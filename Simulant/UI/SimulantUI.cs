@@ -1,12 +1,18 @@
 ﻿#pragma warning disable IDE1006
+using Simulant.ACT;
 using Simulant.Core;
+using Simulant.Core.Entity;
 using Simulant.Core.Environment;
+using Simulant.Game;
 using Simulant.Game.ExtractedCsv;
 using Simulant.Game.ExtractedCsv.Rows;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Simulation;
+using Simulant.Utils;
 using System;
+using System.Buffers.Text;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -57,6 +63,7 @@ namespace Simulant.UI
             // 插件初始化完成：允许防火墙和调试
             chkToggleFirewall.Enabled = pluginReady;
             btnDebug.Enabled = pluginReady;
+            btnAddBNpc.Enabled = pluginReady;
 
             // 防火墙开启：允许加载区域、退出模拟
             btnSimEnter.Enabled = firewallReady && !_switchingTerritory;
@@ -330,6 +337,68 @@ namespace Simulant.UI
             }
         }
 
+        string _addBNpcInputCache = null;
+        private void btnAddBNpc_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string result;
+                using (var form = new SimpleInputForm(
+                    "输入实体数据",
+
+                    "BattleNpc:\n　参数 1：BaseID (uint)\n　　对于 BNpc 应为 1-999999\n　参数 2（可选）：NameID (uint)\n　参数 3（可选）：等级 (byte)\n\n" +
+                    "EventObject: \n　参数 1：BaseID (uint)\n　　对于 EObj 应为 2000001-2999999\n　参数 2（可选）：当前动画状态 (ushort)\n　　默认 1，通常为 2^n\n　参数 3（可选）：EObj 实体表索引\n　　默认 39，仅允许 0-39，重复时会覆盖已有实体",
+
+                    _addBNpcInputCache ?? "17839, 13561, 100"))
+                {
+                    result = form.GetInput();
+                }
+
+                if (result == null) 
+                    return;
+                _addBNpcInputCache = result;
+
+                var (baseId, a2, a3) = result.ParseArgs<uint, uint?, uint?>((1, null), (2, null));
+
+                if (baseId > 0 && baseId < 1000000) // BattleNpc
+                {
+                    var nameId = a2 ?? 0;
+                    var level = checked((byte)(a3 ?? 1));
+
+                    var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("当前无法获取玩家实体。");
+                    var bnpc = _host.EntitySpawner.SpawnBNpc(baseId, nameId, level);
+                    bnpc.Pos3D = me.Pos3D;
+                    bnpc.Heading = me.Heading;
+                    bnpc.SetReadyToDraw();
+                    bnpc.EnableDraw();
+
+                    _host.LogSim($"已生成 BNpc: ID={bnpc.Id:X8}, BaseID={baseId}, NameID={nameId}, Index={bnpc.Native.ObjectIndex}, Ptr={bnpc.Native.Ptr.Hex()}");
+                }
+
+                else if (baseId > 2000000 && baseId < 3000000) // EventObject
+                {
+                    var timelineState = checked((ushort)(a2 ?? 1));
+                    var objectIndex = checked((byte)(a3 ?? 39));
+
+                    var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("当前无法获取玩家实体。");
+                    var data = new EObjData
+                    {
+                        Index = objectIndex,
+                        BaseId = baseId,
+                        Pos = me.Pos3D,
+                        SharedTimelineState = timelineState,
+                    };
+                    var eobj = _host.EntitySpawner.SpawnEObj(data);
+
+                    _host.LogSim($"已生成 EObj: ID={eobj.Id:X8}, BaseID={baseId}, TimelineState={timelineState}, Index={eobj.Native.ObjectIndex} ({data.Index}), Ptr={eobj.Native.Ptr.Hex()}");
+                }
+                else throw new ArgumentOutOfRangeException(nameof(baseId), baseId, "BaseID 不属于 BattleNpc / EventObject 的有效范围。");
+            }
+            catch (Exception ex)
+            {
+                _host.LogError("生成实体失败：" + ex);
+            }
+        }
     }
 }
 #pragma warning restore IDE1006

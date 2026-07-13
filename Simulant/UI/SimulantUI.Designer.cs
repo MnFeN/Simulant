@@ -44,10 +44,11 @@
             this.lblTerritoryId = new System.Windows.Forms.Label();
             this.numTerritoryId = new System.Windows.Forms.NumericUpDown();
             this.splitMainH = new System.Windows.Forms.SplitContainer();
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
             this.presetControl = new Simulant.UI.PresetControl();
             this.logView = new Simulant.UI.LogView();
+            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
+            this.btnAddBNpc = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitMainV)).BeginInit();
             this.splitMainV.Panel1.SuspendLayout();
             this.splitMainV.Panel2.SuspendLayout();
@@ -89,6 +90,7 @@
             this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 22.19101F));
             this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 27.80899F));
+            this.tableL.Controls.Add(this.btnAddBNpc, 0, 6);
             this.tableL.Controls.Add(this.btnDebug, 1, 6);
             this.tableL.Controls.Add(this.btnInitPlugin, 0, 1);
             this.tableL.Controls.Add(this.btnSelectTerritory, 0, 2);
@@ -309,20 +311,6 @@
             this.splitMainH.SplitterDistance = 423;
             this.splitMainH.TabIndex = 0;
             // 
-            // contextMenuStrip1
-            // 
-            this.contextMenuStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripMenuItem2});
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(106, 28);
-            // 
-            // toolStripMenuItem2
-            // 
-            this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(105, 24);
-            this.toolStripMenuItem2.Text = "111";
-            // 
             // presetControl
             // 
             this.presetControl.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
@@ -343,6 +331,37 @@
             this.logView.Name = "logView";
             this.logView.Size = new System.Drawing.Size(865, 465);
             this.logView.TabIndex = 0;
+            // 
+            // contextMenuStrip1
+            // 
+            this.contextMenuStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
+            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.toolStripMenuItem2});
+            this.contextMenuStrip1.Name = "contextMenuStrip1";
+            this.contextMenuStrip1.Size = new System.Drawing.Size(106, 28);
+            // 
+            // toolStripMenuItem2
+            // 
+            this.toolStripMenuItem2.Name = "toolStripMenuItem2";
+            this.toolStripMenuItem2.Size = new System.Drawing.Size(105, 24);
+            this.toolStripMenuItem2.Text = "111";
+            // 
+            // btnAddBNpc
+            // 
+            this.btnAddBNpc.AutoSize = true;
+            this.btnAddBNpc.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.btnAddBNpc.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.btnAddBNpc.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.btnAddBNpc.Location = new System.Drawing.Point(15, 476);
+            this.btnAddBNpc.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
+            this.btnAddBNpc.Name = "btnAddBNpc";
+            this.btnAddBNpc.Padding = new System.Windows.Forms.Padding(5);
+            this.btnAddBNpc.Size = new System.Drawing.Size(140, 42);
+            this.btnAddBNpc.TabIndex = 11;
+            this.btnAddBNpc.TabStop = false;
+            this.btnAddBNpc.Text = "添加实体";
+            this.btnAddBNpc.UseVisualStyleBackColor = true;
+            this.btnAddBNpc.Click += new System.EventHandler(this.btnAddBNpc_Click);
             // 
             // SimulantUI
             // 
@@ -389,5 +408,6 @@
         private System.Windows.Forms.Label lblTerritoryId;
         private System.Windows.Forms.NumericUpDown numTerritoryId;
         internal PresetControl presetControl;
+        private System.Windows.Forms.Button btnAddBNpc;
     }
 }
