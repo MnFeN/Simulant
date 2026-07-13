@@ -141,42 +141,46 @@ namespace Simulant.Content.U7b.Presets
                 CreateAuxiliaryLines();
             }
 
+            LogExecute(boss, 0xC654);
+
             await Task.Delay(3000);
             using (var timer = new SimTimer(_host))
             {
                 boss.Cast(0xBB3B); // 混沌末世 本体读条
+                LogCast(boss, 0xBB3B, boss.Pos3D, boss.Heading);
 
-                FireAndForget(SingleExaFlare(leftOrder[0], true));
-                FireAndForget(SingleExaFlare(leftOrder[1], true));
+                FireAndForget(SingleExaFlare(boss, leftOrder[0], true));
+                FireAndForget(SingleExaFlare(boss, leftOrder[1], true));
 
                 await timer.WaitUntil(ExaFlareGroupDelay * 1);
 
-                FireAndForget(SingleExaFlare(rightOrder[0], false));
-                FireAndForget(SingleExaFlare(rightOrder[1], false));
+                FireAndForget(SingleExaFlare(boss, rightOrder[0], false));
+                FireAndForget(SingleExaFlare(boss, rightOrder[1], false));
 
                 await timer.WaitUntil(ExaFlareGroupDelay * 2);
 
-                FireAndForget(SingleExaFlare(leftOrder[2], true));
-                FireAndForget(SingleExaFlare(leftOrder[3], true));
+                FireAndForget(SingleExaFlare(boss, leftOrder[2], true));
+                FireAndForget(SingleExaFlare(boss, leftOrder[3], true));
 
                 await timer.WaitUntil(ExaFlareGroupDelay * 3);
 
-                FireAndForget(SingleExaFlare(rightOrder[2], false));
-                FireAndForget(SingleExaFlare(rightOrder[3], false));
+                FireAndForget(SingleExaFlare(boss, rightOrder[2], false));
+                FireAndForget(SingleExaFlare(boss, rightOrder[3], false));
 
                 await timer.WaitUntil(ExaFlareGroupDelay * 4);
 
-                FireAndForget(SingleExaFlare(leftOrder[4], true));
-                FireAndForget(SingleExaFlare(leftOrder[5], true));
+                FireAndForget(SingleExaFlare(boss, leftOrder[4], true));
+                FireAndForget(SingleExaFlare(boss, leftOrder[5], true));
 
                 await timer.WaitUntil(ExaFlareGroupDelay * 5);
 
-                FireAndForget(SingleExaFlare(rightOrder[4], false));
-                FireAndForget(SingleExaFlare(rightOrder[5], false));
+                FireAndForget(SingleExaFlare(boss, rightOrder[4], false));
+                FireAndForget(SingleExaFlare(boss, rightOrder[5], false));
 
                 await timer.WaitUntil(16.2);
                 boss.Cast(0xBB3E); // 混沌末世 本体读条
-                
+                LogCast(boss, 0xBB3E, boss.Pos3D, boss.Heading);
+
                 if (UseSpreadDummies)
                 {
                     SpreadPartyMembers(me, 5.1f);
@@ -230,7 +234,7 @@ namespace Simulant.Content.U7b.Presets
         /// <param name="lineIdx"> 面向地火源头方向，从左至右记为 1-6。</param>
         /// <param name="isTopLeft"> 是左上方的地火，反之为右上方。</param>
         /// <returns></returns>
-        private async Task SingleExaFlare(int lineIdx, bool isTopLeft)
+        private async Task SingleExaFlare(Character boss, int lineIdx, bool isTopLeft)
         {
             var initPos = isTopLeft
                    ? new Vector3(100 - 35 + 5 * lineIdx, 100 - 5 * lineIdx, 0)
@@ -250,6 +254,7 @@ namespace Simulant.Content.U7b.Presets
                 var dt = 0.513f;
 
                 FireAndForget(DummyCast(initPos, heading, 0xBB3C, 6f));
+                LogCast(boss, 0xBB3C, initPos, heading);
 
                 for (int i = 0; i < 6; i++)
                 {
@@ -380,6 +385,18 @@ Color: 1, 1, 1, 0.5";
                 member.SetReadyToDraw();
                 member.Redraw();
             }
+        }
+
+        private static void LogCast(Character src, uint actionId, Vector3 pos, float heading)
+        {
+            TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 14:{src.Id:X8}:casterName:{actionId:X2}:actionName:");
+            TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 107:{src.Id:X8}:{actionId:X2}:{pos.X}:{pos.Y}:{pos.Z}:{heading}");
+        }
+
+        private static void LogExecute(Character src, uint actionId)
+        {
+            TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 15:{src.Id:X8}:casterName:{actionId:X2}:actionName:");
+            TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 108:{src.Id:X8}:{actionId:X2}:00000000:0::::");
         }
     }
 }

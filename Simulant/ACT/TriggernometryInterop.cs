@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Advanced_Combat_Tracker;
+using Simulant.Core;
 
 namespace Simulant.ACT
 {
@@ -11,6 +12,7 @@ namespace Simulant.ACT
     {
         private static MethodInfo _getEntitiesMethod;
         private static object _realPluginInstance;
+        private static object _logSourceEnumValue;
 
         public static void Init()
         {
@@ -59,6 +61,16 @@ namespace Simulant.ACT
         {
             dynamic plugin = _realPluginInstance;
             plugin.InvokeNamedCallback(name, val ?? string.Empty);
+        }
+
+        public static void QueueACTLogEvent(string log)
+        {
+            dynamic plugin = _realPluginInstance;
+            log = log ?? string.Empty;
+            var currentZone = ActGlobals.oFormActMain.CurrentZone ?? string.Empty;
+            // 0: Triggernometry.Core.LogEvent.SourceEnum.Log
+            plugin.LogLineQueuer(log, currentZone, 0);
+            PluginHost.Instance.LogVerbose("ACTLog: " + log);
         }
     }
 }
