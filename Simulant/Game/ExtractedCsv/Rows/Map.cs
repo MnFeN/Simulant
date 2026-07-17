@@ -10,9 +10,9 @@ namespace Simulant.Game.ExtractedCsv.Rows
         // 400
         public ushort SizeFactor => Get<ushort>("SizeFactor");
         // -100
-        public ushort OffsetX => Get<ushort>("Offset{X}");
+        public short OffsetX => Get<short>("Offset{X}");
         // -100
-        public ushort OffsetY => Get<ushort>("Offset{Y}");
+        public short OffsetY => Get<short>("Offset{Y}");
         // region: Unlost World
         public ushort RegionPlaceNameId => Get<ushort>("PlaceName{Region}"); // PlaceName
         // place: Alexandria
