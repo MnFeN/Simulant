@@ -386,6 +386,7 @@ namespace Simulant.UI
                         Index = objectIndex,
                         BaseId = baseId,
                         Pos = me.Pos3D,
+                        Heading = me.Heading,
                         SharedTimelineState = timelineState,
                     };
                     var eobj = _host.EntitySpawner.SpawnEObj(data);
