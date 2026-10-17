@@ -29,114 +29,67 @@ namespace Simulant
 
         internal async Task Run()
         {
-            await 绝妖星P5塔();
+            await 招募信息Test();
         }
 
-        public async Task 绝妖星P5塔()
+        public async Task 招募信息Test()
         {
-            var me = _host.EntityProvider.GetMyself();
-            var data = new EObjData
+            const int intervalMs = 3000;
+            const int count = 20;
+
+            for (var n = 0; n < count && !_host.Disposed; n++)
             {
-                Index = 0,
-                BaseId = 2015294,
-                Pos = me.Pos3D + new Vector3(-5, 0, 0),
-            };
-            var eobj = _host.EntitySpawner.SpawnEObj(data);
-            TriggernometryInterop.InvokeNamedCallback("command", $"/e ID: {eobj.Id:X8} #{data.Index} @ {eobj.Native.Ptr.Hex()}");
+                try
+                {
+                    var agent = Framework.Instance.UIModule.AgentModule.LookingForGroup;
 
-            data = new EObjData
-            {
-                Index = 1,
-                BaseId = 2015295,
-                Pos = me.Pos3D + new Vector3(0, 0, 0),
-            };
-            eobj = _host.EntitySpawner.SpawnEObj(data);
-            TriggernometryInterop.InvokeNamedCallback("command", $"/e ID: {eobj.Id:X8} #{data.Index} @ {eobj.Native.Ptr.Hex()}");
+                    if (agent.Ptr == IntPtr.Zero)
+                    {
+                        TriggernometryInterop.InvokeNamedCallback(
+                            "command",
+                            $"/e PF [{n + 1}/{count}] AgentLookingForGroup = null");
+                    }
+                    else
+                    {
+                        var listing = agent.LastViewedListing;
 
-            data = new EObjData
-            {
-                Index = 2,
-                BaseId = 2015296,
-                Pos = me.Pos3D + new Vector3(5, 0, 0),
-            };
-            eobj = _host.EntitySpawner.SpawnEObj(data);
-            TriggernometryInterop.InvokeNamedCallback("command", $"/e ID: {eobj.Id:X8} #{data.Index} @ {eobj.Native.Ptr.Hex()}");
+                        TriggernometryInterop.InvokeNamedCallback(
+                            "command",
+                            $"/e PF [{n + 1}/{count}] Agent=0x{agent.Ptr.Hex()}, OpenCID={agent.ListingContentId}, ListingId={listing.ListingId}, LeaderCID={listing.LeaderContentId}, Duty={listing.DutyId}, Slots={listing.SlotsFilled}/{listing.TotalSlots}, World={listing.World}, Home={listing.HomeWorld}, Current={listing.CurrentWorld}");
 
-            LogObjectArrays();
-        }
+                        var hasMember = false;
 
-        public async Task 绝妖星P3法阵()
-        {
-            var me = _host.EntityProvider.GetMyself();
-            var data = new EObjData
-            {
-                Index = 0,
-                BaseId = 0x1EC03A,
-                Pos = me.Pos3D + new Vector3(-5, 0, 0),
-            };
-            var eobj = _host.EntitySpawner.SpawnEObj(data);
-            TriggernometryInterop.InvokeNamedCallback("command", $"/e ID: {eobj.Id:X8} #{data.Index} @ {eobj.Native.Ptr.Hex()}");
+                        for (var i = 0; i < 48; i++)
+                        {
+                            var contentId = listing.GetMemberContentId(i);
+                            if (contentId == 0)
+                                continue;
 
-            data = new EObjData
-            {
-                Index = 1,
-                BaseId = 0x1EC03B,
-                Pos = me.Pos3D + new Vector3(0, 0, 0),
-            };
-            eobj = _host.EntitySpawner.SpawnEObj(data);
-            TriggernometryInterop.InvokeNamedCallback("command", $"/e ID: {eobj.Id:X8} #{data.Index} @ {eobj.Native.Ptr.Hex()}");
+                            hasMember = true;
 
-            data = new EObjData
-            {
-                Index = 2,
-                BaseId = 0x1EC03C,
-                Pos = me.Pos3D + new Vector3(5, 0, 0),
-            };
-            eobj = _host.EntitySpawner.SpawnEObj(data);
-            TriggernometryInterop.InvokeNamedCallback("command", $"/e ID: {eobj.Id:X8} #{data.Index} @ {eobj.Native.Ptr.Hex()}");
+                            TriggernometryInterop.InvokeNamedCallback(
+                                "command",
+                                $"/e PF Member {i}: CID={contentId}, Job={listing.GetJob(i)}");
+                        }
 
-            LogObjectArrays();
-        }
+                        if (!hasMember)
+                        {
+                            TriggernometryInterop.InvokeNamedCallback(
+                                "command",
+                                "/e PF Members: none");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    TriggernometryInterop.InvokeNamedCallback(
+                        "command",
+                        $"/e PF [{n + 1}/{count}] ERROR: {ex.GetType().Name}: {ex.Message}");
+                }
 
-        public async Task 绝伊甸地火Test()
-        {
-            var data = new EObjData
-            {
-                Index = 0,
-                BaseId = 2014199,
-                Pos = _host.EntityProvider.GetMyself().Pos3D,
-            };
-            var eobj = _host.EntitySpawner.SpawnEObj(data);
-            TriggernometryInterop.InvokeNamedCallback("command", $"/e ID: {eobj.Id:X8} #{data.Index} @ {eobj.Native.Ptr.Hex()}");
-            LogObjectArrays();
-        }
-
-        public async Task 异三角Test()
-        {
-            var data = new EObjData
-            {
-                Index = 5,
-                BaseId = 2000052,
-                SharedTimelineState = 0x2,
-                Pos = _host.EntityProvider.GetMyself().Pos3D,
-            };
-            var eobj = _host.EntitySpawner.SpawnEObj(data);
-            TriggernometryInterop.InvokeNamedCallback("command", $"/e ID: {eobj.Id:X8} @ index {data.Index}");
-            LogObjectArrays();
-        }
-
-        public async Task EObjTowerTest()
-        {
-            var data = new EObjData
-            {
-                Index = 0,
-                TargetableFlags = 5,
-                BaseId = 2009610,
-                SharedTimelineState = 0x41,
-                Pos = _host.EntityProvider.GetMyself().Pos3D,
-            };
-            var eobj = _host.EntitySpawner.SpawnEObj(data);
-            LogObjectArrays();
+                if (n + 1 < count && !_host.Disposed)
+                    await Task.Delay(intervalMs);
+            }
         }
 
         public async Task EObjSharedTimelineStateTest()
@@ -216,7 +169,7 @@ namespace Simulant
                 _host.LogVerbose(sb.ToString());
             }
         }
-
+        
         private void EntityExecuteTest(uint baseId, uint actionId)
         {
             var me = _host.EntityProvider.GetMyself();
@@ -225,11 +178,11 @@ namespace Simulant
 
             bnpc.Pos3D = me.Pos3D;
             bnpc.Heading = me.Heading;
-                    bnpc.SetReadyToDraw();
-                    bnpc.EnableDraw();
+            bnpc.SetReadyToDraw();
+            bnpc.EnableDraw();
 
             bnpc.Execute(actionId);
-            }
+        }
 
         private void EntityCastTest(uint baseId, uint actionId)
         {
