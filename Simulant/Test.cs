@@ -217,58 +217,31 @@ namespace Simulant
             }
         }
 
-        private async void NoFrameLockTest()
+        private void EntityExecuteTest(uint baseId, uint actionId)
         {
             var me = _host.EntityProvider.GetMyself();
 
-            var spawner = _host.EntitySpawner;
-            var spawned = new List<dynamic>();
+            var bnpc = _host.EntitySpawner.SpawnBNpc(baseId, 0, 100);
 
-            await Task.Delay(3000);
-
-            try
-            {
-                var count = 20;
-                var radius = 5f;
-                var basePos = me.Pos3D;
-                var heading = me.Heading;
-
-                for (var i = 0; i < count; i++)
-                {
-                    var angle = Math.PI * 2.0 * i / count;
-                    var offset = new Vector3(
-                        (float)Math.Sin(angle) * radius,
-                        (float)Math.Cos(angle) * radius,
-                        0);
-
-                    var bnpc = spawner.SpawnBNpc(4909, 3765, 90);
-                    spawned.Add(bnpc);
-
-                    bnpc.Pos3D = basePos + offset;
-                    bnpc.Heading = heading;
+            bnpc.Pos3D = me.Pos3D;
+            bnpc.Heading = me.Heading;
                     bnpc.SetReadyToDraw();
                     bnpc.EnableDraw();
-                }
-                await Task.Delay(3000);
-            }
-            finally
-            {
-                spawned.ForEach(bnpc => spawner.Delete(bnpc));
-            }
-        }
 
-        private void EntityCastTest()
+            bnpc.Execute(actionId);
+            }
+
+        private void EntityCastTest(uint baseId, uint actionId)
         {
             var me = _host.EntityProvider.GetMyself();
 
-            var bnpc = _host.EntitySpawner.SpawnBNpc(15725, 12256, 90);
-
+            var bnpc = _host.EntitySpawner.SpawnBNpc(baseId, 0, 100);
             bnpc.Pos3D = me.Pos3D;
             bnpc.Heading = me.Heading;
             bnpc.SetReadyToDraw();
             bnpc.EnableDraw();
 
-            bnpc.Cast(0x7BA2); // 宇宙天箭
+            bnpc.Cast(actionId);
 
             _host.LogVerbose($"CastInfo @ {bnpc.Native.CastInfo.Ptr.Hex()}");
             _host.LogVerbose($"VFunc #81 Ret @ {bnpc.Native.Ptr.CallVFunc<IntPtr>(81).Hex()}");

@@ -1,4 +1,5 @@
 ﻿using Simulant.Game.FFCS.Client.Network;
+using Simulant.Game.FFCS.Client.UI;
 using System;
 
 namespace Simulant.Game.FFCS.Client.System.Framework
@@ -15,5 +16,8 @@ namespace Simulant.Game.FFCS.Client.System.Framework
 
         public NetworkModuleProxy NetworkModuleProxy 
             => Ptr.ReadPtr(0x1678).As<NetworkModuleProxy>();
+
+        public UIModule UIModule
+            => Ptr.ReadPtr(0x2B68).As<UIModule>();
     }
 }
