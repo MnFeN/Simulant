@@ -42,6 +42,20 @@ namespace Simulant.UI
         internal void StopCurrentSession()
             => presetControl.StopCurrentSession();
 
+        internal void OnEntityWorldChanged()
+        {
+            if (IsDisposed || Disposing || _host.Disposed) return;
+            if (InvokeRequired)
+            {
+                if (IsHandleCreated) BeginInvoke(new System.Action(OnEntityWorldChanged));
+                return;
+            }
+            StopCurrentSession();
+            _host.StopDebugEntities();
+            _host.CompleteEntityWorldChange();
+            UpdateControlStates();
+        }
+
         internal void UpdateControlStates()
         {
             if (IsDisposed || Disposing || _host.Disposed)
@@ -376,13 +390,13 @@ namespace Simulant.UI
                     var level = checked((byte)(a3 ?? 1));
 
                     var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("当前无法获取玩家实体。");
-                    var bnpc = _host.EntitySpawner.SpawnBNpc(baseId, nameId, level);
+                    var bnpc = _host.DebugEntities.SpawnBNpc(baseId, nameId, level);
                     bnpc.Pos3D = me.Pos3D;
                     bnpc.Heading = me.Heading;
                     bnpc.SetReadyToDraw();
                     bnpc.EnableDraw();
 
-                    _host.LogSim($"已生成 BNpc: ID={bnpc.Id:X8}, BaseID={baseId}, NameID={nameId}, Index={bnpc.Native.ObjectIndex}, Ptr={bnpc.Native.Ptr.Hex()}");
+                    _host.LogSim($"已生成 BNpc: ID={bnpc.Id:X8}, BaseID={baseId}, NameID={nameId}, Index={bnpc.Entity.Identity.Slot}, Ptr={bnpc.Address.Hex()}");
                 }
 
                 else if (baseId > 2000000 && baseId < 3000000) // EventObject
@@ -391,7 +405,7 @@ namespace Simulant.UI
                     var objectIndex = checked((byte)(a3 ?? 39));
 
                     var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("当前无法获取玩家实体。");
-                    var data = new EObjData
+                    var data = new EventObjectSpawnSpec
                     {
                         Index = objectIndex,
                         BaseId = baseId,
@@ -399,9 +413,9 @@ namespace Simulant.UI
                         Heading = me.Heading,
                         SharedTimelineState = timelineState,
                     };
-                    var eobj = _host.EntitySpawner.SpawnEObj(data);
+                    var eobj = _host.DebugEntities.SpawnEObj(data);
 
-                    _host.LogSim($"已生成 EObj: ID={eobj.Id:X8}, BaseID={baseId}, TimelineState={timelineState}, Index={eobj.Native.ObjectIndex} ({data.Index}), Ptr={eobj.Native.Ptr.Hex()}");
+                    _host.LogSim($"已生成 EObj: ID={eobj.Id:X8}, BaseID={baseId}, TimelineState={timelineState}, Index={eobj.Identity.Slot} ({data.Index}), Ptr={eobj.Address.Hex()}");
                 }
                 else throw new ArgumentOutOfRangeException(nameof(baseId), baseId, "BaseID 不属于 BattleNpc / EventObject 的有效范围。");
             }

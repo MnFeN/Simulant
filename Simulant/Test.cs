@@ -94,19 +94,20 @@ namespace Simulant
 
         public async Task EObjSharedTimelineStateTest()
         {
-            var data = new EObjData
+            var data = new EventObjectSpawnSpec
             {
                 Index = 6,
                 TargetableFlags = 5,
                 BaseId = 2009610,
                 Pos = _host.EntityProvider.GetMyself().Pos3D,
             };
-            var eobj = _host.EntitySpawner.SpawnEObj(data);
+            var eobj = _host.DebugEntities.SpawnEObj(data);
 
             LogObjectArrays();
 
             for (byte i = 0; i <= 0xFF; i++)
             {
+                if (!eobj.IsAlive) break;
                 eobj.SetSharedTimelineState(i);
                 TriggernometryInterop.InvokeNamedCallback("command", $"/e Timeline {i} = {i:X2}");
 
@@ -118,7 +119,7 @@ namespace Simulant
         public async Task EObjTargetableFlagsTest()
         {
             
-            var data = new EObjData
+            var data = new EventObjectSpawnSpec
             {
                 Index = 7,
                 TargetableFlags = 5,
@@ -134,7 +135,7 @@ namespace Simulant
             {
                 data.TargetableFlags = i;
                 data.Pos = _host.EntityProvider.GetMyself().Pos3D;
-                var eobj = _host.EntitySpawner.SpawnEObj(data);
+                var eobj = _host.DebugEntities.SpawnEObj(data);
                 TriggernometryInterop.InvokeNamedCallback("command", $"/e {i}");
 
                 if (i == 0xFF || _host.Disposed) break;
@@ -174,7 +175,7 @@ namespace Simulant
         {
             var me = _host.EntityProvider.GetMyself();
 
-            var bnpc = _host.EntitySpawner.SpawnBNpc(baseId, 0, 100);
+            var bnpc = _host.DebugEntities.SpawnBNpc(baseId, 0, 100);
 
             bnpc.Pos3D = me.Pos3D;
             bnpc.Heading = me.Heading;
@@ -188,7 +189,7 @@ namespace Simulant
         {
             var me = _host.EntityProvider.GetMyself();
 
-            var bnpc = _host.EntitySpawner.SpawnBNpc(baseId, 0, 100);
+            var bnpc = _host.DebugEntities.SpawnBNpc(baseId, 0, 100);
             bnpc.Pos3D = me.Pos3D;
             bnpc.Heading = me.Heading;
             bnpc.SetReadyToDraw();
@@ -196,8 +197,8 @@ namespace Simulant
 
             bnpc.Cast(actionId);
 
-            _host.LogVerbose($"CastInfo @ {bnpc.Native.CastInfo.Ptr.Hex()}");
-            _host.LogVerbose($"VFunc #81 Ret @ {bnpc.Native.Ptr.CallVFunc<IntPtr>(81).Hex()}");
+            _host.LogVerbose($"CastInfo @ {bnpc.Entity.Native.CastInfo.Ptr.Hex()}");
+            _host.LogVerbose($"VFunc #81 Ret @ {bnpc.Entity.Native.Ptr.CallVFunc<IntPtr>(81).Hex()}");
         }
 
         private void TestEnvManager()
@@ -223,34 +224,25 @@ namespace Simulant
             _host.LogRuntime($"GetPublicContentDirector(): {(ulong)ef.GetPublicContentDirector().Ptr:X}");
         }
 
-        private async void EntityTimelineTest()
+        private void EntityTimelineTest()
         {
             var me = _host.EntityProvider.GetMyself();
-            var bnpc = _host.EntitySpawner.SpawnBNpc(4909, 3765, 90);
+            var entities = _host.DebugEntities;
+            var bnpc = entities.SpawnBNpc(4909, 3765, 90);
 
             bnpc.Pos3D = me.Pos3D + new Vector3(1, 0, 0);
             bnpc.Heading = me.Heading;
             bnpc.SetReadyToDraw();
             bnpc.EnableDraw();
 
-            var intervalMs = 10;
-            var speed = 6f;
-            var durationMs = 7000;
-
-            bnpc.PlayBaseTimeline(13);
-
-            var elapsed = 0;
-            while (elapsed < durationMs)
+            bnpc.Entity.PlayBaseTimeline(13);
+            bnpc.MoveTo(bnpc.Pos + new Vector2(0, 42), speed: 6);
+            entities.Scheduler.ScheduleAfter(7.1, () =>
             {
-                bnpc.Y += speed * (intervalMs / 1000f);
-                bnpc.Native.DrawObject.Position.Set(bnpc.Native.Position);
-                await Task.Delay(intervalMs);
-                elapsed += intervalMs;
-            }
-            bnpc.PlayBlendTimeline(3201);
-            await Task.Delay(3000);
-
-            _host.EntitySpawner.Delete(bnpc);
+                bnpc.StopMoving();
+                if (bnpc.IsActive) bnpc.Entity.PlayBlendTimeline(3201);
+            }, "移动后动作");
+            entities.Scheduler.ScheduleAfter(10.1, () => entities.Delete(bnpc), "回收移动测试角色");
         }
 
 

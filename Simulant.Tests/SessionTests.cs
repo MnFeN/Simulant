@@ -29,7 +29,7 @@ namespace Simulant.Tests
                     Assert(probe.PrepareCount == 1 && probe.PrepareThreadId == callerThread,
                         "Options must be prepared once on the calling thread.");
                     Assert(probe.StartCount == 0, "Failed option preparation must not run initialization.");
-                    Assert(probe.StopCount == 1 && probe.Logic.EntityManager.ClearCount == 1,
+                    Assert(probe.StopCount == 1 && probe.ClearCount == 1,
                         "Failed preparation must roll back exactly once.");
                     Assert(!session.IsRunning && probe.Logic.Scheduler.PendingCount == 0,
                         "A failed start must leave no running or queued work.");
@@ -58,7 +58,7 @@ namespace Simulant.Tests
                         "Initialization must execute on the worker.");
                     Assert(probe.StopCount == 1 && probe.StopThreadId == probe.StartThreadId,
                         "A worker failure must clean up once on that worker.");
-                    Assert(probe.Logic.EntityManager.ClearCount == 1 && !session.IsRunning,
+                    Assert(probe.ClearCount == 1 && !session.IsRunning,
                         "A worker failure must clear entities and stop the session.");
                     Assert(host.Errors.Count == 1 && host.Errors.TryPeek(out var error) &&
                         error.Contains("initialization failed"), "The original worker failure must be logged once.");
@@ -115,7 +115,7 @@ namespace Simulant.Tests
                     }
 
                     Assert(stopError == null, "Stopping initialization failed: " + stopError);
-                    Assert(probe.StopCount == 1 && probe.Logic.EntityManager.ClearCount == 1,
+                    Assert(probe.StopCount == 1 && probe.ClearCount == 1,
                         "Stop must clean up exactly once after initialization exits.");
                     Assert(probe.StopThreadId == stopThread.ManagedThreadId,
                         "Normal cleanup should run on the Stop caller after joining the worker.");
@@ -148,7 +148,7 @@ namespace Simulant.Tests
                         "The logic and entity manager must share the new scheduler.");
                     session.Stop();
                     Assert(probe.PrepareCount == 2 && probe.StartCount == 2 && probe.StopCount == 2 &&
-                        probe.Logic.EntityManager.ClearCount == 2,
+                        probe.ClearCount == 2,
                         "Each run must prepare, initialize, and clean up exactly once.");
                 }
                 Assert(probe.StopCount == 2, "Dispose must not repeat either completed run's cleanup.");
@@ -167,7 +167,7 @@ namespace Simulant.Tests
                     session.Dispose();
                     session.Dispose();
                     session.Stop();
-                    Assert(!session.IsRunning && probe.StopCount == 1 && probe.Logic.EntityManager.ClearCount == 1,
+                    Assert(!session.IsRunning && probe.StopCount == 1 && probe.ClearCount == 1,
                         "Repeated Dispose and Stop must leave the session stopped with one cleanup.");
                     Throws<ObjectDisposedException>(session.Start);
                     Throws<ObjectDisposedException>(() => probe.Logic.Scheduler.Schedule(0, () => { }));
@@ -218,6 +218,7 @@ namespace Simulant.Tests
         internal int PrepareCount;
         internal int StartCount;
         internal int StopCount;
+        internal int ClearCount;
         internal int PrepareThreadId;
         internal int StartThreadId;
         internal int StopThreadId;
@@ -267,18 +268,19 @@ namespace Simulant.Tests
             Interlocked.Increment(ref _probe.StopCount);
             _probe.StopAction?.Invoke();
             EntityManager.Clear();
+            Interlocked.Increment(ref _probe.ClearCount);
             _probe.Cleaned.Set();
         }
     }
 }
 
-// Only the four dependencies of SimSession are replaced. The scheduler and SimSession itself
-// are the production source files linked by the test project.
+// The host and preset logic are isolated from ACT/UI; session, entity manager and behavior
+// controllers are the production source files linked by the test project.
 namespace Simulant.Core
 {
     public sealed class PluginHost
     {
-        internal readonly object EntitySpawner = new object();
+        internal readonly Entity.EntitySpawner EntitySpawner = new Entity.EntitySpawner();
         internal readonly ConcurrentQueue<string> Errors = new ConcurrentQueue<string>();
         internal void LogError(string message) => Errors.Enqueue(message);
     }
@@ -298,16 +300,5 @@ namespace Simulant.Simulation
         internal abstract void Prepare();
         internal abstract void Start();
         internal abstract void Stop();
-    }
-}
-
-namespace Simulant.Simulation.Runtime
-{
-    public sealed class SimEntityManager
-    {
-        internal SimScheduler Scheduler { get; set; }
-        internal int ClearCount;
-        public SimEntityManager(object spawner, Action<Exception> onCleanupError = null) { }
-        internal void Clear() => Interlocked.Increment(ref ClearCount);
     }
 }

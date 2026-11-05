@@ -184,6 +184,7 @@ namespace Simulant.Core.Zone
 
         private void LoadTerritoryInternal(int territoryId, TerritoryType territory, int storyProgress = 0)
         {
+            _host.PrepareEntityWorldChange((uint)territoryId);
             if (_loadedInstanceContentId.HasValue && _loadedInstanceContentId.Value != 0)
             {
                 _host.LogVerbose($"FinalizeInstanceContent: {_loadedInstanceContentId.Value}");
@@ -206,6 +207,7 @@ namespace Simulant.Core.Zone
 
             _host.LogVerbose($"SetTerritoryTypeId: {territoryId}");
             EventFramework.Instance.ThrowIfNull().SetTerritoryTypeId((ushort)territoryId);
+            _host.CompleteEntityWorldChange();
         }
 
         // 需要扫描全部实体（含本地实体），似乎有实体模型的时候游戏有概率会炸

@@ -75,6 +75,15 @@ namespace Simulant.Game.FFCS.Client.Game.Object
 
         public IntPtr Ptr { get; set; }
 
+        public GameObject this[int index]
+        {
+            get
+            {
+                if ((uint)index >= Count) throw new ArgumentOutOfRangeException(nameof(index));
+                return Ptr.ReadPtr(index * IntPtr.Size).As<GameObject>();
+            }
+        }
+
         public IEnumerable<GameObject> GameObjects
         {
             get

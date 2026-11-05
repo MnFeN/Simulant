@@ -72,7 +72,7 @@ namespace Simulant.Content.S4b.Presets
         private SimTimeline SingleTriangleTimeline()
         {
             (Triangle triangle, byte index) = GetRandomTriangleFromList();
-            var eobj = EntityManager.Track(triangle.CreateEObj(_host, index));
+            var eobj = EntityManager.SpawnEObj(triangle.CreateSpawnSpec(index));
             var timeline = new SimTimeline();
             timeline.At(1.1, () => eobj.PlayAnimation(0x20), "异三角出现");
             timeline.At(2.6, () => eobj.PlayAnimation(0x80), "异三角旋转");
@@ -138,16 +138,15 @@ namespace Simulant.Content.S4b.Presets
                 IsLeft = direction.TryResolveRandom() == TriangleDirection.Left;
             }
 
-            public Simulant.Core.Entity.EventObject CreateEObj(PluginHost host, byte objectIndex)
+            public EventObjectSpawnSpec CreateSpawnSpec(byte objectIndex)
             {
-                var data = new EObjData
+                return new EventObjectSpawnSpec
                 {
                     Index = objectIndex,
                     BaseId = IsLeft ? 2000052u : 2000051u,
                     SharedTimelineState = 0x2,
                     Pos = new Vector3(PosXY.X, PosXY.Y, 0),
                 };
-                return host.EntitySpawner.SpawnEObj(data);
             }
 
             /// <summary>

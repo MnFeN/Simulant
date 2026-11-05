@@ -1,95 +1,196 @@
-﻿using Simulant.Core;
 using Simulant.Core.Entity;
-using Simulant.Game;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Simulation.Runtime
 {
+    /// <summary>本会话的参与者及创建记录。Attach 只借用，只有 Spawn 才取得回收责任。</summary>
     public sealed class SimEntityManager
     {
         private readonly EntitySpawner _spawner;
         private readonly Action<Exception> _onCleanupError;
-        private readonly List<EntityBase> _localEntities = new List<EntityBase>();
-        internal List<Character> Party = new List<Character>();
-        internal SimScheduler Scheduler { get; set; }
+        private readonly object _gate = new object();
+        private readonly Dictionary<EntityIdentity, SimActor> _actors = new Dictionary<EntityIdentity, SimActor>();
+        private readonly HashSet<EntityBase> _owned = new HashSet<EntityBase>();
+        private SimScheduler _scheduler;
+        private SimCastController _casts;
+        private SimMovementController _movement;
+        private bool _acceptingEntities;
+
+        internal List<SimActor> Party { get; } = new List<SimActor>();
+
+        internal SimScheduler Scheduler
+        {
+            get => _scheduler;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                lock (_gate)
+                {
+                    if (ReferenceEquals(_scheduler, value)) return;
+                    if (_actors.Count != 0 || _owned.Count != 0)
+                        throw new InvalidOperationException("更换调度器前必须清理本次模拟。");
+                    _casts?.Dispose();
+                    _movement?.Dispose();
+                    _scheduler = value;
+                    _casts = new SimCastController(value);
+                    _movement = new SimMovementController(value);
+                    _acceptingEntities = true;
+                }
+            }
+        }
 
         public SimEntityManager(EntitySpawner spawner, Action<Exception> onCleanupError = null)
-        { 
+        {
             _spawner = spawner ?? throw new ArgumentNullException(nameof(spawner));
             _onCleanupError = onCleanupError;
         }
 
-        public Character SpawnPlayer(Job job)
-            => Track(_spawner.SpawnPlayer(job));
+        public SimActor SpawnPlayer(Job job)
+        {
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                return Own(_spawner.SpawnPlayer(job));
+            }
+        }
 
-        public Character SpawnBNpc(uint bNpcBaseId, uint bNpcNameId = 0, byte level = 0)
-            => Track(_spawner.SpawnBNpc(bNpcBaseId, bNpcNameId, level));
+        public SimActor SpawnBNpc(uint baseId, uint nameId = 0, byte level = 0)
+            => SpawnBNpc(new CharacterSpawnSpec { BNpcBaseId = baseId, BNpcNameId = nameId, Level = level });
+
+        public SimActor SpawnBNpc(CharacterSpawnSpec spec)
+        {
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                return Own(_spawner.SpawnBNpc(spec));
+            }
+        }
+
+        private SimActor Own(Character entity)
+        {
+            lock (_gate)
+            {
+                _owned.Add(entity);
+                return Attach(entity);
+            }
+        }
 
         public EventObject SpawnEObj(ushort index, uint baseId, Vector3 pos, float heading = 0)
-            => Track(_spawner.SpawnEObj(index, baseId, pos, heading));
+            => SpawnEObj(new EventObjectSpawnSpec { Index = checked((byte)index), BaseId = baseId, Pos = pos, Heading = heading });
 
-        public T Track<T>(T entity) where T : EntityBase
+        public EventObject SpawnEObj(EventObjectSpawnSpec spec)
+        {
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                var entity = _spawner.SpawnEObj(spec);
+                _owned.Add(entity);
+                return entity;
+            }
+        }
+
+        public SimActor Attach(Character entity)
         {
             if (entity == null) throw new ArgumentNullException(nameof(entity));
-            if (entity is Character character)
-                character.Scheduler = Scheduler;
-            lock (_localEntities)
+            if (!entity.IsAlive) throw new InvalidOperationException("不能关联已经失效的实体。");
+            lock (_gate)
             {
-                if (!_localEntities.Contains(entity))
-                    _localEntities.Add(entity);
+                EnsureAcceptingEntities();
+                if (_actors.TryGetValue(entity.Identity, out var actor) && actor.IsActive)
+                    return actor;
+                actor = new SimActor(entity, _casts, _movement);
+                _actors[entity.Identity] = actor;
+                return actor;
             }
-            return entity;
+        }
+
+        public void Detach(SimActor actor)
+        {
+            if (actor == null) return;
+            lock (_gate)
+            {
+                if (!_actors.TryGetValue(actor.Entity.Identity, out var current) || !ReferenceEquals(current, actor))
+                    return;
+                try { actor.Dispose(); }
+                finally
+                {
+                    _actors.Remove(actor.Entity.Identity);
+                    Party.Remove(actor);
+                }
+            }
+        }
+
+        public void Delete(SimActor actor)
+        {
+            if (actor == null) return;
+            Delete(actor.Entity);
         }
 
         public void Delete(EntityBase entity)
         {
-            lock (_localEntities)
+            if (entity == null) return;
+            lock (_gate)
             {
-                // 已清理的回收节点不能再操作被游戏复用的地址。
-                if (!_localEntities.Contains(entity)) return;
-                if (entity is EventObject)
+                // 延迟回收可能发生在 Clear 之后；不再拥有就不接触原生对象。
+                if (!_owned.Contains(entity)) return;
+                try
                 {
-                    // EventObject 不属于 ClientObjectManager。现有封装没有销毁接口，
-                    // 停止绘制，槽位由后续 SpawnObject 包或切换区域复用。
-                    entity.DisableDraw();
+                    if (_actors.TryGetValue(entity.Identity, out var actor)) Detach(actor);
                 }
-                else
+                finally
                 {
                     _spawner.Delete(entity);
+                    _owned.Remove(entity);
                 }
-                _localEntities.Remove(entity);
             }
         }
 
         public void Clear()
         {
-            lock (_localEntities)
+            SimActor[] actors;
+            EntityBase[] owned;
+            lock (_gate)
             {
-                foreach (var entity in _localEntities.ToArray())
-                {
-                    try
-                    {
-                        Delete(entity);
-                    }
-                    catch (Exception ex)
-                    {
-                        _onCleanupError?.Invoke(ex);
-                    }
-                }
-                _localEntities.Clear();
+                _acceptingEntities = false;
+                actors = _actors.Values.ToArray();
+                owned = _owned.ToArray();
+                _actors.Clear();
+                _owned.Clear();
+                Party.Clear();
             }
-            Party.Clear();
+            // 先停止所有参与者的行为，再回收本会话生成的实体。借用玩家只解除关联。
+            foreach (var actor in actors)
+                TryCleanup(actor.Dispose);
+            foreach (var entity in owned)
+                TryCleanup(() => _spawner.Delete(entity));
+            if (_casts != null) TryCleanup(_casts.Dispose);
+            if (_movement != null) TryCleanup(_movement.Dispose);
         }
 
-        internal Character GetPartyMember(int partyIndex)
-        { 
+        private void TryCleanup(Action cleanup)
+        {
+            try { cleanup(); }
+            catch (Exception ex)
+            {
+                try { _onCleanupError?.Invoke(ex); }
+                catch { /* 日志失败也不能中断其余资源的清理。 */ }
+            }
+        }
+
+        private void EnsureAcceptingEntities()
+        {
+            if (!_acceptingEntities) throw new InvalidOperationException("尚未开始模拟，或模拟已停止。");
+        }
+
+        internal SimActor GetPartyMember(int partyIndex)
+        {
             if (partyIndex < 1 || partyIndex > Party.Count)
                 throw new ArgumentOutOfRangeException(nameof(partyIndex), $"小队成员索引必须在范围内（1-{Party.Count}）。");
-
             return Party[partyIndex - 1];
         }
     }

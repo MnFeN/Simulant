@@ -5,6 +5,7 @@ using Simulant.Core.Environment;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
+using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
@@ -167,7 +168,7 @@ namespace Simulant.Content.U7b.Presets
             mechanic.At(22, () =>
             {
                 var playerPositions = _host.EntityProvider.GetCharacters()
-                    .Where(e => e.Native.ObjectKind == ObjectKind.Pc)
+                    .Where(e => e.ObjectKind == ObjectKind.Pc)
                     .Select(e => (e.Pos3D, e.Address == me.Address))
                     .ToList();
 
@@ -218,7 +219,7 @@ namespace Simulant.Content.U7b.Presets
         /// <param name="lineIdx"> 面向地火源头方向，从左至右记为 1-6。</param>
         /// <param name="isTopLeft"> 是左上方的地火，反之为右上方。</param>
         /// <returns></returns>
-        private SimTimeline SingleExaFlare(Character boss, int lineIdx, bool isTopLeft)
+        private SimTimeline SingleExaFlare(SimActor boss, int lineIdx, bool isTopLeft)
         {
             var initPos = isTopLeft
                    ? new Vector3(100 - 35 + 5 * lineIdx, 100 - 5 * lineIdx, 0)
@@ -366,13 +367,13 @@ Color: 1, 1, 1, 0.5";
             }
         }
 
-        private static void LogCast(Character src, uint actionId, Vector3 pos, float heading)
+        private static void LogCast(SimActor src, uint actionId, Vector3 pos, float heading)
         {
             TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 14:{src.Id:X8}:casterName:{actionId:X2}:actionName:");
             TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 107:{src.Id:X8}:{actionId:X2}:{pos.X}:{pos.Y}:{pos.Z}:{heading}");
         }
 
-        private static void LogExecute(Character src, uint actionId)
+        private static void LogExecute(SimActor src, uint actionId)
         {
             TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 15:{src.Id:X8}:casterName:{actionId:X2}:actionName:");
             TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 108:{src.Id:X8}:{actionId:X2}:00000000:0::::");

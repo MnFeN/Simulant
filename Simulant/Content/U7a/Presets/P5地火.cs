@@ -154,7 +154,7 @@ namespace Simulant.Content.U7a.Presets
 
             timeline.At(0, () =>
             {
-                _host.LogVerbose($"地火线 {lineEObj.Id} @ {lineEObj.Native.Ptr.Hex()} 开始时间轴: Pos = <{pos.X:F2}, {pos.Y:F2}>, Heading = {heading:F2}");
+                _host.LogVerbose($"地火线 {lineEObj.Id} @ {lineEObj.Address.Hex()} 开始时间轴: Pos = <{pos.X:F2}, {pos.Y:F2}>, Heading = {heading:F2}");
                 lineEObj.PlayAnimation(0x10);
                 // 初始的矩形 Omen，技能实际没有其他效果。
                 DummyCast(pos, heading, 0x9D73, 10, 5); // 光

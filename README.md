@@ -86,3 +86,4 @@ Work in progress.
 ## 开发文档 · Development
 
 - [机制时间轴开发](docs/Timeline.md)：节点定义、子轴组合、取消与实体生命周期。
+- [实体与模拟角色](docs/Entities.md)：Native / Entity / SimActor 边界、创建与借用、移动控制。

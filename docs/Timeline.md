@@ -112,7 +112,17 @@ private SimTimeline BurstTimeline(Vector3 position)
 
 例如迟到的节点现在才创建一个需要显示 3 秒的假人，应在实际创建后保留 3 秒，因此内部回收采用 `ScheduleAfter(3, ...)`。把机制的下一步写成 `ScheduleAfter` 则会把本次迟到带到后续步骤；这种情况应定义子轴并 `Play`。
 
-经 `EntityManager` 管理的 `Character.Cast` 会使用所属会话的调度器安排读条完成，停止模拟时这些待执行动作也会取消。读条完成和假人回收按实际开始时间计时。
+`EntityManager.SpawnBNpc`、`SpawnPlayer` 返回 `SimActor`。它的 `Cast` 使用所属会话的调度器安排读条完成，停止模拟时这些待执行动作也会取消。读条完成和假人回收按实际开始时间计时。底层 `Character` 只提供即时操作，不保存调度器或模拟行为。
+
+`SimActor` 也支持移动，可直接放进时间轴：
+
+```csharp
+timeline.At(1, () => boss.MoveTo(new Vector2(100, 90), speed: 6));
+timeline.At(2, () => boss.MoveTo(new Vector2(110, 90), speed: 8)); // 从当前位置改目标
+timeline.At(3, () => boss.StopMoving());
+```
+
+移动使用实际经过时间推进，保持高度，可选择是否面向移动方向。整个会话只在有角色移动时排一个更新节点；到达、停止和回收都会移除该角色的移动记录。具体边界见[实体与模拟角色](Entities.md)。
 
 ## 同一时刻的顺序
 
@@ -150,9 +160,9 @@ timeline.At(3, () =>
 
 ## 实体归属与停止清理
 
-Boss、假人和临时场景对象应通过 `EntityManager.SpawnBNpc`、`SpawnPlayer`、`SpawnEObj` 创建。必须使用其他创建入口时，将返回对象交给 `EntityManager.Track(entity)`，以便会话统一回收。
+Boss、假人和临时场景对象通过 `EntityManager.SpawnBNpc`、`SpawnPlayer`、`SpawnEObj` 创建，由本会话负责回收。已有角色通过 `EntityManager.Attach(character)` 参与模拟：返回同一会话内的 `SimActor`，只借用角色，停止时解除关联。`Attach` 不会取得原生资源所有权。
 
-正常时间轴可以用 `EntityManager.Delete(entity)` 提前回收对象。`OnStop` 用于移除额外的辅助线等外部效果，不必重复回收已登记实体；基类会在 `finally` 中移除 PictoACT 中标记为 `Simulant` 的技能预兆，再调用 `EntityManager.Clear()`。延迟出现的技能预兆也由会话调度器安排，停止时会取消。停止、重开模拟和节点异常都使用同一套清理流程。队列自然执行完毕不会自动结束会话，仍需由停止操作完成会话清理。
+正常时间轴可以用 `EntityManager.Delete(actor)` 或 `Delete(eventObject)` 提前回收本会话生成的对象。借用角色通过 `Detach(actor)` 解除关联。`OnStop` 用于移除额外的辅助线等外部效果，不必重复回收已登记实体；基类会在 `finally` 中调用 `EntityManager.Clear()`，停止角色行为并移除各次读条自己的预兆标签，再回收自有实体。延迟出现的技能预兆也由会话调度器安排，停止时会取消。停止、重开模拟和节点异常都使用同一套清理流程。队列自然执行完毕不会自动结束会话，仍需由停止操作完成会话清理。
 
 现有封装没有 `EventObject` 的原生删除接口。对 EObj 的清理目前停止其绘制，槽位等待后续生成对象的包或切换区域时复用；这不等于销毁游戏中的对象。中途停止、立即重开和不同区域的 EObj 表现仍需在游戏内验证。
 

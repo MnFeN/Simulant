@@ -1,7 +1,5 @@
 ﻿using Simulant.Core;
 using Simulant.Core.Entity;
-using Simulant.ACT;
-using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
@@ -56,19 +54,8 @@ namespace Simulant.Simulation
             }
             finally
             {
-                try
-                {
-                    TriggernometryInterop.InvokeNamedCallback("PictoACT", "Action: Remove\nTag: Simulant");
-                }
-                catch (Exception ex)
-                {
-                    _host.LogError("清理模拟预兆失败：" + ex);
-                }
-                finally
-                {
-                    EntityManager.Clear();
-                    _host.LogSim("模拟已停止。");
-                }
+                EntityManager.Clear();
+                _host.LogSim("模拟已停止。");
             }
         }
 
@@ -106,15 +93,15 @@ namespace Simulant.Simulation
 
         #region Party / Roles
 
-        protected List<Character> Party => EntityManager.Party;
-        protected virtual Character MT => EntityManager.GetPartyMember(1);
-        protected virtual Character ST => EntityManager.GetPartyMember(2);
-        protected virtual Character H1 => EntityManager.GetPartyMember(3);
-        protected virtual Character H2 => EntityManager.GetPartyMember(4);
-        protected virtual Character D1 => EntityManager.GetPartyMember(5);
-        protected virtual Character D2 => EntityManager.GetPartyMember(6);
-        protected virtual Character D3 => EntityManager.GetPartyMember(7);
-        protected virtual Character D4 => EntityManager.GetPartyMember(8);
+        protected List<SimActor> Party => EntityManager.Party;
+        protected virtual SimActor MT => EntityManager.GetPartyMember(1);
+        protected virtual SimActor ST => EntityManager.GetPartyMember(2);
+        protected virtual SimActor H1 => EntityManager.GetPartyMember(3);
+        protected virtual SimActor H2 => EntityManager.GetPartyMember(4);
+        protected virtual SimActor D1 => EntityManager.GetPartyMember(5);
+        protected virtual SimActor D2 => EntityManager.GetPartyMember(6);
+        protected virtual SimActor D3 => EntityManager.GetPartyMember(7);
+        protected virtual SimActor D4 => EntityManager.GetPartyMember(8);
 
         protected enum JobRole
         {
@@ -216,11 +203,11 @@ namespace Simulant.Simulation
 
             foreach (var job in jobs)
             {
-                Character player;
+                SimActor player;
                 if (job.HasValue)
                     player = EntityManager.SpawnPlayer(job.Value);
                 else
-                    player = _host.EntityProvider.GetMyself();
+                    player = EntityManager.Attach(_host.EntityProvider.GetMyself());
 
                 Party.Add(player);
             }
@@ -228,14 +215,13 @@ namespace Simulant.Simulation
 
         #endregion Party / Roles
 
-        protected Character Dummy(Vector3 pos, float heading)
+        protected SimActor Dummy(Vector3 pos, float heading)
         {
             var dummy = EntityManager.SpawnBNpc(9020, 0, 100);
             dummy.Pos3D = pos;
             dummy.Heading = heading;
             // 不可见，但是可以绘制技能特效
-            // Native.SetReadyToDraw 就是在设置这个 flag
-            dummy.Native.TargetableStatus.Set(ObjectTargetableFlags.ReadyToDraw);
+            dummy.SetReadyToDraw();
             dummy.EnableDraw();
             return dummy;
         }
