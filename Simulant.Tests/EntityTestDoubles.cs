@@ -39,6 +39,9 @@ namespace Simulant.Core.Entity
         internal readonly List<uint> CastStarts = new List<uint>();
         internal readonly List<uint> FinalizedCasts = new List<uint>();
         internal readonly List<ushort> PlayedTimelines = new List<ushort>();
+        internal readonly List<ushort> PlayedBaseTimelines = new List<ushort>();
+        internal ushort BaseTimelineId { get; private set; }
+        private long _baseTimelineVersion;
         internal int BaseTimelineResetCount;
 
         internal Character(EntityRegistry registry, EntityIdentity identity, EntityObservation observation)
@@ -99,7 +102,37 @@ namespace Simulant.Core.Entity
             return true;
         }
 
-        public void ResetBaseTimeline() { BaseTimelineResetCount++; }
+        public void PlayBaseTimeline(ushort timelineId, bool interrupt = true)
+        {
+            if (!IsAlive) throw new InvalidOperationException("移动控制器播放了已失效实体的动画。");
+            if (timelineId == 0) return;
+            BaseTimelineId = timelineId;
+            _baseTimelineVersion++;
+            PlayedBaseTimelines.Add(timelineId);
+        }
+
+        public void ResetBaseTimeline()
+        {
+            if (!IsAlive) throw new InvalidOperationException("移动控制器重置了已失效实体的动画。");
+            BaseTimelineId = 0;
+            _baseTimelineVersion++;
+            BaseTimelineResetCount++;
+        }
+
+        internal long PlayOwnedBaseTimeline(ushort timelineId)
+        {
+            PlayBaseTimeline(timelineId);
+            return _baseTimelineVersion;
+        }
+
+        internal bool ResetOwnedBaseTimeline(ushort timelineId, long version)
+        {
+            if (!IsAlive) throw new InvalidOperationException("移动控制器清理了已失效实体的动画。");
+            if (BaseTimelineId != timelineId || _baseTimelineVersion != version) return false;
+            ResetBaseTimeline();
+            return true;
+        }
+
         public void PlayBlendTimeline(ushort timelineId) { PlayedTimelines.Add(timelineId); }
     }
 

@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace Simulant
 {
-    internal class Test
+    internal partial class Test
     {
         private readonly PluginHost _host;
         internal Test(PluginHost host)
@@ -27,9 +27,10 @@ namespace Simulant
             _host = host;
         }
 
-        internal async Task Run()
+        internal Task Run()
         {
-            await 招募信息Test();
+            ToggleEntityBehaviorTest();
+            return Task.CompletedTask;
         }
 
         public async Task 招募信息Test()

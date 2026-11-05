@@ -40,6 +40,7 @@ namespace Simulant.Core
         internal EntityProvider EntityProvider;
         internal EntitySpawner EntitySpawner;
         internal EntityRegistry EntityRegistry;
+        internal Test DebugTest { get; }
         private readonly object _debugGate = new object();
         private SimScheduler _debugScheduler;
         private SimEntityManager _debugEntities;
@@ -73,7 +74,11 @@ namespace Simulant.Core
             }
         }
 
-        internal void StopDebugEntities() => StopDebugEntities(null);
+        internal void StopDebugEntities()
+        {
+            try { DebugTest?.StopEntityBehaviorTest(); }
+            finally { StopDebugEntities(null); }
+        }
 
         private void StopDebugEntities(SimScheduler expectedScheduler)
         {
@@ -124,6 +129,7 @@ namespace Simulant.Core
             EntityProvider = new EntityProvider(EntityRegistry,
                 () => XivPluginInterop.plugin?.DataRepository.GetCurrentPlayerID() ?? 0);
             EntitySpawner = new EntitySpawner(EntityRegistry, EntityProvider, LogError);
+            DebugTest = new Test(this);
 
             Attach();
 

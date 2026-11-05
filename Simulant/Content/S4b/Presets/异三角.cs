@@ -25,12 +25,17 @@ namespace Simulant.Content.S4b.Presets
 
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
+            new ComboBoxOption<bool>(nameof(O8s_异三角Logic.VerifyEntranceMovement), "入场移动验证", false,
+                new Map<bool> { [false] = "关闭", [true] = "开启：移动到场中后施法" }),
         };
 
     }
 
     internal class O8s_异三角Logic : SimLogicBase
     {
+        [SimOption]
+        internal bool VerifyEntranceMovement { get; set; }
+
         public O8s_异三角Logic(PluginHost host, SimPresetBase preset) : base(host, preset)
         {
         }
@@ -46,7 +51,7 @@ namespace Simulant.Content.S4b.Presets
                 .ToList();
 
             var boss = EntityManager.SpawnBNpc(8528, 7131, 80);
-            boss.Pos3D = new Vector3(0, 0, 0);
+            boss.Pos3D = VerifyEntranceMovement ? new Vector3(0, 12, 0) : Vector3.Zero;
             boss.Heading = (float)Math.PI;
             boss.SetReadyToDraw();
             boss.EnableDraw();
@@ -58,7 +63,14 @@ namespace Simulant.Content.S4b.Presets
             mechanic.At(5.2, () => StartTriangles(2), "第二组异三角");
             mechanic.At(7.2, () => StartTriangles(3), "第三组异三角");
             mechanic.At(20, () => EntityManager.Delete(boss), "回收本体");
-            timeline.At(3, mechanic);
+            if (VerifyEntranceMovement)
+            {
+                timeline.At(0, () => boss.MoveTo(Vector2.Zero, speed: 6, animationId: 13,
+                    onArrived: () => Scheduler.ScheduleAfter(1, () => Play(mechanic), "入场后开始异三角")),
+                    "本体移动到场中");
+            }
+            else
+                timeline.At(3, mechanic);
         }
 
         private void StartTriangles(int count)

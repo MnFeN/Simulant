@@ -53,9 +53,14 @@ namespace Simulant.Simulation.Runtime
         public void Cast(uint actionId, float? omenDelay = 0) => _casts.Cast(this, actionId, omenDelay);
         public void Execute(uint actionId) => _casts.Execute(this, actionId);
 
-        /// <summary>在 ACT 的 X/Y 平面内移动，速度单位为世界单位每秒，并保持当前高度。</summary>
-        public void MoveTo(Vector2 target, float speed = 6, bool faceMovement = true)
-            => _movement.MoveTo(this, target, speed, faceMovement);
+        /// <summary>
+        /// 在 ACT 的 X/Y 平面内移动，速度单位为世界单位每秒，并保持当前高度。
+        /// 可指定模型适用的移动动画；正常到达后在调度线程执行同步回调，停止或换目标时取消旧回调。
+        /// 调度线程已经领取的回调可以执行完毕。
+        /// </summary>
+        public void MoveTo(Vector2 target, float speed = 6, bool faceMovement = true,
+            ushort? animationId = null, Action onArrived = null)
+            => _movement.MoveTo(this, target, speed, faceMovement, animationId, onArrived);
 
         public void StopMoving() => _movement.Stop(this);
         public void SetReadyToDraw() { if (IsActive) Entity.SetReadyToDraw(); }

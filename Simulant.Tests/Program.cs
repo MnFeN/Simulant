@@ -51,6 +51,15 @@ namespace Simulant.Tests
                 MovementTests.MovementDropsDetachedAndRecycledEntities,
                 MovementTests.MovementRejectsInvalidInputWithoutReplacingMove,
                 MovementTests.MovementAdvanceClampsLongFramesAndPreservesSpeed,
+                MovementTests.ArrivalResetsAnimationBeforeOneSchedulerCallback,
+                MovementTests.StopRetargetDeleteAndDetachDiscardOldArrival,
+                MovementTests.ArrivalCallbackCanChainSelfAndRetargetAnotherActor,
+                MovementTests.ArrivalCallbackCanCancelOtherCompletedArrivals,
+                MovementTests.ArrivalCallbackCanCancelItsScheduler,
+                MovementTests.ArrivalCallbackDoesNotHoldTheMovementLock,
+                MovementTests.InvalidArrivalCallbackPreservesTheCurrentMovement,
+                MovementTests.MovementCleanupPreservesExternalAnimationEvenWithTheSameId,
+                MovementTests.MovementYieldsAnimationToCastingWithoutRestartingIt,
                 MovementTests.ActorDetachStopsBehaviorEvenWhenCastCleanupFails,
                 CastTests.ReplacingCastCancelsOldCompletionAndDelayedOmen,
                 CastTests.CastCancelAndDisposeRemovePendingWork,
@@ -63,7 +72,9 @@ namespace Simulant.Tests
                 CastTests.CompletionReadFailureStillRemovesOmenAndState,
                 ManagerTests.ManagerClearsOwnedEntitiesAndOnlyDetachesBorrowedActors,
                 ManagerTests.ManagerRejectsCreationOutsideItsSessionAndSupportsRestart,
-                ManagerTests.ManagerCleanupContinuesAfterReleaseAndLoggingFailures
+                ManagerTests.ManagerCleanupContinuesAfterReleaseAndLoggingFailures,
+                ManagerTests.ManagerDeletingOneActorPreservesOtherMovementAndCast,
+                ManagerTests.ManagerStopAndRestartDiscardAllPreviousBehaviors
             };
 
             var failures = 0;

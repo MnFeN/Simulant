@@ -133,6 +133,7 @@ namespace Simulant.UI
             try
             {
                 StopCurrentSession();
+                _host.DebugTest.StopEntityBehaviorTest();
                 _host.ZoneService.ExitToInitialTerritory();
 
                 _host.FirewallService.Disable();
@@ -353,7 +354,7 @@ namespace Simulant.UI
         {
             try
             {
-                await new Test(_host).Run();
+                await _host.DebugTest.Run();
             }
             catch (Exception ex)
             {

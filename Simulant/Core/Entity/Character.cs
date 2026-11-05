@@ -9,6 +9,8 @@ namespace Simulant.Core.Entity
 {
     public sealed class Character : EntityBase
     {
+        private readonly object _baseTimelineGate = new object();
+        private long _baseTimelineVersion;
         internal new NativeCharacter Native => base.Native.Ptr.As<NativeCharacter>();
         internal Character(EntityRegistry registry, EntityIdentity identity, EntityObservation observation)
             : base(registry, identity, observation) { }
@@ -43,17 +45,51 @@ namespace Simulant.Core.Entity
         public void PlayBaseTimeline(ushort timelineId, bool interrupt = true)
         {
             if (timelineId == 0) return;
-            var native = Native;
-            native.SetMode(CharacterModes.AnimLock, 0);
-            native.Timeline.BaseOverride.Set(timelineId);
-            if (interrupt) native.Timeline.TimelineSequencer.PlayTimeline(timelineId);
+            lock (_baseTimelineGate)
+            {
+                var native = Native;
+                _baseTimelineVersion++;
+                native.SetMode(CharacterModes.AnimLock, 0);
+                native.Timeline.BaseOverride.Set(timelineId);
+                if (interrupt) native.Timeline.TimelineSequencer.PlayTimeline(timelineId);
+            }
         }
 
         public void ResetBaseTimeline()
         {
-            var native = Native;
-            native.Timeline.BaseOverride.Set(0);
-            native.SetMode(CharacterModes.Normal, 0);
+            lock (_baseTimelineGate)
+            {
+                var native = Native;
+                _baseTimelineVersion++;
+                native.Timeline.BaseOverride.Set(0);
+                native.SetMode(CharacterModes.Normal, 0);
+            }
+        }
+
+        /// <summary>返回本次动画的版本，供行为结束时确认基础动画仍属于自己。</summary>
+        internal long PlayOwnedBaseTimeline(ushort timelineId)
+        {
+            lock (_baseTimelineGate)
+            {
+                PlayBaseTimeline(timelineId);
+                return _baseTimelineVersion;
+            }
+        }
+
+        /// <summary>只释放本次设置的覆盖，并恢复仍匹配的动画锁定模式，不修改读条状态。</summary>
+        internal bool ResetOwnedBaseTimeline(ushort timelineId, long version)
+        {
+            lock (_baseTimelineGate)
+            {
+                var native = Native;
+                if (version != _baseTimelineVersion || native.Timeline.BaseOverride != timelineId)
+                    return false;
+                _baseTimelineVersion++;
+                native.Timeline.BaseOverride.Set(0);
+                if (native.Mode == CharacterModes.AnimLock && native.ModeParam == 0)
+                    native.SetMode(CharacterModes.Normal, 0);
+                return true;
+            }
         }
 
         public void SetCastInfo(uint actionId, float castTime, byte actionType = 1)
