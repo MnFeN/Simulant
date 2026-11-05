@@ -1,0 +1,26 @@
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <ProjectGuid>{305B4FD1-69FB-493E-AD85-B9D33BFB99A2}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Simulant.Tests</RootNamespace>
+    <AssemblyName>Simulant.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <Optimize Condition="'$(Configuration)' == 'Release'">true</Optimize>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Compile Include="Program.cs" />
+    <Compile Include="SessionTests.cs" />
+    <Compile Include="..\Simulant\Simulation\Runtime\SimSession.cs"><Link>Runtime\SimSession.cs</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Timeline\SimTimeline.cs"><Link>Timeline\SimTimeline.cs</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Timeline\SimScheduler.cs"><Link>Timeline\SimScheduler.cs</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Timeline\SimScheduledAction.cs"><Link>Timeline\SimScheduledAction.cs</Link></Compile>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
