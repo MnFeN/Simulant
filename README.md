@@ -71,7 +71,7 @@ Work in progress.
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/cc9d2ebe-1685-4b51-8d08-a4c237a5d865" />
 
-- 点击“加载区域”，等待地图加载结束后在右侧预设界面点击“开始模拟”，等待每次模拟完全结束后方可点击“停止模拟”（尚未实现打断式结束）。
+- 点击“加载区域”，等待地图加载结束后在右侧预设界面点击“开始模拟”。可在模拟中途点击“停止模拟”；停止会取消后续时间轴节点，等待当前动作返回后清理模拟实体。
 
 - 结束后，取消勾选“启用防火墙”，即可返回旅馆中的原位置。
 
@@ -82,3 +82,7 @@ Work in progress.
   [更纱黑体](https://github.com/be5invis/Sarasa-Gothic/releases)
 
   在 Single Family TTF Package 中下载 Mono 的压缩包并安装字体。
+
+## 开发文档 · Development
+
+- [机制时间轴开发](docs/Timeline.md)：节点定义、子轴组合、取消与实体生命周期。

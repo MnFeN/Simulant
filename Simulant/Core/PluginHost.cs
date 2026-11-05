@@ -8,7 +8,6 @@ using Simulant.UI;
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -154,7 +153,28 @@ namespace Simulant.Core
 
         public void Dispose()
         {
+            if (Disposed)
+                return;
+
             Disposed = true;
+            try
+            {
+                _ui?.StopCurrentSession();
+            }
+            catch (Exception ex)
+            {
+                LogError("卸载时停止模拟失败：" + ex.Message);
+            }
+
+            try
+            {
+                EntitySpawner?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                LogError("卸载时释放实体调度器失败：" + ex.Message);
+            }
+
             try
             {
                 if (FirewallService != null && FirewallService.IsEnabled)
@@ -172,6 +192,7 @@ namespace Simulant.Core
                 XivPluginInterop.plugin.DataSubscription.ProcessChanged -= OnFFXIVProcessChanged;
             }
 
+            _ui?.Dispose();
             _statusLabel.Text = "插件已卸载";
         }
 
@@ -198,23 +219,37 @@ namespace Simulant.Core
                 if (XivPluginInterop.plugin == null)
                     return;
 
-                Task.Run(() =>
+                async Task WaitForPluginAsync()
                 {
-                    var isFFXIVPluginStarted = false;
-
-                    while (!isFFXIVPluginStarted)
+                    try
                     {
-                        if (ffxivPluginData.lblPluginStatus.Text.ToUpper().Contains("STARTED"))
+                        while (!Disposed)
                         {
-                            XivPluginInterop.plugin.DataSubscription.ProcessChanged += OnFFXIVProcessChanged;
-                            OnFFXIVProcessChanged(XivPluginInterop.plugin.DataRepository.GetCurrentFFXIVProcess());
-                            isFFXIVPluginStarted = true;
-                            return;
-                        }
+                            if (ffxivPluginData.lblPluginStatus.IsDisposed)
+                                return;
 
-                        Thread.Sleep(3000);
+                            if (ffxivPluginData.lblPluginStatus.Text.IndexOf("STARTED", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                var plugin = XivPluginInterop.plugin;
+                                if (plugin == null)
+                                    return;
+
+                                plugin.DataSubscription.ProcessChanged += OnFFXIVProcessChanged;
+                                OnFFXIVProcessChanged(plugin.DataRepository.GetCurrentFFXIVProcess());
+                                return;
+                            }
+
+                            await Task.Delay(3000);
+                        }
                     }
-                });
+                    catch (Exception ex)
+                    {
+                        if (!Disposed)
+                            LogError("等待 FFXIV 插件启动失败：" + ex.Message);
+                    }
+                }
+
+                _ = WaitForPluginAsync();
             }
         }
 

@@ -20,7 +20,7 @@ namespace Simulant.Core
         {
             foreach (var pair in _log)
             {
-                lock (_log)
+                lock (pair.Value)
                 {
                     pair.Value.Clear();
                 }
@@ -105,7 +105,7 @@ namespace Simulant.Core
         public string Message { get; set; }
         public string TypeDescription => _typeToDesc.TryGetValue(Type, out var desc) ? desc : Type.ToString();
 
-        private Dictionary<LogType, string> _typeToDesc = new Dictionary<LogType, string>
+        private static readonly Dictionary<LogType, string> _typeToDesc = new Dictionary<LogType, string>
         {
             { LogType.Error,    "错误" },
             { LogType.Warning,  "警告" },

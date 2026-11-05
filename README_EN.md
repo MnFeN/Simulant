@@ -64,7 +64,7 @@ Work in progress. Collaboration is welcome.
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/cc9d2ebe-1685-4b51-8d08-a4c237a5d865" />
 
-- Click "Load Area". After the map finishes loading, click "Start Simulation" in the preset panel on the right. Wait until each simulation has fully finished before clicking "Stop Simulation" (interrupt-style termination is not yet implemented).
+- Click "Load Area". After the map finishes loading, click "Start Simulation" in the preset panel on the right. You can click "Stop Simulation" during a simulation; it cancels pending timeline nodes, waits for the current action to return, and cleans up simulation entities.
 
 - When you are done, uncheck "Enable Firewall" to return to your original location in the inn.
 
@@ -75,3 +75,7 @@ Work in progress. Collaboration is welcome.
   [Sarasa Gothic](https://github.com/be5invis/Sarasa-Gothic/releases)
 
   Download the Mono archive from the Single Family TTF Package and install the font.
+
+## Development
+
+- [Mechanic timeline development (Chinese)](docs/Timeline.md): node definitions, timeline composition, cancellation, and entity lifetime.

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Simulant.UI
@@ -12,10 +13,19 @@ namespace Simulant.UI
     public partial class LogView : UserControl
     {
         private PluginHost _host;
+        private readonly System.Windows.Forms.Timer _refreshTimer;
+        private int _refreshRequested;
+        private string _regexPattern;
+        private Regex _regex;
+        private bool _invalidRegex;
 
         public LogView()
         {
             InitializeComponent();
+            // The component container stops and disposes the timer with this control.
+            _refreshTimer = new System.Windows.Forms.Timer(components) { Interval = 100 };
+            _refreshTimer.Tick += (sender, e) => RefreshPendingLogs();
+            _refreshTimer.Start();
         }
 
         internal void Bind(PluginHost host)
@@ -35,13 +45,15 @@ namespace Simulant.UI
 
         internal void RefreshLogView()
         {
-            if (InvokeRequired)
-            {
-                BeginInvoke(new Action(RefreshLogView));
-                return;
-            }
+            // Logging can originate on the simulation thread. Coalesce all requests
+            // without posting one Windows message and rebuilding the list per line.
+            Interlocked.Exchange(ref _refreshRequested, 1);
+        }
 
-            if (_host == null)
+        private void RefreshPendingLogs()
+        {
+            if (IsDisposed || Disposing || _host == null ||
+                Interlocked.Exchange(ref _refreshRequested, 0) == 0)
                 return;
 
             _logSnapshot = _host.PluginLog.Snapshot();
@@ -70,30 +82,30 @@ namespace Simulant.UI
         private void ApplyLogFilter()
         {
             var pattern = txtLogRegex.Text ?? string.Empty;
-            Regex regex = null;
-
-            if (pattern.Length > 0)
+            if (!string.Equals(pattern, _regexPattern, StringComparison.Ordinal))
             {
+                _regexPattern = pattern;
+                _regex = null;
+                _invalidRegex = false;
                 try
                 {
-                    regex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                    txtLogRegex.BackColor = SystemColors.Window;
+                    if (pattern.Length > 0)
+                        _regex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
                 }
                 catch (ArgumentException)
                 {
-                    txtLogRegex.BackColor = Color.MistyRose;
-                    return;
+                    _invalidRegex = true;
                 }
             }
-            else
-            {
-                txtLogRegex.BackColor = SystemColors.Window;
-            }
+
+            txtLogRegex.BackColor = _invalidRegex ? Color.MistyRose : SystemColors.Window;
+            if (_invalidRegex)
+                return;
 
             _virtualData = _logSnapshot
                 .Where(pair => IsLogTypeEnabled(pair.Key))
                 .SelectMany(pair => pair.Value)
-                .Where(log => regex == null || regex.IsMatch(log.Message ?? string.Empty))
+                .Where(log => _regex == null || _regex.IsMatch(log.Message ?? string.Empty))
                 .OrderBy(log => log.Timestamp)
                 .ToList();
 

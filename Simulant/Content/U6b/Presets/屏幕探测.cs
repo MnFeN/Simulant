@@ -3,6 +3,7 @@ using Simulant.Core;
 using Simulant.Core.Environment;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -31,7 +32,7 @@ namespace Simulant.Content.U6b.Presets
         {
         }
 
-        protected override void OnStart()
+        protected override void BuildTimeline(SimTimeline timeline)
         {
             throw new NotImplementedException();
         }

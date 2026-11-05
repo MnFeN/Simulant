@@ -6,10 +6,10 @@ using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Game.FFCS.Client.Graphics.Scene;
 using Simulant.Game.FFCS.Client.Network;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
 using NativeCharacter = Simulant.Game.FFCS.Client.Game.Character.Character;
 
@@ -18,6 +18,31 @@ namespace Simulant.Core.Entity
     public class Character : EntityBase
     {
         private readonly PluginHost _host;
+        private readonly object _castGate = new object();
+        private SimScheduledAction _castCompletion;
+        private SimScheduledAction _pendingOmen;
+        private long _castGeneration;
+        private bool _deleted;
+        internal SimScheduler Scheduler { get; set; }
+        private SimScheduler ActionScheduler => Scheduler ?? _host.EntitySpawner.StandaloneScheduler;
+
+        internal void Invalidate()
+        {
+            lock (_castGate)
+            {
+                _deleted = true;
+                CancelPendingCast();
+            }
+        }
+
+        private void CancelPendingCast()
+        {
+            _castGeneration++;
+            _castCompletion?.Cancel();
+            _pendingOmen?.Cancel();
+            _castCompletion = null;
+            _pendingOmen = null;
+        }
 
         protected override GameObject NativeGameObject => Native.Ptr.As<GameObject>();
         public new NativeCharacter Native { get; }
@@ -123,23 +148,28 @@ namespace Simulant.Core.Entity
 
         public void Cast(uint actionId, float? omenDelay = 0)
         {
-            var action = ResolveActionData(actionId);
-            if (action == null) return;
+            lock (_castGate)
+            {
+                if (_deleted) return;
+                var action = ResolveActionData(actionId);
+                if (action == null) return;
+                CancelPendingCast();
 
-            var castTime = action.CastTime;
+                var castTime = action.CastTime;
 
-            // 用 CastInfo 控制读条开始，可以自动创建特效、显示咏唱进度条
-            SetCastInfo(actionId, castTime);
+                // 用 CastInfo 控制读条开始，可以自动创建特效、显示咏唱进度条
+                SetCastInfo(actionId, castTime);
 
-            // 如果技能表里有 omen：
-            var omenId = action.OmenId;
-            if (omenId > 0 && omenDelay.HasValue)
-                PlayOmen(action, omenDelay.Value);
+                // 如果技能表里有 omen：
+                var omenId = action.OmenId;
+                if (omenId > 0 && omenDelay.HasValue)
+                    PlayOmen(action, omenDelay.Value);
 
-            // 读条结束时播放对应 timeline
-            QueueExecute(action, castTime);
+                // 读条结束时播放对应 timeline
+                QueueExecute(action, castTime);
 
-            _host.LogVerbose($"Casting action: {actionId} ({castTime:0.0} s)");
+                _host.LogVerbose($"Casting action: {actionId} ({castTime:0.0} s)");
+            }
         }
 
         public void SetCastInfo(uint actionId, float castTime, byte actionType = 1)
@@ -179,6 +209,18 @@ namespace Simulant.Core.Entity
 
         public void PlayOmen(ActionRow action, float omenDelay)
         {
+            if (action == null) throw new ArgumentNullException(nameof(action));
+            if (float.IsNaN(omenDelay) || float.IsInfinity(omenDelay))
+                throw new ArgumentOutOfRangeException(nameof(omenDelay));
+            lock (_castGate)
+            {
+                if (_deleted) return;
+                PlayOmenCore(action, omenDelay);
+            }
+        }
+
+        private void PlayOmenCore(ActionRow action, float omenDelay)
+        {
             omenDelay = Math.Max(0, omenDelay);
             var sustain = action.CastTime - omenDelay - 0.3; // 实际读条比表里短 0.3 s
             if (sustain < 0) return;
@@ -215,20 +257,37 @@ namespace Simulant.Core.Entity
             var sb = new System.Text.StringBuilder();
             sb.AppendLine($"Tag: Simulant");
             sb.AppendLine($"Omen: {action.Omen.Name}");
-            sb.AppendLine($"Delay: {omenDelay}");
             sb.AppendLine($"t: {sustain}"); 
             sb.AppendLine($"O: {center.X}, {center.Y}, {center.Z}");
             sb.AppendLine($"θ: {heading}");
             sb.AppendLine($"Scale: {x}, {y}, 1");
-            TriggernometryInterop.InvokeNamedCallback("PictoACT", sb.ToString());
+            var command = sb.ToString();
+            _pendingOmen?.Cancel();
+            if (omenDelay <= 0)
+            {
+                TriggernometryInterop.InvokeNamedCallback("PictoACT", command);
+                return;
+            }
+            var generation = _castGeneration;
+            _pendingOmen = ActionScheduler.ScheduleAfter(omenDelay, () =>
+            {
+                lock (_castGate)
+                {
+                    if (!_deleted && generation == _castGeneration)
+                        TriggernometryInterop.InvokeNamedCallback("PictoACT", command);
+                }
+            }, $"技能 {action.Index} 预兆");
         }
 
         public void Execute(uint actionId)
         {
-            var action = ResolveActionData(actionId);
-            if (action == null) return;
-
-            Execute(action);
+            lock (_castGate)
+            {
+                if (_deleted) return;
+                var action = ResolveActionData(actionId);
+                if (action == null) return;
+                Execute(action);
+            }
         }
 
         private void Execute(ActionRow action)
@@ -246,14 +305,17 @@ namespace Simulant.Core.Entity
 
         private void QueueExecute(ActionRow action, float delay)
         {
-            Task.Run(async () =>
+            var generation = _castGeneration;
+            _castCompletion = ActionScheduler.ScheduleAfter(Math.Max(0, delay), () =>
             {
-                if (delay > 0)
-                    await Task.Delay((int)(delay * 1000));
-
-                Execute(action);
-                FinalizeCast();
-            });
+                lock (_castGate)
+                {
+                    if (_deleted || generation != _castGeneration) return;
+                    Execute(action);
+                    FinalizeCast();
+                    _castCompletion = null;
+                }
+            }, $"技能 {action.Index} 读条完成");
         }
 
         public void ActorMove(Vector3 pos, float heading, byte speedParam = 20)

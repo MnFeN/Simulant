@@ -3,6 +3,7 @@ using Simulant.Game.FFCS.Client.Game.Character;
 using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Game.FFCS.Client.Network;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -10,7 +11,7 @@ using System.Numerics;
 
 namespace Simulant.Core.Entity
 {
-    public sealed class EntitySpawner
+    public sealed class EntitySpawner : IDisposable
     {
         private readonly PluginHost _host;
 
@@ -19,8 +20,46 @@ namespace Simulant.Core.Entity
             _host = host ?? throw new ArgumentNullException(nameof(host));
         }
 
-        private readonly ConcurrentDictionary<IntPtr, ushort> _localEntityIndexes =
-            new ConcurrentDictionary<IntPtr, ushort>();
+        private readonly ConcurrentDictionary<IntPtr, Tuple<Character, ushort>> _localEntityIndexes =
+            new ConcurrentDictionary<IntPtr, Tuple<Character, ushort>>();
+        private readonly object _schedulerGate = new object();
+        private SimScheduler _standaloneScheduler;
+        private bool _disposed;
+
+        // 调试工具等非会话调用也共用一个 worker，绝不为每次读条创建线程或 Task。
+        internal SimScheduler StandaloneScheduler
+        {
+            get
+            {
+                SimScheduler retired = null;
+                SimScheduler scheduler;
+                lock (_schedulerGate)
+                {
+                    if (_disposed) throw new ObjectDisposedException(nameof(EntitySpawner));
+                    if (_standaloneScheduler == null || !_standaloneScheduler.IsRunning)
+                    {
+                        retired = _standaloneScheduler;
+                        _standaloneScheduler = new SimScheduler((ex, node) =>
+                            _host.LogError($"实体延迟动作「{node}」失败：{ex}"));
+                        _standaloneScheduler.Start();
+                    }
+                    scheduler = _standaloneScheduler;
+                }
+                retired?.Dispose();
+                return scheduler;
+            }
+        }
+
+        public void Dispose()
+        {
+            SimScheduler scheduler;
+            lock (_schedulerGate)
+            {
+                _disposed = true;
+                scheduler = _standaloneScheduler;
+            }
+            scheduler?.Dispose();
+        }
 
         public Character CreateBattleCharacter()
         {
@@ -33,7 +72,8 @@ namespace Simulant.Core.Entity
                 throw new InvalidOperationException($"生成实体失败：返回的实体索引 #{createdIndex} 对应空指针。");
 
             var character = new Character(native, _host);
-            _localEntityIndexes[character.Address] = (ushort)createdIndex;
+            lock (_localEntityIndexes)
+                _localEntityIndexes[character.Address] = Tuple.Create(character, (ushort)createdIndex);
 
             return character;
         }
@@ -55,27 +95,46 @@ namespace Simulant.Core.Entity
                 ?? throw new ArgumentException("未找到自身实体", nameof(source));
 
             var player = CreateBattleCharacter();
-
-            player.Native.CharacterSetup.CopyFromCharacter(source.Native, copyFlags);
-            player.Native.ObjectKind.Set(ObjectKind.Pc);
-            player.Id = GetNextPlayerId();
-            player.Job = job;
-
-            return player;
+            try
+            {
+                player.Native.CharacterSetup.CopyFromCharacter(source.Native, copyFlags);
+                player.Native.ObjectKind.Set(ObjectKind.Pc);
+                player.Id = GetNextPlayerId();
+                player.Job = job;
+                return player;
+            }
+            catch
+            {
+                DeleteAfterFailedSetup(player);
+                throw;
+            }
         }
 
         public Character SpawnBNpc(uint bNpcBaseId, uint bNpcNameId, byte level)
         {
             var bnpc = CreateBattleCharacter();
+            try
+            {
+                bnpc.Native.CharacterSetup.SetupBNpc(bNpcBaseId, bNpcNameId);
+                bnpc.Native.ObjectKind.Set(ObjectKind.BattleNpc);
+                bnpc.Id = GetNextNonPlayerId();
+                bnpc.Level = level;
+                bnpc.Native.Battalion.Set(4);
+                bnpc.Native.IsHostile.Set(true);
+                bnpc.Native.InCombat.Set(true);
+                return bnpc;
+            }
+            catch
+            {
+                DeleteAfterFailedSetup(bnpc);
+                throw;
+            }
+        }
 
-            bnpc.Native.CharacterSetup.SetupBNpc(bNpcBaseId, bNpcNameId);
-            bnpc.Native.ObjectKind.Set(ObjectKind.BattleNpc);
-            bnpc.Id = GetNextNonPlayerId();
-            bnpc.Level = level;
-            bnpc.Native.Battalion.Set(4);
-            bnpc.Native.IsHostile.Set(true);
-            bnpc.Native.InCombat.Set(true);
-            return bnpc;
+        private void DeleteAfterFailedSetup(Character character)
+        {
+            try { Delete(character); }
+            catch (Exception ex) { _host.LogError("实体初始化失败后回收失败：" + ex); }
         }
 
         private static readonly object _idLock = new object();
@@ -108,10 +167,16 @@ namespace Simulant.Core.Entity
             if (entity.Native.IsNull())
                 throw new ArgumentException("实体的原生对象为空", nameof(entity));
 
-            if (!_localEntityIndexes.TryRemove(entity.Address, out ushort createdIndex))
-                return;
+            lock (_localEntityIndexes)
+            {
+                if (!_localEntityIndexes.TryGetValue(entity.Address, out var entry) ||
+                    !ReferenceEquals(entry.Item1, entity))
+                    return;
 
-            ClientObjectManager.Instance.DeleteObjectByIndex(createdIndex, 0);
+                entry.Item1.Invalidate();
+                ClientObjectManager.Instance.DeleteObjectByIndex(entry.Item2, 0);
+                _localEntityIndexes.TryRemove(entity.Address, out _);
+            }
         }
 
         public EventObject SpawnEObj(int index, uint baseId, Vector3 pos, float heading, ushort animation = 0)

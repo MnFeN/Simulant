@@ -5,11 +5,11 @@ using Simulant.Core.Environment;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Threading.Tasks;
 using static System.Math;
 
 namespace Simulant.Content.U7b.Presets
@@ -99,16 +99,6 @@ namespace Simulant.Content.U7b.Presets
 
         private bool _isPerfect;
 
-        protected override void OnStart()
-        {
-            _isPerfect = true;
-            Timeline().ContinueWith(t =>
-            {
-                if (t.Exception != null)
-                    _host.LogError("模拟错误：" + t.Exception.GetBaseException());
-            }, TaskContinuationOptions.OnlyOnFaulted);
-        }
-
         protected override void OnStop()
         {
             RemoveAuxiliaryLines();
@@ -116,12 +106,13 @@ namespace Simulant.Content.U7b.Presets
 
         const float ExaFlareGroupDelay = 2.5f;
 
-        private async Task Timeline()
+        protected override void BuildTimeline(SimTimeline timeline)
         {
+            _isPerfect = true;
             var leftOrder = ResolveExaFlareOrder(LeftExaFlareOrder);
             var rightOrder = ResolveExaFlareOrder(RightExaFlareOrder);
 
-            var boss = _host.EntitySpawner.SpawnBNpc(19511, 7131, 100); // Kefka
+            var boss = EntityManager.SpawnBNpc(19511, 7131, 100); // Kefka
             boss.Pos3D = new Vector3(100, 100, 0);
             boss.Heading = (float)PI;
             boss.SetReadyToDraw();
@@ -143,41 +134,27 @@ namespace Simulant.Content.U7b.Presets
 
             LogExecute(boss, 0xC654);
 
-            await Task.Delay(3000);
-            using (var timer = new SimTimer(_host))
+            var mechanic = new SimTimeline();
+            mechanic.At(0, () =>
             {
                 boss.Cast(0xBB3B); // 混沌末世 本体读条
                 LogCast(boss, 0xBB3B, boss.Pos3D, boss.Heading);
+            }, "混沌末世读条");
 
-                FireAndForget(SingleExaFlare(boss, leftOrder[0], true));
-                FireAndForget(SingleExaFlare(boss, leftOrder[1], true));
+            // 左右各三组，每组两条，左右交替间隔 2.5 秒。
+            for (int group = 0; group < 3; group++)
+            {
+                var leftTime = ExaFlareGroupDelay * group * 2;
+                var rightTime = leftTime + ExaFlareGroupDelay;
+                for (int line = group * 2; line < group * 2 + 2; line++)
+                {
+                    mechanic.At(leftTime, SingleExaFlare(boss, leftOrder[line], true));
+                    mechanic.At(rightTime, SingleExaFlare(boss, rightOrder[line], false));
+                }
+            }
 
-                await timer.WaitUntil(ExaFlareGroupDelay * 1);
-
-                FireAndForget(SingleExaFlare(boss, rightOrder[0], false));
-                FireAndForget(SingleExaFlare(boss, rightOrder[1], false));
-
-                await timer.WaitUntil(ExaFlareGroupDelay * 2);
-
-                FireAndForget(SingleExaFlare(boss, leftOrder[2], true));
-                FireAndForget(SingleExaFlare(boss, leftOrder[3], true));
-
-                await timer.WaitUntil(ExaFlareGroupDelay * 3);
-
-                FireAndForget(SingleExaFlare(boss, rightOrder[2], false));
-                FireAndForget(SingleExaFlare(boss, rightOrder[3], false));
-
-                await timer.WaitUntil(ExaFlareGroupDelay * 4);
-
-                FireAndForget(SingleExaFlare(boss, leftOrder[4], true));
-                FireAndForget(SingleExaFlare(boss, leftOrder[5], true));
-
-                await timer.WaitUntil(ExaFlareGroupDelay * 5);
-
-                FireAndForget(SingleExaFlare(boss, rightOrder[4], false));
-                FireAndForget(SingleExaFlare(boss, rightOrder[5], false));
-
-                await timer.WaitUntil(16.2);
+            mechanic.At(16.2, () =>
+            {
                 boss.Cast(0xBB3E); // 混沌末世 本体读条
                 LogCast(boss, 0xBB3E, boss.Pos3D, boss.Heading);
 
@@ -185,8 +162,10 @@ namespace Simulant.Content.U7b.Presets
                 {
                     SpreadPartyMembers(me, 5.1f);
                 }
+            }, "分散读条与队友走位");
 
-                await timer.WaitUntil(22.0);
+            mechanic.At(22, () =>
+            {
                 var playerPositions = _host.EntityProvider.GetCharacters()
                     .Where(e => e.Native.ObjectKind == ObjectKind.Pc)
                     .Select(e => (e.Pos3D, e.Address == me.Address))
@@ -196,18 +175,23 @@ namespace Simulant.Content.U7b.Presets
                 {
                     ExecuteAndValidateSpread(pos, isSelf);
                 }
+            }, "分散判定");
 
-                await timer.WaitUntil(23.5);
+            mechanic.At(23.5, () =>
+            {
                 if (_isPerfect)
                 {
                     TriggernometryInterop.InvokeNamedCallback("LockOn",
                         $"{_host.EntityProvider.GetMyself().Address}, m0489trg_a0c");
                 }
+            }, "无伤完成反馈");
 
-                await timer.WaitUntil(27);
-                _host.EntitySpawner.Delete(boss);
+            mechanic.At(27, () =>
+            {
+                EntityManager.Delete(boss);
                 EntityManager.Clear();
-            }
+            }, "回收模拟实体");
+            timeline.At(3, mechanic);
         }
 
         private List<int> ResolveExaFlareOrder(ExaFlareOrder order)
@@ -234,7 +218,7 @@ namespace Simulant.Content.U7b.Presets
         /// <param name="lineIdx"> 面向地火源头方向，从左至右记为 1-6。</param>
         /// <param name="isTopLeft"> 是左上方的地火，反之为右上方。</param>
         /// <returns></returns>
-        private async Task SingleExaFlare(Character boss, int lineIdx, bool isTopLeft)
+        private SimTimeline SingleExaFlare(Character boss, int lineIdx, bool isTopLeft)
         {
             var initPos = isTopLeft
                    ? new Vector3(100 - 35 + 5 * lineIdx, 100 - 5 * lineIdx, 0)
@@ -246,27 +230,22 @@ namespace Simulant.Content.U7b.Presets
                 ? new Vector3(5, 5, 0)
                 : new Vector3(-5, 5, 0);
 
-            using (var timer = new SimTimer(_host))
+            var timeline = new SimTimeline();
+            timeline.At(0, () =>
             {
-                // 后六次判定（不含初始，以 108 日志计）相对于初始预兆的线性拟合结果为：4.582, 5.095, 5.608, 6.121, 6.634, 7.147
-                // 即第二次判定延迟 4.582 s，间隔 0.513 s
-                var t0 = 4.582f;
-                var dt = 0.513f;
-
-                FireAndForget(DummyCast(initPos, heading, 0xBB3C, 6f));
+                DummyCast(initPos, heading, 0xBB3C, 6f);
                 LogCast(boss, 0xBB3C, initPos, heading);
-
-                for (int i = 0; i < 6; i++)
-                {
-                    await timer.WaitUntil(t0 + dt * i);
-                    ExecuteAndValidateExaFlare(initPos + dPos * (i + 1), heading);
-                }
-            }
+            }, "地火初始预兆");
+            // 后六次判定相对初始预兆为 4.582、5.095、5.608、6.121、6.634、7.147 秒。
+            timeline.Repeat(4.582, 0.513, 6,
+                i => ExecuteAndValidateExaFlare(initPos + dPos * (i + 1), heading),
+                "地火前进判定");
+            return timeline;
         }
 
         private void ExecuteAndValidateExaFlare(Vector3 pos, float heading)
         {
-            FireAndForget(DummyExecute(pos, heading, 0xBB3D, 3f));
+            DummyExecute(pos, heading, 0xBB3D, 3f);
             var player = _host.EntityProvider.GetMyself();
             if (Vector2.Distance(new Vector2(pos.X, pos.Y), player.Pos) <= 6f)
             {
@@ -277,7 +256,7 @@ namespace Simulant.Content.U7b.Presets
 
         private void ExecuteAndValidateSpread(Vector3 pos, bool isSelf)
         {
-            FireAndForget(DummyExecute(pos, 0f, 0xBB3F, 3f));
+            DummyExecute(pos, 0f, 0xBB3F, 3f);
             if (isSelf) return;
 
             var player = _host.EntityProvider.GetMyself();

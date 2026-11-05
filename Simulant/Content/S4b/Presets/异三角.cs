@@ -4,11 +4,11 @@ using Simulant.Core.Environment;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace Simulant.Content.S4b.Presets
 {
@@ -35,83 +35,54 @@ namespace Simulant.Content.S4b.Presets
         {
         }
 
-        protected override void OnStart()
-        {
-            Timeline().ContinueWith(t =>
-            {
-                if (t.Exception != null)
-                    _host.LogError("模拟错误：" + t.Exception.GetBaseException());
-            }, TaskContinuationOptions.OnlyOnFaulted);
-        }
-
         protected override void OnStop()
         {
         }
 
-        private async Task Timeline()
+        protected override void BuildTimeline(SimTimeline timeline)
         {
             _remainingTriangles = _candidateTriangles
                 .Select((triangle, i) => (triangle, (byte)(10 + i)))
                 .ToList();
 
-            var boss = _host.EntitySpawner.SpawnBNpc(8528, 7131, 80);
+            var boss = EntityManager.SpawnBNpc(8528, 7131, 80);
             boss.Pos3D = new Vector3(0, 0, 0);
             boss.Heading = (float)Math.PI;
             boss.SetReadyToDraw();
             boss.EnableDraw();
 
-            await Task.Delay(3000);
-
-            // 时间轴开始    
-            var timer = new SimTimer(_host);
-            boss.Cast(0x290D); // 异三角 本体读条
-
-            await timer.WaitUntil(3.2);
-            FireAndForgetMultipleTriangles(2);
-
-            await timer.WaitUntil(5.2);
-            FireAndForgetMultipleTriangles(2);
-
-            await timer.WaitUntil(7.2);
-            FireAndForgetMultipleTriangles(3);
-
-            await timer.WaitUntil(20);
-            _host.EntitySpawner.Delete(boss);
-            timer.Dispose();
+            // 准备 3 秒后，以本体读条为机制时间轴的零点。
+            var mechanic = new SimTimeline();
+            mechanic.At(0, () => boss.Cast(0x290D), "异三角读条");
+            mechanic.At(3.2, () => StartTriangles(2), "第一组异三角");
+            mechanic.At(5.2, () => StartTriangles(2), "第二组异三角");
+            mechanic.At(7.2, () => StartTriangles(3), "第三组异三角");
+            mechanic.At(20, () => EntityManager.Delete(boss), "回收本体");
+            timeline.At(3, mechanic);
         }
 
-        private void FireAndForgetMultipleTriangles(int count)
+        private void StartTriangles(int count)
         {
             for (int i = 0; i < count; i++)
             {
-                FireAndForget(SingleTriangleTimeline());
+                Play(SingleTriangleTimeline());
             }
         }
         
-        private async Task SingleTriangleTimeline()
+        private SimTimeline SingleTriangleTimeline()
         {
-            var timer = new SimTimer(_host);
-
             (Triangle triangle, byte index) = GetRandomTriangleFromList();
-            var eobj = triangle.CreateEObj(_host, index);
-            
-            await timer.WaitUntil(1.1);
-            eobj.PlayAnimation(0x20);
-
-            await timer.WaitUntil(2.6);
-            eobj.PlayAnimation(0x80);
-
-            await timer.WaitUntil(9.6);
-            eobj.PlayAnimation(0x8);
-
-            await timer.WaitUntil(9.7);
-            var abilityPositions = triangle.ResolveAbilityPos();
-            foreach (var pos in abilityPositions)
+            var eobj = EntityManager.Track(triangle.CreateEObj(_host, index));
+            var timeline = new SimTimeline();
+            timeline.At(1.1, () => eobj.PlayAnimation(0x20), "异三角出现");
+            timeline.At(2.6, () => eobj.PlayAnimation(0x80), "异三角旋转");
+            timeline.At(9.6, () => eobj.PlayAnimation(0x8), "异三角消失");
+            timeline.At(9.7, () =>
             {
-                FireAndForget(DummyExecute(pos, 0f, 0x290E, 3f)); // 实际爆炸的圆形 AoE
-            }
-
-            timer.Dispose();
+                foreach (var pos in triangle.ResolveAbilityPos())
+                    DummyExecute(pos, 0f, 0x290E, 3f); // 实际爆炸的圆形 AoE
+            }, "异三角爆炸");
+            return timeline;
         }
 
         private List<Triangle> _candidateTriangles = new List<Triangle>

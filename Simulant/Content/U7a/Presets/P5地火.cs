@@ -3,10 +3,10 @@ using Simulant.Core.Environment;
 using Simulant.Game;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Threading.Tasks;
 using static System.Math;
 
 namespace Simulant.Content.U7a.Presets
@@ -105,110 +105,84 @@ namespace Simulant.Content.U7a.Presets
         {
         }
 
-        protected override void OnStart()
-        {
-            Timeline().ContinueWith(t =>
-            {
-                if (t.Exception != null)
-                    _host.LogError("模拟错误：" + t.Exception.GetBaseException());
-            }, TaskContinuationOptions.OnlyOnFaulted);
-        }
-
         protected override void OnStop()
         {
         }
 
-        private async Task Timeline()
+        protected override void BuildTimeline(SimTimeline timeline)
         {
-            var boss = _host.EntitySpawner.SpawnBNpc(17839, 13561, 100); // Pandora
+            var boss = EntityManager.SpawnBNpc(17839, 13561, 100); // Pandora
             boss.Pos3D = new Vector3(100, 100, 0);
             boss.Heading = (float)PI;
             boss.SetReadyToDraw();
             boss.EnableDraw();
 
-            await Task.Delay(3000);
-
-            // 时间轴开始，读条的同时生成 EObj，但不播放动画。
-            var timer = new SimTimer(_host);
-            boss.Cast(0x9D72); // 地火 本体读条
-
+            var mechanic = new SimTimeline();
             var lines = new List<Simulant.Core.Entity.EventObject>();
-            var eObjsPose = CalculateEObjsPose();
-            for (int i = 0; i < 6; i++)
+            mechanic.At(0, () =>
             {
-                var (pos, heading) = eObjsPose[i];
-                var eObj = _host.EntitySpawner.SpawnEObj((ushort)i, 2014199, pos, heading); // no animation, timeline state 0
-                lines.Add(eObj);
-            }
-
-            await timer.WaitUntil(8);
-            lines.ForEach(e => e.PlayAnimation(0x2)); // 8s 时所有线同时出现
-
-            await timer.WaitUntil(10);
-            FireAndForget(SingleTimelineStartFromGlowing(lines[0]));
-            FireAndForget(SingleTimelineStartFromGlowing(lines[1]));
-
-            await timer.WaitUntil(14);
-            FireAndForget(SingleTimelineStartFromGlowing(lines[2]));
-            FireAndForget(SingleTimelineStartFromGlowing(lines[3]));
-
-            await timer.WaitUntil(18);
-            FireAndForget(SingleTimelineStartFromGlowing(lines[4]));
-            FireAndForget(SingleTimelineStartFromGlowing(lines[5]));
-
-            await timer.WaitUntil(20);
-            boss.Heading = (float)((int)CenterDir4 / 2.0 * PI - PI);
-
-            await timer.WaitUntil(25);
-            boss.Cast(0x9D76); // 双分摊
-
-            await timer.WaitUntil(42);
-            _host.EntitySpawner.Delete(boss);
-            timer.Dispose();
+                boss.Cast(0x9D72);
+                // 读条的同时生成 EObj，但不播放动画。
+                var eObjsPose = CalculateEObjsPose();
+                for (int i = 0; i < 6; i++)
+                {
+                    var (pos, heading) = eObjsPose[i];
+                    lines.Add(EntityManager.SpawnEObj((ushort)i, 2014199, pos, heading));
+                }
+            }, "地火读条与生成直线");
+            mechanic.At(8, () => lines.ForEach(e => e.PlayAnimation(0x2)), "地火细线出现");
+            mechanic.Repeat(10, 4, 3, group =>
+            {
+                Play(SingleTimelineStartFromGlowing(lines[group * 2]));
+                Play(SingleTimelineStartFromGlowing(lines[group * 2 + 1]));
+            }, "地火分组发光");
+            mechanic.At(20, () => boss.Heading = (float)((int)CenterDir4 / 2.0 * PI - PI), "本体转向安全点");
+            mechanic.At(25, () => boss.Cast(0x9D76), "双分摊读条");
+            mechanic.At(42, () => EntityManager.Delete(boss), "回收本体");
+            timeline.At(3, mechanic);
         }
 
         /// <summary> 每条地火直线从细线扩大开始的完整时间轴。 </summary>
-        private async Task SingleTimelineStartFromGlowing(Simulant.Core.Entity.EventObject lineEObj)
+        private SimTimeline SingleTimelineStartFromGlowing(Simulant.Core.Entity.EventObject lineEObj)
         {
             // 实体面向与直线垂直，面向光侧
 
-            _host.LogVerbose($"地火线 {lineEObj.Id} @ {lineEObj.Native.Ptr.Hex()} 开始时间轴: Pos = <{lineEObj.Pos.X:F2}, {lineEObj.Pos.Y:F2}>, Heading = {lineEObj.Heading:F2}");
-            var timer = new SimTimer(_host);
+            var timeline = new SimTimeline();
             var pos = lineEObj.Pos3D;
             var heading = lineEObj.Heading;
             var oppositeHeading = (float)(lineEObj.Heading + PI);
 
-            lineEObj.PlayAnimation(0x10);
-            // 初始的矩形 Omen，技能实际没有其他效果
-            FireAndForget(DummyCast(pos, heading, 0x9D73, 10, 5)); // 光
-            FireAndForget(DummyCast(pos, oppositeHeading, 0x9CB6, 10, 5)); // 暗
-
-            await timer.WaitUntil(7);
-            lineEObj.PlayAnimation(0x8); // 箭头特效
-
-            FireAndForget(QueueSteps(pos, heading, isLight: true));
-            FireAndForget(QueueSteps(pos, oppositeHeading, isLight: false));
-
-            timer.Dispose();
+            timeline.At(0, () =>
+            {
+                _host.LogVerbose($"地火线 {lineEObj.Id} @ {lineEObj.Native.Ptr.Hex()} 开始时间轴: Pos = <{pos.X:F2}, {pos.Y:F2}>, Heading = {heading:F2}");
+                lineEObj.PlayAnimation(0x10);
+                // 初始的矩形 Omen，技能实际没有其他效果。
+                DummyCast(pos, heading, 0x9D73, 10, 5); // 光
+                DummyCast(pos, oppositeHeading, 0x9CB6, 10, 5); // 暗
+            }, "地火光暗预兆");
+            timeline.At(7, () => lineEObj.PlayAnimation(0x8), "地火箭头出现");
+            timeline.At(7, StepsTimeline(pos, heading, isLight: true));
+            timeline.At(7, StepsTimeline(pos, oppositeHeading, isLight: false));
+            return timeline;
         }
 
-        private async Task QueueSteps(Vector3 pos, float heading, bool isLight)
+        private SimTimeline StepsTimeline(Vector3 pos, float heading, bool isLight)
         {
-            var timer = new SimTimer(_host);
+            var timeline = new SimTimeline();
             var step = new Vector3((float)(5 * Sin(heading)), (float)(5 * Cos(heading)), 0);
             uint abilityId = isLight ? 0x9D74u : 0x9D75u;
             var center = new Vector3(100, 100, 0);
 
             for (int i = 1; i < 10; i++)
             {
-                await timer.WaitUntil(2 * i);
                 var currentPos = pos + step * i;
                 if (Vector3.Distance(currentPos, center) > 21)
                     break;
 
-                FireAndForget(DummyExecute(currentPos, heading, abilityId, 3));
+                timeline.At(2 * i, () => DummyExecute(currentPos, heading, abilityId, 3),
+                    $"{(isLight ? "光" : "暗")}地火第 {i} 步");
             }
-            timer.Dispose();
+            return timeline;
         }
 
         /// <summary>

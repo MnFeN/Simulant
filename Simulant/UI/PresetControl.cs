@@ -11,10 +11,19 @@ namespace Simulant.UI
         private PluginHost _host;
         private SimPresetBase _preset;
         private SimSession _session;
+        private readonly Timer _sessionStateTimer;
+        private bool _displayedRunning;
 
         public PresetControl()
         {
             InitializeComponent();
+            _sessionStateTimer = new Timer(components) { Interval = 500 };
+            _sessionStateTimer.Tick += (sender, e) =>
+            {
+                if ((_session?.IsRunning == true) != _displayedRunning)
+                    UpdateButtons();
+            };
+            _sessionStateTimer.Start();
             Disposed += (sender, e) => StopCurrentSession();
             ClearPreset();
         }
@@ -118,10 +127,20 @@ namespace Simulant.UI
             if (_preset == null) return;
 
             StopCurrentSession();
-            _session = _preset.CreateSimSession(_host);
-            _session.Start();
-
-            UpdateButtons();
+            try
+            {
+                _session = _preset.CreateSimSession(_host);
+                _session.Start();
+            }
+            catch (Exception ex)
+            {
+                StopCurrentSession();
+                _host.LogError("模拟启动失败：" + ex);
+            }
+            finally
+            {
+                UpdateButtons();
+            }
         }
 
         private void btnEnd_Click(object sender, EventArgs e)
@@ -131,10 +150,18 @@ namespace Simulant.UI
             UpdateButtons();
         }
 
-        private void StopCurrentSession()
+        internal void StopCurrentSession()
         {
-            _session?.Dispose();
-            _session = null;
+            try
+            {
+                _session?.Dispose();
+            }
+            finally
+            {
+                _session = null;
+                if (!IsDisposed && !Disposing)
+                    UpdateButtons();
+            }
         }
 
         private void UpdateButtons()
@@ -142,6 +169,7 @@ namespace Simulant.UI
             var hasHost = _host != null;
             var hasPreset = _preset != null;
             var isRunning = _session?.IsRunning == true;
+            _displayedRunning = isRunning;
 
             _host?.LogVerbose($"UpdateButtons: hasHost = {hasHost}, hasPreset = {hasPreset}, isRunning = {isRunning}");
             btnStart.Enabled = hasHost && hasPreset && !isRunning;

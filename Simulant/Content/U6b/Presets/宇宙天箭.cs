@@ -5,10 +5,10 @@ using Simulant.Core.Environment;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace Simulant.Content.U6b.Presets
 {
@@ -88,69 +88,57 @@ namespace Simulant.Content.U6b.Presets
         {
         }
 
-        protected override void OnStart()
-        {
-            Timeline().ContinueWith(t =>
-            {
-                if (t.Exception != null)
-                    _host.LogError("模拟错误：" + t.Exception.GetBaseException());
-            }, TaskContinuationOptions.OnlyOnFaulted);
-        }
-
         protected override void OnStop()
         {
         }
 
-        private async Task Timeline()
+        protected override void BuildTimeline(SimTimeline timeline)
         {
-            var boss = _host.EntitySpawner.SpawnBNpc(15725, 12256, 90); // alpha omega
+            var boss = EntityManager.SpawnBNpc(15725, 12256, 90); // alpha omega
             boss.Pos3D = new Vector3(100, 100, 0);
             boss.Heading = (float)Math.PI;
             boss.SetReadyToDraw();
             boss.EnableDraw();
 
-            await Task.Delay(3000);
-
-            // 时间轴开始
-            var timer = new SimTimer(_host);
-            boss.Cast(0x7BA2); // 射手天箭 本体读条
+            var mechanic = new SimTimeline();
+            mechanic.At(0, () => boss.Cast(0x7BA2), "宇宙天箭读条");
             if (ArrowMode == ArrowMode.OutsideFirst)
             {
-                OutsideArrowTimeline();
-                await timer.WaitUntil(2);
-                InsideArrowTimeline();
+                mechanic.At(0, OutsideArrowTimeline());
+                mechanic.At(2, InsideArrowTimeline());
             }
             else
             {
-                InsideArrowTimeline();
-                await timer.WaitUntil(2);
-                OutsideArrowTimeline();
+                mechanic.At(0, InsideArrowTimeline());
+                mechanic.At(2, OutsideArrowTimeline());
             }
 
-            await timer.WaitUntil(25);
-            _host.EntitySpawner.Delete(boss);
-            timer.Dispose();
+            mechanic.At(25, () => EntityManager.Delete(boss), "回收本体");
+            timeline.At(3, mechanic);
         }
 
-        private void InsideArrowTimeline()
+        private SimTimeline InsideArrowTimeline()
         {
-            FireAndForget(SingleArrowTimeline(new Vector3(80, 100, 0), (float)Math.PI / 2));
-            FireAndForget(SingleArrowTimeline(new Vector3(100, 80, 0), 0f));
+            var timeline = new SimTimeline();
+            timeline.At(0, SingleArrowTimeline(new Vector3(80, 100, 0), (float)Math.PI / 2));
+            timeline.At(0, SingleArrowTimeline(new Vector3(100, 80, 0), 0f));
+            return timeline;
         }
 
-        private void OutsideArrowTimeline()
+        private SimTimeline OutsideArrowTimeline()
         {
-            FireAndForget(SingleArrowTimeline(new Vector3(80, 85, 0), (float)Math.PI / 2));
-            FireAndForget(SingleArrowTimeline(new Vector3(80, 115, 0), (float)Math.PI / 2));
-            FireAndForget(SingleArrowTimeline(new Vector3(85, 80, 0), 0f));
-            FireAndForget(SingleArrowTimeline(new Vector3(115, 80, 0), 0f));
+            var timeline = new SimTimeline();
+            timeline.At(0, SingleArrowTimeline(new Vector3(80, 85, 0), (float)Math.PI / 2));
+            timeline.At(0, SingleArrowTimeline(new Vector3(80, 115, 0), (float)Math.PI / 2));
+            timeline.At(0, SingleArrowTimeline(new Vector3(85, 80, 0), 0f));
+            timeline.At(0, SingleArrowTimeline(new Vector3(115, 80, 0), 0f));
+            return timeline;
         }
 
         /// <summary> 每个初始宇宙天箭宽读条及后续扩散窄直条的完整时间轴。 </summary>
-        private async Task SingleArrowTimeline(Vector3 pos, float heading)
+        private SimTimeline SingleArrowTimeline(Vector3 pos, float heading)
         {
-            var timer = new SimTimer(_host);
-
+            var timeline = new SimTimeline();
             var Δt = 2.005;
             Vector3 dir = new Vector3(
                 (float)Math.Cos(heading), 
@@ -160,40 +148,37 @@ namespace Simulant.Content.U6b.Presets
             var t0 = 10.6;
 
             // 初始宽直条
-            WideArrow(pos, heading);
+            timeline.At(0, () => WideArrow(pos, heading), "宇宙天箭宽直条");
 
             for (int step = 0; step < 10; step++)
             {
-                await timer.WaitUntil(t0 + Δt * step);
-
                 var offset = 7.5f + 5f * step;
                 var pos1 = pos + dir * offset;
                 var pos2 = pos - dir * offset;
 
-                var valid1 = TryThinArrow(pos1, heading);
-                var valid2 = TryThinArrow(pos2, heading);
+                var valid1 = IsInsideArena(pos1);
+                var valid2 = IsInsideArena(pos2);
+                if (!valid1 && !valid2)
+                    break;
 
-                if (!valid1 && !valid2) break;
+                timeline.At(t0 + Δt * step, () =>
+                {
+                    if (valid1) DummyExecute(pos1, heading, 0x7BA4, 3f);
+                    if (valid2) DummyExecute(pos2, heading, 0x7BA4, 3f);
+                }, $"宇宙天箭扩散 {step + 1}");
             }
 
-            await Task.Delay(3000);
-            timer.Dispose();
+            return timeline;
         }
 
         private void WideArrow(Vector3 pos, float heading)
         {
-            FireAndForget(DummyCast(pos, heading, 0x7BA3, 10f)); // omen
-            FireAndForget(DummyCast(pos, heading, 0x7E51, 10f)); // arrows vfx
+            DummyCast(pos, heading, 0x7BA3, 10f); // omen
+            DummyCast(pos, heading, 0x7E51, 10f); // arrows vfx
         }
 
-        private bool TryThinArrow(Vector3 pos, float heading)
-        {
-            if (Math.Abs(pos.X - 100) > 21 || Math.Abs(pos.Y - 100) > 21)
-                return false; // 已经出了场地范围
-
-            FireAndForget(DummyExecute(pos, heading, 0x7BA4, 3f));
-            return true;
-        }
+        private static bool IsInsideArena(Vector3 pos)
+            => Math.Abs(pos.X - 100) <= 21 && Math.Abs(pos.Y - 100) <= 21;
 
     }
 }

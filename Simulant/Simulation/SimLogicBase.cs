@@ -1,13 +1,14 @@
 ﻿using Simulant.Core;
 using Simulant.Core.Entity;
+using Simulant.ACT;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation.Runtime;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
-using System.Threading.Tasks;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Simulation
@@ -18,6 +19,7 @@ namespace Simulant.Simulation
         protected readonly SimPresetBase _preset;
 
         internal SimEntityManager EntityManager { get; set; }
+        internal SimScheduler Scheduler { get; set; }
 
         // 如果修改构造函数传参，需要同步修改 SimSession 构造函数中的 CreateInstance 调用参数
         public SimLogicBase(PluginHost host, SimPresetBase preset)
@@ -26,39 +28,57 @@ namespace Simulant.Simulation
             _preset = preset ?? throw new ArgumentNullException(nameof(preset));
         }
 
-        public void Start()
+        internal void Prepare()
         {
-            try
-            {
-                _host.LogSim($"正在开始模拟：{_preset.Name}（{_preset.Phase.Name}）");
-                LoadOptionsFrom(_preset.Options);
-                EntityManager.Clear();
-                _host.LogSim($"模拟已开始。");
-                OnStart();
-            }
-            catch (Exception ex)
-            {
-                _host.LogError($"模拟启动失败：{ex}");
-            }
+            _host.LogSim($"正在开始模拟：{_preset.Name}（{_preset.Phase.Name}）");
+            LoadOptionsFrom(_preset.Options);
         }
 
-        public void Stop()
+        internal void Start()
+        {
+            var timeline = new SimTimeline();
+            BuildTimeline(timeline);
+            // 实体准备耗时不挤占时间轴的准备阶段；从准备完成的实际时刻开始。
+            Scheduler.ScheduleAfter(0, () => Play(timeline), "开始时间轴");
+            _host.LogSim("模拟已开始。");
+        }
+
+        internal void Stop()
         {
             try
             {
                 _host.LogSim($"正在停止模拟：{_preset.Name}（{_preset.Phase.Name}）");
                 OnStop();
-                EntityManager.Clear();
-                _host.LogSim($"模拟已停止。");
             }
             catch (Exception ex)
             {
                 _host.LogError($"模拟停止失败：{ex}");
             }
+            finally
+            {
+                try
+                {
+                    TriggernometryInterop.InvokeNamedCallback("PictoACT", "Action: Remove\nTag: Simulant");
+                }
+                catch (Exception ex)
+                {
+                    _host.LogError("清理模拟预兆失败：" + ex);
+                }
+                finally
+                {
+                    EntityManager.Clear();
+                    _host.LogSim("模拟已停止。");
+                }
+            }
         }
 
-        protected abstract void OnStart();
-        protected abstract void OnStop();
+        /// <summary>在调度线程上初始化实体并定义节点。时间单位为秒，节点应为短同步动作。</summary>
+        protected abstract void BuildTimeline(SimTimeline timeline);
+        protected virtual void OnStop() { }
+
+        /// <summary>子轴以当前节点的计划时间为原点，因此父节点迟到不会逐层积累漂移。</summary>
+        protected void Play(SimTimeline timeline, double delaySeconds = 0)
+            => Scheduler.Play(timeline, delaySeconds);
 
         internal void LoadOptionsFrom(IEnumerable<SimOptionBase> options)
         {
@@ -208,10 +228,9 @@ namespace Simulant.Simulation
 
         #endregion Party / Roles
 
-        // to-do: 用 EntityManager 管理
         protected Character Dummy(Vector3 pos, float heading)
         {
-            var dummy = _host.EntitySpawner.SpawnBNpc(9020, 0, 100);
+            var dummy = EntityManager.SpawnBNpc(9020, 0, 100);
             dummy.Pos3D = pos;
             dummy.Heading = heading;
             // 不可见，但是可以绘制技能特效
@@ -221,30 +240,26 @@ namespace Simulant.Simulation
             return dummy;
         }
 
-        protected async Task DummyCast(Vector3 pos, float heading, uint abilityId, float despawnSeconds, float? omenDelay = 0)
+        protected void DummyCast(Vector3 pos, float heading, uint abilityId, float despawnSeconds, float? omenDelay = 0)
         {
+            ValidateLifetime(despawnSeconds);
             var dummy = Dummy(pos, heading);
             dummy.Cast(abilityId, omenDelay);
-            await Task.Delay(TimeSpan.FromSeconds(despawnSeconds));
-            _host.EntitySpawner.Delete(dummy);
+            Scheduler.ScheduleAfter(despawnSeconds, () => EntityManager.Delete(dummy), "回收读条假人");
         }
 
-        protected async Task DummyExecute(Vector3 pos, float heading, uint abilityId, float despawnSeconds)
+        protected void DummyExecute(Vector3 pos, float heading, uint abilityId, float despawnSeconds)
         {
+            ValidateLifetime(despawnSeconds);
             var dummy = Dummy(pos, heading);
             dummy.Execute(abilityId);
-            await Task.Delay(TimeSpan.FromSeconds(despawnSeconds));
-            _host.EntitySpawner.Delete(dummy);
+            Scheduler.ScheduleAfter(despawnSeconds, () => EntityManager.Delete(dummy), "回收技能假人");
         }
 
-        protected void FireAndForget(Task task)
+        private static void ValidateLifetime(float seconds)
         {
-            if (task == null) return;
-
-            task.ContinueWith(
-                t => _host.LogError("模拟错误：" + t.Exception.GetBaseException()),
-                TaskContinuationOptions.OnlyOnFaulted
-            );
+            if (float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds < 0)
+                throw new ArgumentOutOfRangeException(nameof(seconds));
         }
 
     }

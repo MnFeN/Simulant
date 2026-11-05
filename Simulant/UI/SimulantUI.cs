@@ -35,11 +35,18 @@ namespace Simulant.UI
 
         private async void btnInitPlugin_Click(object sender, EventArgs e)
         {
+            StopCurrentSession();
             await _host.InitAsync();
         }
 
+        internal void StopCurrentSession()
+            => presetControl.StopCurrentSession();
+
         internal void UpdateControlStates()
         {
+            if (IsDisposed || Disposing || _host.Disposed)
+                return;
+
             if (InvokeRequired)
             {
                 BeginInvoke(new System.Action(UpdateControlStates));
@@ -111,6 +118,7 @@ namespace Simulant.UI
         {
             try
             {
+                StopCurrentSession();
                 _host.ZoneService.ExitToInitialTerritory();
 
                 _host.FirewallService.Disable();
@@ -303,6 +311,7 @@ namespace Simulant.UI
                     return;
                 }
 
+                StopCurrentSession();
                 if (!_host.ZoneService.TryEnterTerritory(_selectedTerritoryId))
                     return;
 
@@ -317,6 +326,7 @@ namespace Simulant.UI
 
         private void btnSimExit_Click(object sender, EventArgs e)
         {
+            StopCurrentSession();
             _host.ZoneService.ExitToInitialTerritory();
         }
 
