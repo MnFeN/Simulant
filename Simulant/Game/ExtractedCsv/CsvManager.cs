@@ -28,6 +28,8 @@ namespace Simulant.Game.ExtractedCsv
         /// </summary>
         private readonly Dictionary<Type, object> _typedTables = new Dictionary<Type, object>();
         private readonly object _lockTypedTables = new object();
+        private readonly object _loadAllGate = new object();
+        private bool _allTablesLoaded;
 
         /// <summary>
         /// Cached mapping from table name to the corresponding TypedCsvRow type.
@@ -150,6 +152,17 @@ namespace Simulant.Game.ExtractedCsv
         /// </param>
         public void LoadAllTables(bool multiThread = true)
         {
+            // 多个宿主重叠加载时只解析一次；完整成功后复用缓存，失败保留重试机会。
+            lock (_loadAllGate)
+            {
+                if (_allTablesLoaded) return;
+                LoadAllTablesCore(multiThread);
+                _allTablesLoaded = true;
+            }
+        }
+
+        private void LoadAllTablesCore(bool multiThread)
+        {
             var files = _csvAssembly
                 .GetManifestResourceNames()
                 .Where(name => name.StartsWith(CsvResourcePrefix, StringComparison.OrdinalIgnoreCase))
@@ -178,10 +191,15 @@ namespace Simulant.Game.ExtractedCsv
         /// </summary>
         public void Clear()
         {
-            lock (_lockTables)
-                _tables.Clear();
-            lock (_lockTypedTables)
-                _typedTables.Clear();
+            // 与完整加载互斥，清空后下一次 LoadAllTables 会重新读取嵌入数据。
+            lock (_loadAllGate)
+            {
+                _allTablesLoaded = false;
+                lock (_lockTables)
+                    _tables.Clear();
+                lock (_lockTypedTables)
+                    _typedTables.Clear();
+            }
         }
 
         /// <summary>

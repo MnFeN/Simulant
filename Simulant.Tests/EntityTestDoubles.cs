@@ -36,6 +36,9 @@ namespace Simulant.Core.Entity
         internal readonly List<Vector2> PositionWrites = new List<Vector2>();
         internal readonly List<int> WriteThreads = new List<int>();
         internal Action<Vector2> OnPositionWritten;
+        internal int PositionReads;
+        internal readonly List<NetworkMove> NetworkMoves = new List<NetworkMove>();
+        internal Action<Vector3, float, byte> OnActorMove;
         internal readonly List<uint> CastStarts = new List<uint>();
         internal readonly List<uint> FinalizedCasts = new List<uint>();
         internal readonly List<ushort> PlayedTimelines = new List<ushort>();
@@ -49,7 +52,7 @@ namespace Simulant.Core.Entity
 
         public Vector2 Pos
         {
-            get => _position;
+            get { PositionReads++; return _position; }
             set
             {
                 if (!IsAlive) throw new InvalidOperationException("移动控制器写入了已失效的实体。");
@@ -72,11 +75,29 @@ namespace Simulant.Core.Entity
 
         public Vector3 Pos3D
         {
-            get => new Vector3(_position.X, _position.Y, _height);
+            get { PositionReads++; return new Vector3(_position.X, _position.Y, _height); }
             set { Pos = new Vector2(value.X, value.Y); _height = value.Z; }
         }
 
         public Simulant.Game.FFCS.Client.Game.Character.Job Job { get; set; }
+        internal sealed class NetworkMove
+        {
+            internal Vector3 Position;
+            internal float Heading;
+            internal byte SpeedParam;
+            internal int Thread;
+        }
+
+        public void ActorMove(Vector3 position, float heading, byte speedParam = 20)
+        {
+            if (!IsAlive) throw new InvalidOperationException("移动控制器向已失效的实体发送了移动包。");
+            NetworkMoves.Add(new NetworkMove
+            {
+                Position = position, Heading = heading, SpeedParam = speedParam,
+                Thread = System.Threading.Thread.CurrentThread.ManagedThreadId
+            });
+            OnActorMove?.Invoke(position, heading, speedParam);
+        }
         public float HitboxRadius { get; set; }
         private uint _castingActionId;
         internal Action BeforeCastingActionIdRead;
@@ -145,6 +166,8 @@ namespace Simulant.Core.Entity
 
 namespace Simulant.Game.ExtractedCsv
 {
+    public abstract class TypedCsvRow { }
+
     public sealed class CsvManager
     {
         public static CsvManager Instance { get; } = new CsvManager();
@@ -160,6 +183,17 @@ namespace Simulant.Game.ExtractedCsv
 
 namespace Simulant.Game.ExtractedCsv.Rows
 {
+    public sealed class BNpcBase : Simulant.Game.ExtractedCsv.TypedCsvRow
+    {
+        public ushort ModelCharaId { get; set; }
+        public byte Battalion { get; set; }
+    }
+
+    public sealed class BNpcName : Simulant.Game.ExtractedCsv.TypedCsvRow
+    {
+        public string Name { get; set; }
+    }
+
     public sealed class Action
     {
         public int Index { get; set; }
@@ -194,7 +228,12 @@ namespace Simulant.ACT
 
 namespace Simulant.Game.FFCS.Client.Game.Character
 {
-    public enum Job : byte { Adv = 0 }
+    public enum Job : byte
+    {
+        Adv = 0, GLA = 1, PLD = 19, MNK = 20, WAR = 21, DRG = 22, BRD = 23,
+        WHM = 24, BLM = 25, SMN = 27, SCH = 28, PCT = 42
+    }
+    public enum CharacterModes : byte { None = 0, Normal = 1, Dead = 2, AnimLock = 8 }
 }
 
 namespace Simulant.Game
@@ -210,6 +249,14 @@ namespace Simulant.Game
 
 namespace Simulant.Game.FFCS.Client.Game.Object
 {
+    [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit, Size = 8)]
+    public struct GameObjectId
+    {
+        [global::System.Runtime.InteropServices.FieldOffset(0)] public ulong Id;
+        public static implicit operator GameObjectId(ulong id) => new GameObjectId { Id = id };
+        public static implicit operator ulong(GameObjectId id) => id.Id;
+    }
+
     public enum ObjectKind : byte { None = 0, Pc = 1, BattleNpc = 2, EventObj = 7 }
     public struct GameObject
     {

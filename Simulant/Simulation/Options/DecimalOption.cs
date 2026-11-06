@@ -25,10 +25,10 @@ namespace Simulant.Simulation.Options
         {
             var numericUpDown = new NumericUpDown
             {
-                Value = (decimal)_default,
                 Minimum = (decimal)_min,
                 Maximum = (decimal)_max,
                 DecimalPlaces = _decimalPlaces,
+                Value = (decimal)_default,
             }; 
             presetControl.ApplyNumericUpDownStyle(numericUpDown);
             return numericUpDown;

@@ -27,6 +27,9 @@ namespace Simulant.UI
         {
             _host = host;
             InitializeComponent();
+            ConfigureEntityTestMenu();
+            ConfigureNetworkEntityMenu();
+            new ToolTip(components).SetToolTip(btnInitPlugin, "重新初始化前，请先关闭防火墙并完成清理。");
             logView.Bind(_host); // would RefreshLogView
             presetControl.Bind(_host);
             UpdateTerritoryData(0);
@@ -70,21 +73,24 @@ namespace Simulant.UI
             var csvReady = _host.CsvReady && !_host.CsvLoading;
             var pluginReady = _host.PluginReady && !_host.IsInitializing;
             var firewallReady = pluginReady && _host.FirewallEnabled;
+            var firewallPending = _host.FirewallService?.HasPendingCleanup == true;
 
             // 初始化按钮：初始化中禁用，初始化完成后仍可再次点击
-            btnInitPlugin.Enabled = !_host.IsInitializing;
+            btnInitPlugin.Enabled = !_host.IsInitializing && !_switchingTerritory && !firewallPending;
 
             // CSV 加载完：允许选地图、输入区域 ID、选择阶段
-            btnSelectTerritory.Enabled = csvReady;
+            btnSelectTerritory.Enabled = csvReady && !_switchingTerritory;
             lblTerritoryId.Enabled = csvReady;
-            numTerritoryId.Enabled = csvReady;
+            numTerritoryId.Enabled = csvReady && !_switchingTerritory;
             lblTerritory.Enabled = csvReady;
-            cbxPhase.Enabled = csvReady;
+            cbxPhase.Enabled = csvReady && !_switchingTerritory;
 
             // 插件初始化完成：允许防火墙和调试
-            chkToggleFirewall.Enabled = pluginReady;
+            chkToggleFirewall.Enabled = !_host.IsInitializing && (pluginReady || firewallPending);
+            // 部分失败时仍保留勾选，用户可以继续关闭并重试剩余清理。
+            SetFirewallToggleChecked(firewallPending);
             btnDebug.Enabled = pluginReady;
-            btnAddBNpc.Enabled = pluginReady;
+            btnAddBNpc.Enabled = pluginReady || _host.HasPendingDebugEntityCleanup;
 
             // 防火墙开启：允许加载区域、退出模拟
             btnSimEnter.Enabled = firewallReady && !_switchingTerritory;
@@ -120,7 +126,7 @@ namespace Simulant.UI
             catch (Exception ex)
             {
                 _host.LogError("防火墙开启失败：" + ex.Message);
-                SetFirewallToggleChecked(false);
+                SetFirewallToggleChecked(_host.FirewallService.HasPendingCleanup);
             }
             finally
             {
@@ -132,9 +138,12 @@ namespace Simulant.UI
         {
             try
             {
+                _host.ZoneService.CancelPendingPhase();
                 StopCurrentSession();
-                _host.DebugTest.StopEntityBehaviorTest();
-                _host.ZoneService.ExitToInitialTerritory();
+                _host.StopDebugEntities();
+                _host.EntitySpawner.Clear();
+                if (_host.ZoneService.HasPendingReturn && !_host.ZoneService.ExitToInitialTerritory())
+                    throw new InvalidOperationException("未能返回真实区域，防火墙保持开启；请处理错误后重试。");
 
                 _host.FirewallService.Disable();
                 _host.LogSim("防火墙已成功关闭。");
@@ -143,7 +152,7 @@ namespace Simulant.UI
             catch (Exception ex)
             {
                 _host.LogError("防火墙关闭失败：" + ex.Message);
-                SetFirewallToggleChecked(_host.FirewallEnabled);
+                SetFirewallToggleChecked(_host.FirewallService.HasPendingCleanup);
             }
             finally
             {
@@ -163,17 +172,20 @@ namespace Simulant.UI
         #region Territory
 
         private bool _switchingTerritory;
+        internal bool IsSwitchingTerritory => _switchingTerritory;
         private int _selectedTerritoryId;
         private bool _updatingTerritoryIdInput;
         private bool _updatingPhaseSelection;
 
         private void btnSelectTerritory_Click(object sender, EventArgs e)
         {
-            var form = new TerritoryForm();
-            if (form.ShowDialog() != DialogResult.OK)
-                return;
-
-            var territoryId = form.TerritoryIdResult;
+            int territoryId;
+            using (var form = new TerritoryForm())
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+                territoryId = form.TerritoryIdResult;
+            }
 
             // 同步数值框的地图 ID
             _updatingTerritoryIdInput = true;
@@ -341,7 +353,9 @@ namespace Simulant.UI
 
         private void btnSimExit_Click(object sender, EventArgs e)
         {
+            _host.ZoneService.CancelPendingPhase();
             StopCurrentSession();
+            _host.StopDebugEntities();
             _host.ZoneService.ExitToInitialTerritory();
         }
 
@@ -351,10 +365,25 @@ namespace Simulant.UI
             => logView.RefreshLogView();
 
         private async void btnDebug_Click(object sender, EventArgs e)
+            => await RunEntityTest((ModifierKeys & Keys.Shift) != 0
+                ? Test.EntityTestKind.LocalEntities : Test.EntityTestKind.NetworkNpc);
+
+        private void ConfigureEntityTestMenu()
+        {
+            var menu = new ContextMenuStrip(components);
+            menu.Items.Add("网络 NPC 测试", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkNpc));
+            menu.Items.Add("网络玩家测试（职业套装与复制外观）", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkPlayer));
+            menu.Items.Add("本地三实体测试", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.LocalEntities));
+            btnDebug.ContextMenuStrip = menu;
+            new ToolTip(components).SetToolTip(btnDebug,
+                "单击测试网络 NPC；右键选择网络玩家或本地三实体测试。运行时再次点击停止。");
+        }
+
+        private async Task RunEntityTest(Test.EntityTestKind kind)
         {
             try
             {
-                await _host.DebugTest.Run();
+                await _host.DebugTest.Run(kind);
             }
             catch (Exception ex)
             {
@@ -364,7 +393,15 @@ namespace Simulant.UI
 
         string _addBNpcInputCache = null;
         private void btnAddBNpc_Click(object sender, EventArgs e)
+            => SpawnManualEntity(false);
+
+        private void SpawnManualEntity(bool local)
         {
+            if (!_host.PluginReady || _host.IsInitializing)
+            {
+                _host.LogWarning("插件尚未完成初始化；如有未回收实体，请右键选择清理后再重试初始化。");
+                return;
+            }
             try
             {
                 string result;
@@ -390,14 +427,26 @@ namespace Simulant.UI
                     var nameId = a2 ?? 0;
                     var level = checked((byte)(a3 ?? 1));
 
-                    var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("当前无法获取玩家实体。");
-                    var bnpc = _host.DebugEntities.SpawnBNpc(baseId, nameId, level);
-                    bnpc.Pos3D = me.Pos3D;
-                    bnpc.Heading = me.Heading;
-                    bnpc.SetReadyToDraw();
-                    bnpc.EnableDraw();
+                    if (local)
+                    {
+                        var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("当前无法获取玩家实体。");
+                        var bnpc = _host.DebugEntities.SpawnBNpc(baseId, nameId, level);
+                        bnpc.Pos3D = me.Pos3D;
+                        bnpc.Heading = me.Heading;
+                        bnpc.SetReadyToDraw();
+                        bnpc.EnableDraw();
 
-                    _host.LogSim($"已生成 BNpc: ID={bnpc.Id:X8}, BaseID={baseId}, NameID={nameId}, Index={bnpc.Entity.Identity.Slot}, Ptr={bnpc.Address.Hex()}");
+                        _host.LogSim($"已生成 BNpc: ID={bnpc.Id:X8}, BaseID={baseId}, NameID={nameId}, Index={bnpc.Entity.Identity.Slot}, Ptr={bnpc.Address.Hex()}");
+                    }
+                    else
+                    {
+                        var me = GetManualSpawnSource();
+                        _host.DebugEntities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
+                        {
+                            BNpcBaseId = baseId, BNpcNameId = nameId, Level = level,
+                            Pos = me.Pos3D, Heading = me.Heading
+                        }, LogManualNetworkEntity);
+                    }
                 }
 
                 else if (baseId > 2000000 && baseId < 3000000) // EventObject

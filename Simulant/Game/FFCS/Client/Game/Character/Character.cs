@@ -77,11 +77,14 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         #endregion
 
         public EmoteController EmoteController => Ptr.As<EmoteController>(0x630);
+        public DrawDataContainer DrawData => Ptr.As<DrawDataContainer>(0x6F8);
         public TimelineContainer Timeline => Ptr.As<TimelineContainer>(0xA30);
         public VfxContainer Vfx => Ptr.As<VfxContainer>(0x1988);
         public CharacterSetupContainer CharacterSetup => Ptr.As<CharacterSetupContainer>(0x1B10);
         public ModelContainer ModelContainer => Ptr.As<ModelContainer>(0x1B28);
         public MemoryField<float> Alpha => Ptr.Field<float>(0x22E8);
+        public MemoryField<ushort> CurrentWorld => Ptr.Field<ushort>(0x2360);
+        public MemoryField<ushort> HomeWorld => Ptr.Field<ushort>(0x2362);
         public MemoryField<CharacterModes> Mode => Ptr.Field<CharacterModes>(0x2364);
         public MemoryField<byte> ModeParam => Ptr.Field<byte>(0x2365);
 

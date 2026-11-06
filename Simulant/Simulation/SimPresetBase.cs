@@ -18,6 +18,8 @@ namespace Simulant.Simulation
         public abstract DateTime LastUpdated { get; }
         public abstract PhaseData Phase { get; }
         public abstract string Description { get; }
+        /// <summary>占位预设设为 false，保留展示信息但禁止创建模拟会话。</summary>
+        public virtual bool IsImplemented => true;
 
         /// <summary> 全部 Option，包括纯 Label 这种仅用于显示 UI 的假 Option。</summary>
         public abstract List<SimOptionBase> Options { get; }
@@ -28,6 +30,8 @@ namespace Simulant.Simulation
 
         public SimSession CreateSimSession(PluginHost host)
         {
+            if (!IsImplemented)
+                throw new InvalidOperationException($"预设「{Name}」尚未实现，暂不能开始模拟。");
             return new SimSession(host, this);
         }
 

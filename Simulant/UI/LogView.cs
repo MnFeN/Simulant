@@ -2,6 +2,7 @@
 using Simulant.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -18,10 +19,16 @@ namespace Simulant.UI
         private string _regexPattern;
         private Regex _regex;
         private bool _invalidRegex;
+        private readonly ErrorProvider _filterErrors;
 
         public LogView()
         {
             InitializeComponent();
+            _filterErrors = new ErrorProvider(components)
+            {
+                ContainerControl = this,
+                BlinkStyle = ErrorBlinkStyle.NeverBlink,
+            };
             // The component container stops and disposes the timer with this control.
             _refreshTimer = new System.Windows.Forms.Timer(components) { Interval = 100 };
             _refreshTimer.Tick += (sender, e) => RefreshPendingLogs();
@@ -87,14 +94,16 @@ namespace Simulant.UI
                 _regexPattern = pattern;
                 _regex = null;
                 _invalidRegex = false;
+                _filterErrors.SetError(txtLogRegex, string.Empty);
                 try
                 {
                     if (pattern.Length > 0)
-                        _regex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                        _regex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase,
+                            TimeSpan.FromMilliseconds(50));
                 }
                 catch (ArgumentException)
                 {
-                    _invalidRegex = true;
+                    RejectLogFilter("正则表达式格式不正确，请修改后重试。");
                 }
             }
 
@@ -102,32 +111,94 @@ namespace Simulant.UI
             if (_invalidRegex)
                 return;
 
-            _virtualData = _logSnapshot
-                .Where(pair => IsLogTypeEnabled(pair.Key))
-                .SelectMany(pair => pair.Value)
-                .Where(log => _regex == null || _regex.IsMatch(log.Message ?? string.Empty))
-                .OrderBy(log => log.Timestamp)
-                .ToList();
+            // 单条匹配和整批筛选都限时，避免日志增加时反复阻塞界面。
+            var filtered = new List<LogItem>();
+            var timer = Stopwatch.StartNew();
+            try
+            {
+                foreach (var pair in _logSnapshot)
+                {
+                    if (!IsLogTypeEnabled(pair.Key))
+                        continue;
+                    foreach (var log in pair.Value)
+                    {
+                        if (_regex != null)
+                        {
+                            if (timer.ElapsedMilliseconds >= 200)
+                            {
+                                RejectLogFilter("正则筛选耗时过长，已暂停筛选并保留原列表。请简化或清空表达式后重试。");
+                                return;
+                            }
+                            if (!_regex.IsMatch(log.Message ?? string.Empty))
+                                continue;
+                        }
+                        filtered.Add(log);
+                    }
+                }
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                RejectLogFilter("正则匹配超时，已暂停筛选并保留原列表。请简化或清空表达式后重试。");
+                return;
+            }
 
-            dgvLog.RowCount = _virtualData.Count;
+            ReplaceLogRows(filtered.OrderBy(log => log.Timestamp).ToList());
+        }
+
+        private void ReplaceLogRows(List<LogItem> logs)
+        {
+            var firstRow = dgvLog.FirstDisplayedScrollingRowIndex;
+            var visibleItems = new HashSet<LogItem>(firstRow < 0 ? Enumerable.Empty<LogItem>() :
+                _virtualData.Skip(firstRow).Take(Math.Max(1, dgvLog.DisplayedRowCount(true))));
+            var followTail = _virtualData.Count == 0 ||
+                (firstRow >= 0 && firstRow + dgvLog.DisplayedRowCount(false) >= _virtualData.Count);
+            var currentRow = dgvLog.CurrentCell?.RowIndex ?? -1;
+            var currentItem = currentRow >= 0 && currentRow < _virtualData.Count ? _virtualData[currentRow] : null;
+            var currentColumn = dgvLog.CurrentCell?.ColumnIndex ?? 0;
+            var selected = new HashSet<LogItem>(dgvLog.SelectedRows.Cast<DataGridViewRow>()
+                .Where(row => row.Index >= 0 && row.Index < _virtualData.Count)
+                .Select(row => _virtualData[row.Index]));
+
+            _virtualData = logs;
+            dgvLog.RowCount = logs.Count;
+            var restoredFirstRow = -1;
+            var restoredCurrentRow = -1;
+            var selectedRows = new List<int>(selected.Count);
+            for (var index = 0; index < logs.Count; index++)
+            {
+                if (restoredFirstRow < 0 && visibleItems.Contains(logs[index])) restoredFirstRow = index;
+                if (ReferenceEquals(logs[index], currentItem)) restoredCurrentRow = index;
+                if (selected.Contains(logs[index])) selectedRows.Add(index);
+            }
+            if (restoredCurrentRow >= 0)
+                dgvLog.CurrentCell = dgvLog.Rows[restoredCurrentRow].Cells[currentColumn];
+            else
+                dgvLog.CurrentCell = null;
+            dgvLog.ClearSelection();
+            foreach (var row in selectedRows) dgvLog.Rows[row].Selected = true;
             dgvLog.Invalidate();
 
-            if (dgvLog.RowCount > 0)
+            if (logs.Count > 0)
             {
-                dgvLog.ClearSelection();
-                // scroll to bottom
+                // 用日志对象恢复位置，旧日志淘汰或筛选后也不会把选中项误映射到别的消息。
                 try
                 {
                     if (dgvLog.Visible && dgvLog.DisplayedRowCount(false) > 0)
-                        dgvLog.FirstDisplayedScrollingRowIndex = dgvLog.RowCount - 1;
+                        dgvLog.FirstDisplayedScrollingRowIndex = followTail ? logs.Count - 1 :
+                            restoredFirstRow >= 0 ? restoredFirstRow : Math.Max(0, Math.Min(firstRow, logs.Count - 1));
                 }
                 catch (InvalidOperationException)
                 {
-                    // in case:
-                    // System.InvalidOperationException: 没有可供显示行的空间。
-                    // 在 System.Windows.Forms.DataGridView.set_FirstDisplayedScrollingRowIndex(Int32 value)
+                    // 没有可供显示行的空间时，稍后显示窗口再滚动。
                 }
             }
+        }
+
+        private void RejectLogFilter(string message)
+        {
+            _invalidRegex = true;
+            txtLogRegex.BackColor = Color.MistyRose;
+            _filterErrors.SetError(txtLogRegex, message);
         }
 
         private void txtLogRegex_TextChanged(object sender, EventArgs e)
@@ -354,7 +425,10 @@ namespace Simulant.UI
                 return;
 
             _host.PluginLog.Remove(selectedItems);
-
+            _logSnapshot = _host.PluginLog.Snapshot();
+            var removed = new HashSet<LogItem>(selectedItems);
+            // 无效正则会暂停自动筛选，但用户明确删除的日志仍应立即从当前列表移除。
+            ReplaceLogRows(_virtualData.Where(item => !removed.Contains(item)).ToList());
             RefreshLogView();
         }
 

@@ -36,7 +36,7 @@ namespace Simulant.Simulation
         {
             var timeline = new SimTimeline();
             BuildTimeline(timeline);
-            // 实体准备耗时不挤占时间轴的准备阶段；从准备完成的实际时刻开始。
+            // 准备入口从当前时刻开始；网络实体的后续机制由就绪回调排入。
             Scheduler.ScheduleAfter(0, () => Play(timeline), "开始时间轴");
             _host.LogSim("模拟已开始。");
         }
@@ -54,12 +54,13 @@ namespace Simulant.Simulation
             }
             finally
             {
+                _preparingParty = false;
                 EntityManager.Clear();
                 _host.LogSim("模拟已停止。");
             }
         }
 
-        /// <summary>在调度线程上初始化实体并定义节点。时间单位为秒，节点应为短同步动作。</summary>
+        /// <summary>在调度线程上定义准备节点；网络实体就绪后再排入机制时间轴。时间单位为秒，节点应为短同步动作。</summary>
         protected abstract void BuildTimeline(SimTimeline timeline);
         protected virtual void OnStop() { }
 
@@ -113,7 +114,7 @@ namespace Simulant.Simulation
             [JobRole.None] = new List<Job>(),
             [JobRole.Tank] = new List<Job> { Job.PLD, Job.WAR, Job.DRK, Job.GNB },
             [JobRole.Healer] = new List<Job> { Job.WHM, Job.AST, Job.SGE, Job.SCH },
-            [JobRole.Melee] = new List<Job> { Job.MNK, Job.DRG, Job.NIN, Job.RPR, Job.VPR },
+            [JobRole.Melee] = new List<Job> { Job.MNK, Job.DRG, Job.NIN, Job.SAM, Job.RPR, Job.VPR },
             [JobRole.PhysicalRanged] = new List<Job> { Job.BRD, Job.MCH, Job.DNC },
             [JobRole.MagicalRanged] = new List<Job> { Job.BLM, Job.SMN, Job.RDM, Job.PCT },
         };
@@ -153,15 +154,24 @@ namespace Simulant.Simulation
             AutoRole.Asc(JobRole.MagicalRanged),
         };
 
-        protected void GeneratePartyMembers(int myPartyIdx)
+        private bool _preparingParty;
+
+        /// <summary>按职能顺序准备网络玩家，全部就绪后在调度线程继续；自己只借用，不重复生成。</summary>
+        protected void GeneratePartyMembers(int myPartyIdx, Action onReady)
         {
+            SimTimeline.ValidateAction(onReady, nameof(onReady));
+            if (_preparingParty || Party.Count != 0)
+                throw new InvalidOperationException("本次模拟已准备小队，不能重复追加队员；请停止并完成清理后重新开始。");
             var partyRoles = PartyRoles();
 
             var isOutOfRange = myPartyIdx < 1 || myPartyIdx > partyRoles.Count;
             if (isOutOfRange)
                 throw new ArgumentOutOfRangeException(nameof(myPartyIdx), $"小队职能序号必须在小队范围内（1-{partyRoles.Count}）。");
 
-            var myJob = _host.EntityProvider.GetMyself().Job;
+            var myself = _host.EntityProvider.GetMyself();
+            if (myself == null || !myself.IsAlive)
+                throw new InvalidOperationException("未找到有效的自身玩家，无法准备模拟小队。");
+            var myJob = myself.Job;
             var usedJobs = new HashSet<Job> { myJob };
 
             List<Job?> jobs = new List<Job?>();
@@ -201,45 +211,82 @@ namespace Simulant.Simulation
                 usedJobs.Add(job.Value);
             }
 
-            foreach (var job in jobs)
-            {
-                SimActor player;
-                if (job.HasValue)
-                    player = EntityManager.SpawnPlayer(job.Value);
-                else
-                    player = EntityManager.Attach(_host.EntityProvider.GetMyself());
+            var position = myself.Pos3D;
+            var heading = myself.Heading;
+            var members = new SimActor[jobs.Count];
+            members[myPartyIdx - 1] = EntityManager.Attach(myself);
+            var remaining = jobs.Count - 1;
+            _preparingParty = true;
 
-                Party.Add(player);
+            void CompleteParty()
+            {
+                Party.AddRange(members);
+                _preparingParty = false;
+                onReady();
+            }
+
+            if (remaining == 0)
+            {
+                CompleteParty();
+                return;
+            }
+
+            for (var i = 0; i < jobs.Count; i++)
+            {
+                if (!jobs[i].HasValue) continue;
+                var slot = i;
+                EntityManager.SpawnNetworkPlayer(new NetworkPlayerSpawnSpec
+                {
+                    Job = jobs[i].Value,
+                    AppearanceSource = myself,
+                    Pos = position,
+                    Heading = heading,
+                }, player =>
+                {
+                    members[slot] = player;
+                    if (--remaining == 0) CompleteParty();
+                });
             }
         }
 
         #endregion Party / Roles
 
-        protected SimActor Dummy(Vector3 pos, float heading)
+        protected void Dummy(Vector3 pos, float heading, Action<SimActor> onReady)
         {
-            var dummy = EntityManager.SpawnBNpc(9020, 0, 100);
-            dummy.Pos3D = pos;
-            dummy.Heading = heading;
-            // 不可见，但是可以绘制技能特效
-            dummy.SetReadyToDraw();
-            dummy.EnableDraw();
-            return dummy;
+            // 不可见模型仍承载技能特效；就绪时只关闭选中能力，不关闭游戏绘制。
+            EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
+            {
+                BNpcBaseId = 9020,
+                Level = 100,
+                Pos = pos,
+                Heading = heading,
+                Targetable = false,
+            }, onReady);
         }
 
-        protected void DummyCast(Vector3 pos, float heading, uint abilityId, float despawnSeconds, float? omenDelay = 0)
+        protected void DummyCast(Vector3 pos, float heading, uint abilityId, float despawnSeconds,
+            float? omenDelay = 0, Action onCast = null)
         {
             ValidateLifetime(despawnSeconds);
-            var dummy = Dummy(pos, heading);
-            dummy.Cast(abilityId, omenDelay);
-            Scheduler.ScheduleAfter(despawnSeconds, () => EntityManager.Delete(dummy), "回收读条假人");
+            if (onCast != null) SimTimeline.ValidateAction(onCast, nameof(onCast));
+            Dummy(pos, heading, dummy =>
+            {
+                dummy.Cast(abilityId, omenDelay);
+                Scheduler.ScheduleAfter(despawnSeconds, () => EntityManager.Delete(dummy), "回收读条假人");
+                onCast?.Invoke();
+            });
         }
 
-        protected void DummyExecute(Vector3 pos, float heading, uint abilityId, float despawnSeconds)
+        protected void DummyExecute(Vector3 pos, float heading, uint abilityId, float despawnSeconds, Action onExecuted = null)
         {
             ValidateLifetime(despawnSeconds);
-            var dummy = Dummy(pos, heading);
-            dummy.Execute(abilityId);
-            Scheduler.ScheduleAfter(despawnSeconds, () => EntityManager.Delete(dummy), "回收技能假人");
+            if (onExecuted != null) SimTimeline.ValidateAction(onExecuted, nameof(onExecuted));
+            Dummy(pos, heading, dummy =>
+            {
+                dummy.Execute(abilityId);
+                Scheduler.ScheduleAfter(despawnSeconds, () => EntityManager.Delete(dummy), "回收技能假人");
+                onExecuted?.Invoke();
+            });
         }
 
         private static void ValidateLifetime(float seconds)

@@ -93,6 +93,227 @@ namespace Simulant.Tests
             }
         }
 
+        internal static void ManagerRetriesFailedOwnedCleanupBeforeRestart()
+        {
+            var spawner = new EntitySpawner();
+            var errors = 0;
+            var failedAttempts = 0;
+            using (var firstScheduler = new SimScheduler())
+            using (var secondScheduler = new SimScheduler())
+            {
+                var manager = new SimEntityManager(spawner, _ => errors++) { Scheduler = firstScheduler };
+                try
+                {
+                    var failed = manager.SpawnBNpc(1);
+                    var successful = manager.SpawnBNpc(2);
+                    spawner.BeforeDelete = entity =>
+                    {
+                        if (ReferenceEquals(entity, failed.Entity) && ++failedAttempts == 1)
+                            throw new InvalidOperationException("首次删除失败");
+                    };
+                    manager.Clear();
+                    Assert(errors == 1 && !failed.IsActive && !successful.IsActive && failed.Entity.IsAlive &&
+                        !successful.Entity.IsAlive, "清理失败必须停止所有行为，同时继续回收其余实体。");
+                    Assert(manager.HasPendingCleanup, "失败的实体回收记录必须对会话持有者保持可见。");
+                    Throws<InvalidOperationException>(() => manager.Scheduler = secondScheduler);
+                    Throws<InvalidOperationException>(() => manager.SpawnBNpc(3));
+                    Assert(ReferenceEquals(manager.Scheduler, firstScheduler), "尚有失败清理记录时不得切换到新会话。");
+                    manager.Clear();
+                    Assert(errors == 1 && !failed.Entity.IsAlive && failedAttempts == 2 && spawner.Deleted.Count == 2,
+                        "再次清理必须重试失败实体，不能在第一次失败时丢失其所有权。");
+                    Assert(!manager.HasPendingCleanup, "重试完成后必须解除剩余清理状态。");
+                    Assert(spawner.DeleteAttempts.Count(entity => ReferenceEquals(entity, successful.Entity)) == 1,
+                        "重试失败实体时不能再次调用已成功实体的删除入口。");
+                    manager.Clear();
+                    Assert(spawner.DeleteAttempts.Count == 3, "全部清理成功后的重复清理不得再次触碰原生实体。");
+                    manager.Scheduler = secondScheduler;
+                    var current = manager.SpawnBNpc(3);
+                    Assert(current.IsActive, "失败记录清空后必须允许新会话创建角色。");
+                }
+                finally { spawner.BeforeDelete = null; manager.Clear(); }
+            }
+        }
+
+        internal static void ManagerBlocksRestartDuringCleanupAndPreservesNewControllers()
+        {
+            var spawner = new EntitySpawner();
+            Exception cleanupFailure = null;
+            Exception restartFailure = null;
+            Exception schedulerFailure = null;
+            using (var entered = new ManualResetEventSlim())
+            using (var release = new ManualResetEventSlim())
+            using (var cleared = new ManualResetEventSlim())
+            using (var restartAttempted = new ManualResetEventSlim())
+            using (var arrived = new ManualResetEventSlim())
+            using (var firstScheduler = new SimScheduler())
+            using (var secondScheduler = new SimScheduler((error, _) => { schedulerFailure = error; arrived.Set(); }))
+            {
+                var manager = new SimEntityManager(spawner, error => cleanupFailure = error) { Scheduler = firstScheduler };
+                Thread cleaner = null;
+                Thread restarter = null;
+                try
+                {
+                    var old = manager.SpawnBNpc(1);
+                    spawner.BeforeDelete = entity =>
+                    {
+                        if (!ReferenceEquals(entity, old.Entity)) return;
+                        entered.Set();
+                        Assert(release.Wait(5000), "清理线程未能释放删除屏障。");
+                    };
+                    cleaner = new Thread(() =>
+                    {
+                        try { manager.Clear(); }
+                        catch (Exception error) { cleanupFailure = error; }
+                        finally { cleared.Set(); }
+                    }) { IsBackground = true };
+                    cleaner.Start();
+                    Assert(entered.Wait(5000), "旧会话未进入原生删除屏障。");
+                    Assert(manager.HasPendingCleanup, "原生回收仍在进行时不能报告清理已经完成。");
+                    restarter = new Thread(() =>
+                    {
+                        try { manager.Scheduler = secondScheduler; }
+                        catch (Exception error) { restartFailure = error; }
+                        finally { restartAttempted.Set(); }
+                    }) { IsBackground = true };
+                    restarter.Start();
+                    Assert(restartAttempted.Wait(5000) && restartFailure is InvalidOperationException,
+                        "旧清理仍在执行时必须拒绝重启，不能先换入新控制器再由旧清理释放。");
+                    Assert(!cleared.IsSet && ReferenceEquals(manager.Scheduler, firstScheduler),
+                        "被屏障暂停的清理期间只能保留旧调度器。");
+                    release.Set();
+                    Assert(cleared.Wait(5000) && cleaner.Join(5000) && restarter.Join(5000), "清理或重启测试线程未结束。");
+                    Assert(cleanupFailure == null && !old.Entity.IsAlive, "旧会话清理失败：" + cleanupFailure);
+                    manager.Scheduler = secondScheduler;
+                    var current = manager.SpawnBNpc(2);
+                    current.MoveTo(new Vector2(1, 0), 100, onArrived: arrived.Set);
+                    secondScheduler.Start();
+                    Assert(arrived.Wait(5000), "清理结束后的新移动控制器没有完成移动。");
+                    secondScheduler.Dispose();
+                    Assert(schedulerFailure == null && current.IsActive && current.Pos == new Vector2(1, 0),
+                        "旧清理不得释放或污染后续会话的控制器：" + schedulerFailure);
+                }
+                finally
+                {
+                    release.Set();
+                    cleaner?.Join(5000);
+                    restarter?.Join(5000);
+                    secondScheduler.Dispose();
+                    spawner.BeforeDelete = null;
+                    manager.Clear();
+                }
+            }
+        }
+
+        internal static void ManagerRetriesUndeliveredLocalCreationAndBlocksRestart()
+        {
+            var spawnAttempts = new Action<SimEntityManager>[]
+            {
+                manager => manager.SpawnBNpc(1),
+                manager => manager.SpawnPlayer(Job.PLD)
+            };
+            foreach (var spawn in spawnAttempts)
+            {
+                var spawner = new EntitySpawner();
+                var errors = 0;
+                var failRetry = true;
+                using (var first = new SimScheduler())
+                using (var second = new SimScheduler())
+                {
+                    var manager = new SimEntityManager(spawner, _ => errors++) { Scheduler = first };
+                    try
+                    {
+                        spawner.NextUnreleasedCreationFailure = new InvalidOperationException("模拟本地创建和回滚均失败。");
+                        Throws<InvalidOperationException>(() => spawn(manager));
+                        Assert(spawner.SpawnCount == 1 && manager.HasPendingCleanup &&
+                            spawner.HasPendingCreationCleanup && spawner.DeleteAttempts.Count == 0,
+                            "首次创建尚未交付实体就抛错时，管理器仍必须暴露遗留清理责任。");
+                        Throws<InvalidOperationException>(() => manager.Scheduler = second);
+                        Assert(ReferenceEquals(manager.Scheduler, first), "不能绕过未交付实体的失败记录更换调度器。");
+
+                        spawner.BeforeRetryFailedCreations = () =>
+                        {
+                            if (failRetry) throw new InvalidOperationException("模拟未交付实体暂时无法回收。");
+                        };
+                        manager.Clear();
+                        Assert(errors == 1 && manager.HasPendingCleanup && spawner.FailedCreationCleanupAttempts == 1,
+                            "没有已交付实体的 Clear 也必须重试底层遗留资源，失败后保留清理状态。");
+                        Throws<InvalidOperationException>(() => manager.Scheduler = second);
+                        Throws<InvalidOperationException>(() => manager.SpawnBNpc(2));
+                        Throws<InvalidOperationException>(() => manager.SpawnPlayer(Job.PLD));
+                        Throws<InvalidOperationException>(() => manager.SpawnEObj(new EventObjectSpawnSpec { Index = 2 }));
+                        Assert(spawner.SpawnCount == 1, "停止并保留创建清理期间，各生成入口都不能再次调用底层创建。");
+
+                        failRetry = false;
+                        manager.Clear();
+                        Assert(!manager.HasPendingCleanup && !spawner.HasPendingCreationCleanup &&
+                            spawner.FailedCreationCleanupAttempts == 2 && errors == 1,
+                            "重试成功后应解除创建失败产生的重启限制。");
+                        manager.Clear();
+                        Assert(spawner.FailedCreationCleanupAttempts == 2, "清空后的重复停止不能重复回收未交付资源。");
+                        manager.Scheduler = second;
+                        Assert(manager.SpawnBNpc(3).IsActive, "完成未交付资源清理后应允许新一轮创建。");
+                    }
+                    finally { spawner.BeforeRetryFailedCreations = null; manager.Clear(); }
+                }
+            }
+        }
+
+        internal static void ManagerCreationCleanupPreservesOtherManagersEntities()
+        {
+            var spawner = new EntitySpawner();
+            using (var firstScheduler = new SimScheduler())
+            using (var secondScheduler = new SimScheduler())
+            {
+                var failedManager = new SimEntityManager(spawner) { Scheduler = firstScheduler };
+                var otherManager = new SimEntityManager(spawner) { Scheduler = secondScheduler };
+                try
+                {
+                    var other = otherManager.SpawnBNpc(1);
+                    other.MoveTo(new Vector2(10, 0));
+                    spawner.NextUnreleasedCreationFailure = new InvalidOperationException("模拟另一管理器创建回滚失败。");
+                    Throws<InvalidOperationException>(() => failedManager.SpawnBNpc(2));
+                    failedManager.Clear();
+                    Assert(!failedManager.HasPendingCleanup && spawner.FailedCreationCleanupAttempts == 1,
+                        "失败管理器应能够回收尚未交付的创建遗留资源。");
+                    Assert(other.IsActive && other.Entity.IsAlive && other.IsMoving && secondScheduler.PendingCount == 1 &&
+                        spawner.DeleteAttempts.Count == 0,
+                        "共享生成器的失败清理不能删除另一管理器的已交付实体或中断其移动。");
+                    otherManager.Clear();
+                    Assert(spawner.Deleted.Count == 1 && ReferenceEquals(spawner.Deleted[0], other.Entity),
+                        "已交付实体仍应只由所属管理器清理。");
+                }
+                finally { failedManager.Clear(); otherManager.Clear(); }
+            }
+        }
+
+        internal static void ManagerWorldResetReleasesUndeliveredCreationBarrier()
+        {
+            var spawner = new EntitySpawner();
+            using (var first = new SimScheduler())
+            using (var second = new SimScheduler())
+            {
+                var manager = new SimEntityManager(spawner) { Scheduler = first };
+                try
+                {
+                    spawner.NextUnreleasedCreationFailure = new InvalidOperationException("模拟旧世界创建回滚失败。");
+                    Throws<InvalidOperationException>(() => manager.SpawnBNpc(1));
+                    spawner.BeforeRetryFailedCreations = () => { throw new InvalidOperationException("旧世界暂时无法清理。"); };
+                    manager.Clear();
+                    Assert(manager.HasPendingCleanup && spawner.FailedCreationCleanupAttempts == 1,
+                        "换图前应保留尚未完成的旧世界创建清理。");
+                    spawner.ResetWorld();
+                    Assert(!spawner.HasPendingCreationCleanup && !manager.HasPendingCleanup,
+                        "世界失效后管理器应立即解除旧世界未交付资源的清理限制。");
+                    manager.Clear();
+                    Assert(spawner.FailedCreationCleanupAttempts == 1 && spawner.DeleteAttempts.Count == 0,
+                        "换图后的清理不能再次访问旧世界遗留资源。");
+                    manager.Scheduler = second;
+                    Assert(manager.SpawnBNpc(2).IsActive, "旧世界失效后应允许绑定新调度器并创建新实体。");
+                }
+                finally { spawner.BeforeRetryFailedCreations = null; manager.Clear(); }
+            }
+        }
+
         internal static void ManagerDeletingOneActorPreservesOtherMovementAndCast()
         {
             TriggernometryInterop.Reset();
@@ -288,14 +509,87 @@ namespace Simulant.Core.Entity
     {
         internal readonly Simulant.Tests.EntityTestWorld World = new Simulant.Tests.EntityTestWorld();
         internal readonly List<EntityBase> Deleted = new List<EntityBase>();
+        internal readonly List<EntityBase> DeleteAttempts = new List<EntityBase>();
         internal Action<EntityBase> BeforeDelete;
         internal int SpawnCount;
+        // 模拟本地角色已分配、初始化和首次回滚均失败，但没有交付包装对象的创建。
+        internal Exception NextUnreleasedCreationFailure;
+        internal Action BeforeRetryFailedCreations;
+        internal int FailedCreationCleanupAttempts;
+        private int _pendingCreationCleanupCount;
+        internal bool HasPendingCreationCleanup => _pendingCreationCleanupCount != 0;
+        internal readonly List<NetworkCharacterSpawnRequest> NetworkRequests = new List<NetworkCharacterSpawnRequest>();
+        internal readonly List<NetworkCharacterSpawnRequest> CancelledNetworkRequests = new List<NetworkCharacterSpawnRequest>();
+        internal bool NetworkReady;
+        internal int NetworkPollCount;
+        internal Action<NetworkNpcSpawnSpec> BeforeNetworkBegin { get; set; }
+        internal Action<NetworkPlayerSpawnSpec> BeforeNetworkPlayerBegin { get; set; }
+        internal Action<NetworkCharacterSpawnRequest> AfterNetworkReserved { get; set; }
+        internal Action<NetworkCharacterSpawnRequest> BeforeNetworkPoll { get; set; }
+        internal Action<NetworkCharacterSpawnRequest> BeforeNetworkCancel { get; set; }
         private ushort _nextSlot = 1;
+
+        internal void BeginSpawnNetworkBNpc(NetworkNpcSpawnSpec spec, out NetworkCharacterSpawnRequest request)
+        {
+            request = null;
+            BeforeNetworkBegin?.Invoke(spec);
+            BeginNetworkSpawn(ObjectKind.BattleNpc, Job.Adv, out request);
+        }
+
+        internal void BeginSpawnNetworkPlayer(NetworkPlayerSpawnSpec spec, out NetworkCharacterSpawnRequest request)
+        {
+            request = null;
+            BeforeNetworkPlayerBegin?.Invoke(spec);
+            BeginNetworkSpawn(ObjectKind.Pc, spec.Job, out request);
+        }
+
+        private void BeginNetworkSpawn(ObjectKind kind, Job job, out NetworkCharacterSpawnRequest request)
+        {
+            request = new NetworkCharacterSpawnRequest((byte)_nextSlot++, kind, job);
+            NetworkRequests.Add(request);
+            SpawnCount++;
+            try { AfterNetworkReserved?.Invoke(request); }
+            catch (Exception spawnError)
+            {
+                try { CancelNetworkCharacter(request); }
+                catch (Exception cleanupError)
+                {
+                    throw new AggregateException("生成及回滚均失败。", spawnError, cleanupError);
+                }
+                throw;
+            }
+        }
+
+        internal Character TryCompleteNetworkCharacter(NetworkCharacterSpawnRequest request)
+        {
+            NetworkPollCount++;
+            BeforeNetworkPoll?.Invoke(request);
+            if (request.Cancelled) throw new InvalidOperationException("已取消的网络生成请求不能再次领取。");
+            if (!NetworkReady && !request.Ready) return null;
+            if (request.Entity == null)
+            {
+                World.Objects[request.Index] = new EntityObservation(new IntPtr(100 + request.Index),
+                    request.EntityId, request.Kind);
+                request.Entity = (Character)World.Registry.RegisterCreated(request.Index);
+                request.Entity.Job = request.Job;
+            }
+            return request.Entity;
+        }
+
+        internal void CancelNetworkCharacter(NetworkCharacterSpawnRequest request)
+        {
+            BeforeNetworkCancel?.Invoke(request);
+            if (request.Released) return;
+            if (request.Entity != null) Delete(request.Entity);
+            request.Cancelled = true;
+            request.Released = true;
+            CancelledNetworkRequests.Add(request);
+        }
 
         public Character SpawnPlayer(Job job) => SpawnBNpc(new CharacterSpawnSpec());
         public Character SpawnBNpc(CharacterSpawnSpec spec)
         {
-            SpawnCount++;
+            BeginLocalCreation();
             return World.CreateCharacter(_nextSlot++);
         }
 
@@ -307,12 +601,57 @@ namespace Simulant.Core.Entity
             return (EventObject)World.Registry.RegisterCreated(spec.Index);
         }
 
+        private void BeginLocalCreation()
+        {
+            SpawnCount++;
+            var failure = NextUnreleasedCreationFailure;
+            if (failure == null) return;
+            NextUnreleasedCreationFailure = null;
+            _pendingCreationCleanupCount++;
+            throw failure;
+        }
+
+        internal void RetryFailedCreations()
+        {
+            if (!HasPendingCreationCleanup) return;
+            FailedCreationCleanupAttempts++;
+            BeforeRetryFailedCreations?.Invoke();
+            _pendingCreationCleanupCount = 0;
+        }
+
+        internal void ResetWorld()
+        {
+            _pendingCreationCleanupCount = 0;
+            World.Registry.Reset();
+        }
+
         public void Delete(EntityBase entity)
         {
+            DeleteAttempts.Add(entity);
+            if (Deleted.Contains(entity)) return;
             BeforeDelete?.Invoke(entity);
             Deleted.Add(entity);
             World.Registry.Invalidate(entity);
             World.Objects[entity.Identity.Slot] = null;
         }
+    }
+
+    internal sealed class NetworkCharacterSpawnRequest
+    {
+        internal NetworkCharacterSpawnRequest(byte index, ObjectKind kind, Job job)
+        {
+            Index = index;
+            EntityId = (uint)(10 + index);
+            Kind = kind;
+            Job = job;
+        }
+        public byte Index { get; }
+        public uint EntityId { get; }
+        internal ObjectKind Kind { get; }
+        internal Job Job { get; }
+        internal Character Entity;
+        internal bool Ready { get; set; }
+        internal bool Cancelled;
+        internal bool Released;
     }
 }

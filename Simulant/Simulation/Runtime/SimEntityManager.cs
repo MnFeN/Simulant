@@ -9,7 +9,7 @@ using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 namespace Simulant.Simulation.Runtime
 {
     /// <summary>本会话的参与者及创建记录。Attach 只借用，只有 Spawn 才取得回收责任。</summary>
-    public sealed class SimEntityManager
+    public sealed partial class SimEntityManager
     {
         private readonly EntitySpawner _spawner;
         private readonly Action<Exception> _onCleanupError;
@@ -20,8 +20,20 @@ namespace Simulant.Simulation.Runtime
         private SimCastController _casts;
         private SimMovementController _movement;
         private bool _acceptingEntities;
+        private bool _isClearing;
 
         internal List<SimActor> Party { get; } = new List<SimActor>();
+
+        // 清理期间或仍持有资源时为真；Clear 返回后可用来判断是否需要重试。
+        internal bool HasPendingCleanup
+        {
+            get
+            {
+                lock (_gate)
+                    return _isClearing || _owned.Count != 0 || _networkSpawns.Count != 0 ||
+                        _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true;
+            }
+        }
 
         internal SimScheduler Scheduler
         {
@@ -31,12 +43,19 @@ namespace Simulant.Simulation.Runtime
                 if (value == null) throw new ArgumentNullException(nameof(value));
                 lock (_gate)
                 {
+                    if (_isClearing)
+                        throw new InvalidOperationException("正在清理本次模拟，不能更换调度器。");
                     if (ReferenceEquals(_scheduler, value)) return;
-                    if (_actors.Count != 0 || _owned.Count != 0)
+                    if (_spawner.HasPendingCreationCleanup)
+                        throw new InvalidOperationException("宿主仍有未交付的失败创建，请先重试清理后开始模拟。");
+                    if (_movement?.HasPendingCleanup == true)
+                        throw new InvalidOperationException("上次模拟的移动尚未停止，请先重试清理后开始模拟。");
+                    if (_actors.Count != 0 || _owned.Count != 0 || _networkSpawns.Count != 0)
                         throw new InvalidOperationException("更换调度器前必须清理本次模拟。");
                     _casts?.Dispose();
                     _movement?.Dispose();
                     _scheduler = value;
+                    _networkGeneration++;
                     _casts = new SimCastController(value);
                     _movement = new SimMovementController(value);
                     _acceptingEntities = true;
@@ -154,31 +173,66 @@ namespace Simulant.Simulation.Runtime
         {
             SimActor[] actors;
             EntityBase[] owned;
+            PendingNetworkSpawn[] networkSpawns;
+            SimCastController casts;
+            SimMovementController movement;
             lock (_gate)
             {
-                _acceptingEntities = false;
+                // 回调或日志可能重入清理；由正在执行的这一轮继续持有回收责任。
+                if (_isClearing) return;
+                networkSpawns = _networkSpawns.ToArray();
                 actors = _actors.Values.ToArray();
                 owned = _owned.ToArray();
+                casts = _casts;
+                movement = _movement;
+                _isClearing = true;
+                _acceptingEntities = false;
+                _networkGeneration++;
+                _networkPoll?.Cancel();
+                _networkPoll = null;
+                foreach (var pending in networkSpawns)
+                {
+                    pending.OnReady = null;
+                    // 已就绪实体的回收责任已经转入 _owned。
+                    if (pending.Actor != null) _networkSpawns.Remove(pending);
+                }
                 _actors.Clear();
-                _owned.Clear();
                 Party.Clear();
             }
-            // 先停止所有参与者的行为，再回收本会话生成的实体。借用玩家只解除关联。
-            foreach (var actor in actors)
-                TryCleanup(actor.Dispose);
-            foreach (var entity in owned)
-                TryCleanup(() => _spawner.Delete(entity));
-            if (_casts != null) TryCleanup(_casts.Dispose);
-            if (_movement != null) TryCleanup(_movement.Dispose);
+            try
+            {
+                foreach (var pending in networkSpawns)
+                    if (pending.Actor == null && TryCleanup(() => _spawner.CancelNetworkCharacter(pending.Request)))
+                        lock (_gate) _networkSpawns.Remove(pending);
+                // 先停止所有参与者的行为，再回收本会话生成的实体。借用玩家只解除关联。
+                foreach (var actor in actors)
+                    TryCleanup(actor.Dispose);
+                foreach (var entity in owned)
+                    if (TryCleanup(() => _spawner.Delete(entity)))
+                        lock (_gate) _owned.Remove(entity);
+                if (casts != null) TryCleanup(casts.Dispose);
+                if (movement != null) TryCleanup(movement.Dispose);
+                // 仅接管共享生成器中从未交付的失败分配，不触及其他会话已拥有的实体。
+                TryCleanup(_spawner.RetryFailedCreations);
+            }
+            finally
+            {
+                lock (_gate) _isClearing = false;
+            }
         }
 
-        private void TryCleanup(Action cleanup)
+        private bool TryCleanup(Action cleanup)
         {
-            try { cleanup(); }
+            try
+            {
+                cleanup();
+                return true;
+            }
             catch (Exception ex)
             {
                 try { _onCleanupError?.Invoke(ex); }
                 catch { /* 日志失败也不能中断其余资源的清理。 */ }
+                return false;
             }
         }
 

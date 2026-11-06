@@ -13,9 +13,10 @@ namespace Simulant.Simulation.Runtime
         private readonly object _lifecycleLock = new object();
         private SimScheduler _scheduler;
         private int _cleanupRequired;
-        private bool _disposed;
+        private volatile bool _disposed;
 
         public bool IsRunning => _scheduler?.IsRunning == true;
+        internal bool HasPendingCleanup => _entityManager.HasPendingCleanup;
 
         internal SimSession(PluginHost host, SimPresetBase preset)
         {
@@ -35,6 +36,8 @@ namespace Simulant.Simulation.Runtime
 
         public void Start()
         {
+            if (Monitor.IsEntered(_lifecycleLock) || _scheduler?.IsSchedulerThread == true)
+                throw new InvalidOperationException("不能在本会话的启动、停止或时间轴节点内重启会话，请等待当前调用退出后再开始。");
             lock (_lifecycleLock)
             {
                 if (_disposed)
@@ -43,16 +46,20 @@ namespace Simulant.Simulation.Runtime
                     throw new InvalidOperationException("SimSession 已在运行中。");
 
                 StopCore();
+                if (_disposed)
+                    throw new ObjectDisposedException(nameof(SimSession));
+                if (HasPendingCleanup)
+                    throw new InvalidOperationException("上次模拟的实体尚未完全回收，请先停止并重试清理。");
                 _scheduler = new SimScheduler((ex, node) =>
                 {
-                    _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{ex}");
-                    Cleanup();
+                    try { _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{ex}"); }
+                    finally { Cleanup(); }
                 });
-                _logic.Scheduler = _scheduler;
-                _entityManager.Scheduler = _scheduler;
-                Interlocked.Exchange(ref _cleanupRequired, 1);
                 try
                 {
+                    _entityManager.Scheduler = _scheduler;
+                    _logic.Scheduler = _scheduler;
+                    Interlocked.Exchange(ref _cleanupRequired, 1);
                     // UI 选项只在调用方读取；实体初始化与所有节点都在专用线程运行。
                     _logic.Prepare();
                     _scheduler.Schedule(0, _logic.Start, "初始化模拟");
@@ -68,6 +75,12 @@ namespace Simulant.Simulation.Runtime
 
         public void Stop()
         {
+            // 外部停止可能持有生命周期锁并等待当前节点；节点不能再反向等待该锁。
+            if (_scheduler?.IsSchedulerThread == true)
+            {
+                StopCore();
+                return;
+            }
             lock (_lifecycleLock)
                 StopCore();
         }
@@ -83,13 +96,20 @@ namespace Simulant.Simulation.Runtime
         {
             if (Interlocked.Exchange(ref _cleanupRequired, 0) != 0)
                 _logic.Stop();
+            else if (HasPendingCleanup)
+                _entityManager.Clear();
         }
 
         public void Dispose()
         {
+            if (_scheduler?.IsSchedulerThread == true)
+            {
+                _disposed = true;
+                StopCore();
+                return;
+            }
             lock (_lifecycleLock)
             {
-                if (_disposed) return;
                 _disposed = true;
                 StopCore();
             }

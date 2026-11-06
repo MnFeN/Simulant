@@ -15,31 +15,62 @@
 在 `SimLogicBase.BuildTimeline` 或时间轴节点内使用会话的 `EntityManager`：
 
 ```csharp
-var boss = EntityManager.SpawnBNpc(new CharacterSpawnSpec
+EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
 {
     BNpcBaseId = 15725,
     BNpcNameId = 12256,
     Level = 90,
     Pos = new Vector3(100, 100, 0),
     Heading = (float)Math.PI
+}, boss =>
+{
+    var mechanic = new SimTimeline();
+    mechanic.At(0, () => boss.Cast(0x7BA2));
+    mechanic.At(10, () => EntityManager.Delete(boss));
+    Play(mechanic);
 });
-boss.SetReadyToDraw();
-boss.EnableDraw();
-
-// 也保留简短写法：SpawnBNpc(baseId, nameId, level)、SpawnPlayer(job)。
-var player = EntityManager.Attach(_host.EntityProvider.GetMyself());
-
-timeline.At(0, () => boss.Cast(0x7BA2));
-timeline.At(10, () => EntityManager.Delete(boss));
 ```
 
-`CharacterSpawnSpec` 和 `EventObjectSpawnSpec` 只描述创建参数。`EntitySpawner` 负责创建和回收本地资源，`SimEntityManager` 记录其中哪些资源属于当前会话。
+现有预设的 Boss、技能假人和队员统一使用网络角色；先开启防火墙，再开始预设。生成回调拿到就绪实体后才启动机制时间轴，避免把模型登记的等待时间算入读条。技能假人通过 `Targetable = false` 保持不可选中，寿命从就绪并开始施法时计算。
+
+`CharacterSpawnSpec` 和 `EventObjectSpawnSpec` 只描述创建参数。`EntitySpawner` 负责创建和回收资源，`SimEntityManager` 记录其中哪些资源属于当前会话。
+
+网络角色使用 `EntityManager.SpawnNetworkBNpc(spec, onReady)` 或 `SpawnNetworkPlayer(job/spec, onReady)`，在客户端完成登记和必要入场控制后交付角色；同步本地入口保持可用。两种来源由生成器配对回收，参数、职业套装及使用边界见 [网络角色生成](NetworkEntities.md)。
 
 `Spawn` 取得回收责任；`Attach` 只借用。对同一实体重复 `Attach` 返回本会话现有的活动 `SimActor`。`Detach` 或 `actor.Dispose()` 停止行为，保留底层实体；`Delete` 仅回收本会话生成的实体，借用玩家不会被删除。即便先 `Detach`，本会话生成的角色仍会在停止时回收。
 
-停止顺序是：取消时间轴并等待当前节点退出，停止所有角色行为，清除本次读条预兆，最后回收自有实体。停止后的管理器不再接受生成或关联；重新开始会话时绑定新的调度器。
+`GeneratePartyMembers(myPartyIdx, onReady)` 每次模拟会话只准备一次小队，按原职能顺序等待全部网络玩家就绪后再回调；自身玩家仍然借用。停止并完成清理后，可以在下一轮重新准备。
+
+从调度线程外停止时，顺序是：取消时间轴并等待当前节点退出，停止所有角色行为，清除本次读条预兆，最后回收自有实体。调度回调内停止会话不能等待自身退出，调用后应立即 `return`，不要继续访问已清理的实体。停止后的管理器不再接受生成或关联；清理完成后重新开始会话时绑定新的调度器。
+
+`Clear()` 逐项回收实体和取消尚未就绪的网络请求：成功项移出记录，失败项保留，单项异常不妨碍其余资源清理。再次调用只重试尚未完成的资源，不会重新删除已成功回收的实体。清理进行中或仍有失败记录时，不能更换调度器开始下一轮。
+
+本地角色在交付前初始化失败、立即回滚也失败时，生成器会单独保留分配记录。任一共享此生成器的会话清理时都可重试这些未交付资源，不会因此回收另一会话的成功实体；清理完成前不能开始新会话。重试需确认原进程、对象管理器、槽位、地址及身份仍匹配；创建时始终未能确认身份的记录保留至世界重置，不认领后来出现的同槽对象。
+
+会话的 `OnStop` 每轮只调用一次；后续 `Stop()` 或 `Dispose()` 只重试剩余实体清理。界面会保留清理失败的会话，禁用“开始模拟”，保留“停止模拟”按钮供再次重试。清理成功后可以重新开始；换图后旧世界记录失效，后续清理只移除旧记录，不访问旧指针。
+
+## 读条与取消
+
+```csharp
+boss.Cast(0x7BA2);
+boss.StopCasting();
+```
+
+`StopCasting()` 取消该角色在本会话安排的读条完成节点、延迟预兆和已显示的预兆，并按原技能编号结束读条；不会删除角色或停止其移动。没有本会话读条记录时，不改动角色的外部读条。
 
 ## 移动
+
+网络角色优先使用客户端移动插值：
+
+```csharp
+boss.MoveNetworkTo(new Vector2(100, 90), speedParam: 30,
+    onArrived: () => boss.Cast(0x7BA2));
+boss.StopMoving();
+```
+
+`MoveNetworkTo` 只向网络角色发送一次 `ActorMove`，由客户端完成移动和动画。控制器约每 100 ms 读取实际位置确认到达，不逐帧写坐标；到达后执行回调，30 秒未到达则报告超时。`speedParam` 保留协议字节的语义，不与本地 `MoveTo` 的浮点速度参数混用。停止或替换时发送当前位置作为新目标，并取消旧到达回调。此方式不接受自身或本地备用表中的角色。
+
+原有本地插值保留为备用：
 
 ```csharp
 boss.MoveTo(new Vector2(100, 90), speed: 6);
@@ -52,6 +83,8 @@ boss.MoveTo(new Vector2(100, 90), speed: 6, animationId: 13,
     onArrived: () => boss.Cast(0x7BA2));
 ```
 
+`IsMoving`、`StopMoving()` 同时管理本会话的 `MoveTo` 和 `MoveNetworkTo`；同一角色两种移动互斥。`Detach` 或 `actor.Dispose()` 也会停止它们。直接调用 `actor.Entity.ActorMove(...)` 不会登记到控制器，不在这些接口的管理范围内。对本会话拥有的玩家或 NPC，`EntityManager.Delete(actor)` 成功回收实体后，其原生移动也随之结束；借用实体不会被删除。
+
 - 坐标沿用项目的 ACT 约定：`X/Y` 为水平面，`Z` 为高度。移动保持当前高度，速度为世界单位/秒，必须是有限正数。
 - `MoveTo` 从当前位置向目标直线推进，途中再次调用会替换目标和速度。默认面向移动方向；到达目标自动停止，不会越过目标。
 - 每个会话只有一个按需排队的更新节点，约每 16 ms 更新全部移动角色。使用实际经过时间计算距离，迟到时不会补排多帧；无人移动时没有移动节点。
@@ -59,13 +92,15 @@ boss.MoveTo(new Vector2(100, 90), speed: 6, animationId: 13,
 
 `animationId` 可选，由调用方选择适用于模型的动画。指定后，移动控制器在更新线程启动动画，在到达、主动停止、替换或释放时结束自己的动画。移动期间开始施法会让出动画，位置仍继续推进，本次移动不会再次抢占动画。没有指定动画时只更新位置。
 
-`onArrived` 在调度线程上执行一次，此时已经停止移动并清理所属动画，可以直接施法、开始下一段移动或删除角色。停止、改目标、删除和会话结束都会取消尚未领取的旧回调；已经领取的回调允许执行完毕，会话停止会等待它退出再回收实体。回调必须是短同步操作。回调中的实际延迟使用 `Scheduler.ScheduleAfter`，避免慢帧时把下一阶段当成已经过去。
+`onArrived` 在调度线程上执行一次，此时已经停止移动并清理所属动画，可以直接施法、开始下一段移动或删除角色。停止、改目标、删除和会话结束都会取消尚未领取的旧回调；已经领取的回调允许执行完毕，从调度线程外停止会话会等待它退出再回收实体。回调必须是短同步操作。回调中的实际延迟使用 `Scheduler.ScheduleAfter`，避免慢帧时把下一阶段当成已经过去。
 
 当前实现不含寻路、碰撞、重力、路径曲线或自动选择跑步动画。后续路径或追踪行为可扩展移动控制器，保持现有 `MoveTo` 调用方式。
 
 ## 身份与失效
 
 宿主的 `EntityProvider`、`EntitySpawner` 共享一个 `EntityRegistry`。同一原生实例的查询和生成结果使用同一包装。`EntityIdentity` 由世界代次、对象槽位和实例代次构成；游戏 `Id` 和地址只是元数据，不单独用作实例身份。
+
+本地角色、网络角色和 EObj 共用 ID 分配：创建前批读全局对象指针，并检查已有资源、等待中的网络请求和失败创建的已知身份。玩家使用 `0x10FFxxxx`，非玩家使用 `0x40FFxxxx`；分别找出当前客户端同前缀的最大编号，与本进程已经分配的编号取较大值，再从下一号继续。旧插件残留和隐藏 EObj 都会参与计算，不填补区间中的空洞；到达区间上限时明确失败，不回绕。扫描只在生成时执行，同一原生指针只读一次 ID；这不是跨客户端的全局身份分配。
 
 访问实体前检查对象表中的地址、游戏 ID 和对象种类。槽位变化、显式回收或世界重置后，旧包装失效，`IsAlive` 为 `false`，即时内存操作拒绝执行。模拟控制器跳过失效角色，不再写入旧地址。本地生成会强制产生新代次，即便游戏复用了相同字段。
 

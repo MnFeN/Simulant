@@ -3,6 +3,7 @@ using Simulant.Game.ExtractedCsv;
 using Simulant.Game.ExtractedCsv.Rows;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
@@ -16,6 +17,10 @@ namespace Simulant.UI
     {
         private List<TerritoryViewItem> _allTerritories;
         private List<TerritoryViewItem> _filteredTerritories;
+        private readonly ErrorProvider _filterErrors;
+        private bool _invalidRegex;
+        private string _lastSuccessfulFilterText = string.Empty;
+        private bool _lastSuccessfulPresetOnly;
 
         // 记录上一次的搜索条件，以便在重新打开窗口时恢复
         private static string _lastFilterText = string.Empty;
@@ -27,6 +32,12 @@ namespace Simulant.UI
         public TerritoryForm()
         {
             InitializeComponent();
+            if (components == null) components = new System.ComponentModel.Container();
+            _filterErrors = new ErrorProvider(components)
+            {
+                ContainerControl = this,
+                BlinkStyle = ErrorBlinkStyle.NeverBlink,
+            };
             LoadTerritoryData();
 
             RestoreViewState();
@@ -36,8 +47,8 @@ namespace Simulant.UI
 
         private void RestoreViewState()
         {
-            txtFilter.Text = _lastFilterText ?? string.Empty;
             chkPresetOnly.Checked = _lastPresetOnly;
+            txtFilter.Text = _lastFilterText ?? string.Empty;
         }
 
         private void RestoreSelectedTerritory()
@@ -66,8 +77,9 @@ namespace Simulant.UI
 
         private void SaveViewState()
         {
-            _lastFilterText = txtFilter.Text ?? string.Empty;
-            _lastPresetOnly = chkPresetOnly.Checked;
+            // 错误输入保留在本次窗口内，下次打开恢复当前列表实际使用的条件。
+            _lastFilterText = _lastSuccessfulFilterText;
+            _lastPresetOnly = _lastSuccessfulPresetOnly;
 
             var rowIndex = dgvTerritory.CurrentCell?.RowIndex ?? -1;
             _lastSelectedTerritoryId = rowIndex >= 0 && rowIndex < _filteredTerritories.Count
@@ -117,6 +129,7 @@ namespace Simulant.UI
                 .ToList();
 
             _filteredTerritories = new List<TerritoryViewItem>(_allTerritories);
+            dgvTerritory.RowCount = _filteredTerritories.Count;
         }
 
         private static HashSet<int> GetPresetTerritoryIds()
@@ -148,44 +161,67 @@ namespace Simulant.UI
 
         private void txtFilter_TextChanged(object sender, EventArgs e)
         {
+            _invalidRegex = false;
+            _filterErrors.SetError(txtFilter, string.Empty);
             try
             {
                 _cachedRegex = string.IsNullOrWhiteSpace(txtFilter.Text)
                     ? null
-                    : new Regex(txtFilter.Text, RegexOptions.IgnoreCase);
+                    : new Regex(txtFilter.Text, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(50));
 
-                (sender as TextBox).BackColor = SystemColors.Window;
-                ApplySearch();
+                txtFilter.BackColor = SystemColors.Window;
             }
-            catch
+            catch (ArgumentException)
             {
-                (sender as TextBox).BackColor = Color.SeaShell;
+                RejectSearch("正则表达式格式不正确，请修改后重试。");
+                return;
             }
+            ApplySearch();
         }
 
         private void ApplySearch()
         {
+            if (_invalidRegex || _allTerritories == null) return;
+            var result = new List<TerritoryViewItem>();
+            var timer = Stopwatch.StartNew();
+
+            bool Matches(string text)
+            {
+                if (timer.ElapsedMilliseconds >= 200)
+                    throw new TimeoutException();
+                return _cachedRegex.IsMatch(text ?? string.Empty);
+            }
+
+            try
+            {
+                foreach (var territory in _allTerritories)
+                {
+                    if (chkPresetOnly.Checked && !territory.HasPreset) continue;
+                    if (_cachedRegex != null && !Matches(territory.IdString) &&
+                        !Matches(territory.InstanceName) && !Matches(territory.PlaceName) && !Matches(territory.RegionName))
+                        continue;
+                    result.Add(territory);
+                }
+            }
+            catch (TimeoutException)
+            {
+                RejectSearch("正则筛选耗时过长，已保留原列表。请简化或清空表达式后重试。");
+                return;
+            }
+
+            // 全部匹配成功后才替换列表，输入错误或超时不会丢失当前结果和选择。
             dgvTerritory.Rows.Clear(); // 不加这个就会卡
-
-            IEnumerable<TerritoryViewItem> result = _allTerritories;
-
-            if (chkPresetOnly.Checked)
-            {
-                result = result.Where(t => t.HasPreset);
-            }
-
-            if (_cachedRegex != null)
-            {
-                result = result.Where(t =>
-                    _cachedRegex.IsMatch(t.IdString) ||
-                    _cachedRegex.IsMatch(t.InstanceName) ||
-                    _cachedRegex.IsMatch(t.PlaceName) ||
-                    _cachedRegex.IsMatch(t.RegionName)
-                );
-            }
-
-            _filteredTerritories = result.ToList();
+            _filteredTerritories = result;
             dgvTerritory.RowCount = _filteredTerritories.Count;
+            _lastSuccessfulFilterText = txtFilter.Text ?? string.Empty;
+            _lastSuccessfulPresetOnly = chkPresetOnly.Checked;
+        }
+
+        private void RejectSearch(string message)
+        {
+            _invalidRegex = true;
+            txtFilter.BackColor = Color.MistyRose;
+            _filterErrors.SetError(txtFilter, message);
         }
 
         private void dgvTerritory_SelectionChanged(object sender, EventArgs e)

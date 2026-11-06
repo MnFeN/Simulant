@@ -50,27 +50,28 @@ namespace Simulant.Content.S4b.Presets
                 .Select((triangle, i) => (triangle, (byte)(10 + i)))
                 .ToList();
 
-            var boss = EntityManager.SpawnBNpc(8528, 7131, 80);
-            boss.Pos3D = VerifyEntranceMovement ? new Vector3(0, 12, 0) : Vector3.Zero;
-            boss.Heading = (float)Math.PI;
-            boss.SetReadyToDraw();
-            boss.EnableDraw();
-
-            // 准备 3 秒后，以本体读条为机制时间轴的零点。
-            var mechanic = new SimTimeline();
-            mechanic.At(0, () => boss.Cast(0x290D), "异三角读条");
-            mechanic.At(3.2, () => StartTriangles(2), "第一组异三角");
-            mechanic.At(5.2, () => StartTriangles(2), "第二组异三角");
-            mechanic.At(7.2, () => StartTriangles(3), "第三组异三角");
-            mechanic.At(20, () => EntityManager.Delete(boss), "回收本体");
-            if (VerifyEntranceMovement)
+            timeline.At(0, () => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                timeline.At(0, () => boss.MoveTo(Vector2.Zero, speed: 6, animationId: 13,
-                    onArrived: () => Scheduler.ScheduleAfter(1, () => Play(mechanic), "入场后开始异三角")),
-                    "本体移动到场中");
-            }
-            else
-                timeline.At(3, mechanic);
+                BNpcBaseId = 8528,
+                BNpcNameId = 7131,
+                Level = 80,
+                Pos = VerifyEntranceMovement ? new Vector3(0, 12, 0) : Vector3.Zero,
+                Heading = (float)Math.PI,
+            }, boss =>
+            {
+                // 准备 3 秒后，以本体读条为机制时间轴的零点。
+                var mechanic = new SimTimeline();
+                mechanic.At(0, () => boss.Cast(0x290D), "异三角读条");
+                mechanic.At(3.2, () => StartTriangles(2), "第一组异三角");
+                mechanic.At(5.2, () => StartTriangles(2), "第二组异三角");
+                mechanic.At(7.2, () => StartTriangles(3), "第三组异三角");
+                mechanic.At(20, () => EntityManager.Delete(boss), "回收本体");
+                if (VerifyEntranceMovement)
+                    boss.MoveNetworkTo(Vector2.Zero, speedParam: 30,
+                        onArrived: () => Scheduler.ScheduleAfter(1, () => Play(mechanic), "入场后开始异三角"));
+                else
+                    Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体就绪后开始异三角");
+            }), "生成异三角本体");
         }
 
         private void StartTriangles(int count)

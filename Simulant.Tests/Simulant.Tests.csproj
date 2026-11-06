@@ -8,6 +8,7 @@
     <AssemblyName>Simulant.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <LangVersion>7.3</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <Optimize Condition="'$(Configuration)' == 'Release'">true</Optimize>
     <WarningLevel>4</WarningLevel>
@@ -23,12 +24,31 @@
     <Compile Include="CastTests.cs" />
     <Compile Include="ManagerTests.cs" />
     <Compile Include="EntityTestDoubles.cs" />
+    <Compile Include="NetworkSpawnTests.cs" />
+    <Compile Include="NetworkManagerTests.cs" />
+    <Compile Include="NetworkPlayerSpawnTests.cs" />
+    <Compile Include="PacketCodecTests.cs" />
+    <Compile Include="PresetPlacementTests.cs" />
+    <Compile Include="ZonePhaseTests.cs" />
+    <Compile Include="FirewallTests.cs" />
+    <Compile Include="FirewallTestDoubles.cs" />
+    <Compile Include="..\Simulant\Core\Firewall\FirewallService.cs"><Link>Firewall\FirewallService.cs</Link></Compile>
+    <Compile Include="..\Simulant\Core\Zone\PhaseApplication.cs"><Link>Zone\PhaseApplication.cs</Link></Compile>
+    <Compile Include="..\Simulant\Content\U7b\Presets\P5地火.Placement.cs"><Link>Content\P5地火.Placement.cs</Link></Compile>
+    <Compile Include="..\Simulant\Core\Entity\NetworkNpcSpawnSpec.cs"><Link>Entity\NetworkNpcSpawnSpec.cs</Link></Compile>
+    <Compile Include="..\Simulant\Core\Entity\NetworkPlayerSpawnSpec.cs"><Link>Entity\NetworkPlayerSpawnSpec.cs</Link></Compile>
+    <Compile Include="..\Simulant\Core\Entity\PlayerAppearanceSnapshot.cs"><Link>Entity\PlayerAppearanceSnapshot.cs</Link></Compile>
+    <Compile Include="..\Simulant\Core\Entity\JobEquipment.cs"><Link>Entity\JobEquipment.cs</Link></Compile>
+    <Compile Include="..\Simulant\Game\PacketCodec.cs"><Link>Game\PacketCodec.cs</Link></Compile>
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\SpawnPackets.cs"><Link>Game\SpawnPackets.cs</Link></Compile>
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\NetworkSpawnPackets.cs"><Link>Game\NetworkSpawnPackets.cs</Link></Compile>
     <Compile Include="..\Simulant\Core\Entity\EntityIdentity.cs"><Link>Entity\EntityIdentity.cs</Link></Compile>
     <Compile Include="..\Simulant\Core\Entity\EntityRegistry.cs"><Link>Entity\EntityRegistry.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimActor.cs"><Link>Runtime\SimActor.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimCastController.cs"><Link>Runtime\SimCastController.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimOmenRenderer.cs"><Link>Runtime\SimOmenRenderer.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.cs"><Link>Runtime\SimEntityManager.cs</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Network.cs"><Link>Runtime\SimEntityManager.Network.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimMovementController.cs"><Link>Runtime\SimMovementController.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimSession.cs"><Link>Runtime\SimSession.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Timeline\SimTimeline.cs"><Link>Timeline\SimTimeline.cs</Link></Compile>

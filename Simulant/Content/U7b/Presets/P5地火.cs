@@ -80,7 +80,7 @@ namespace Simulant.Content.U7b.Presets
         Line36_14_25, Line36_25_14
     }
 
-    internal class P5地火Logic : SimLogicBase
+    internal partial class P5地火Logic : SimLogicBase
     {
         [SimOption]
         internal ExaFlareOrder LeftExaFlareOrder { get; set; }
@@ -99,9 +99,12 @@ namespace Simulant.Content.U7b.Presets
         }
 
         private bool _isPerfect;
+        private int _remainingJudgements;
+        private bool _feedbackDue;
 
         protected override void OnStop()
         {
+            _feedbackDue = false;
             RemoveAuxiliaryLines();
         }
 
@@ -110,24 +113,38 @@ namespace Simulant.Content.U7b.Presets
         protected override void BuildTimeline(SimTimeline timeline)
         {
             _isPerfect = true;
+            _remainingJudgements = 12 * 6;
+            _feedbackDue = false;
             var leftOrder = ResolveExaFlareOrder(LeftExaFlareOrder);
             var rightOrder = ResolveExaFlareOrder(RightExaFlareOrder);
 
-            var boss = EntityManager.SpawnBNpc(19511, 7131, 100); // Kefka
-            boss.Pos3D = new Vector3(100, 100, 0);
-            boss.Heading = (float)PI;
-            boss.SetReadyToDraw();
-            boss.EnableDraw();
-
             var me = _host.EntityProvider.GetMyself();
+            if (me == null || !me.IsAlive)
+                throw new InvalidOperationException("未找到有效的自身玩家，无法准备地火模拟。");
             var myIdx = GetFakePartyIndex(me);
 
-            if (UseSpreadDummies)
+            timeline.At(0, () => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                GeneratePartyMembers(myIdx);
-                SpreadPartyMembers(me, 3f);
-            }
+                BNpcBaseId = 19511, // Kefka
+                BNpcNameId = 7131,
+                Level = 100,
+                Pos = new Vector3(100, 100, 0),
+                Heading = (float)PI,
+            }, boss =>
+            {
+                if (UseSpreadDummies)
+                    GeneratePartyMembers(myIdx, () =>
+                    {
+                        SpreadPartyMembers(me, 3f);
+                        StartMechanic(boss, me, leftOrder, rightOrder);
+                    });
+                else
+                    StartMechanic(boss, me, leftOrder, rightOrder);
+            }), "生成地火本体与模拟小队");
+        }
 
+        private void StartMechanic(SimActor boss, Character me, List<int> leftOrder, List<int> rightOrder)
+        {
             if (EnableAuxiliaryLines)
             {
                 CreateAuxiliaryLines();
@@ -172,6 +189,7 @@ namespace Simulant.Content.U7b.Presets
                     .Select(e => (e.Pos3D, e.Address == me.Address))
                     .ToList();
 
+                _remainingJudgements += playerPositions.Count;
                 foreach (var (pos, isSelf) in playerPositions)
                 {
                     ExecuteAndValidateSpread(pos, isSelf);
@@ -180,11 +198,8 @@ namespace Simulant.Content.U7b.Presets
 
             mechanic.At(23.5, () =>
             {
-                if (_isPerfect)
-                {
-                    TriggernometryInterop.InvokeNamedCallback("LockOn",
-                        $"{_host.EntityProvider.GetMyself().Address}, m0489trg_a0c");
-                }
+                _feedbackDue = true;
+                TryReportPerfect();
             }, "无伤完成反馈");
 
             mechanic.At(27, () =>
@@ -192,7 +207,7 @@ namespace Simulant.Content.U7b.Presets
                 EntityManager.Delete(boss);
                 EntityManager.Clear();
             }, "回收模拟实体");
-            timeline.At(3, mechanic);
+            Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体与小队就绪后开始地火");
         }
 
         private List<int> ResolveExaFlareOrder(ExaFlareOrder order)
@@ -231,41 +246,64 @@ namespace Simulant.Content.U7b.Presets
                 ? new Vector3(5, 5, 0)
                 : new Vector3(-5, 5, 0);
 
-            var timeline = new SimTimeline();
-            timeline.At(0, () =>
-            {
-                DummyCast(initPos, heading, 0xBB3C, 6f);
-                LogCast(boss, 0xBB3C, initPos, heading);
-            }, "地火初始预兆");
+            var steps = new SimTimeline();
             // 后六次判定相对初始预兆为 4.582、5.095、5.608、6.121、6.634、7.147 秒。
-            timeline.Repeat(4.582, 0.513, 6,
+            steps.Repeat(4.582, 0.513, 6,
                 i => ExecuteAndValidateExaFlare(initPos + dPos * (i + 1), heading),
                 "地火前进判定");
+            var timeline = new SimTimeline();
+            timeline.At(0, () => DummyCast(initPos, heading, 0xBB3C, 6f, onCast: () =>
+            {
+                LogCast(boss, 0xBB3C, initPos, heading);
+                Play(steps);
+            }), "地火初始预兆");
             return timeline;
         }
 
         private void ExecuteAndValidateExaFlare(Vector3 pos, float heading)
         {
-            DummyExecute(pos, heading, 0xBB3D, 3f);
-            var player = _host.EntityProvider.GetMyself();
-            if (Vector2.Distance(new Vector2(pos.X, pos.Y), player.Pos) <= 6f)
+            DummyExecute(pos, heading, 0xBB3D, 3f, () =>
             {
-                _isPerfect = false;
-                TriggernometryInterop.InvokeNamedCallback("LockOn", $"{player.Address}, m0489trg_b0c");
-            }
+                var player = _host.EntityProvider.GetMyself();
+                if (Vector2.Distance(new Vector2(pos.X, pos.Y), player.Pos) <= 6f)
+                {
+                    _isPerfect = false;
+                    TriggernometryInterop.InvokeNamedCallback("LockOn", $"{player.Address}, m0489trg_b0c");
+                }
+                CompleteJudgement();
+            });
         }
 
         private void ExecuteAndValidateSpread(Vector3 pos, bool isSelf)
         {
-            DummyExecute(pos, 0f, 0xBB3F, 3f);
-            if (isSelf) return;
-
-            var player = _host.EntityProvider.GetMyself();
-            if (Vector2.Distance(new Vector2(pos.X, pos.Y), player.Pos) <= 5f)
+            DummyExecute(pos, 0f, 0xBB3F, 3f, () =>
             {
-                _isPerfect = false;
-                TriggernometryInterop.InvokeNamedCallback("LockOn", $"{player.Address}, m0489trg_b0c");
-            }
+                if (!isSelf)
+                {
+                    var player = _host.EntityProvider.GetMyself();
+                    if (Vector2.Distance(new Vector2(pos.X, pos.Y), player.Pos) <= 5f)
+                    {
+                        _isPerfect = false;
+                        TriggernometryInterop.InvokeNamedCallback("LockOn", $"{player.Address}, m0489trg_b0c");
+                    }
+                }
+                CompleteJudgement();
+            });
+        }
+
+        private void CompleteJudgement()
+        {
+            _remainingJudgements--;
+            TryReportPerfect();
+        }
+
+        private void TryReportPerfect()
+        {
+            // 网络生成可能延后实际判定；未完成或已取消的判定不能算作无伤完成。
+            if (!_feedbackDue || _remainingJudgements != 0 || !_isPerfect) return;
+            _feedbackDue = false;
+            TriggernometryInterop.InvokeNamedCallback("LockOn",
+                $"{_host.EntityProvider.GetMyself().Address}, m0489trg_a0c");
         }
 
         const string AuxiliaryLineTag = "Simulant_AuxiliaryLine";
@@ -317,53 +355,23 @@ Color: 1, 1, 1, 0.5";
 
         private void SpreadPartyMembers(Character me, float minDistance)
         {
-            var random = new Random();
             var myPos = me.Pos;
-            var center = new Vector2(100, 100);
-            const int maxAttemptsPerMember = 1000;
-
-            var placedPositions = new List<Vector2>();
-
-            Vector2 RandomPos(float radius)
-            {
-                var angle = random.NextDouble() * PI * 2.0;
-                var distance = Sqrt(random.NextDouble()) * radius;
-
-                return new Vector2(
-                    myPos.X + (float)(Cos(angle) * distance),
-                    myPos.Y + (float)(Sin(angle) * distance));
-            }
-
+            var members = new List<SimActor>();
             for (int i = 1; i <= 8; i++)
             {
                 var member = EntityManager.GetPartyMember(i)
                     ?? throw new Exception($"无法获取队伍成员 {i}");
-                if (member.Address == me.Address)
-                    continue;
+                if (member.Address != me.Address) members.Add(member);
+            }
 
-                Vector2 pos = myPos;
-                var found = false;
-
-                for (int attempt = 0; attempt < maxAttemptsPerMember; attempt++)
-                {
-                    pos = RandomPos(15f);
-
-                    if (Vector2.Distance(center, pos) <= 20f && placedPositions.All(p => Vector2.Distance(p, pos) > minDistance))
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                    pos = RandomPos(1f);
-
-                placedPositions.Add(pos);
-
+            // 整组位置全部通过校验后再移动队友，布置失败时由会话统一清理。
+            var positions = PlanSpreadPositions(myPos, members.Count, minDistance, new Random());
+            for (var i = 0; i < members.Count; i++)
+            {
+                var member = members[i];
+                var pos = positions[i];
                 member.Pos = pos;
                 member.Heading = (float)(PI + Atan2(pos.X - myPos.X, pos.Y - myPos.Y));
-                member.SetReadyToDraw();
-                member.Redraw();
             }
         }
 

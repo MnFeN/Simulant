@@ -25,22 +25,6 @@ namespace Simulant.Content.U6b.Presets
 
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
-            new ComboBoxOption<int>(
-                nameof(U6b6_宇宙天箭Logic.MyPartyIndex), 
-                "自身职能", 
-                1,
-                new Map<int> // to-do: Role8Option : ComboBoxOption, enum Role8，IsT(this Role8 role) ...
-                {
-                    [1] = "MT",
-                    [2] = "ST",
-                    [3] = "H1",
-                    [4] = "H2",
-                    [5] = "D1",
-                    [6] = "D2",
-                    [7] = "D3",
-                    [8] = "D4",
-                }),
-
             new ComboBoxOption<ArrowMode>(
                 nameof(U6b6_宇宙天箭Logic.ArrowMode), 
                 "宇宙天箭模式", 
@@ -50,16 +34,6 @@ namespace Simulant.Content.U6b.Presets
                     [ArrowMode.Random] = "随机",
                     [ArrowMode.OutsideFirst] = "先外侧",
                     [ArrowMode.InsideFirst] = "先内侧",
-                }),
-
-            new ComboBoxOption<bool>(
-                nameof(U6b6_宇宙天箭Logic.IsSecondRound), 
-                "轮次", 
-                false,
-                new Map<bool>
-                {
-                    [false] = "第一轮（116 死刑 / 分摊）",
-                    [true] = "第二轮（八方分散 + 挡枪）",
                 }),
         };
     }
@@ -76,13 +50,7 @@ namespace Simulant.Content.U6b.Presets
     {
 
         [SimOption]
-        internal int MyPartyIndex { get; set; }
-
-        [SimOption]
         internal ArrowMode ArrowMode { get; set; }
-
-        [SimOption]
-        internal bool IsSecondRound { get; set; }
 
         public U6b6_宇宙天箭Logic(PluginHost host, SimPresetBase preset) : base(host, preset)
         {
@@ -94,27 +62,31 @@ namespace Simulant.Content.U6b.Presets
 
         protected override void BuildTimeline(SimTimeline timeline)
         {
-            var boss = EntityManager.SpawnBNpc(15725, 12256, 90); // alpha omega
-            boss.Pos3D = new Vector3(100, 100, 0);
-            boss.Heading = (float)Math.PI;
-            boss.SetReadyToDraw();
-            boss.EnableDraw();
-
-            var mechanic = new SimTimeline();
-            mechanic.At(0, () => boss.Cast(0x7BA2), "宇宙天箭读条");
-            if (ArrowMode == ArrowMode.OutsideFirst)
+            timeline.At(0, () => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                mechanic.At(0, OutsideArrowTimeline());
-                mechanic.At(2, InsideArrowTimeline());
-            }
-            else
+                BNpcBaseId = 15725, // alpha omega
+                BNpcNameId = 12256,
+                Level = 90,
+                Pos = new Vector3(100, 100, 0),
+                Heading = (float)Math.PI,
+            }, boss =>
             {
-                mechanic.At(0, InsideArrowTimeline());
-                mechanic.At(2, OutsideArrowTimeline());
-            }
+                var mechanic = new SimTimeline();
+                mechanic.At(0, () => boss.Cast(0x7BA2), "宇宙天箭读条");
+                if (ArrowMode == ArrowMode.OutsideFirst)
+                {
+                    mechanic.At(0, OutsideArrowTimeline());
+                    mechanic.At(2, InsideArrowTimeline());
+                }
+                else
+                {
+                    mechanic.At(0, InsideArrowTimeline());
+                    mechanic.At(2, OutsideArrowTimeline());
+                }
 
-            mechanic.At(25, () => EntityManager.Delete(boss), "回收本体");
-            timeline.At(3, mechanic);
+                mechanic.At(25, () => EntityManager.Delete(boss), "回收本体");
+                Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体就绪后开始宇宙天箭");
+            }), "生成宇宙天箭本体");
         }
 
         private SimTimeline InsideArrowTimeline()

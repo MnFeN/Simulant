@@ -17,7 +17,26 @@ namespace Simulant.Game.FFCS.Client.Network
         public static IntPtr HandleSpawnPlayerPacketFuncPtr { get; set; }
         public static void HandleSpawnPlayerPacket(uint targetId, IntPtr packetPtr) // SpawnPlayerPacket*
         {
+            if (HandleSpawnPlayerPacketFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("网络玩家生成函数尚未定位。");
             HandleSpawnPlayerPacketFuncPtr.Call(targetId, packetPtr);
+        }
+
+        public static unsafe void HandleSpawnPlayerPacket(uint targetId, SpawnPlayerPacket packet)
+        {
+            if (HandleSpawnPlayerPacketFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("网络玩家生成函数尚未定位。");
+            var packetPtr = IntPtr.Zero;
+            try
+            {
+                packetPtr = Memory.AllocateMemory(sizeof(SpawnPlayerPacket));
+                Memory.Write(packetPtr, packet);
+                HandleSpawnPlayerPacketFuncPtr.Call(targetId, packetPtr);
+            }
+            finally
+            {
+                if (packetPtr != IntPtr.Zero) Memory.FreeMemory(packetPtr);
+            }
         }
 
         // 收包函数 SpawnNpc 分支调用的函数
@@ -27,6 +46,8 @@ namespace Simulant.Game.FFCS.Client.Network
         public static IntPtr HandleSpawnNpcPacketFuncPtr { get; set; }
         public static unsafe void HandleSpawnNpcPacket(uint targetId, SpawnNpcPacket packet)
         {
+            if (HandleSpawnNpcPacketFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("网络角色生成函数尚未定位。");
             IntPtr packetPtr = default;
             try
             {
@@ -38,6 +59,29 @@ namespace Simulant.Game.FFCS.Client.Network
             {
                 if (packetPtr != default)
                     Memory.FreeMemory(packetPtr);
+            }
+        }
+
+        // AnoMech 1646a706：角色删除包包含 CharacterManager 的索引，也能取消尚未消费的生成包。
+        [SigPattern("48 89 5C 24 ?? 57 48 83 EC 40 0F B6 1A")]
+        public static IntPtr HandleDespawnCharacterPacketFuncPtr { get; set; }
+
+        public static void HandleDespawnCharacterPacket(byte index)
+        {
+            if (index == 0 || index >= 100)
+                throw new ArgumentOutOfRangeException(nameof(index), "模拟角色的网络槽位必须为 1-99。");
+            if (HandleDespawnCharacterPacketFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("网络角色回收函数尚未定位。");
+            var packetPtr = IntPtr.Zero;
+            try
+            {
+                packetPtr = Memory.AllocateMemory(1);
+                Memory.Write(packetPtr, new DespawnCharacterPacket { Index = index });
+                HandleDespawnCharacterPacketFuncPtr.Call(0ul, packetPtr);
+            }
+            finally
+            {
+                if (packetPtr != IntPtr.Zero) Memory.FreeMemory(packetPtr);
             }
         }
 
@@ -70,6 +114,8 @@ namespace Simulant.Game.FFCS.Client.Network
         public static IntPtr HandleActorMovePacketFuncPtr { get; set; }
         public static unsafe IntPtr HandleActorMovePacket(uint objectId, ActorMovePacket actorMovePayload)
         {
+            if (HandleActorMovePacketFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("网络角色移动函数尚未定位。");
             var memory = NamazuInterop.Plugin.Memory;
             IntPtr actorMovePayloadPtr = default;
 
@@ -92,7 +138,11 @@ namespace Simulant.Game.FFCS.Client.Network
         [SigPattern("44 8B 4F ? 44 8B 47 ? 89 44 24 ? 8B 47 ? 89 44 24 ? E8 * * * *")]
         public static IntPtr HandleActorControlFuncPtr { get; set; }
         public static IntPtr HandleActorControl(uint objectId, ushort category, uint a1, uint a2, uint a3, uint a4, uint a5, uint a6, uint a7, uint a8, uint targetId, uint unk)
-            => HandleActorControlFuncPtr.Call<IntPtr>(objectId, category, a1, a2, a3, a4, a5, a6, a7, a8, targetId, unk);
+        {
+            if (HandleActorControlFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("网络角色控制函数尚未定位。");
+            return HandleActorControlFuncPtr.Call<IntPtr>(objectId, category, a1, a2, a3, a4, a5, a6, a7, a8, targetId, unk);
+        }
 
     }
 }

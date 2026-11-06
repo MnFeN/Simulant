@@ -21,15 +21,16 @@ namespace Simulant
 {
     internal partial class Test
     {
+        internal enum EntityTestKind { NetworkNpc, NetworkPlayer, LocalEntities }
         private readonly PluginHost _host;
         internal Test(PluginHost host)
         {
             _host = host;
         }
 
-        internal Task Run()
+        internal Task Run(EntityTestKind kind = EntityTestKind.NetworkNpc)
         {
-            ToggleEntityBehaviorTest();
+            ToggleEntityBehaviorTest(kind);
             return Task.CompletedTask;
         }
 
@@ -176,30 +177,27 @@ namespace Simulant
         {
             var me = _host.EntityProvider.GetMyself();
 
-            var bnpc = _host.DebugEntities.SpawnBNpc(baseId, 0, 100);
-
-            bnpc.Pos3D = me.Pos3D;
-            bnpc.Heading = me.Heading;
-            bnpc.SetReadyToDraw();
-            bnpc.EnableDraw();
-
-            bnpc.Execute(actionId);
+            _host.DebugEntities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
+            {
+                BNpcBaseId = baseId, Level = 100, Pos = me.Pos3D, Heading = me.Heading,
+                Targetable = false
+            }, bnpc => bnpc.Execute(actionId));
         }
 
         private void EntityCastTest(uint baseId, uint actionId)
         {
             var me = _host.EntityProvider.GetMyself();
 
-            var bnpc = _host.DebugEntities.SpawnBNpc(baseId, 0, 100);
-            bnpc.Pos3D = me.Pos3D;
-            bnpc.Heading = me.Heading;
-            bnpc.SetReadyToDraw();
-            bnpc.EnableDraw();
-
-            bnpc.Cast(actionId);
-
-            _host.LogVerbose($"CastInfo @ {bnpc.Entity.Native.CastInfo.Ptr.Hex()}");
-            _host.LogVerbose($"VFunc #81 Ret @ {bnpc.Entity.Native.Ptr.CallVFunc<IntPtr>(81).Hex()}");
+            _host.DebugEntities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
+            {
+                BNpcBaseId = baseId, Level = 100, Pos = me.Pos3D, Heading = me.Heading,
+                Targetable = false
+            }, bnpc =>
+            {
+                bnpc.Cast(actionId);
+                _host.LogVerbose($"CastInfo @ {bnpc.Entity.Native.CastInfo.Ptr.Hex()}");
+                _host.LogVerbose($"VFunc #81 Ret @ {bnpc.Entity.Native.Ptr.CallVFunc<IntPtr>(81).Hex()}");
+            });
         }
 
         private void TestEnvManager()
@@ -229,21 +227,15 @@ namespace Simulant
         {
             var me = _host.EntityProvider.GetMyself();
             var entities = _host.DebugEntities;
-            var bnpc = entities.SpawnBNpc(4909, 3765, 90);
-
-            bnpc.Pos3D = me.Pos3D + new Vector3(1, 0, 0);
-            bnpc.Heading = me.Heading;
-            bnpc.SetReadyToDraw();
-            bnpc.EnableDraw();
-
-            bnpc.Entity.PlayBaseTimeline(13);
-            bnpc.MoveTo(bnpc.Pos + new Vector2(0, 42), speed: 6);
-            entities.Scheduler.ScheduleAfter(7.1, () =>
+            entities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                bnpc.StopMoving();
-                if (bnpc.IsActive) bnpc.Entity.PlayBlendTimeline(3201);
-            }, "移动后动作");
-            entities.Scheduler.ScheduleAfter(10.1, () => entities.Delete(bnpc), "回收移动测试角色");
+                BNpcBaseId = 4909, BNpcNameId = 3765, Level = 90,
+                Pos = me.Pos3D + new Vector3(1, 0, 0), Heading = me.Heading
+            }, bnpc => bnpc.MoveNetworkTo(bnpc.Pos + new Vector2(0, 42), speedParam: 30, onArrived: () =>
+            {
+                bnpc.Entity.PlayBlendTimeline(3201);
+                entities.Scheduler.ScheduleAfter(3, () => entities.Delete(bnpc), "回收移动测试角色");
+            }));
         }
 
 

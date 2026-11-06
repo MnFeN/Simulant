@@ -27,7 +27,7 @@ namespace Simulant
             public bool CleanupCompleted;
         }
 
-        private void ToggleEntityBehaviorTest()
+        private void ToggleEntityBehaviorTest(EntityTestKind kind)
         {
             EntityBehaviorRun previous;
             lock (_entityTestGate) previous = _entityBehaviorRun;
@@ -38,9 +38,14 @@ namespace Simulant
             }
 
             EnsureEntityTestReady();
-            if (!CsvManager.Instance.Get<ActionRow>().TryGetValue((int)EntityTestActionId, out var action) ||
-                action.CastTime < 3 || action.OmenId == 0 || action.AnimationEndId < 0)
-                throw new InvalidOperationException("实体测试技能数据不完整，需要带读条、预兆和结束动画的流体摆动。");
+            var castTime = 0f;
+            if (kind != EntityTestKind.NetworkPlayer)
+            {
+                if (!CsvManager.Instance.Get<ActionRow>().TryGetValue((int)EntityTestActionId, out var action) ||
+                    action.CastTime < 3 || action.OmenId == 0 || action.AnimationEndId < 0)
+                    throw new InvalidOperationException("实体测试技能数据不完整，需要带读条、预兆和结束动画的流体摆动。");
+                castTime = action.CastTime;
+            }
 
             var run = new EntityBehaviorRun();
             run.Scheduler = new SimScheduler((ex, node) =>
@@ -62,8 +67,21 @@ namespace Simulant
                     if (_entityBehaviorRun != null)
                         throw new InvalidOperationException("已有实体测试正在运行。");
                     _entityBehaviorRun = run;
-                    run.Scheduler.Schedule(0, () => BeginEntityMovementTest(run, action.CastTime), "生成并移动测试角色");
-                    LogEntityTest(run, "开始。请观察玩家前方三只实体；左右以玩家起始朝向为准，再次点击“调试”可随时停止，正常流程约 15 秒。");
+                    if (kind == EntityTestKind.NetworkPlayer)
+                    {
+                        run.Scheduler.Schedule(0, () => BeginNetworkPlayerTest(run), "生成网络模拟玩家");
+                        LogEntityTest(run, "网络玩家测试开始。将生成骑士、白魔法师和绘灵法师，验证职业套装、复制外观、可选中、移动与回收。再次点击“调试”可停止。");
+                    }
+                    else if (kind == EntityTestKind.NetworkNpc)
+                    {
+                        run.Scheduler.Schedule(0, () => BeginNetworkEntityTest(run, castTime), "生成网络测试角色");
+                        LogEntityTest(run, "网络生成测试开始。将验证战斗列表、ActorControl、ActorMove、回收和重新生成；再次点击“调试”可停止。按住 Shift 点击可运行原有三实体本地测试。");
+                    }
+                    else
+                    {
+                        run.Scheduler.Schedule(0, () => BeginEntityMovementTest(run, castTime), "生成并移动测试角色");
+                        LogEntityTest(run, "本地生成测试开始。请观察玩家前方三只实体；左右以玩家起始朝向为准，再次点击“调试”可随时停止，正常流程约 15 秒。");
+                    }
                     run.Scheduler.Start();
                 }
             }
@@ -240,9 +258,20 @@ namespace Simulant
 
         internal void StopEntityBehaviorTest() => StopEntityBehaviorTest(null, "宿主停止或场景变化");
 
+        internal bool HasPendingEntityTestCleanup
+        {
+            get
+            {
+                lock (_entityTestGate)
+                    return _entityBehaviorRun != null && !_entityBehaviorRun.Scheduler.IsRunning &&
+                        _entityBehaviorRun.Entities.HasPendingCleanup;
+            }
+        }
+
         private void StopEntityBehaviorTest(EntityBehaviorRun expected, string reason)
         {
             EntityBehaviorRun run;
+            var waitForWorkerOnly = false;
             lock (_entityTestGate)
             {
                 run = _entityBehaviorRun;
@@ -253,19 +282,32 @@ namespace Simulant
                     if (run.Scheduler.IsSchedulerThread || run.StoppingThreadId == Thread.CurrentThread.ManagedThreadId)
                         return;
                     while (!run.CleanupCompleted) Monitor.Wait(_entityTestGate);
-                    return;
+                    waitForWorkerOnly = true;
                 }
-                run.StoppingThreadId = Thread.CurrentThread.ManagedThreadId;
+                else
+                {
+                    run.StoppingThreadId = Thread.CurrentThread.ManagedThreadId;
+                    run.CleanupCompleted = false;
+                }
+            }
+            if (waitForWorkerOnly)
+            {
+                // 清理可能由调度线程自己完成；外部停止还需等当前回调真正退出。
+                run.Scheduler.Dispose();
+                return;
             }
             // 不能持锁等待线程：正在执行的完成/异常回调也会进入停止入口。
+            var previousCleanupErrors = run.CleanupErrors;
             try
             {
                 try { run.Scheduler.Dispose(); }
                 finally { run.Entities.Clear(); }
-                var clean = !run.Scheduler.IsRunning && run.Scheduler.PendingCount == 0 && run.CleanupErrors == 0;
+                var clean = !run.Scheduler.IsRunning && run.Scheduler.PendingCount == 0 &&
+                    !run.Entities.HasPendingCleanup && run.CleanupErrors == previousCleanupErrors;
                 foreach (var actor in run.Actors) clean &= !actor.IsActive && !actor.IsMoving;
                 if (!clean)
-                    _host.LogError($"[实体测试] {reason}，清理检查未通过；回收异常 {run.CleanupErrors} 次。");
+                    _host.LogError($"[实体测试] {reason}，清理检查未通过；本次回收异常 {run.CleanupErrors - previousCleanupErrors} 次。" +
+                        "如仍有待回收实体，可再次点击调试或执行清理重试。");
                 else
                     LogEntityTest(run, $"{reason}，已通过 {run.Checks} 项检查，调度队列与角色行为已清理。请另行确认画面中没有残留实体或预兆。");
             }
@@ -274,7 +316,9 @@ namespace Simulant
                 lock (_entityTestGate)
                 {
                     run.CleanupCompleted = true;
-                    if (ReferenceEquals(_entityBehaviorRun, run)) _entityBehaviorRun = null;
+                    run.StoppingThreadId = 0;
+                    if (ReferenceEquals(_entityBehaviorRun, run) && !run.Entities.HasPendingCleanup)
+                        _entityBehaviorRun = null;
                     Monitor.PulseAll(_entityTestGate);
                 }
             }

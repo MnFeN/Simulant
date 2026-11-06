@@ -138,6 +138,25 @@ namespace Simulant.Tests
             }
         }
 
+        internal static void MovementRejectsRestartWhenItsQueuedTickWasCancelled()
+        {
+            foreach (var stopFirst in new[] { false, true })
+            {
+                var world = new EntityTestWorld();
+                using (var scheduler = new SimScheduler())
+                using (var movement = new SimMovementController(scheduler))
+                {
+                    var actor = CreateActor(world, movement, scheduler, 0);
+                    actor.MoveTo(Vector2.One);
+                    scheduler.Cancel();
+                    if (stopFirst) actor.StopMoving();
+                    Throws<InvalidOperationException>(() => actor.MoveTo(new Vector2(2, 2)));
+                    Assert(!actor.IsMoving && scheduler.PendingCount == 0 && actor.Entity.PositionWrites.Count == 0,
+                        "共享更新句柄已被调度器取消后，新移动必须回滚，不能留下永远不会更新的移动状态。");
+                }
+            }
+        }
+
         internal static void MovementRejectsInvalidInputWithoutReplacingMove()
         {
             var world = new EntityTestWorld();
@@ -557,6 +576,296 @@ namespace Simulant.Tests
                 actor.MoveTo(Vector2.One);
                 Assert(scheduler.PendingCount == 0 && entity.PositionWrites.Count == 0,
                     "旧模拟角色不得立即写入位置，也不得重新启动延迟移动。");
+            }
+        }
+
+        internal static void NetworkMovementSharesPollingAndUsesActualArrival()
+        {
+            Exception failure = null;
+            using (var arrived = new CountdownEvent(2))
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; }))
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var first = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                var second = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                var local = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
+                first.Entity.Pos3D = new Vector3(0, 0, 7);
+                var writesBefore = first.Entity.PositionWrites.Count;
+                var callbacks = 0;
+                Action callback = () =>
+                {
+                    Assert(scheduler.IsSchedulerThread, "网络到达回调必须在共享调度线程执行。");
+                    callbacks++;
+                    arrived.Signal();
+                };
+                first.MoveNetworkTo(new Vector2(3, 4), onArrived: callback);
+                second.MoveNetworkTo(new Vector2(-4, 0), speedParam: 40, onArrived: callback);
+                local.MoveTo(new Vector2(100, 0));
+                Assert(scheduler.PendingCount == 1 && first.Entity.NetworkMoves.Count == 0,
+                    "本地和多个网络角色应共享一个节点，调用线程不能提前发送移动包。");
+                scheduler.Schedule(0.32, () =>
+                {
+                    Assert(first.IsMoving && second.IsMoving && callbacks == 0,
+                        "只发送移动包不能视作到达，必须等待实际坐标接近目标。");
+                    Assert(first.Entity.NetworkMoves.Count == 1 && second.Entity.NetworkMoves.Count == 1,
+                        "轮询期间不能重复发送移动包。");
+                    Assert(first.Entity.PositionReads <= 5 && second.Entity.PositionReads <= 5 && local.Entity.PositionWrites.Count >= 5,
+                        "本地高频插值不能增加网络角色跨进程位置读取频率。");
+                    Assert(first.Entity.PositionWrites.Count == writesBefore && first.Entity.PlayedBaseTimelines.Count == 0,
+                        "网络移动不得直接插值位置或强制覆盖移动动画。");
+                    first.Entity.Pos = new Vector2(3.02f, 4.01f);
+                    second.Entity.Pos = new Vector2(-4.02f, 0);
+                    local.StopMoving();
+                });
+                scheduler.Start();
+                Assert(arrived.Wait(5000), "两个网络角色未按实际位置完成到达回调：" + failure);
+                scheduler.Dispose();
+                Assert(failure == null && callbacks == 2 && !first.IsMoving && !second.IsMoving,
+                    "网络到达应各执行一次回调并移除移动状态：" + failure);
+                var packet = first.Entity.NetworkMoves.Single();
+                Assert(packet.Position == new Vector3(3, 4, 7) && packet.SpeedParam == 30 &&
+                    Math.Abs(packet.Heading - Math.Atan2(3, 4)) < 0.00001,
+                    "首包应保留 ACT 高度，按目标计算面向并采用默认网络速度参数。");
+                Assert(first.Entity.NetworkMoves.Count == 1 && second.Entity.NetworkMoves.Count == 1,
+                    "正常到达不应额外发停止包改变角色朝向。");
+            }
+        }
+
+        internal static void NetworkAndLocalMovementReplaceEachOtherAndChainCallbacks()
+        {
+            Exception failure = null;
+            var obsoleteCalls = 0;
+            var localCalls = 0;
+            var finalCalls = 0;
+            using (var finished = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                actor.MoveNetworkTo(new Vector2(10, 0), onArrived: () => obsoleteCalls++);
+                scheduler.Schedule(0.03, () =>
+                {
+                    actor.Entity.Pos3D = new Vector3(1, 2, 3);
+                    actor.Entity.Heading = 0.7f;
+                    actor.MoveNetworkTo(new Vector2(20, 0), onArrived: () => obsoleteCalls++);
+                    var stop = actor.Entity.NetworkMoves.Last();
+                    Assert(stop.Position == new Vector3(1, 2, 3) && stop.Heading == 0.7f && stop.SpeedParam == 30,
+                        "更换网络目标应先向实际当前位置发送停止包，保留原移动速度和当前面向。");
+                });
+                scheduler.Schedule(0.06, () =>
+                {
+                    actor.MoveTo(new Vector2(1, 2), animationId: 13, onArrived: () =>
+                    {
+                        localCalls++;
+                        Assert(actor.Entity.BaseTimelineId == 0 && !actor.IsMoving,
+                            "从本地到达回调切回网络移动前必须结束旧移动和动画。");
+                        actor.MoveNetworkTo(new Vector2(30, 0), onArrived: () =>
+                        {
+                            finalCalls++;
+                            finished.Set();
+                        });
+                    });
+                    Assert(actor.Entity.NetworkMoves.Last().Position == new Vector3(1, 2, 3),
+                        "本地移动替换网络移动时也必须先停止旧的原生移动。");
+                });
+                scheduler.Schedule(0.15, () => actor.Entity.Pos = new Vector2(30, 0));
+                scheduler.Start();
+                Assert(finished.Wait(5000), "本地与网络移动的到达链未完成。");
+                scheduler.Dispose();
+                Assert(failure == null && obsoleteCalls == 0 && localCalls == 1 && finalCalls == 1 && !actor.IsMoving,
+                    "两种移动必须互斥，取消旧回调，并允许到达回调启动下一段：" + failure);
+                Assert(actor.Entity.NetworkMoves.Count == 5,
+                    "三段网络移动只应各发一次首包，加上两次替换的停止包。");
+            }
+        }
+
+        internal static void NetworkMovementStopFailuresRemainRetryable()
+        {
+            foreach (var mode in new[] { "停止", "解除关联", "释放控制器" })
+            {
+                var callbackCalls = 0;
+                using (var sent = new ManualResetEventSlim())
+                using (var scheduler = new SimScheduler())
+                using (var movement = new SimMovementController(scheduler))
+                {
+                    var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                    actor.Entity.OnActorMove = (_, __, ___) => sent.Set();
+                    actor.MoveNetworkTo(new Vector2(10, 0), onArrived: () => callbackCalls++);
+                    scheduler.Start();
+                    Assert(sent.Wait(5000), "网络移动没有发出首包。");
+                    scheduler.Cancel();
+                    actor.Entity.OnActorMove = (_, __, ___) => { throw new InvalidOperationException("模拟原生停止失败。"); };
+                    Action stop = mode == "停止" ? (Action)actor.StopMoving :
+                        mode == "解除关联" ? actor.Dispose : (Action)movement.Dispose;
+                    if (mode == "释放控制器") Throws<AggregateException>(stop);
+                    else Throws<InvalidOperationException>(stop);
+                    Assert(actor.Entity.NetworkMoves.Count == 2, "停止失败后应保留已经尝试发送停止包的证据。");
+                    actor.Entity.OnActorMove = null;
+                    stop();
+                    Assert(actor.Entity.NetworkMoves.Count == 3 && actor.Entity.NetworkMoves.Last().Position == Vector3.Zero,
+                        mode + "失败后必须仍能重试原移动的停止，不能丢失记录。");
+                    stop();
+                    Assert(actor.Entity.NetworkMoves.Count == 3 && callbackCalls == 0 && !actor.IsMoving,
+                        "成功停止后不得重复发包或补执行已取消的到达回调。");
+                }
+            }
+        }
+
+        internal static void NetworkMovementTimeoutStopsWithoutArriving()
+        {
+            Exception failure = null;
+            var callbackCalls = 0;
+            using (var failed = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; failed.Set(); }))
+            using (var movement = new SimMovementController(scheduler, networkTimeoutSeconds: 0.15))
+            {
+                var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                actor.MoveNetworkTo(new Vector2(10, 0), speedParam: 40, onArrived: () => callbackCalls++);
+                scheduler.Start();
+                Assert(failed.Wait(5000), "没有实际移动的角色应在截止时间后明确报告失败。");
+                scheduler.Dispose();
+                Assert(failure is TimeoutException && callbackCalls == 0 && !actor.IsMoving && !scheduler.IsRunning,
+                    "超时应结束移动并交给调度器失败路径，不能冒充到达。");
+                Assert(actor.Entity.NetworkMoves.Count == 2 && actor.Entity.NetworkMoves[1].Position == Vector3.Zero &&
+                    actor.Entity.NetworkMoves[1].SpeedParam == 40,
+                    "超时必须用原速度参数向实际当前位置发送一次停止包。");
+            }
+        }
+
+        internal static void NetworkMovementRejectsInvalidOrCancelledRequestsBeforeDispatch()
+        {
+            var world = new EntityTestWorld();
+            using (var scheduler = new SimScheduler())
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var actor = CreateActor(world, movement, scheduler, 2);
+                actor.MoveNetworkTo(new Vector2(10, 0));
+                Action asynchronous = async () => await Task.Yield();
+                Throws<ArgumentException>(() => actor.MoveNetworkTo(new Vector2(20, 0), onArrived: asynchronous));
+                Throws<ArgumentOutOfRangeException>(() => actor.MoveNetworkTo(new Vector2(float.NaN, 0)));
+                Throws<ArgumentOutOfRangeException>(() => actor.MoveNetworkTo(new Vector2(1001, 0)));
+                Throws<ArgumentOutOfRangeException>(() => actor.MoveNetworkTo(Vector2.One, speedParam: 0));
+                foreach (ushort slot in new ushort[] { 0, 1, 3 })
+                {
+                    var unsuitable = CreateActor(world, movement, scheduler, slot);
+                    unsuitable.MoveTo(Vector2.One);
+                    Throws<InvalidOperationException>(() => unsuitable.MoveNetworkTo(Vector2.One));
+                    Assert(unsuitable.IsMoving, "拒绝非网络表角色时不得取消其已有的本地移动。");
+                    unsuitable.StopMoving();
+                }
+                var localRegistry = new Simulant.Core.Entity.EntityRegistry(slot => slot == 200 ?
+                    new Simulant.Core.Entity.EntityObservation(new IntPtr(2000), 2000,
+                        Simulant.Game.FFCS.Client.Game.Object.ObjectKind.BattleNpc) :
+                    (Simulant.Core.Entity.EntityObservation?)null, 201);
+                var localEntity = (Simulant.Core.Entity.Character)localRegistry.Get(200);
+                var localActor = new SimActor(localEntity, new SimCastController(scheduler), movement);
+                localActor.MoveTo(Vector2.One);
+                Throws<InvalidOperationException>(() => localActor.MoveNetworkTo(Vector2.One));
+                Assert(localActor.IsMoving && localEntity.NetworkMoves.Count == 0,
+                    "本地角色表的偶数槽位也必须明确拒绝网络移动，同时保留旧本地移动。");
+                localActor.StopMoving();
+                Assert(actor.IsMoving && scheduler.PendingCount == 1 && actor.Entity.NetworkMoves.Count == 0,
+                    "无效参数不得替换原网络移动或提前发包。");
+                actor.StopMoving();
+                Assert(scheduler.PendingCount == 0 && actor.Entity.NetworkMoves.Count == 0,
+                    "首包发送前停止不得向客户端发送多余停止包。");
+                actor.MoveNetworkTo(new Vector2(10, 0));
+                scheduler.Cancel();
+                Throws<InvalidOperationException>(() => actor.MoveNetworkTo(new Vector2(20, 0)));
+                Assert(!actor.IsMoving && actor.Entity.NetworkMoves.Count == 0 && scheduler.PendingCount == 0,
+                    "已取消调度器不能留下无法执行的新移动或发送原生包。");
+            }
+        }
+
+        internal static void ManagerRetainsFailedBorrowedNetworkMovementCleanup()
+        {
+            var spawner = new Simulant.Core.Entity.EntitySpawner();
+            var cleanupErrors = 0;
+            using (var sent = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler())
+            using (var replacementScheduler = new SimScheduler())
+            {
+                var manager = new SimEntityManager(spawner, _ => cleanupErrors++) { Scheduler = scheduler };
+                var actor = manager.Attach(spawner.World.CreateCharacter(2));
+                actor.Entity.OnActorMove = (_, __, ___) => sent.Set();
+                actor.MoveNetworkTo(new Vector2(10, 0));
+                Assert(!manager.HasPendingCleanup, "正常借用角色的移动不能误报失败清理待办。");
+                scheduler.Start();
+                Assert(sent.Wait(5000), "借用网络角色没有发出首包。");
+                scheduler.Cancel();
+                actor.Entity.OnActorMove = (_, __, ___) => { throw new InvalidOperationException("模拟借用角色停止失败。"); };
+                Throws<InvalidOperationException>(() => manager.Detach(actor));
+                manager.Clear();
+                Assert(manager.HasPendingCleanup && cleanupErrors > 0 && actor.Entity.IsAlive,
+                    "解除关联后借用实体仍然有效，原生停止失败必须保留到后续 Clear 重试。");
+                Throws<InvalidOperationException>(() => manager.Scheduler = replacementScheduler);
+                actor.Entity.OnActorMove = null;
+                var failedAttempts = actor.Entity.NetworkMoves.Count;
+                manager.Clear();
+                Assert(!manager.HasPendingCleanup && actor.Entity.NetworkMoves.Count == failedAttempts + 1 && actor.Entity.IsAlive,
+                    "停止恢复后 Clear 必须完成一次原生停止而不删除借用实体，并解除重启限制。");
+                manager.Clear();
+                Assert(actor.Entity.NetworkMoves.Count == failedAttempts + 1, "成功停止后重复清理不能再次发包。");
+                manager.Scheduler = replacementScheduler;
+                manager.Clear();
+            }
+        }
+
+        internal static void NetworkMovementDetachingDuringDispatchStillStopsTheOwnedMove()
+        {
+            Exception failure = null;
+            Exception detachFailure = null;
+            using (var failed = new ManualResetEventSlim())
+            using (var detached = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; failed.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                var expected = new InvalidOperationException("模拟移动包部分成功后失败。");
+                actor.Entity.OnActorMove = (_, __, ___) =>
+                {
+                    if (actor.Entity.NetworkMoves.Count != 1) return;
+                    var thread = new Thread(() =>
+                    {
+                        try { actor.Dispose(); }
+                        catch (Exception error) { detachFailure = error; }
+                        finally { detached.Set(); }
+                    }) { IsBackground = true };
+                    thread.Start();
+                    Assert(SpinWait.SpinUntil(() => !actor.IsActive, 5000), "解除关联线程没有进入停止路径。");
+                    throw expected;
+                };
+                actor.MoveNetworkTo(new Vector2(10, 0));
+                scheduler.Start();
+                Assert(failed.Wait(5000) && detached.Wait(5000), "发包与并发解除关联没有按期结束。");
+                scheduler.Dispose();
+                Assert(ReferenceEquals(failure, expected) && detachFailure == null && actor.Entity.IsAlive,
+                    "发包失败必须报告原异常，解除关联应保留原生实体。");
+                Assert(actor.Entity.NetworkMoves.Count == 2 && actor.Entity.NetworkMoves[1].Position == Vector3.Zero,
+                    "actor 已解除关联但实体仍活着时，不能误当世界失效而丢弃停止责任。");
+                Assert(!movement.HasPendingCleanup && !actor.IsMoving, "成功停止后不应留下清理待办。");
+            }
+        }
+
+        internal static void NetworkMovementNeverStopsARecycledEntity()
+        {
+            var world = new EntityTestWorld();
+            using (var sent = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler())
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var actor = CreateActor(world, movement, scheduler, 2);
+                actor.Entity.OnActorMove = (_, __, ___) => sent.Set();
+                actor.MoveNetworkTo(new Vector2(10, 0));
+                scheduler.Start();
+                Assert(sent.Wait(5000), "网络移动没有发出首包。");
+                scheduler.Cancel();
+                world.Registry.RegisterCreated(2);
+                actor.StopMoving();
+                actor.Dispose();
+                movement.Dispose();
+                Assert(actor.Entity.NetworkMoves.Count == 1 && !actor.IsMoving,
+                    "原实体已经换代时，停止、解除关联和释放都不得向复用槽位的新实体发包。");
             }
         }
 

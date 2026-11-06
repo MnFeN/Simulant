@@ -21,19 +21,44 @@ namespace Simulant.Simulation.Runtime
             public bool AnimationFinished;
             public bool Arrived;
             public Action OnArrived;
+            public bool Network;
+            public byte SpeedParam;
+            public bool NetworkStarted;
+            public double NextPollAt;
+            public bool Stopping;
         }
 
         private const double TickIntervalSeconds = 0.016;
+        private const double NetworkPollIntervalSeconds = 0.1;
+        private const float NetworkArrivalTolerance = 0.1f;
         private readonly object _gate = new object();
         private readonly SimScheduler _scheduler;
         private readonly Action _onTick;
         private readonly List<Movement> _moving = new List<Movement>();
         private SimScheduledAction _tick;
+        private double _tickDueAt;
+        private readonly double _networkTimeoutSeconds;
         private bool _disposed;
 
-        public SimMovementController(SimScheduler scheduler)
+        internal bool HasPendingCleanup
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    foreach (var movement in _moving)
+                        if (_disposed || movement.Stopping) return true;
+                    return false;
+                }
+            }
+        }
+
+        public SimMovementController(SimScheduler scheduler, double networkTimeoutSeconds = 30)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+            if (double.IsNaN(networkTimeoutSeconds) || double.IsInfinity(networkTimeoutSeconds) || networkTimeoutSeconds <= 0)
+                throw new ArgumentOutOfRangeException(nameof(networkTimeoutSeconds));
+            _networkTimeoutSeconds = networkTimeoutSeconds;
             _onTick = Tick;
         }
 
@@ -45,12 +70,7 @@ namespace Simulant.Simulation.Runtime
             ValidateSpeed(speed);
             if (animationId == 0)
                 throw new ArgumentOutOfRangeException(nameof(animationId), "移动动画编号必须为正数；不控制动画时请省略该参数。");
-            if (onArrived != null)
-            {
-                foreach (var callback in onArrived.GetInvocationList())
-                    if (callback.Method.IsDefined(typeof(AsyncStateMachineAttribute), false))
-                        throw new ArgumentException("到达回调必须同步执行，延迟动作请添加到调度器。", nameof(onArrived));
-            }
+            ValidateCallback(onArrived);
             lock (_gate)
             {
                 if (_disposed) throw new ObjectDisposedException(nameof(SimMovementController));
@@ -68,6 +88,41 @@ namespace Simulant.Simulation.Runtime
                     FaceMovement = faceMovement,
                     UpdatedAt = _scheduler.ElapsedSeconds,
                     AnimationId = animationId,
+                    OnArrived = onArrived
+                };
+                _moving.Add(movement);
+                try { QueueTick(); }
+                catch
+                {
+                    _moving.Remove(movement);
+                    throw;
+                }
+            }
+        }
+
+        public void MoveNetworkTo(SimActor actor, Vector2 target, byte speedParam = 30, Action onArrived = null)
+        {
+            if (actor == null) throw new ArgumentNullException(nameof(actor));
+            ValidatePosition(target, nameof(target));
+            if (Math.Abs(target.X) > 1000 || Math.Abs(target.Y) > 1000)
+                throw new ArgumentOutOfRangeException(nameof(target), "网络移动目标必须位于移动包可表示的坐标范围内（-1000 至 1000）。");
+            if (speedParam == 0)
+                throw new ArgumentOutOfRangeException(nameof(speedParam), "网络移动速度参数不能为零；停止移动请调用 StopMoving。");
+            ValidateCallback(onArrived);
+            var slot = actor.Entity.Identity.Slot;
+            if (slot < 2 || slot >= 200 || (slot & 1) != 0)
+                throw new InvalidOperationException("网络移动只支持网络角色表中的角色，不能用于自身玩家或本地备用实体。");
+            lock (_gate)
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(SimMovementController));
+                if (!actor.IsActive) throw new InvalidOperationException("不能移动已经失效或解除关联的角色。");
+                StopCore(actor);
+                var movement = new Movement
+                {
+                    Actor = actor,
+                    Target = target,
+                    Network = true,
+                    SpeedParam = speedParam,
                     OnArrived = onArrived
                 };
                 _moving.Add(movement);
@@ -105,9 +160,12 @@ namespace Simulant.Simulation.Runtime
             var index = Find(actor);
             if (index < 0) return;
             var movement = _moving[index];
-            _moving.RemoveAt(index);
             movement.OnArrived = null;
+            movement.Stopping = true;
+            StopNetworkMovement(movement);
             FinishAnimation(movement);
+            // 原生停止失败时保留记录；后续 Stop 或 Dispose 仍能重试，不能丢失回收责任。
+            _moving.Remove(movement);
         }
 
         private void Tick()
@@ -122,7 +180,9 @@ namespace Simulant.Simulation.Runtime
                 {
                     var movement = _moving[i];
                     if (movement.Arrived) continue;
-                    if (!movement.Actor.IsActive)
+                    // 混用本地插值时，网络角色仍只每 100 ms 读取一次状态和位置。
+                    if (movement.Network && movement.NetworkStarted && now < movement.NextPollAt && !movement.Stopping) continue;
+                    if (movement.Stopping || !movement.Actor.IsActive)
                     {
                         StopCore(movement.Actor);
                         continue;
@@ -130,17 +190,25 @@ namespace Simulant.Simulation.Runtime
                     try
                     {
                         var entity = movement.Actor.Entity;
-                        UpdateAnimation(movement);
-                        var current = entity.Pos;
-                        var next = Advance(current, movement.Target, movement.Speed,
-                            Math.Max(0, now - movement.UpdatedAt), out var arrived);
-                        movement.UpdatedAt = now;
-                        if (next != current)
+                        bool arrived;
+                        if (movement.Network)
                         {
-                            if (movement.FaceMovement)
-                                entity.Heading = (float)Math.Atan2((double)movement.Target.X - current.X,
-                                    (double)movement.Target.Y - current.Y);
-                            entity.Pos = next;
+                            arrived = UpdateNetworkMovement(movement, now);
+                        }
+                        else
+                        {
+                            UpdateAnimation(movement);
+                            var current = entity.Pos;
+                            var next = Advance(current, movement.Target, movement.Speed,
+                                Math.Max(0, now - movement.UpdatedAt), out arrived);
+                            movement.UpdatedAt = now;
+                            if (next != current)
+                            {
+                                if (movement.FaceMovement)
+                                    entity.Heading = (float)Math.Atan2((double)movement.Target.X - current.X,
+                                        (double)movement.Target.Y - current.Y);
+                                entity.Pos = next;
+                            }
                         }
                         if (arrived && _moving.Contains(movement))
                         {
@@ -150,7 +218,7 @@ namespace Simulant.Simulation.Runtime
                             completed.Add(movement);
                         }
                     }
-                    catch (InvalidOperationException) when (!movement.Actor.IsActive)
+                    catch (InvalidOperationException) when (!movement.Actor.Entity.IsAlive)
                     {
                         // 首次检查有效性后、执行原生操作前，实体仍可能消失。
                         _moving.Remove(movement);
@@ -175,6 +243,53 @@ namespace Simulant.Simulation.Runtime
                 }
                 // 用户代码可继续移动、读条或回收实体，不能持有移动锁调用。
                 callback?.Invoke();
+            }
+        }
+
+        private bool UpdateNetworkMovement(Movement movement, double now)
+        {
+            var entity = movement.Actor.Entity;
+            var current = entity.Pos3D;
+            ValidatePosition(new Vector2(current.X, current.Y), "当前位置");
+            if (float.IsNaN(current.Z) || float.IsInfinity(current.Z))
+                throw new InvalidOperationException("网络角色当前高度不是有限数，无法发送移动包。");
+            var dx = (double)movement.Target.X - current.X;
+            var dy = (double)movement.Target.Y - current.Y;
+            if (dx * dx + dy * dy <= NetworkArrivalTolerance * NetworkArrivalTolerance) return true;
+            if (!movement.NetworkStarted)
+            {
+                // 首包也在共享调度线程发送；此前取消无需发送停止包。
+                // 先记录已尝试发送，确保原生调用部分成功后抛错仍能被清理。
+                movement.NetworkStarted = true;
+                movement.UpdatedAt = now;
+                entity.ActorMove(new Vector3(movement.Target.X, movement.Target.Y, current.Z),
+                    (float)Math.Atan2(dx, dy), movement.SpeedParam);
+            }
+            else if (now - movement.UpdatedAt >= _networkTimeoutSeconds)
+            {
+                var timeout = new TimeoutException($"网络角色 #{entity.Id:X8} 在 {_networkTimeoutSeconds} 秒内未到达目标位置。");
+                try { StopCore(movement.Actor); }
+                catch (Exception cleanupError) { throw new AggregateException("网络移动超时且停止失败。", timeout, cleanupError); }
+                throw timeout;
+            }
+            movement.NextPollAt = now + NetworkPollIntervalSeconds;
+            return false;
+        }
+
+        private static void StopNetworkMovement(Movement movement)
+        {
+            if (!movement.Network || !movement.NetworkStarted || movement.Arrived) return;
+            var entity = movement.Actor.Entity;
+            try
+            {
+                // Detach 已将 actor 标记为不活动，但仍应停止本次拥有的原生移动。
+                if (entity.IsAlive) entity.ActorMove(entity.Pos3D, entity.Heading, movement.SpeedParam);
+                movement.NetworkStarted = false;
+            }
+            catch (InvalidOperationException) when (!entity.IsAlive)
+            {
+                // 实体失效后不能向复用该槽位的新对象发送停止包。
+                movement.NetworkStarted = false;
             }
         }
 
@@ -239,6 +354,14 @@ namespace Simulant.Simulation.Runtime
                 throw new ArgumentOutOfRangeException(nameof(speed), "速度必须为有限的正数。");
         }
 
+        private static void ValidateCallback(Action onArrived)
+        {
+            if (onArrived == null) return;
+            foreach (var callback in onArrived.GetInvocationList())
+                if (callback.Method.IsDefined(typeof(AsyncStateMachineAttribute), false))
+                    throw new ArgumentException("到达回调必须同步执行，延迟动作请添加到调度器。", nameof(onArrived));
+        }
+
         private int Find(SimActor actor)
         {
             for (var i = 0; i < _moving.Count; ++i)
@@ -248,7 +371,25 @@ namespace Simulant.Simulation.Runtime
 
         private void QueueTick()
         {
-            if (_tick == null) _tick = _scheduler.ScheduleAfter(TickIntervalSeconds, _onTick, "更新实体移动");
+            if (_tick != null && _tick.IsCompleted) _tick = null;
+            var now = _scheduler.ElapsedSeconds;
+            var dueAt = double.PositiveInfinity;
+            foreach (var movement in _moving)
+            {
+                if (movement.Arrived) continue;
+                var next = !movement.Network ? now + TickIntervalSeconds :
+                    movement.NetworkStarted ? movement.NextPollAt : now;
+                if (movement.Stopping) next = now;
+                dueAt = Math.Min(dueAt, next);
+            }
+            if (double.IsPositiveInfinity(dueAt)) return;
+            // 新的本地插值或网络首包无需等待已有的低频网络轮询。
+            if (_tick != null && dueAt < _tickDueAt && _tick.Cancel()) _tick = null;
+            if (_tick == null)
+            {
+                _tickDueAt = dueAt;
+                _tick = _scheduler.ScheduleAfter(Math.Max(0, dueAt - now), _onTick, "更新实体移动");
+            }
         }
 
         private void CancelIdleTick()
@@ -270,23 +411,21 @@ namespace Simulant.Simulation.Runtime
         {
             lock (_gate)
             {
-                if (_disposed) return;
                 _disposed = true;
                 var movements = _moving.ToArray();
-                _moving.Clear();
-                CancelIdleTick();
+                if (_tick != null && _tick.Cancel()) _tick = null;
                 List<Exception> errors = null;
                 foreach (var movement in movements)
                 {
                     movement.OnArrived = null;
-                    try { FinishAnimation(movement); }
+                    try { StopCore(movement.Actor); }
                     catch (Exception error)
                     {
                         if (errors == null) errors = new List<Exception>();
                         errors.Add(error);
                     }
                 }
-                if (errors != null) throw new AggregateException("清理模拟移动动画失败。", errors);
+                if (errors != null) throw new AggregateException("清理模拟移动失败。", errors);
             }
         }
     }

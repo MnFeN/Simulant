@@ -1,5 +1,6 @@
 ﻿using Simulant.Core;
 using Simulant.Core.Environment;
+using Simulant.Core.Entity;
 using Simulant.Game;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
@@ -111,35 +112,39 @@ namespace Simulant.Content.U7a.Presets
 
         protected override void BuildTimeline(SimTimeline timeline)
         {
-            var boss = EntityManager.SpawnBNpc(17839, 13561, 100); // Pandora
-            boss.Pos3D = new Vector3(100, 100, 0);
-            boss.Heading = (float)PI;
-            boss.SetReadyToDraw();
-            boss.EnableDraw();
-
-            var mechanic = new SimTimeline();
-            var lines = new List<Simulant.Core.Entity.EventObject>();
-            mechanic.At(0, () =>
+            timeline.At(0, () => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                boss.Cast(0x9D72);
-                // 读条的同时生成 EObj，但不播放动画。
-                var eObjsPose = CalculateEObjsPose();
-                for (int i = 0; i < 6; i++)
+                BNpcBaseId = 17839, // Pandora
+                BNpcNameId = 13561,
+                Level = 100,
+                Pos = new Vector3(100, 100, 0),
+                Heading = (float)PI,
+            }, boss =>
+            {
+                var mechanic = new SimTimeline();
+                var lines = new List<Simulant.Core.Entity.EventObject>();
+                mechanic.At(0, () =>
                 {
-                    var (pos, heading) = eObjsPose[i];
-                    lines.Add(EntityManager.SpawnEObj((ushort)i, 2014199, pos, heading));
-                }
-            }, "地火读条与生成直线");
-            mechanic.At(8, () => lines.ForEach(e => e.PlayAnimation(0x2)), "地火细线出现");
-            mechanic.Repeat(10, 4, 3, group =>
-            {
-                Play(SingleTimelineStartFromGlowing(lines[group * 2]));
-                Play(SingleTimelineStartFromGlowing(lines[group * 2 + 1]));
-            }, "地火分组发光");
-            mechanic.At(20, () => boss.Heading = (float)((int)CenterDir4 / 2.0 * PI - PI), "本体转向安全点");
-            mechanic.At(25, () => boss.Cast(0x9D76), "双分摊读条");
-            mechanic.At(42, () => EntityManager.Delete(boss), "回收本体");
-            timeline.At(3, mechanic);
+                    boss.Cast(0x9D72);
+                    // 读条的同时生成 EObj，但不播放动画。
+                    var eObjsPose = CalculateEObjsPose();
+                    for (int i = 0; i < 6; i++)
+                    {
+                        var (pos, heading) = eObjsPose[i];
+                        lines.Add(EntityManager.SpawnEObj((ushort)i, 2014199, pos, heading));
+                    }
+                }, "地火读条与生成直线");
+                mechanic.At(8, () => lines.ForEach(e => e.PlayAnimation(0x2)), "地火细线出现");
+                mechanic.Repeat(10, 4, 3, group =>
+                {
+                    Play(SingleTimelineStartFromGlowing(lines[group * 2]));
+                    Play(SingleTimelineStartFromGlowing(lines[group * 2 + 1]));
+                }, "地火分组发光");
+                mechanic.At(20, () => boss.Heading = (float)((int)CenterDir4 / 2.0 * PI - PI), "本体转向安全点");
+                mechanic.At(25, () => boss.Cast(0x9D76), "双分摊读条");
+                mechanic.At(42, () => EntityManager.Delete(boss), "回收本体");
+                Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体就绪后开始地火");
+            }), "生成地火本体");
         }
 
         /// <summary> 每条地火直线从细线扩大开始的完整时间轴。 </summary>

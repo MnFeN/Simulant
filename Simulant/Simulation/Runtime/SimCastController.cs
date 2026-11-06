@@ -45,6 +45,8 @@ namespace Simulant.Simulation.Runtime
                 var action = ResolveAction(actionId);
                 if (action == null) return;
                 CancelCore(actor);
+                // 移除预兆会调用外部代码；它可能已清理角色或开始更新的读条。
+                if (_disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
                 var state = new CastState
                 {
                     ActionId = actionId,
@@ -85,6 +87,7 @@ namespace Simulant.Simulation.Runtime
                 var action = ResolveAction(actionId);
                 if (action == null) return;
                 CancelCore(actor);
+                if (_disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
                 ExecuteCore(actor, action);
             }
         }
@@ -129,7 +132,10 @@ namespace Simulant.Simulation.Runtime
                     }
                 }
                 finally { CancelState(actor, state); }
-                if (execute && actor.IsActive && !_casts.ContainsKey(actor)) ExecuteCore(actor, action);
+                if (!execute || _disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
+                // 清理预兆期间也可能有外部原生读条接管动画，必须重新读取当前技能。
+                var actionAfterCleanup = actor.Entity.CastingActionId;
+                if (actionAfterCleanup == 0 || actionAfterCleanup == state.ActionId) ExecuteCore(actor, action);
             }
         }
 

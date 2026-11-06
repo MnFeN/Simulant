@@ -185,6 +185,257 @@ namespace Simulant.Tests
             }
         }
 
+        internal static void SessionRetainsFailedCleanupAndRejectsRestart()
+        {
+            using (var probe = new SessionProbe())
+            using (var initialized = new AutoResetEvent(false))
+            {
+                var host = new PluginHost();
+                var failDeletion = true;
+                host.EntitySpawner.BeforeDelete = _ =>
+                {
+                    if (failDeletion) throw new InvalidOperationException("暂时无法回收实体");
+                };
+                probe.StartAction = () =>
+                {
+                    probe.Logic.EntityManager.SpawnBNpc(1);
+                    initialized.Set();
+                };
+                using (var session = CreateSession(host, probe))
+                {
+                    try
+                    {
+                        session.Start();
+                        Assert(initialized.WaitOne(TimeoutMs), "等待带实体的会话启动超时。");
+                        var firstScheduler = probe.Logic.Scheduler;
+                        session.Stop();
+                        Assert(!session.IsRunning && session.HasPendingCleanup && probe.StopCount == 1 &&
+                            host.EntitySpawner.Deleted.Count == 0,
+                            "实体回收失败后必须保留清理状态，同时只调用一次停止逻辑。");
+
+                        Throws<InvalidOperationException>(session.Start);
+                        Assert(ReferenceEquals(firstScheduler, probe.Logic.Scheduler) &&
+                            ReferenceEquals(firstScheduler, probe.Logic.EntityManager.Scheduler) &&
+                            probe.PrepareCount == 1 && probe.StartCount == 1 && probe.StopCount == 1 &&
+                            host.EntitySpawner.DeleteAttempts.Count == 2,
+                            "重启前可以重试清理，但仍失败时不得替换调度器或重复执行预设逻辑。");
+
+                        failDeletion = false;
+                        session.Stop();
+                        Assert(!session.HasPendingCleanup && probe.StopCount == 1 &&
+                            host.EntitySpawner.Deleted.Count == 1 && host.EntitySpawner.DeleteAttempts.Count == 3,
+                            "再次停止应只重试未完成的回收，并在成功后解除清理状态。");
+
+                        session.Start();
+                        Assert(initialized.WaitOne(TimeoutMs), "回收成功后会话未能重新启动。");
+                        Assert(session.IsRunning && !ReferenceEquals(firstScheduler, probe.Logic.Scheduler),
+                            "清理完成后重新开始应使用新调度器。");
+                        session.Stop();
+                        Assert(probe.StopCount == 2 && host.EntitySpawner.Deleted.Count == 2,
+                            "重启后的停止逻辑与实体回收应各执行一次。");
+                    }
+                    finally { failDeletion = false; session.Stop(); }
+                }
+            }
+        }
+
+        internal static void SessionDisposeRetriesPendingNetworkCleanup()
+        {
+            using (var probe = new SessionProbe())
+            using (var queued = new ManualResetEventSlim())
+            {
+                var host = new PluginHost();
+                var failCancellation = true;
+                var cancellationAttempts = 0;
+                host.EntitySpawner.BeforeNetworkCancel = _ =>
+                {
+                    cancellationAttempts++;
+                    if (failCancellation) throw new InvalidOperationException("暂时无法取消网络生成");
+                };
+                probe.StartAction = () =>
+                {
+                    probe.Logic.EntityManager.SpawnNetworkBNpc(new Core.Entity.NetworkNpcSpawnSpec(),
+                        _ => { throw new Exception("尚未就绪的角色不得交付。"); });
+                    queued.Set();
+                };
+                var session = CreateSession(host, probe);
+                try
+                {
+                    session.Start();
+                    Wait(queued, "网络生成请求排队");
+                    session.Dispose();
+                    Assert(session.HasPendingCleanup && !session.IsRunning && probe.StopCount == 1 &&
+                        cancellationAttempts == 1 && host.EntitySpawner.CancelledNetworkRequests.Count == 0,
+                        "Dispose 遇到网络取消失败必须保留请求，不得把会话当作已经清理完成。");
+                    Throws<ObjectDisposedException>(session.Start);
+
+                    failCancellation = false;
+                    session.Dispose();
+                    session.Stop();
+                    session.Dispose();
+                    Assert(!session.HasPendingCleanup && probe.StopCount == 1 && cancellationAttempts == 2 &&
+                        host.EntitySpawner.CancelledNetworkRequests.Count == 1 &&
+                        host.EntitySpawner.NetworkRequests[0].Entity == null,
+                        "Dispose 之后仍应允许重试取消；成功后的重复停止不得重放预设停止逻辑或再次取消请求。");
+                }
+                finally { failCancellation = false; session.Dispose(); }
+            }
+        }
+
+        internal static void SessionCallbackCanStopWhileExternalStopWaits()
+            => VerifyConcurrentStopReentry("停止", session => session.Stop(), null, false);
+
+        internal static void SessionCallbackCanDisposeWhileExternalStopWaits()
+            => VerifyConcurrentStopReentry("释放", session => session.Dispose(), null, true);
+
+        internal static void SessionCallbackCannotRestartWhileExternalStopWaits()
+            => VerifyConcurrentStopReentry("重新开始", session => session.Start(), typeof(InvalidOperationException), false);
+
+        internal static void SessionSynchronousCallbacksCannotRestart()
+            => RunBoundedSessionScenario("准备及停止回调内重启", () =>
+            {
+                var probe = new SessionProbe();
+                var host = new PluginHost();
+                var prepareAttempts = 0;
+                var stopAttempts = 0;
+                Exception prepareError = null;
+                Exception stopError = null;
+                SimSession session = null;
+                probe.PrepareAction = () =>
+                {
+                    if (Interlocked.Increment(ref prepareAttempts) != 1) return;
+                    try { session.Start(); }
+                    catch (Exception error) { prepareError = error; }
+                };
+                probe.StartAction = () => probe.Logic.EntityManager.SpawnBNpc(1);
+                probe.StopAction = () =>
+                {
+                    if (Interlocked.Increment(ref stopAttempts) != 1) return;
+                    try { session.Start(); }
+                    catch (Exception error) { stopError = error; }
+                };
+                session = CreateSession(host, probe);
+                session.Start();
+                Assert(probe.Started.Wait(TimeoutMs), "准备阶段拒绝重入后，正常初始化未执行。");
+                Assert(prepareError?.GetType() == typeof(InvalidOperationException),
+                    "准备回调内再次开始必须明确抛出 InvalidOperationException：" + prepareError);
+                var originalScheduler = probe.Logic.Scheduler;
+                session.Stop();
+                Assert(stopError?.GetType() == typeof(InvalidOperationException),
+                    "外部停止触发的停止回调内再次开始必须明确抛出 InvalidOperationException：" + stopError);
+                Assert(prepareAttempts == 1 && stopAttempts == 1 && probe.PrepareCount == 1 && probe.StartCount == 1 &&
+                    probe.StopCount == 1 && probe.ClearCount == 1 && host.EntitySpawner.Deleted.Count == 1,
+                    "同步重入不得重复准备、初始化、停止或回收实体。");
+                Assert(!session.IsRunning && originalScheduler.PendingCount == 0 &&
+                    ReferenceEquals(originalScheduler, probe.Logic.Scheduler) && host.Errors.IsEmpty,
+                    "停止回调内重启被拒绝后，不得替换调度器或遗留运行中的会话。");
+                session.Dispose();
+                Assert(probe.StopCount == 1 && probe.ClearCount == 1, "最后释放不得重复已完成的清理。");
+                probe.Dispose();
+            });
+
+        private static void VerifyConcurrentStopReentry(string operation, Action<SimSession> callback,
+            Type expectedCallbackError, bool disposedByCallback)
+        {
+            foreach (var externalDispose in new[] { false, true })
+                VerifyBoundedSessionReentry(operation, callback, expectedCallbackError, disposedByCallback, externalDispose);
+        }
+
+        private static void VerifyBoundedSessionReentry(string operation, Action<SimSession> callback,
+            Type expectedCallbackError, bool disposedByCallback, bool externalDispose)
+            => RunBoundedSessionScenario("外部" + (externalDispose ? "释放" : "停止") + "与节点内" + operation,
+                () => RunConcurrentStopReentry(operation, callback, expectedCallbackError, disposedByCallback, externalDispose));
+
+        private static void RunBoundedSessionScenario(string description, Action action)
+        {
+            Exception failure = null;
+            var completed = new ManualResetEventSlim();
+            var scenario = new Thread(() =>
+            {
+                try { action(); }
+                catch (Exception error) { failure = error; }
+                finally { completed.Set(); }
+            }) { IsBackground = true, Name = "会话并发回归场景" };
+            scenario.Start();
+            // 场景本身也有超时，避免 Start 或完成后的状态检查出现新死锁时挂住整套测试。
+            if (!completed.Wait(TimeoutMs * 3))
+                throw new Exception("会话" + description + "场景未按期退出。");
+            Assert(scenario.Join(TimeoutMs), "会话并发测试的场景线程未退出。");
+            completed.Dispose();
+            if (failure != null) throw new Exception("会话" + description + "验证失败。", failure);
+        }
+
+        private static void RunConcurrentStopReentry(string operation, Action<SimSession> callback,
+            Type expectedCallbackError, bool disposedByCallback, bool externalDispose)
+        {
+            var probe = new SessionProbe();
+            var entered = new ManualResetEventSlim();
+            var callbackExited = new ManualResetEventSlim();
+            var host = new PluginHost();
+            var lateCalls = 0;
+            Exception callbackError = null;
+            Exception stopError = null;
+            SimSession session = null;
+            probe.StartAction = () =>
+            {
+                probe.Logic.EntityManager.SpawnBNpc(1);
+                var scheduler = probe.Logic.Scheduler;
+                scheduler.ScheduleAfter(0, () =>
+                {
+                    entered.Set();
+                    try
+                    {
+                        Assert(SpinWait.SpinUntil(() => !scheduler.IsRunning, TimeoutMs),
+                            "外部停止未在节点重入前取消调度器。");
+                        callback(session);
+                    }
+                    catch (Exception error) { callbackError = error; }
+                    finally { callbackExited.Set(); }
+                }, "等待外部停止后在节点内" + operation);
+                scheduler.ScheduleAfter(0, () => Interlocked.Increment(ref lateCalls), "停止后不得执行的节点");
+            };
+            session = CreateSession(host, probe);
+            session.Start();
+            Assert(entered.Wait(TimeoutMs), "并发测试节点未进入执行状态。");
+            var originalScheduler = probe.Logic.Scheduler;
+            var stopThread = new Thread(() =>
+            {
+                try
+                {
+                    if (externalDispose) session.Dispose();
+                    else session.Stop();
+                }
+                catch (Exception error) { stopError = error; }
+            }) { IsBackground = true, Name = "会话并发回归外部停止" };
+            stopThread.Start();
+
+            // 失败时不在 finally 中等待 Dispose，也不释放仍可能被后台节点使用的屏障。
+            Assert(callbackExited.Wait(TimeoutMs), "节点内" + operation + "与外部停止互相等待，节点未退出。");
+            Assert(stopThread.Join(TimeoutMs), "节点返回后外部停止仍未退出。");
+            Assert(stopError == null, "外部停止发生异常：" + stopError);
+            Assert(expectedCallbackError == null ? callbackError == null : callbackError?.GetType() == expectedCallbackError,
+                "节点内" + operation + "的结果不符合约定：" + callbackError);
+            Assert(!session.IsRunning && ReferenceEquals(originalScheduler, probe.Logic.Scheduler) &&
+                originalScheduler.PendingCount == 0 && probe.PrepareCount == 1 && probe.StartCount == 1,
+                "节点重入不得重建调度器、重复准备或遗留待执行节点。");
+            Assert(probe.StopCount == 1 && probe.ClearCount == 1 &&
+                host.EntitySpawner.Deleted.Count == 1 && host.EntitySpawner.DeleteAttempts.Count == 1,
+                "并发停止必须只执行一次预设停止、清理及实体回收。");
+            Assert(lateCalls == 0 && host.Errors.IsEmpty,
+                "停止后的节点不得执行，正常关闭及明确拒绝重启不应被记录为执行失败。");
+            if (disposedByCallback || externalDispose)
+                Assert(Throws<ObjectDisposedException>(session.Start).GetType() == typeof(ObjectDisposedException),
+                    "任一线程释放会话后，后续开始调用必须保持拒绝状态。");
+
+            session.Dispose();
+            session.Stop();
+            Assert(probe.StopCount == 1 && probe.ClearCount == 1 && host.EntitySpawner.DeleteAttempts.Count == 1,
+                "并发停止完成后重复释放和停止不得再次清理。");
+            probe.Dispose();
+            entered.Dispose();
+            callbackExited.Dispose();
+        }
+
         private static SimSession CreateSession(PluginHost host, SessionProbe probe)
             => new SimSession(host, new SessionTestPreset(probe));
 
@@ -283,6 +534,10 @@ namespace Simulant.Core
         internal readonly Entity.EntitySpawner EntitySpawner = new Entity.EntitySpawner();
         internal readonly ConcurrentQueue<string> Errors = new ConcurrentQueue<string>();
         internal void LogError(string message) => Errors.Enqueue(message);
+        internal Action<string> FirewallLog { get; set; }
+        internal void LogRuntime(string message) => FirewallLog?.Invoke(message);
+        internal void LogWarning(string message) => FirewallLog?.Invoke(message);
+        internal void LogVerbose(string message) => FirewallLog?.Invoke(message);
     }
 }
 

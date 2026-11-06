@@ -126,6 +126,9 @@ namespace Simulant.Core.Entity
         }
 
         public float HitboxRadius => Native.HitboxRadius;
+        /// <summary>客户端综合标志、加载状态等条件得出的可选中结果。</summary>
+        public bool IsTargetable => Native.GetIsTargetable();
+        public void SetTargetable(bool targetable) => ActorControl(0x36, targetable ? 1u : 0u);
         public void EnableDraw() => Native.EnableDraw();
         public void DisableDraw() => Native.DisableDraw();
         public void SetReadyToDraw() => Native.SetReadyToDraw();

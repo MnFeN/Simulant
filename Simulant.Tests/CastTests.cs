@@ -41,9 +41,9 @@ namespace Simulant.Tests
                 var delayed = scene.Actor(1);
                 visible.Cast(1);
                 delayed.Cast(1, omenDelay: 0.05f);
-                scene.Casts.Cancel(visible);
+                visible.StopCasting();
                 Assert(visible.Entity.CastingActionId == 0 && scene.Scheduler.PendingCount == 2,
-                    "Cancel 必须仅清除指定模拟角色的读条，并保留另一角色的调度。");
+                    "StopCasting 必须仅清除指定模拟角色的读条，并保留另一角色的调度。");
                 scene.Casts.Dispose();
                 scene.Casts.Dispose();
                 Assert(delayed.Entity.CastingActionId == 0 && scene.Scheduler.PendingCount == 0,
@@ -60,6 +60,35 @@ namespace Simulant.Tests
             }
         }
 
+        internal static void StopCastingPreservesMovementAndAllowsRecast()
+        {
+            using (var scene = new CastTestScene())
+            {
+                scene.AddAction(1, 1, omen: true);
+                scene.AddAction(2, 0.04f);
+                var actor = scene.Actor(0);
+                var target = new Vector2(0.2f, 0);
+                actor.MoveTo(target, 2);
+                actor.Cast(1);
+                actor.StopCasting();
+                actor.StopCasting();
+                Assert(actor.IsActive && actor.IsMoving && actor.Entity.CastingActionId == 0 &&
+                    scene.Scheduler.PendingCount == 1,
+                    "重复停止读条必须保留角色、移动目标及唯一的移动更新节点。");
+                actor.Cast(2);
+                scene.RunPast(0.2);
+                Assert(actor.Pos == target && !actor.IsMoving,
+                    "停止读条后，已有移动仍必须到达原目标。");
+                Assert(actor.Entity.CastStarts.SequenceEqual(new uint[] { 1, 2 }) &&
+                    actor.Entity.FinalizedCasts.SequenceEqual(new uint[] { 1, 2 }) &&
+                    actor.Entity.PlayedTimelines.SequenceEqual(new ushort[] { 102 }),
+                    "停止后必须能重新读条，且只有新读条可以播放完成动作。");
+                Assert(TriggernometryInterop.Commands.Count(command => !IsRemoval(command)) == 1 &&
+                    TriggernometryInterop.Commands.Count(IsRemoval) == 1,
+                    "重复停止只能移除一次旧读条的预兆。");
+            }
+        }
+
         internal static void OmenTagsAreIndependentAcrossActorsAndRecasts()
         {
             using (var scene = new CastTestScene())
@@ -71,7 +100,7 @@ namespace Simulant.Tests
                 second.Cast(1);
                 var shows = TriggernometryInterop.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
                 Assert(shows.Length == 2 && shows.Distinct().Count() == 2, "两个模拟角色不得共享预兆移除标签。");
-                scene.Casts.Cancel(first);
+                first.StopCasting();
                 Assert(TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[] { shows[0] }),
                     "取消一个模拟角色的读条时，只能移除该角色的预兆。");
                 second.Cast(1);
@@ -95,7 +124,7 @@ namespace Simulant.Tests
                 recycled.Cast(1);
                 externallyChanged.Entity.CastingActionId = 999;
                 explicitlyCancelled.Entity.CastingActionId = 999;
-                scene.Casts.Cancel(explicitlyCancelled);
+                explicitlyCancelled.StopCasting();
                 scene.World.Registry.RegisterCreated(2);
                 scene.RunPast(0.08);
                 Assert(externallyChanged.Entity.CastingActionId == 999 && explicitlyCancelled.Entity.CastingActionId == 999,
@@ -162,6 +191,83 @@ namespace Simulant.Tests
                 Assert(actor.Entity.CastingActionId == 2 && actor.Entity.PlayedTimelines.Count == 0 &&
                     actor.Entity.BaseTimelineResetCount == 0,
                     "旧完成操作不得覆盖其清理回调同步启动的新读条。");
+            }
+        }
+
+        internal static void CastCancellationReentryPreservesTheNewerCast()
+        {
+            foreach (var executeOuter in new[] { false, true })
+            using (var scene = new CastTestScene())
+            {
+                scene.AddAction(1, 1, omen: true);
+                scene.AddAction(2, 1);
+                scene.AddAction(3, 1);
+                var actor = scene.Actor(0);
+                actor.Cast(1);
+                var oldTag = Tag(TriggernometryInterop.Commands.Single());
+                TriggernometryInterop.OnCommand = command =>
+                {
+                    if (IsRemoval(command) && Tag(command) == oldTag) actor.Cast(3);
+                };
+                if (executeOuter) actor.Execute(2);
+                else actor.Cast(2);
+                Assert(actor.Entity.CastingActionId == 3 && actor.Entity.CastStarts.SequenceEqual(new uint[] { 1, 3 }) &&
+                    actor.Entity.PlayedTimelines.Count == 0 && actor.Entity.BaseTimelineResetCount == 0 &&
+                    scene.Scheduler.PendingCount == 1,
+                    "取消回调启动新读条后，较早的 Cast 或 Execute 必须让出控制权，不能重复登记或覆盖新动画。");
+            }
+        }
+
+        internal static void CastCancellationReentryCannotResumeAfterCleanup()
+        {
+            foreach (var executeOuter in new[] { false, true })
+            foreach (var disposeController in new[] { false, true })
+            using (var scene = new CastTestScene())
+            {
+                scene.AddAction(1, 1, omen: true);
+                scene.AddAction(2, 1);
+                var actor = scene.Actor(0);
+                actor.Cast(1);
+                var oldTag = Tag(TriggernometryInterop.Commands.Single());
+                TriggernometryInterop.OnCommand = command =>
+                {
+                    if (!IsRemoval(command) || Tag(command) != oldTag) return;
+                    if (disposeController) scene.Casts.Dispose();
+                    else actor.Dispose();
+                };
+                if (executeOuter) actor.Execute(2);
+                else actor.Cast(2);
+                Assert(actor.Entity.IsAlive && actor.Entity.CastingActionId == 0 &&
+                    actor.Entity.CastStarts.SequenceEqual(new uint[] { 1 }) &&
+                    actor.Entity.PlayedTimelines.Count == 0 && actor.Entity.BaseTimelineResetCount == 0 &&
+                    scene.Scheduler.PendingCount == 0,
+                    "取消回调解除角色或释放控制器后，旧调用不得在仍存活的借用实体上重新读条或播放动作。");
+            }
+        }
+
+        internal static void CompletionRemovalPreservesAnExternalReplacementCast()
+        {
+            using (var scene = new CastTestScene())
+            using (var replaced = new ManualResetEventSlim())
+            {
+                scene.AddAction(1, 0.35f, omen: true);
+                var actor = scene.Actor(0);
+                actor.Cast(1);
+                var oldTag = Tag(TriggernometryInterop.Commands.Single());
+                TriggernometryInterop.OnCommand = command =>
+                {
+                    if (!IsRemoval(command) || Tag(command) != oldTag) return;
+                    // 外部原生读条不会进入本控制器的字典，不能仅靠字典判断动画所有权。
+                    actor.Entity.SetCastInfo(999, 2);
+                    replaced.Set();
+                };
+                scene.Scheduler.Start();
+                Assert(replaced.Wait(5000), "完成清理没有触发外部替代读条。");
+                scene.Scheduler.Dispose();
+                scene.AssertNoFailure();
+                Assert(actor.Entity.CastingActionId == 999 && actor.Entity.FinalizedCasts.SequenceEqual(new uint[] { 1 }) &&
+                    actor.Entity.PlayedTimelines.Count == 0 && actor.Entity.BaseTimelineResetCount == 0,
+                    "完成清理期间出现外部读条后，不得重置其基础动画或播放旧技能完成动作。");
             }
         }
 
