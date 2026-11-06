@@ -141,6 +141,7 @@ namespace Simulant.UI
                 _host.ZoneService.CancelPendingPhase();
                 StopCurrentSession();
                 _host.StopDebugEntities();
+                _host.PartyService?.RestoreAll();
                 _host.EntitySpawner.Clear();
                 if (_host.ZoneService.HasPendingReturn && !_host.ZoneService.ExitToInitialTerritory())
                     throw new InvalidOperationException("未能返回真实区域，防火墙保持开启；请处理错误后重试。");
@@ -373,10 +374,11 @@ namespace Simulant.UI
             var menu = new ContextMenuStrip(components);
             menu.Items.Add("网络 NPC 测试", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkNpc));
             menu.Items.Add("网络玩家测试（职业套装与复制外观）", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkPlayer));
+            menu.Items.Add("小队列表测试（血量、状态与仇恨）", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkParty));
             menu.Items.Add("本地三实体测试", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.LocalEntities));
             btnDebug.ContextMenuStrip = menu;
             new ToolTip(components).SetToolTip(btnDebug,
-                "单击测试网络 NPC；右键选择网络玩家或本地三实体测试。运行时再次点击停止。");
+                "单击测试网络 NPC；右键选择网络玩家、小队列表或本地三实体测试。运行时再次点击停止。");
         }
 
         private async Task RunEntityTest(Test.EntityTestKind kind)

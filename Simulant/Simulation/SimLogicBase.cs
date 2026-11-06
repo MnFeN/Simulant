@@ -221,6 +221,7 @@ namespace Simulant.Simulation
             void CompleteParty()
             {
                 Party.AddRange(members);
+                if (members.Length > 1) EntityManager.ShowParty(_host.PartyService);
                 _preparingParty = false;
                 onReady();
             }

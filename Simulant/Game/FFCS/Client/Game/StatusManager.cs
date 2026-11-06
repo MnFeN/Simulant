@@ -48,7 +48,8 @@ namespace Simulant.Game.FFCS.Client.Game
         [SigPattern("E8 * * * * 40 0A F0 48 8D 5B")]
         public static IntPtr SetStatusFuncPtr { get; set; }
         public bool SetStatus(int statusIndex, ushort statusId, float remaining, ushort param, GameObjectId sourceObject, bool refreshFlags)
-            => SetStatusFuncPtr.Call<bool>(Ptr, statusIndex, statusId, remaining, param, sourceObject, refreshFlags);
+            // 原生按值接收完整 64 位身份；object[] 不会触发 GameObjectId 到 ulong 的隐式转换。
+            => SetStatusFuncPtr.Call<bool>(Ptr, statusIndex, statusId, remaining, param, sourceObject.Id, refreshFlags);
     }
 
     public struct Status : IMemoryObject

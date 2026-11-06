@@ -21,7 +21,7 @@ namespace Simulant
 {
     internal partial class Test
     {
-        internal enum EntityTestKind { NetworkNpc, NetworkPlayer, LocalEntities }
+        internal enum EntityTestKind { NetworkNpc, NetworkPlayer, NetworkParty, LocalEntities }
         private readonly PluginHost _host;
         internal Test(PluginHost host)
         {

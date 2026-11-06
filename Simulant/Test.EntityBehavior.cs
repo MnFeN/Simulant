@@ -39,7 +39,7 @@ namespace Simulant
 
             EnsureEntityTestReady();
             var castTime = 0f;
-            if (kind != EntityTestKind.NetworkPlayer)
+            if (kind == EntityTestKind.NetworkNpc || kind == EntityTestKind.LocalEntities)
             {
                 if (!CsvManager.Instance.Get<ActionRow>().TryGetValue((int)EntityTestActionId, out var action) ||
                     action.CastTime < 3 || action.OmenId == 0 || action.AnimationEndId < 0)
@@ -67,7 +67,12 @@ namespace Simulant
                     if (_entityBehaviorRun != null)
                         throw new InvalidOperationException("已有实体测试正在运行。");
                     _entityBehaviorRun = run;
-                    if (kind == EntityTestKind.NetworkPlayer)
+                    if (kind == EntityTestKind.NetworkParty)
+                    {
+                        run.Scheduler.Schedule(0, () => BeginPartyTest(run), "生成小队列表测试角色");
+                        LogEntityTest(run, "小队列表测试开始。将生成七名模拟玩家和一只 NPC，显示自身加七人的小队，分阶段检查血量、状态与仇恨。名单就绪后保留三十秒，再次点击“调试”可停止。");
+                    }
+                    else if (kind == EntityTestKind.NetworkPlayer)
                     {
                         run.Scheduler.Schedule(0, () => BeginNetworkPlayerTest(run), "生成网络模拟玩家");
                         LogEntityTest(run, "网络玩家测试开始。将生成骑士、白魔法师和绘灵法师，验证职业套装、复制外观、可选中、移动与回收。再次点击“调试”可停止。");

@@ -1,7 +1,9 @@
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.Character;
 using Simulant.Game.FFCS.Client.Game.Network;
+using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Game.FFCS.Client.Network;
+using System;
 using System.Numerics;
 using NativeCharacter = Simulant.Game.FFCS.Client.Game.Character.Character;
 
@@ -19,6 +21,45 @@ namespace Simulant.Core.Entity
         public uint MaxHP { get => Native.MaxHealth; set => Native.MaxHealth.Set(value); }
         public uint MP { get => Native.Mana; set => Native.Mana.Set(value); }
         public uint MaxMp { get => Native.MaxMana; set => Native.MaxMana.Set(value); }
+
+        /// <summary>通过原生收包更新血蓝量，保留全部状态；仅用于网络角色。</summary>
+        public void SetNetworkVitals(uint hp, ushort? mp = null)
+        {
+            if (PacketDispatcher.HandleStatusEffectListDoublePacketFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("原生角色状态更新函数尚未定位。");
+            var native = Native;
+            ushort index = native.ObjectIndex;
+            if ((ObjectKind != ObjectKind.Pc && ObjectKind != ObjectKind.BattleNpc) || index >= 200 || index % 2 != 0)
+                throw new InvalidOperationException("只有战斗实体列表中的网络玩家或战斗 NPC 可以接收血量更新。");
+            uint maxHp = native.MaxHealth, maxMp = native.MaxMana;
+            uint currentMp = mp.HasValue ? mp.Value : (uint)native.Mana;
+            if (hp > maxHp) throw new ArgumentOutOfRangeException(nameof(hp), "当前血量不能超过血量上限。");
+            if (currentMp > maxMp) throw new ArgumentOutOfRangeException(nameof(mp), "当前魔力不能超过魔力上限。");
+            if (maxMp > ushort.MaxValue)
+                throw new InvalidOperationException("角色魔力上限超出状态更新包的范围。");
+
+            var packet = new StatusEffectListDoublePacket
+            {
+                ClassJob = (byte)(Job)native.ClassJob, Level = native.Level, Level_2 = native.Level,
+                CurrentHP = hp, MaxHP = maxHp, CurrentMP = (ushort)currentMp, MaxMP = (ushort)maxMp,
+                DamageShield = native.ShieldValue
+            };
+            // 状态内存每槽 16 字节，包内每槽 12 字节；来源在网络包中使用实体 ID。
+            var statuses = native.StatusManager.Ptr.ReadBytes(StatusEffectListDoublePacket.StatusCount * 0x10, 8);
+            if (statuses == null || statuses.Length != StatusEffectListDoublePacket.StatusCount * 0x10)
+                throw new InvalidOperationException("读取角色完整状态失败，未发送血量更新。");
+            for (var i = 0; i < StatusEffectListDoublePacket.StatusCount; i++)
+            {
+                var offset = i * 0x10;
+                packet.SetStatus(i, new StatusEffectListStatus
+                {
+                    StatusId = BitConverter.ToUInt16(statuses, offset), Param = BitConverter.ToUInt16(statuses, offset + 2),
+                    RemainingTime = BitConverter.ToSingle(statuses, offset + 4), SourceEntityId = BitConverter.ToUInt32(statuses, offset + 8)
+                });
+            }
+            PacketDispatcher.HandleStatusEffectListDoublePacket(Native.EntityId, packet);
+        }
+
         public byte Level { get => Native.Level; set => Native.Level.Set(value); }
         public Job Job { get => Native.ClassJob; set => Native.ClassJob.Set(value); }
         public CharacterModes Mode => Native.Mode;

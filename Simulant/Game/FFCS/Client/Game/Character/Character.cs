@@ -83,6 +83,8 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         public CharacterSetupContainer CharacterSetup => Ptr.As<CharacterSetupContainer>(0x1B10);
         public ModelContainer ModelContainer => Ptr.As<ModelContainer>(0x1B28);
         public MemoryField<float> Alpha => Ptr.Field<float>(0x22E8);
+        public MemoryField<ulong> AccountId => Ptr.Field<ulong>(0x2350);
+        public MemoryField<ulong> ContentId => Ptr.Field<ulong>(0x2358);
         public MemoryField<ushort> CurrentWorld => Ptr.Field<ushort>(0x2360);
         public MemoryField<ushort> HomeWorld => Ptr.Field<ushort>(0x2362);
         public MemoryField<CharacterModes> Mode => Ptr.Field<CharacterModes>(0x2364);

@@ -457,6 +457,91 @@ namespace Simulant.Tests
             }
         }
 
+        internal static void ManagerRestoresPartyBeforeDeletingItsMembersAndRetriesFailure()
+        {
+            var spawner = new EntitySpawner();
+            var party = new Simulant.Core.Party.SimPartyService();
+            var errors = 0;
+            using (var firstScheduler = new SimScheduler())
+            using (var secondScheduler = new SimScheduler())
+            {
+                var manager = new SimEntityManager(spawner, _ => errors++) { Scheduler = firstScheduler };
+                var first = manager.SpawnBNpc(1);
+                var second = manager.SpawnBNpc(2);
+                manager.Party.Add(first);
+                manager.Party.Add(second);
+                manager.ShowParty(party);
+                Assert(party.IsOwnedBy(manager) && party.ShowCount == 1 && party.Members.SequenceEqual(new[] { first, second }),
+                    "展示小队必须以当前会话作为所有者，并保留小队顺序。");
+                party.BeforeRestore = () => { throw new InvalidOperationException("模拟原生小队恢复失败。"); };
+                try
+                {
+                    manager.Clear();
+                    Assert(errors == 1 && party.IsOwnedBy(manager) && manager.HasPendingCleanup,
+                        "原生小队恢复失败必须保留所有者和会话清理责任。");
+                    Assert(first.Entity.IsAlive && second.Entity.IsAlive && spawner.DeleteAttempts.Count == 0,
+                        "名单尚未恢复时不能先删除仍被小队引用的模拟实体。");
+                    Throws<InvalidOperationException>(() => manager.Scheduler = secondScheduler);
+                    Throws<InvalidOperationException>(() => manager.SpawnBNpc(3));
+                    party.BeforeRestore = () =>
+                    {
+                        Assert(first.Entity.IsAlive && second.Entity.IsAlive && spawner.DeleteAttempts.Count == 0,
+                            "恢复重试必须仍发生在任何成员删除之前。");
+                    };
+                    manager.Clear();
+                    Assert(!party.IsOwnedBy(manager) && !manager.HasPendingCleanup && party.RestoreAttempts == 2 &&
+                        !first.Entity.IsAlive && !second.Entity.IsAlive && spawner.Deleted.Count == 2,
+                        "恢复成功后才可释放小队实体并解除重启限制。");
+                    manager.Clear();
+                    Assert(party.RestoreAttempts == 2 && spawner.DeleteAttempts.Count == 2,
+                        "成功恢复和删除的资源不应在重复清理时再次触碰。");
+                    manager.Scheduler = secondScheduler;
+                    manager.Clear();
+                }
+                finally { party.BeforeRestore = null; manager.Clear(); }
+            }
+        }
+
+        internal static void ManagerUsesOneEnmityRefreshAndCancelsOnClear()
+        {
+            var spawner = new EntitySpawner();
+            var party = new Simulant.Core.Party.SimPartyService();
+            Exception failure = null;
+            using (var refreshed = new ManualResetEventSlim())
+            using (var observedAfterClear = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; observedAfterClear.Set(); }))
+            {
+                var manager = new SimEntityManager(spawner) { Scheduler = scheduler };
+                try
+                {
+                    var boss = manager.SpawnBNpc(1);
+                    var member = manager.SpawnBNpc(2);
+                    manager.Party.Add(member);
+                    Throws<InvalidOperationException>(() => manager.SetPartyEnmity(boss, 100));
+                    manager.ShowParty(party);
+                    manager.SetPartyEnmity(boss, 100);
+                    manager.SetPartyEnmity(boss, 50);
+                    Assert(party.EnmitySetCount == 2 && party.EnmityTarget == boss.Id &&
+                        party.EnmityValues.SequenceEqual(new[] { 50 }) && scheduler.PendingCount == 1,
+                        "多次更新仇恨必须共用一个刷新节点，服务应收到最后的目标与数值。");
+                    party.OnRefreshEnmity = refreshed.Set;
+                    scheduler.Start();
+                    Assert(refreshed.Wait(5000), "仇恨刷新节点没有执行：" + failure);
+                    manager.Clear();
+                    var refreshes = party.EnmityRefreshCount;
+                    Assert(scheduler.PendingCount == 0 && !party.IsOwnedBy(manager),
+                        "停止模拟必须取消刷新节点并恢复小队。");
+                    scheduler.ScheduleAfter(0.6, observedAfterClear.Set, "确认清理后没有迟到的仇恨刷新");
+                    Assert(observedAfterClear.Wait(5000), "清理后的观察节点没有执行。");
+                    Assert(failure == null && party.EnmityRefreshCount == refreshes,
+                        "停止后不得再刷新小队仇恨：" + failure);
+                    manager.Clear();
+                    Assert(party.EnmityRefreshCount == refreshes, "重复停止不能重新触发刷新。");
+                }
+                finally { manager.Clear(); }
+            }
+        }
+
         private static void AddCombinedAction(int id, float castTime, bool omen)
         {
             CsvManager.Instance.Get<ActionRow>()[id] = new ActionRow

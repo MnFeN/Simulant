@@ -1,4 +1,5 @@
 using Simulant.Core.Entity;
+using Simulant.Core.Party;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,8 @@ namespace Simulant.Simulation.Runtime
         private SimMovementController _movement;
         private bool _acceptingEntities;
         private bool _isClearing;
+        private SimPartyService _partyService;
+        private SimScheduledAction _partyEnmityPoll;
 
         internal List<SimActor> Party { get; } = new List<SimActor>();
 
@@ -31,7 +34,8 @@ namespace Simulant.Simulation.Runtime
             {
                 lock (_gate)
                     return _isClearing || _owned.Count != 0 || _networkSpawns.Count != 0 ||
-                        _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true;
+                        _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true ||
+                        _partyService?.IsOwnedBy(this) == true;
             }
         }
 
@@ -50,6 +54,8 @@ namespace Simulant.Simulation.Runtime
                         throw new InvalidOperationException("宿主仍有未交付的失败创建，请先重试清理后开始模拟。");
                     if (_movement?.HasPendingCleanup == true)
                         throw new InvalidOperationException("上次模拟的移动尚未停止，请先重试清理后开始模拟。");
+                    if (_partyService?.IsOwnedBy(this) == true)
+                        throw new InvalidOperationException("上次模拟的小队列表尚未恢复，请先重试清理。");
                     if (_actors.Count != 0 || _owned.Count != 0 || _networkSpawns.Count != 0)
                         throw new InvalidOperationException("更换调度器前必须清理本次模拟。");
                     _casts?.Dispose();
@@ -67,6 +73,47 @@ namespace Simulant.Simulation.Runtime
         {
             _spawner = spawner ?? throw new ArgumentNullException(nameof(spawner));
             _onCleanupError = onCleanupError;
+        }
+
+        internal void ShowParty(SimPartyService service)
+        {
+            if (service == null) throw new ArgumentNullException(nameof(service));
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                if (_partyService != null && !ReferenceEquals(_partyService, service) && _partyService.IsOwnedBy(this))
+                    throw new InvalidOperationException("本会话已借用另一个小队列表，必须先恢复。");
+                _partyService = service;
+                service.Show(this, Party);
+            }
+        }
+
+        internal void SetPartyEnmity(SimActor target, params int[] enmity)
+        {
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                if (!target.IsActive || _partyService?.IsOwnedBy(this) != true)
+                    throw new InvalidOperationException("请先显示模拟小队并指定有效目标。");
+                _partyService.SetEnmity(this, target.Id, Party, enmity);
+                SchedulePartyEnmity();
+            }
+        }
+
+        private void SchedulePartyEnmity()
+        {
+            if (_partyEnmityPoll != null) return;
+            _partyEnmityPoll = _scheduler.ScheduleAfter(0.25, () =>
+            {
+                lock (_gate)
+                {
+                    _partyEnmityPoll = null;
+                    if (!_acceptingEntities || _isClearing || _partyService?.IsOwnedBy(this) != true) return;
+                    _partyService.RefreshEnmity(this);
+                    SchedulePartyEnmity();
+                }
+            }, "检查模拟目标的仇恨显示");
         }
 
         public SimActor SpawnPlayer(Job job)
@@ -135,6 +182,7 @@ namespace Simulant.Simulation.Runtime
             {
                 if (!_actors.TryGetValue(actor.Entity.Identity, out var current) || !ReferenceEquals(current, actor))
                     return;
+                _partyService?.RemoveMember(this, actor.Id);
                 try { actor.Dispose(); }
                 finally
                 {
@@ -157,6 +205,8 @@ namespace Simulant.Simulation.Runtime
             {
                 // 延迟回收可能发生在 Clear 之后；不再拥有就不接触原生对象。
                 if (!_owned.Contains(entity)) return;
+                // 列表移除失败时保留实体，避免界面仍引用已回收的队员。
+                _partyService?.RemoveMember(this, entity.Id);
                 try
                 {
                     if (_actors.TryGetValue(entity.Identity, out var actor)) Detach(actor);
@@ -187,6 +237,8 @@ namespace Simulant.Simulation.Runtime
                 movement = _movement;
                 _isClearing = true;
                 _acceptingEntities = false;
+                _partyEnmityPoll?.Cancel();
+                _partyEnmityPoll = null;
                 _networkGeneration++;
                 _networkPoll?.Cancel();
                 _networkPoll = null;
@@ -207,9 +259,11 @@ namespace Simulant.Simulation.Runtime
                 // 先停止所有参与者的行为，再回收本会话生成的实体。借用玩家只解除关联。
                 foreach (var actor in actors)
                     TryCleanup(actor.Dispose);
-                foreach (var entity in owned)
-                    if (TryCleanup(() => _spawner.Delete(entity)))
-                        lock (_gate) _owned.Remove(entity);
+                var partyRestored = _partyService == null || TryCleanup(() => _partyService.Restore(this));
+                if (partyRestored)
+                    foreach (var entity in owned)
+                        if (TryCleanup(() => _spawner.Delete(entity)))
+                            lock (_gate) _owned.Remove(entity);
                 if (casts != null) TryCleanup(casts.Dispose);
                 if (movement != null) TryCleanup(movement.Dispose);
                 // 仅接管共享生成器中从未交付的失败分配，不触及其他会话已拥有的实体。

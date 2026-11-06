@@ -39,7 +39,35 @@ EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
 
 `Spawn` 取得回收责任；`Attach` 只借用。对同一实体重复 `Attach` 返回本会话现有的活动 `SimActor`。`Detach` 或 `actor.Dispose()` 停止行为，保留底层实体；`Delete` 仅回收本会话生成的实体，借用玩家不会被删除。即便先 `Detach`，本会话生成的角色仍会在停止时回收。
 
-`GeneratePartyMembers(myPartyIdx, onReady)` 每次模拟会话只准备一次小队，按原职能顺序等待全部网络玩家就绪后再回调；自身玩家仍然借用。停止并完成清理后，可以在下一轮重新准备。
+`GeneratePartyMembers(myPartyIdx, onReady)` 每次模拟会话只准备一次小队，按原职能顺序等待全部网络玩家就绪，登记原生小队列表后再回调；自身玩家仍然借用。停止并完成清理后，可以在下一轮重新准备。
+
+## 原生小队列表
+
+`SimEntityManager.Party` 保留机制使用的职能顺序；`EntityManager.ShowParty(_host.PartyService)` 把自己和其余网络玩家登记到原生主小队，人数为 2-8 人。原生记录将自己放在第一位，界面最终显示顺序仍受游戏的小队排序设置影响。现有 `GeneratePartyMembers` 已自动完成这一步。
+
+名单使用客户端 `HandleUpdatePartyPacket` 收包入口更新。小队状态图标可以按实体 ID 从战斗实体读取，但只改角色的 `HP` 字段不足以同步小队血条，需要血量／状态收包管线。不新增界面绘制、不周期性重发整张名单，也不向服务器发送邀请或离队操作。生成队员必须使用网络管线，本地备用角色不能入队。
+
+结构按项目的 `Ptr/MemoryField` 方式迁入，参考固定版本 [FFCS GroupManager](https://github.com/aers/FFXIVClientStructs/blob/aad0de66f0a6b49f257d224499dd685ceba567da/FFXIVClientStructs/FFXIV/Client/Game/Group/GroupManager.cs)、[FFCS Hate](https://github.com/aers/FFXIVClientStructs/blob/aad0de66f0a6b49f257d224499dd685ceba567da/FFXIVClientStructs/FFXIV/Client/Game/UI/Hate.cs) 及 [AnoMech 原生小队收包用法](https://github.com/anomek/AnoMech/blob/1646a7068c2071a3d1fd9e3c84550dfd3f1b6ade/AnoMech/Core/Native/Implementations/PartyHud.cs)。这些参考不是国服布局实测结果，因此提交后会读回人数与身份确认名单；图形界面仍需实机验证。
+
+网络角色使用 `member.Entity.SetNetworkVitals(hp, mp)` 更新血蓝；省略 `mp` 保留现值。它发送完整 `StatusEffectListDouble`，保留 60 个状态的槽位、时间、参数和来源实体 ID，以及角色最大血蓝、职业、等级和护盾。状态也可继续使用原生 `StatusManager.SetStatus/RemoveStatus`。原有 `HP` 属性仍是即时内存访问，保留给明确需要裸写的场合。
+
+这与 [Sapphire 的血量更新流程](https://github.com/SapphireServer/Sapphire/blob/aab9cb2347eb0ec42e85ee3e117a0c177b9b3070/src/world/Actor/Chara.cpp) 一致：ActorControl 处理飘字，另发 HudParam 完整血蓝／状态；当前客户端使用已核对的 60 槽收包布局，不能直接复制私服旧版 30 槽协议。
+
+机制可以按 `Party` 的顺序提供当前目标的仇恨百分比：
+
+```csharp
+EntityManager.SetPartyEnmity(boss, 100, 80, 20, 15, 40, 35, 30, 25);
+```
+
+该调用不计算技能伤害或自动生成仇恨；数值为 0-100，目标必须是本地模拟生成的有效战斗 NPC。发送前按仇恨降序排列，通过原生 UpdateHate 收包入口更新。会话共用一个每 250 ms 的检查节点，仅在选中相应 Boss 且目标切换或仇恨数据变化时发送，不按角色分配计时器。它不替用户选择目标，也不自动改变 Boss 的攻击目标。
+
+自身原先未入战时，通过 `ActorControl SetBattle (0x04, 1)` 临时入战，停止时恢复；原先已入战则保持原状态。此流程参考 [Sapphire Player.cpp](https://github.com/SapphireServer/Sapphire/blob/aab9cb2347eb0ec42e85ee3e117a0c177b9b3070/src/world/Actor/Player.cpp)，当前目标仇恨包和函数入口使用 [国服 KodakkuAssist 的定义](https://github.com/moewcorp/KodakkuAssist/blob/e5bd79f841fe483e14a3dd22a04f845eab239026/KodakkuAssist/Module/GameEvent/Types/EnmityUpdate.cs)。原生血条与仇恨显示的修复效果仍需国服 7.57 实测，入口见 [实体实机测试](EntityTests.md)。
+
+首次显示前保存原小队名单与仇恨；恢复通过同一个原生收包入口完成，再补回全部 60 个状态及其计数标志、成员姓名、坐标、护盾和标志。快照不复制原生对象指针。只允许一个会话借用原生小队，暂不覆盖团队名单。
+
+停止、关闭防火墙、插件禁用以及插件主动切图均先恢复小队，再回收模拟角色。恢复失败会保留所有权并阻止删除队员，下次停止重试。主动删除或解除关联队员时也先更新名单。外部换图、退出或切换游戏进程使旧世界失效；随后不会向新世界写入旧快照。切换到另一个仍在运行的客户端时，不尝试跨进程恢复旧客户端，应先停止当前模拟。
+
+## 会话回收
 
 从调度线程外停止时，顺序是：取消时间轴并等待当前节点退出，停止所有角色行为，清除本次读条预兆，最后回收自有实体。调度回调内停止会话不能等待自身退出，调用后应立即 `return`，不要继续访问已清理的实体。停止后的管理器不再接受生成或关联；清理完成后重新开始会话时绑定新的调度器。
 

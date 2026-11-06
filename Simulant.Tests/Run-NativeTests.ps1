@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-构建插件，并用真实 DLL 验证本地创建清理、实体 ID 分配与插件卸载。
+构建插件，并用真实 DLL 验证本地创建清理、实体 ID 分配、插件卸载与模拟小队。
 .DESCRIPTION
 仅替换 PostNamazu 的原生读写与调用边界，不会启动或连接 ACT、游戏。
 各组入口分别运行，避免静态状态互相影响；任一构建、编译或验证失败均返回非零退出码。
@@ -60,10 +60,12 @@ try {
     $localTestsPath = Join-Path $PSScriptRoot 'Native\LocalCreationTests.cs'
     $idTestsPath = Join-Path $PSScriptRoot 'Native\EntityIdAllocationTests.cs'
     $unloadTestsPath = Join-Path $PSScriptRoot 'Native\PluginUnloadTests.cs'
+    $partyTestsPath = Join-Path $PSScriptRoot 'Native\PartyServiceTests.cs'
     $entries = @(
         @{ Name = 'LocalCreationTests'; Label = '本地创建与失败清理'; Sources = @($localTestsPath) },
         @{ Name = 'EntityIdAllocationTests'; Label = '实体 ID 分配'; Sources = @($localTestsPath, $idTestsPath) },
-        @{ Name = 'PluginUnloadTests'; Label = '退出模拟并卸载插件'; Sources = @($localTestsPath, $unloadTestsPath) }
+        @{ Name = 'PluginUnloadTests'; Label = '退出模拟并卸载插件'; Sources = @($localTestsPath, $unloadTestsPath) },
+        @{ Name = 'PartyServiceTests'; Label = '模拟小队与仇恨恢复'; Sources = @($partyTestsPath) }
     )
 
     foreach ($entry in $entries) {
@@ -85,7 +87,7 @@ try {
         & $executablePath
         if ($LASTEXITCODE -ne 0) { throw ($entry.Label + '验证失败，退出码：' + $LASTEXITCODE) }
     }
-    Write-Host '三组真实 DLL 故障注入验证全部通过。'
+    Write-Host '四组真实 DLL 故障注入验证全部通过。'
     exit 0
 }
 catch {

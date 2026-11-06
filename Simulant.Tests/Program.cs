@@ -99,6 +99,8 @@ namespace Simulant.Tests
                 ManagerTests.ManagerBlocksRestartDuringCleanupAndPreservesNewControllers,
                 ManagerTests.ManagerDeletingOneActorPreservesOtherMovementAndCast,
                 ManagerTests.ManagerStopAndRestartDiscardAllPreviousBehaviors,
+                ManagerTests.ManagerRestoresPartyBeforeDeletingItsMembersAndRetriesFailure,
+                ManagerTests.ManagerUsesOneEnmityRefreshAndCancelsOnClear,
                 PacketCodecTests.CoordinateEncodingClampsBeforeIntegerConversion,
                 PacketCodecTests.CoordinateAndHeadingEncodingRejectNonFiniteInputs,
                 PacketCodecTests.PacketCoordinateAndHeadingQuantizationRemainStable,

@@ -164,6 +164,59 @@ namespace Simulant.Core.Entity
     }
 }
 
+namespace Simulant.Core.Party
+{
+    // 会话测试只替换原生小队展示与恢复，恢复失败后保留同一所有者。
+    internal sealed class SimPartyService
+    {
+        private object _owner;
+        internal Action BeforeRestore;
+        internal int ShowCount;
+        internal int RestoreAttempts;
+        internal int EnmitySetCount;
+        internal int EnmityRefreshCount;
+        internal Action OnRefreshEnmity;
+        internal uint EnmityTarget;
+        internal IReadOnlyList<int> EnmityValues;
+        internal IReadOnlyList<Simulant.Simulation.Runtime.SimActor> Members;
+
+        internal bool IsOwnedBy(object owner) => ReferenceEquals(_owner, owner) && _owner != null;
+        internal void Show(object owner, IReadOnlyList<Simulant.Simulation.Runtime.SimActor> members)
+        {
+            if (_owner != null && !ReferenceEquals(_owner, owner))
+                throw new InvalidOperationException("模拟小队已由另一会话持有。");
+            _owner = owner;
+            Members = members;
+            ShowCount++;
+        }
+        internal void Restore(object owner)
+        {
+            if (!IsOwnedBy(owner)) return;
+            RestoreAttempts++;
+            BeforeRestore?.Invoke();
+            _owner = null;
+        }
+        internal void RemoveMember(object owner, uint id)
+        {
+            if (IsOwnedBy(owner)) Restore(owner);
+        }
+        internal void SetEnmity(object owner, uint targetId,
+            IReadOnlyList<Simulant.Simulation.Runtime.SimActor> members, IReadOnlyList<int> values)
+        {
+            if (!IsOwnedBy(owner)) throw new InvalidOperationException("测试小队尚未被本会话接管。");
+            EnmityTarget = targetId;
+            EnmityValues = values;
+            EnmitySetCount++;
+        }
+        internal void RefreshEnmity(object owner)
+        {
+            if (!IsOwnedBy(owner)) throw new InvalidOperationException("小队恢复后仍调用了仇恨刷新。");
+            EnmityRefreshCount++;
+            OnRefreshEnmity?.Invoke();
+        }
+    }
+}
+
 namespace Simulant.Game.ExtractedCsv
 {
     public abstract class TypedCsvRow { }

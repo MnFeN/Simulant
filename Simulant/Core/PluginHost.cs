@@ -48,6 +48,7 @@ namespace Simulant.Core
         internal Environment.EnvironmentService EnvironmentService;
         internal EntityProvider EntityProvider;
         internal EntitySpawner EntitySpawner;
+        internal Party.SimPartyService PartyService;
         internal EntityRegistry EntityRegistry;
         internal Test DebugTest { get; }
         private readonly object _debugGate = new object();
@@ -177,6 +178,7 @@ namespace Simulant.Core
         {
             _ui?.StopCurrentSession();
             StopDebugEntities();
+            PartyService?.RestoreAll();
             EntitySpawner?.Clear();
             EntitySpawner?.ResetWorld();
             // 本地切图已经在这里清理；稍后到达的相同区域通知不应停止新会话。
@@ -207,6 +209,7 @@ namespace Simulant.Core
                 () => XivPluginInterop.plugin?.DataRepository.GetCurrentPlayerID() ?? 0);
             EntitySpawner = new EntitySpawner(EntityRegistry, EntityProvider, LogError,
                 () => FirewallEnabled && PluginReady && !IsInitializing && !Disposed);
+            PartyService = new Party.SimPartyService(this);
             DebugTest = new Test(this);
 
             Attach();
@@ -372,6 +375,8 @@ namespace Simulant.Core
                         throw new InvalidOperationException("初始化尚未结束，旧宿主已停止接受操作；请稍后重试卸载或重新启用。");
                     TryCleanup("卸载时停止模拟失败", () => _ui?.StopCurrentSession());
                     TryCleanup("卸载时停止调试失败", StopDebugEntities);
+                    TryCleanup("卸载时恢复小队失败", () => PartyService?.RestoreAll());
+                    ThrowIfFailed();
                     TryCleanup("卸载时释放实体资源失败", () => EntitySpawner?.Dispose());
                     ThrowIfFailed();
 
@@ -492,6 +497,7 @@ namespace Simulant.Core
                 // 旧进程可能已经退出；先使引用失效，绝不能尝试在新进程中删除旧地址。
                 PluginReady = false;
                 ZoneService?.InvalidateWorld();
+                PartyService?.InvalidateWorld();
                 EntitySpawner?.ResetWorld();
                 // 旧进程的补丁恢复失败也不能阻止新世界使实体引用失效。
                 try { FirewallService?.ResetProcess(); }
@@ -512,6 +518,7 @@ namespace Simulant.Core
                 if (_disposeCompleted || _entityZoneId == zoneId) return;
                 _entityZoneId = zoneId;
                 ZoneService?.InvalidateWorld();
+                PartyService?.InvalidateWorld();
                 // 外部换图发生后只能失效旧引用，不能再尝试释放上一场景的内存。
                 EntitySpawner?.ResetWorld();
             }
