@@ -1,0 +1,22 @@
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <ProjectGuid>{7B94AE6F-69BF-4B60-8293-BBB3805E565C}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Simulant.ReplayTool</RootNamespace>
+    <AssemblyName>Simulant.ReplayInspector</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <Optimize Condition="'$(Configuration)' == 'Release'">true</Optimize>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Compile Include="Program.cs" />
+    <Compile Include="..\..\Simulant\Replay\*.cs"><Link>Replay\%(Filename)%(Extension)</Link></Compile>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
