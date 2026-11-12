@@ -9,7 +9,7 @@ using NativeCharacter = Simulant.Game.FFCS.Client.Game.Character.Character;
 
 namespace Simulant.Core.Entity
 {
-    public sealed class Character : EntityBase
+    public sealed partial class Character : EntityBase
     {
         private readonly object _baseTimelineGate = new object();
         private long _baseTimelineVersion;

@@ -14,6 +14,95 @@ namespace Simulant.Tests
     {
         private const int TimeoutMs = 5000;
 
+        internal static void SessionFailureKeepsEffectsBeforeCleanup()
+        {
+            using (var probe = new SessionProbe())
+            using (var displaying = new ManualResetEventSlim())
+            {
+                var host = new PluginHost { FirewallLog = message => displaying.Set() };
+                var laterNodes = 0;
+                SimActor actor = null;
+                probe.StartAction = () =>
+                {
+                    actor = probe.Logic.EntityManager.SpawnBNpc(1);
+                    probe.Logic.Scheduler.ScheduleAfter(0, () => { throw new InvalidOperationException("技能结算异常。"); });
+                    probe.Logic.Scheduler.ScheduleAfter(0.05, () => laterNodes++);
+                };
+                using (var session = CreateSession(host, probe))
+                {
+                    session.FailureCleanupDelaySeconds = 0.3;
+                    session.Start();
+                    Wait(displaying, "异常演出保留窗口");
+                    Assert(!session.IsRunning && session.HasPendingCleanup && actor.Entity.IsAlive && probe.StopCount == 0,
+                        "异常后应取消战斗时间轴，但保留实体让已提交的技能继续演出。");
+                    Assert(probe.Logic.Scheduler.PendingCount == 0, "保留演出时不得继续执行后续战斗节点。");
+                    Wait(probe.Cleaned, "演出窗口结束后回收");
+                    session.Stop();
+                    Assert(laterNodes == 0 && probe.StopCount == 1 && !actor.Entity.IsAlive && !session.HasPendingCleanup,
+                        "演出窗口结束后必须只清理一次，期间不能放行后续技能。");
+                }
+            }
+        }
+
+        internal static void SessionExplicitStopInterruptsFailureDisplay()
+            => RunBoundedSessionScenario("显式停止打断异常演出", () =>
+            {
+                foreach (var dispose in new[] { false, true })
+                using (var probe = new SessionProbe())
+                using (var displaying = new ManualResetEventSlim())
+                {
+                    var host = new PluginHost { FirewallLog = message => displaying.Set() };
+                    probe.StartAction = () =>
+                    {
+                        probe.Logic.EntityManager.SpawnBNpc(1);
+                        throw new InvalidOperationException("演出中的异常。");
+                    };
+                    using (var session = CreateSession(host, probe))
+                    {
+                        session.FailureCleanupDelaySeconds = 10;
+                        session.Start();
+                        Wait(displaying, "等待显式停止的演出窗口");
+                        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+                        if (dispose) session.Dispose();
+                        else session.Stop();
+                        Assert(elapsed.Elapsed.TotalSeconds < 2,
+                            "手动停止或禁用必须立即唤醒调度线程，不能等待演出倒计时。");
+                        Assert(probe.StopCount == 1 && !session.HasPendingCleanup && host.EntitySpawner.Deleted.Count == 1,
+                            "中断演出窗口后必须完成一次实体回收。");
+                    }
+                }
+            });
+
+        internal static void SessionDelayedFailureCleanupCanRetry()
+        {
+            using (var probe = new SessionProbe())
+            {
+                var host = new PluginHost();
+                var failDeletion = true;
+                host.EntitySpawner.BeforeDelete = actor =>
+                {
+                    if (failDeletion) throw new InvalidOperationException("演出结束后暂时无法回收。");
+                };
+                probe.StartAction = () =>
+                {
+                    probe.Logic.EntityManager.SpawnBNpc(1);
+                    throw new InvalidOperationException("技能结算异常。");
+                };
+                using (var session = CreateSession(host, probe))
+                {
+                    session.FailureCleanupDelaySeconds = 0.01;
+                    session.Start();
+                    Wait(probe.Cleaned, "演出结束后的首次清理");
+                    Assert(session.HasPendingCleanup && host.EntitySpawner.Deleted.Count == 0,
+                        "延迟清理失败仍须保留实体及清理责任。");
+                    failDeletion = false;
+                    session.Stop();
+                    Assert(!session.HasPendingCleanup && host.EntitySpawner.Deleted.Count == 1 && probe.StopCount == 1,
+                        "再次停止只重试未完成回收，不能重复预设的停止逻辑。");
+                }
+            }
+        }
+
         internal static void SessionPrepareFailureRollsBack()
         {
             using (var probe = new SessionProbe())

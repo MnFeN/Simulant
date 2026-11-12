@@ -24,7 +24,7 @@ namespace Simulant.UI
 
         // 记录上一次的搜索条件，以便在重新打开窗口时恢复
         private static string _lastFilterText = string.Empty;
-        private static bool _lastPresetOnly;
+        private static bool _lastPresetOnly = true;
         private static int? _lastSelectedTerritoryId;
 
         public int TerritoryIdResult { get; private set; }

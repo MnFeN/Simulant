@@ -30,6 +30,15 @@ namespace Simulant.Core.Entity
 
     public sealed class Character : EntityBase
     {
+        private readonly StatusTestCharacter _native = new StatusTestCharacter();
+        internal StatusTestCharacter Native
+        {
+            get
+            {
+                if (!IsAlive) throw new InvalidOperationException("状态控制器访问了已失效的实体。");
+                return _native;
+            }
+        }
         private Vector2 _position;
         private float _height;
         private float _heading;
@@ -161,6 +170,58 @@ namespace Simulant.Core.Entity
     {
         internal EventObject(EntityRegistry registry, EntityIdentity identity, EntityObservation observation)
             : base(registry, identity, observation) { }
+    }
+
+    internal sealed class StatusTestCharacter
+    {
+        internal readonly Simulant.Game.FFCS.Client.Game.StatusManager StatusManager = new Simulant.Game.FFCS.Client.Game.StatusManager();
+    }
+}
+
+namespace Simulant.Game.FFCS.Client.Game
+{
+    // 只替换原生状态读写，状态所有权、重试和实体生命周期使用正式实现。
+    public sealed class StatusTestField<T>
+    {
+        internal T Value;
+        public T Get() => Value;
+    }
+
+    public sealed class Status
+    {
+        public readonly StatusTestField<ushort> StatusId = new StatusTestField<ushort>();
+        public readonly StatusTestField<ushort> Param = new StatusTestField<ushort>();
+        public readonly StatusTestField<float> RemainingTime = new StatusTestField<float>();
+        public readonly StatusTestField<Object.GameObjectId> SourceObject = new StatusTestField<Object.GameObjectId>();
+    }
+
+    public sealed class StatusManager
+    {
+        public static IntPtr SetStatusFuncPtr = new IntPtr(1), RemoveStatusFuncPtr = new IntPtr(2);
+        private readonly Status[] _values = new Status[60];
+        internal int SetCalls, RemoveCalls;
+        internal Action<int> AfterSet, BeforeRemove, AfterRemove;
+        public StatusManager() { for (var i = 0; i < _values.Length; i++) _values[i] = new Status(); }
+        public Status GetStatus(int index) => _values[index];
+        public bool SetStatus(int index, ushort id, float remaining, ushort param, Object.GameObjectId source, bool refresh)
+        {
+            SetCalls++;
+            var status = _values[index];
+            var identityChanged = status.StatusId.Get() != id || status.SourceObject.Get().Id != source.Id;
+            status.StatusId.Value = id;
+            status.Param.Value = param;
+            status.RemainingTime.Value = remaining;
+            status.SourceObject.Value = source;
+            AfterSet?.Invoke(index);
+            return identityChanged;
+        }
+        public void RemoveStatus(int index)
+        {
+            RemoveCalls++;
+            BeforeRemove?.Invoke(index);
+            _values[index].StatusId.Value = 0;
+            AfterRemove?.Invoke(index);
+        }
     }
 }
 
@@ -306,6 +367,7 @@ namespace Simulant.Game.FFCS.Client.Game.Object
     public struct GameObjectId
     {
         [global::System.Runtime.InteropServices.FieldOffset(0)] public ulong Id;
+        [global::System.Runtime.InteropServices.FieldOffset(0)] public uint ObjectId;
         public static implicit operator GameObjectId(ulong id) => new GameObjectId { Id = id };
         public static implicit operator ulong(GameObjectId id) => id.Id;
     }

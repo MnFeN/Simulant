@@ -33,7 +33,7 @@ namespace Simulant.Simulation.Runtime
             get
             {
                 lock (_gate)
-                    return _isClearing || _owned.Count != 0 || _networkSpawns.Count != 0 ||
+                    return _isClearing || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 ||
                         _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true ||
                         _partyService?.IsOwnedBy(this) == true;
             }
@@ -56,6 +56,10 @@ namespace Simulant.Simulation.Runtime
                         throw new InvalidOperationException("上次模拟的移动尚未停止，请先重试清理后开始模拟。");
                     if (_partyService?.IsOwnedBy(this) == true)
                         throw new InvalidOperationException("上次模拟的小队列表尚未恢复，请先重试清理。");
+                    if (_statuses.Count != 0)
+                        throw new InvalidOperationException("上次模拟的点名状态尚未清理，请先重试停止。");
+                    if (_mechanics.Count != 0)
+                        throw new InvalidOperationException("上次模拟的机制尚未清理，请先重试停止。");
                     if (_actors.Count != 0 || _owned.Count != 0 || _networkSpawns.Count != 0)
                         throw new InvalidOperationException("更换调度器前必须清理本次模拟。");
                     _casts?.Dispose();
@@ -182,6 +186,9 @@ namespace Simulant.Simulation.Runtime
             {
                 if (!_actors.TryGetValue(actor.Entity.Identity, out var current) || !ReferenceEquals(current, actor))
                     return;
+                if (_mechanics.Any(mechanic => mechanic.HasFailedCleanup))
+                    throw new InvalidOperationException("仍有机制清理失败，不能提前解除角色关联，请重试停止模拟。");
+                ClearStatuses(actor.Entity);
                 _partyService?.RemoveMember(this, actor.Id);
                 try { actor.Dispose(); }
                 finally
@@ -205,6 +212,9 @@ namespace Simulant.Simulation.Runtime
             {
                 // 延迟回收可能发生在 Clear 之后；不再拥有就不接触原生对象。
                 if (!_owned.Contains(entity)) return;
+                if (_mechanics.Any(mechanic => mechanic.HasFailedCleanup))
+                    throw new InvalidOperationException("仍有机制清理失败，不能提前回收实体，请重试停止模拟。");
+                ClearStatuses(entity);
                 // 列表移除失败时保留实体，避免界面仍引用已回收的队员。
                 _partyService?.RemoveMember(this, entity.Id);
                 try
@@ -230,6 +240,8 @@ namespace Simulant.Simulation.Runtime
             {
                 // 回调或日志可能重入清理；由正在执行的这一轮继续持有回收责任。
                 if (_isClearing) return;
+                if (_mechanics.Any(mechanic => mechanic.IsCleaning))
+                    throw new InvalidOperationException("不能在机制清理回调中再次清理整个会话；请在回调返回后停止。");
                 networkSpawns = _networkSpawns.ToArray();
                 actors = _actors.Values.ToArray();
                 owned = _owned.ToArray();
@@ -248,22 +260,40 @@ namespace Simulant.Simulation.Runtime
                     // 已就绪实体的回收责任已经转入 _owned。
                     if (pending.Actor != null) _networkSpawns.Remove(pending);
                 }
-                _actors.Clear();
-                Party.Clear();
             }
             try
             {
                 foreach (var pending in networkSpawns)
                     if (pending.Actor == null && TryCleanup(() => _spawner.CancelNetworkCharacter(pending.Request)))
                         lock (_gate) _networkSpawns.Remove(pending);
+                // 机制清理闭包仍可能读取小队和角色；失败时保留整批资源供下一次停止重试。
+                if (!TryCleanup(ClearMechanics))
+                {
+                    foreach (var actor in actors)
+                    {
+                        TryCleanup(actor.StopCasting);
+                        TryCleanup(actor.StopMoving);
+                    }
+                    return;
+                }
+                lock (_gate)
+                {
+                    _actors.Clear();
+                    Party.Clear();
+                }
                 // 先停止所有参与者的行为，再回收本会话生成的实体。借用玩家只解除关联。
                 foreach (var actor in actors)
                     TryCleanup(actor.Dispose);
+                TryCleanup(() => ClearStatuses());
                 var partyRestored = _partyService == null || TryCleanup(() => _partyService.Restore(this));
                 if (partyRestored)
                     foreach (var entity in owned)
+                    {
+                        lock (_gate)
+                            if (HasStatusDependency(entity)) continue;
                         if (TryCleanup(() => _spawner.Delete(entity)))
                             lock (_gate) _owned.Remove(entity);
+                    }
                 if (casts != null) TryCleanup(casts.Dispose);
                 if (movement != null) TryCleanup(movement.Dispose);
                 // 仅接管共享生成器中从未交付的失败分配，不触及其他会话已拥有的实体。

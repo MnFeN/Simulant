@@ -98,6 +98,23 @@ namespace Simulant.Simulation.Timeline
             }
         }
 
+        /// <summary>供机制添加可取消节点；节点内部以计划时间为基准，避免开始演出的耗时推迟判定。</summary>
+        internal SimScheduledAction ScheduleRelativeToNode(double seconds, Action action, string name = null)
+        {
+            SimTimeline.ValidateSeconds(seconds, nameof(seconds));
+            SimTimeline.ValidateAction(action, nameof(action));
+            lock (_gate)
+            {
+                ThrowIfStopped();
+                var anchor = IsSchedulerThread && _executing ? _currentNodeSeconds : _clock.Elapsed.TotalSeconds;
+                var time = anchor + seconds;
+                SimTimeline.ValidateSeconds(time, nameof(seconds));
+                var node = Enqueue(time, action, name);
+                Monitor.Pulse(_gate);
+                return node;
+            }
+        }
+
         /// <summary>
         /// Queues a snapshot of the timeline. Inside a node, the anchor is that node's planned time,
         /// preventing accumulated drift. From other threads, the anchor is the actual current time.
@@ -141,10 +158,30 @@ namespace Simulant.Simulation.Timeline
             {
                 _disposed = true;
                 CancelCore();
+                Monitor.PulseAll(_gate);
                 join = _started && !IsSchedulerThread;
             }
             // No callback, error handler, or thread join runs while holding the queue lock.
             if (join) _worker.Join();
+        }
+
+        /// <summary>异常中止后，在原调度线程保留演出；显式释放可立即唤醒，不再执行任何节点。</summary>
+        internal void WaitForFailureDisplay(double seconds)
+        {
+            SimTimeline.ValidateSeconds(seconds, nameof(seconds));
+            if (!IsSchedulerThread) throw new InvalidOperationException("异常演出等待只能在调度线程执行。");
+            var wait = Stopwatch.StartNew();
+            lock (_gate)
+            {
+                while (_cancelled && !_disposed)
+                {
+                    var remaining = seconds - wait.Elapsed.TotalSeconds;
+                    if (remaining <= 0) return;
+                    var milliseconds = remaining >= int.MaxValue / 1000.0
+                        ? int.MaxValue : Math.Max(1, (int)Math.Ceiling(remaining * 1000));
+                    Monitor.Wait(_gate, milliseconds);
+                }
+            }
         }
 
         internal bool Cancel(SimScheduledAction node)

@@ -1,6 +1,7 @@
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -598,8 +599,16 @@ namespace Simulant.Tests
                     callbacks++;
                     arrived.Signal();
                 };
-                first.MoveNetworkTo(new Vector2(3, 4), onArrived: callback);
-                second.MoveNetworkTo(new Vector2(-4, 0), speedParam: 40, onArrived: callback);
+                first.MoveNetworkTo(new Vector2(3, 4), onArrived: () =>
+                {
+                    Assert(scheduler.ElapsedSeconds >= 5.0 / 3, "即使原生位置提前抵达，也不能跳过按速度计算的移动时间。");
+                    callback();
+                });
+                second.MoveNetworkTo(new Vector2(-4, 0), speedParam: 40, onArrived: () =>
+                {
+                    Assert(scheduler.ElapsedSeconds >= 1, "网络移动到达不能早于自身路程所需时间。");
+                    callback();
+                });
                 local.MoveTo(new Vector2(100, 0));
                 Assert(scheduler.PendingCount == 1 && first.Entity.NetworkMoves.Count == 0,
                     "本地和多个网络角色应共享一个节点，调用线程不能提前发送移动包。");
@@ -607,8 +616,9 @@ namespace Simulant.Tests
                 {
                     Assert(first.IsMoving && second.IsMoving && callbacks == 0,
                         "只发送移动包不能视作到达，必须等待实际坐标接近目标。");
-                    Assert(first.Entity.NetworkMoves.Count == 1 && second.Entity.NetworkMoves.Count == 1,
-                        "轮询期间不能重复发送移动包。");
+                    Assert(first.Entity.NetworkMoves.Count >= 2 && first.Entity.NetworkMoves.Count <= 4 &&
+                        second.Entity.NetworkMoves.Count >= 2 && second.Entity.NetworkMoves.Count <= 4,
+                        "网络角色应按低频共享节拍发送沿途位置，不应随本地插值每帧发包。");
                     Assert(first.Entity.PositionReads <= 5 && second.Entity.PositionReads <= 5 && local.Entity.PositionWrites.Count >= 5,
                         "本地高频插值不能增加网络角色跨进程位置读取频率。");
                     Assert(first.Entity.PositionWrites.Count == writesBefore && first.Entity.PlayedBaseTimelines.Count == 0,
@@ -622,12 +632,61 @@ namespace Simulant.Tests
                 scheduler.Dispose();
                 Assert(failure == null && callbacks == 2 && !first.IsMoving && !second.IsMoving,
                     "网络到达应各执行一次回调并移除移动状态：" + failure);
-                var packet = first.Entity.NetworkMoves.Single();
-                Assert(packet.Position == new Vector3(3, 4, 7) && packet.SpeedParam == 30 &&
+                var packet = first.Entity.NetworkMoves.First();
+                Assert(packet.Position == new Vector3(0, 0, 7) && packet.SpeedParam == 30 &&
                     Math.Abs(packet.Heading - Math.Atan2(3, 4)) < 0.00001,
-                    "首包应保留 ACT 高度，按目标计算面向并采用默认网络速度参数。");
-                Assert(first.Entity.NetworkMoves.Count == 1 && second.Entity.NetworkMoves.Count == 1,
-                    "正常到达不应额外发停止包改变角色朝向。");
+                    "首包应报告出发点、保留 ACT 高度，按目标计算面向并采用默认网络速度参数。");
+                Assert(first.Entity.NetworkMoves.Last().Position == new Vector3(3, 4, 7) &&
+                    first.Entity.NetworkMoves.Count(move => move.Position == new Vector3(3, 4, 7)) == 1 &&
+                    second.Entity.NetworkMoves.Last().Position == new Vector3(-4, 0, 0),
+                    "终点应精确补发一次，正常到达不应额外发停止包改变角色朝向。");
+            }
+        }
+
+        internal static void NetworkMovementStreamsElapsedPositionsWithoutEarlyCompletion()
+        {
+            Exception failure = null;
+            var samples = new List<Tuple<double, Vector3>>();
+            var callbacks = 0;
+            using (var finished = new ManualResetEventSlim())
+            using (var alreadyThere = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); alreadyThere.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                var target = new Vector2(2.22f, 0);
+                actor.Entity.OnActorMove = (position, _, __) => samples.Add(Tuple.Create(scheduler.ElapsedSeconds, position));
+                actor.MoveNetworkTo(target, speedParam: 60, onArrived: () => { callbacks++; finished.Set(); });
+                scheduler.Schedule(0.12, () => Thread.Sleep(220));
+                scheduler.Schedule(0.65, () =>
+                {
+                    Assert(actor.IsMoving && callbacks == 0, "路径时间走完仍须等待实际位置，不能只按预估时间回调。");
+                    Assert(samples.Count(sample => sample.Item2.X == target.X) == 1,
+                        "最后一个不足节拍的分段必须补发，等待实际到达期间不能重发同一终点。");
+                    actor.Entity.Pos = target;
+                });
+                scheduler.Start();
+                Assert(finished.Wait(5000), "分段网络移动未完成：" + failure);
+                Assert(failure == null && callbacks == 1, "分段网络移动不应提前完成或报告异常：" + failure);
+                var packetCount = samples.Count;
+                actor.MoveNetworkTo(target, speedParam: 60, onArrived: alreadyThere.Set);
+                Assert(alreadyThere.Wait(5000), "已经在目标点的网络移动没有完成。");
+                scheduler.Dispose();
+                Assert(failure == null && samples.Count == packetCount, "已在目标点时不能再发送移动包：" + failure);
+
+                var start = samples[0].Item1;
+                Assert(samples.Count >= 3 && samples.Count <= 5, "掉帧后应跳过过时的中间包，不得补发一串追赶帧。");
+                for (var index = 1; index < samples.Count; index++)
+                {
+                    var expected = Math.Min(target.X, 6 * (samples[index].Item1 - start));
+                    Assert(Math.Abs(samples[index].Item2.X - expected) < 0.05,
+                        "网络包位置应根据真实经过时间计算，既不能提前发送未来位置，也不能按固定帧数慢慢追赶。");
+                    Assert(samples[index].Item2.X > samples[index - 1].Item2.X, "途中位置必须前进，不能反复发送同一坐标。");
+                }
+                Assert(samples.Last().Item1 - start >= target.X / 6 - 0.005,
+                    "最终目的地不得在计划路程完成前发送。");
+                Assert(samples.Last().Item1 - start < 0.45,
+                    "尾段不能为了等下一个完整轮询间隔而推迟到位。");
             }
         }
 
@@ -659,7 +718,7 @@ namespace Simulant.Tests
                         localCalls++;
                         Assert(actor.Entity.BaseTimelineId == 0 && !actor.IsMoving,
                             "从本地到达回调切回网络移动前必须结束旧移动和动画。");
-                        actor.MoveNetworkTo(new Vector2(30, 0), onArrived: () =>
+                        actor.MoveNetworkTo(new Vector2(2, 2), onArrived: () =>
                         {
                             finalCalls++;
                             finished.Set();
@@ -668,14 +727,15 @@ namespace Simulant.Tests
                     Assert(actor.Entity.NetworkMoves.Last().Position == new Vector3(1, 2, 3),
                         "本地移动替换网络移动时也必须先停止旧的原生移动。");
                 });
-                scheduler.Schedule(0.15, () => actor.Entity.Pos = new Vector2(30, 0));
+                scheduler.Schedule(0.15, () => actor.Entity.Pos = new Vector2(2, 2));
                 scheduler.Start();
                 Assert(finished.Wait(5000), "本地与网络移动的到达链未完成。");
                 scheduler.Dispose();
                 Assert(failure == null && obsoleteCalls == 0 && localCalls == 1 && finalCalls == 1 && !actor.IsMoving,
                     "两种移动必须互斥，取消旧回调，并允许到达回调启动下一段：" + failure);
-                Assert(actor.Entity.NetworkMoves.Count == 5,
-                    "三段网络移动只应各发一次首包，加上两次替换的停止包。");
+                Assert(actor.Entity.NetworkMoves.Count >= 6 && actor.Entity.NetworkMoves.Last().Position == new Vector3(2, 2, 3) &&
+                    actor.Entity.NetworkMoves.All(move => move.Position.X < 3),
+                    "替换后只能推进当前路线，已取消的旧远端目标不能迟到发出。");
             }
         }
 
@@ -726,8 +786,9 @@ namespace Simulant.Tests
                 scheduler.Dispose();
                 Assert(failure is TimeoutException && callbackCalls == 0 && !actor.IsMoving && !scheduler.IsRunning,
                     "超时应结束移动并交给调度器失败路径，不能冒充到达。");
-                Assert(actor.Entity.NetworkMoves.Count == 2 && actor.Entity.NetworkMoves[1].Position == Vector3.Zero &&
-                    actor.Entity.NetworkMoves[1].SpeedParam == 40,
+                Assert(actor.Entity.NetworkMoves.Count >= 2 && actor.Entity.NetworkMoves.Last().Position == Vector3.Zero &&
+                    actor.Entity.NetworkMoves.Last().SpeedParam == 40 &&
+                    actor.Entity.NetworkMoves.Count(move => move.Position == Vector3.Zero) == 2,
                     "超时必须用原速度参数向实际当前位置发送一次停止包。");
             }
         }

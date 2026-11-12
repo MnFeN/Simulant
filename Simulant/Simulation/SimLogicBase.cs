@@ -1,6 +1,7 @@
 ﻿using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Simulation.Runtime;
+using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
@@ -67,6 +68,13 @@ namespace Simulant.Simulation
         /// <summary>子轴以当前节点的计划时间为原点，因此父节点迟到不会逐层积累漂移。</summary>
         protected void Play(SimTimeline timeline, double delaySeconds = 0)
             => Scheduler.Play(timeline, delaySeconds);
+
+        /// <summary>把一次机制接入子时间轴；开始、判定和清理由当前会话管理。</summary>
+        protected SimTimeline Mechanic(SimMechanic mechanic)
+        {
+            if (mechanic == null) throw new ArgumentNullException(nameof(mechanic));
+            return new SimTimeline().At(0, () => EntityManager.RunMechanic(mechanic), mechanic.Name);
+        }
 
         internal void LoadOptionsFrom(IEnumerable<SimOptionBase> options)
         {

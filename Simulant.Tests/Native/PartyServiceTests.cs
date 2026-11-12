@@ -101,6 +101,9 @@ namespace Simulant.Tests.Native
                         (ushort)args[2] == 43 && (float)args[3] == 12.5f && (ushort)args[4] == 3 &&
                         args[5] is ulong && (ulong)args[5] == 0x0000000240FF1234UL && (bool)args[6],
                         "状态调用必须保留参数顺序、类型与来源身份的高 32 位。");
+                    Assert(!manager.SetStatus(29, 43, 1.96f, 4, source, true) &&
+                        manager.GetStatus(29).Param.Get() == 4 && manager.GetStatus(29).RemainingTime.Get() == 1.96f,
+                        "编号、来源不变时，原生返回 false 仍应正常更新参数和持续时间。");
                     Assert(manager.SetStatus(0, 158, 30, 0, new GameObjectId { ObjectId = Scene.SelfId }, false),
                         "普通玩家来源也应能够设置状态。");
                     Assert((ulong)scene.Plugin.LastStatusArguments[5] == Scene.SelfId &&
@@ -843,7 +846,15 @@ namespace Simulant.Tests.Native
             if (function == StatusFunction)
             {
                 LastStatusArguments = args;
-                return (T)(object)true;
+                var slot = (IntPtr)args[0] + 8 + (int)args[1] * 0x10;
+                var id = (ushort)args[2];
+                var source = (ulong)args[5];
+                var identityChanged = Memory.Read<ushort>(slot) != id || Memory.Read<ulong>(slot + 8) != source;
+                Memory.Put(slot, id);
+                Memory.Put(slot + 2, (ushort)args[4]);
+                Memory.Put(slot + 4, (float)args[3]);
+                Memory.Put(slot + 8, source);
+                return (T)(object)identityChanged;
             }
             if (function == HateFunction)
             {

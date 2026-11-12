@@ -68,8 +68,8 @@ namespace Simulant.Simulation.Runtime
 
         /// <summary>
         /// 控制网络角色表中的角色向 ACT 的 X/Y 目标移动，沿用当前高度；原生客户端管理移动动画。
-        /// 首包在调度线程发送，随后每 100 毫秒检查实际位置，30 秒未到达则报告超时并停止模拟。
-        /// speedParam 是包内速度参数，默认 30；到达回调为同步动作，替换或停止会取消旧回调。
+        /// 首包在调度线程发送，随后每 100 毫秒按经过时间发送沿途位置并检查实际到达，30 秒未到达则报告超时。
+        /// speedParam 是每秒距离乘以 10 后的包内速度参数，默认 30；替换或停止会取消旧的同步到达回调。
         /// </summary>
         public void MoveNetworkTo(Vector2 target, byte speedParam = 30, Action onArrived = null)
             => _movement.MoveNetworkTo(this, target, speedParam, onArrived);

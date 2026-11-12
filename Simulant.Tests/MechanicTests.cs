@@ -1,0 +1,333 @@
+using Simulant.Core.Entity;
+using Simulant.Simulation.Geometry;
+using Simulant.Simulation.Mechanics;
+using Simulant.Simulation.Runtime;
+using Simulant.Simulation.Timeline;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Threading;
+
+namespace Simulant.Tests
+{
+    internal static class MechanicTests
+    {
+        internal static void SnapshotReadsOnceAndKeepsOriginalSlots()
+        {
+            using (var scene = new Scene())
+            {
+                var detached = scene.Manager.Attach(scene.Spawner.World.CreateCharacter(3));
+                detached.Dispose();
+                scene.Player.Pos = new Vector2(1, 0);
+                scene.Other.Pos = new Vector2(3, 0);
+                var before = scene.Player.Entity.PositionReads;
+                var snapshot = PartySnapshot.Capture(new[] { scene.Player, detached, null, scene.Other });
+                scene.Player.Pos = new Vector2(100, 100);
+                Assert(snapshot.Members.Count == 2 && snapshot.Get(3).Actor == scene.Other && snapshot.Get(0).Position == new Vector2(1, 0),
+                    "快照必须跳过失效角色，保留原始下标，并冻结读取时的位置。");
+                Assert(snapshot.InArea(ActionArea.Circle(5), Vector2.Zero).Count == 2 &&
+                    snapshot.AnyInArea(ActionArea.Circle(2), Vector2.Zero) && snapshot.Nearest(Vector2.Zero).Value.Slot == 0 &&
+                    snapshot.Nearest(Vector2.Zero, scene.Player).Value.Slot == 3,
+                    "范围、最近成员及来源排除查询应使用同一份坐标。");
+                Assert(scene.Player.Entity.PositionReads == before + 1, "多次范围查询不得重读实体位置。");
+                Throws<InvalidOperationException>(() => snapshot.Get(1));
+                var empty = new PartySnapshot(Array.Empty<PartyMemberSnapshot>());
+                Assert(!empty.Nearest(Vector2.Zero).HasValue, "无候选时最近成员必须为空。");
+                Throws<InvalidOperationException>(() => empty.InArea(default(ActionArea), Vector2.Zero));
+                Throws<ArgumentOutOfRangeException>(() => empty.AnyInArea(ActionArea.Circle(1), new Vector2(float.NaN, 0)));
+            }
+        }
+
+        internal static void AreaMechanicKeepsInvalidSoakersInItsResult()
+        {
+            using (var scene = new Scene())
+            using (var finished = new ManualResetEventSlim())
+            {
+                scene.Player.Pos = new Vector2(10, 10);
+                scene.Other.Pos = new Vector2(11, 10);
+                var order = new List<string>();
+                var mechanic = new AreaMechanic
+                {
+                    Area = ActionArea.Circle(3), RequiredPlayers = 2,
+                    CenterAtResolve = snapshot => snapshot.Get(0).Position,
+                    HeadingAtResolve = snapshot => 1.25f,
+                    Started = context => order.Add("开始"),
+                    Check = members => members.Any(member => member.Slot == 1) ? "队员没有所需层数。" : null,
+                    Succeeded = result => order.Add("成功"),
+                    Failed = result => order.Add("失败"),
+                    Resolved = result =>
+                    {
+                        Assert(result.Participants.Count == 2 && !result.Success && result.Reason == "队员没有所需层数。" &&
+                            result.Center == new Vector2(10, 10) && result.Heading == 1.25f,
+                            "额外条件失败不得把实际踩塔者从人数或冻结结果中筛掉。");
+                        order.Add("结果");
+                    },
+                    Cleanup = context => { order.Add("清理"); finished.Set(); },
+                };
+                scene.Manager.RunMechanic(mechanic);
+                scene.Scheduler.Start();
+                Await(finished);
+                scene.Scheduler.Dispose();
+                scene.AssertNoError();
+                Assert(order.SequenceEqual(new[] { "开始", "失败", "结果", "清理" }), "机制回调顺序不正确。");
+                Throws<InvalidOperationException>(() => scene.Manager.RunMechanic(mechanic));
+            }
+        }
+
+        internal static void MechanicGroupEvaluatesEverythingBeforeAnyCallback()
+        {
+            using (var scene = new Scene())
+            using (var finished = new ManualResetEventSlim())
+            {
+                scene.Player.Pos = Vector2.Zero;
+                scene.Other.Pos = new Vector2(1, 0);
+                var ruleState = true;
+                var callbacks = new List<int>();
+                var first = new AreaMechanic
+                {
+                    Area = ActionArea.Circle(2), RequiredPlayers = 2,
+                    Resolved = result => { callbacks.Add(1); ruleState = false; scene.Other.Pos = new Vector2(100, 0); },
+                };
+                var second = new AreaMechanic
+                {
+                    Area = ActionArea.Circle(2), RequiredPlayers = 2,
+                    Check = members => ruleState ? null : "不应读取到其他结果回调修改后的状态。",
+                    Resolved = result => { Assert(result.Success && result.Participants.Count == 2, "第二座塔应沿用共同快照与预先判定结果。"); callbacks.Add(2); },
+                };
+                var reads = scene.Other.Entity.PositionReads;
+                scene.Manager.RunMechanic(new MechanicGroup(first, second)
+                {
+                    Resolved = result =>
+                    {
+                        Assert(result.Success && result.Children.Count == 2 &&
+                            ReferenceEquals(result.Children[0].Snapshot, result.Children[1].Snapshot), "组内机制必须共享同一个快照对象。");
+                        callbacks.Add(3);
+                    },
+                    Cleanup = context => finished.Set(),
+                });
+                scene.Scheduler.Start();
+                Await(finished);
+                scene.Scheduler.Dispose();
+                scene.AssertNoError();
+                Assert(callbacks.SequenceEqual(new[] { 1, 2, 3 }) && scene.Other.Entity.PositionReads == reads + 1,
+                    "必须先判定所有区域，再发各子结果，最后发组结果，且只读一轮实体位置。");
+            }
+        }
+
+        internal static void MechanicNodesUsePlannedTimeAndCancelWithTheirOwner()
+        {
+            using (var scene = new Scene())
+            using (var finished = new ManualResetEventSlim())
+            {
+                var order = new List<string>();
+                var extra = false;
+                scene.Scheduler.Schedule(0, () => scene.Manager.RunMechanic(new AreaMechanic
+                {
+                    Area = ActionArea.Circle(2), ResolveAfter = 0.02,
+                    Started = context =>
+                    {
+                        context.ScheduleAfter(0.3, () => extra = true);
+                        Thread.Sleep(80);
+                    },
+                    Resolved = result => order.Add("判定"),
+                }));
+                scene.Scheduler.Schedule(0.04, () => { order.Add("后续"); finished.Set(); });
+                scene.Scheduler.Start();
+                Await(finished);
+                scene.Scheduler.Dispose();
+                scene.AssertNoError();
+                Assert(order.SequenceEqual(new[] { "判定", "后续" }) && !extra && scene.Scheduler.PendingCount == 0,
+                    "开始回调的耗时不能整体推迟判定；结束后必须取消机制添加的剩余节点。");
+            }
+        }
+
+        internal static void MechanicPartialStartRetainsCleanupAndActorsForRetry()
+        {
+            using (var scene = new Scene())
+            using (var restart = new SimScheduler())
+            {
+                var failures = true;
+                var cleanups = 0;
+                SimActor created = null;
+                var mechanic = new AreaMechanic
+                {
+                    Area = ActionArea.Circle(2),
+                    Started = context =>
+                    {
+                        created = context.Entities.SpawnBNpc(1);
+                        throw new InvalidOperationException("模拟开始特效部分成功后失败。");
+                    },
+                    Cleanup = context =>
+                    {
+                        cleanups++;
+                        Assert(scene.Player.IsActive && created.IsActive && scene.Manager.Party.Count == 2,
+                            "清理回调完成前不得先解除角色或清空小队。");
+                        if (failures) throw new InvalidOperationException("模拟清理失败。");
+                    },
+                };
+                Throws<AggregateException>(() => scene.Manager.RunMechanic(mechanic));
+                scene.Manager.Clear();
+                Assert(scene.Manager.HasPendingCleanup && created.Entity.IsAlive && scene.Spawner.Deleted.Count == 0,
+                    "机制清理失败必须保留实体与恢复责任。");
+                Throws<InvalidOperationException>(() => scene.Manager.Delete(created));
+                Throws<InvalidOperationException>(() => scene.Manager.Scheduler = restart);
+                failures = false;
+                scene.Manager.Clear();
+                Assert(!scene.Manager.HasPendingCleanup && !created.Entity.IsAlive && scene.Player.Entity.IsAlive && cleanups == 3,
+                    "再次停止应重试清理，再回收自有实体，保留真实玩家。");
+            }
+        }
+
+        internal static void MechanicCallbackFailureStillCleansUp()
+        {
+            using (var scene = new Scene())
+            using (var cleaned = new ManualResetEventSlim())
+            {
+                scene.Manager.RunMechanic(new AreaMechanic
+                {
+                    Area = ActionArea.Circle(2),
+                    Resolved = result => { throw new InvalidOperationException("模拟结果演出失败。"); },
+                    Cleanup = context => cleaned.Set(),
+                });
+                scene.Scheduler.Start();
+                Await(cleaned);
+                Await(scene.ErrorReported);
+                scene.Scheduler.Dispose();
+                Assert(scene.Errors.Count == 1 && scene.Scheduler.PendingCount == 0,
+                    "结果回调失败应执行清理，并把异常交回同一调度器。");
+                Assert(scene.Errors[0].StackTrace.Contains(nameof(MechanicCallbackFailureStillCleansUp)),
+                    "机制清理后重新抛出异常应保留实际失败回调的调用栈。");
+            }
+        }
+
+        internal static void MechanicWorldChangeSkipsRemainingCallbacksAndCleanup()
+        {
+            using (var scene = new Scene())
+            using (var reset = new ManualResetEventSlim())
+            {
+                var writes = 0;
+                scene.Manager.RunMechanic(new MechanicGroup(
+                    new AreaMechanic
+                    {
+                        Area = ActionArea.Circle(2),
+                        Succeeded = result => { scene.Spawner.World.Registry.Reset(); reset.Set(); },
+                        Resolved = result => writes++, Cleanup = context => writes++,
+                    },
+                    new AreaMechanic { Area = ActionArea.Circle(2), Resolved = result => writes++, Cleanup = context => writes++ })
+                { Resolved = result => writes++, Cleanup = context => writes++ });
+                scene.Scheduler.Start();
+                Await(reset);
+                scene.Scheduler.Dispose();
+                scene.Manager.Clear();
+                scene.AssertNoError();
+                Assert(writes == 0 && !scene.Manager.HasPendingCleanup, "回调使世界失效后，不得继续演出或向新地图执行旧清理。");
+            }
+        }
+
+        internal static void MechanicGroupReuseDoesNotCancelAnExistingOwner()
+        {
+            using (var scene = new Scene())
+            {
+                var existingCleanups = 0;
+                var owned = new AreaMechanic { Area = ActionArea.Circle(2), ResolveAfter = 100, Cleanup = context => existingCleanups++ };
+                scene.Manager.RunMechanic(owned);
+                // 作为子项要求零延迟；这里只验证 Claim 拒绝已使用实例时不能拿走旧所有权。
+                owned.ResolveAfter = 0;
+                Throws<InvalidOperationException>(() => scene.Manager.RunMechanic(new MechanicGroup(
+                    new AreaMechanic { Area = ActionArea.Circle(2) }, owned)));
+                Assert(existingCleanups == 0 && scene.Scheduler.PendingCount == 1,
+                    "组装失败时不能清理另一个正在运行的机制。");
+                scene.Manager.Clear();
+                Assert(existingCleanups == 1, "会话停止时仍应由原所有者清理已有机制。");
+            }
+        }
+
+        internal static void MechanicResourceCleanupDoesNotCancelParallelMechanics()
+        {
+            using (var scene = new Scene())
+            {
+                var helper = scene.Manager.SpawnBNpc(1);
+                var cleanups = 0;
+                scene.Manager.RunMechanic(new AreaMechanic { Area = ActionArea.Circle(2), ResolveAfter = 100, Cleanup = context => cleanups++ });
+                scene.Manager.Delete(helper);
+                Assert(cleanups == 0 && scene.Scheduler.PendingCount == 1 && !helper.Entity.IsAlive,
+                    "回收单个演出实体不能取消无关的并行机制。");
+                scene.Manager.Clear();
+                Assert(cleanups == 1, "最终停止会话应清理剩余机制。");
+            }
+        }
+
+        internal static void MechanicValidationHappensBeforeStart()
+        {
+            using (var scene = new Scene())
+            {
+                var starts = 0;
+                Throws<InvalidOperationException>(() => scene.Manager.RunMechanic(new AreaMechanic
+                { Area = ActionArea.Circle(2), RequiredPlayers = 1, MinPlayers = 1, Started = context => starts++ }));
+                Throws<InvalidOperationException>(() => scene.Manager.RunMechanic(new AreaMechanic
+                { Area = default(ActionArea), Started = context => starts++ }));
+                Assert(starts == 0 && scene.Scheduler.PendingCount == 0, "错误规则必须在原生演出与调度之前拒绝。");
+            }
+        }
+
+        internal static void MechanicGroupDoesNotCleanUnstartedChildren()
+        {
+            using (var scene = new Scene())
+            {
+                var firstCleanup = 0;
+                var laterStarted = 0;
+                var laterCleanup = 0;
+                Throws<InvalidOperationException>(() => scene.Manager.RunMechanic(new MechanicGroup(
+                    new AreaMechanic
+                    {
+                        Area = ActionArea.Circle(2),
+                        Started = context => { throw new InvalidOperationException("第一项开始失败。"); },
+                        Cleanup = context => firstCleanup++,
+                    },
+                    new AreaMechanic
+                    {
+                        Area = ActionArea.Circle(2),
+                        Started = context => laterStarted++,
+                        Cleanup = context => laterCleanup++,
+                    })));
+                Assert(firstCleanup == 1 && laterStarted == 0 && laterCleanup == 0,
+                    "组的首项开始失败时，只清理已经进入开始回调的项，不能释放后续尚未创建的资源。");
+            }
+        }
+
+        private sealed class Scene : IDisposable
+        {
+            internal readonly EntitySpawner Spawner = new EntitySpawner();
+            internal readonly SimEntityManager Manager;
+            internal readonly SimScheduler Scheduler;
+            internal readonly List<Exception> Errors = new List<Exception>();
+            internal readonly ManualResetEventSlim ErrorReported = new ManualResetEventSlim();
+            internal readonly SimActor Player, Other;
+
+            internal Scene()
+            {
+                Scheduler = new SimScheduler((error, name) => { Errors.Add(error); ErrorReported.Set(); });
+                Manager = new SimEntityManager(Spawner) { Scheduler = Scheduler };
+                Player = Manager.Attach(Spawner.World.CreateCharacter(0));
+                Other = Manager.Attach(Spawner.World.CreateCharacter(2));
+                Manager.Party.Add(Player);
+                Manager.Party.Add(Other);
+            }
+            internal void AssertNoError() { if (Errors.Count != 0) throw new AggregateException("机制测试收到调度异常。", Errors); }
+            public void Dispose() { Scheduler.Dispose(); Manager.Clear(); ErrorReported.Dispose(); }
+        }
+
+        private static void Await(ManualResetEventSlim signal)
+        {
+            if (!signal.Wait(3000)) throw new Exception("等待机制测试节点超时。");
+        }
+        private static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
+        private static void Throws<T>(Action action) where T : Exception
+        {
+            try { action(); }
+            catch (T) { return; }
+            throw new Exception("预期抛出 " + typeof(T).Name + "。");
+        }
+    }
+}

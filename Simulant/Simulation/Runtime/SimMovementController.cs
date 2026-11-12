@@ -24,6 +24,10 @@ namespace Simulant.Simulation.Runtime
             public bool Network;
             public byte SpeedParam;
             public bool NetworkStarted;
+            public Vector2 NetworkOrigin;
+            public Vector2 NetworkLastSent;
+            public double NetworkDuration;
+            public bool NetworkDestinationSent;
             public double NextPollAt;
             public bool Stopping;
         }
@@ -122,6 +126,7 @@ namespace Simulant.Simulation.Runtime
                     Actor = actor,
                     Target = target,
                     Network = true,
+                    Speed = speedParam / 10f,
                     SpeedParam = speedParam,
                     OnArrived = onArrived
                 };
@@ -255,14 +260,18 @@ namespace Simulant.Simulation.Runtime
                 throw new InvalidOperationException("网络角色当前高度不是有限数，无法发送移动包。");
             var dx = (double)movement.Target.X - current.X;
             var dy = (double)movement.Target.Y - current.Y;
-            if (dx * dx + dy * dy <= NetworkArrivalTolerance * NetworkArrivalTolerance) return true;
+            var withinTolerance = dx * dx + dy * dy <= NetworkArrivalTolerance * NetworkArrivalTolerance;
+            // 原生位置可能已经追上前一个包；路程未按时间走完时，不能提前宣布到达。
+            if (withinTolerance && (!movement.NetworkStarted || movement.NetworkDestinationSent)) return true;
             if (!movement.NetworkStarted)
             {
                 // 首包也在共享调度线程发送；此前取消无需发送停止包。
                 // 先记录已尝试发送，确保原生调用部分成功后抛错仍能被清理。
                 movement.NetworkStarted = true;
                 movement.UpdatedAt = now;
-                entity.ActorMove(new Vector3(movement.Target.X, movement.Target.Y, current.Z),
+                movement.NetworkOrigin = movement.NetworkLastSent = new Vector2(current.X, current.Y);
+                movement.NetworkDuration = Math.Sqrt(dx * dx + dy * dy) / movement.Speed;
+                entity.ActorMove(current,
                     (float)Math.Atan2(dx, dy), movement.SpeedParam);
             }
             else if (now - movement.UpdatedAt >= _networkTimeoutSeconds)
@@ -272,7 +281,26 @@ namespace Simulant.Simulation.Runtime
                 catch (Exception cleanupError) { throw new AggregateException("网络移动超时且停止失败。", timeout, cleanupError); }
                 throw timeout;
             }
-            movement.NextPollAt = now + NetworkPollIntervalSeconds;
+            else if (!movement.NetworkDestinationSent)
+            {
+                // ActorMove 报告的是服务器当前位置，不是导航终点；远端终点会让客户端追赶加速。
+                // 按真实经过时间发沿途位置，丢帧时跳过过时中间包，仍由客户端平滑移动模型。
+                // https://github.com/anomek/AnoMech/blob/1646a7068c2071a3d1fd9e3c84550dfd3f1b6ade/AnoMech/Core/Game/Motion/ModelSync.cs
+                var next = Advance(movement.NetworkOrigin, movement.Target, movement.Speed,
+                    Math.Max(0, now - movement.UpdatedAt), out var final);
+                if (next != movement.NetworkLastSent || final)
+                {
+                    var direction = movement.Target - movement.NetworkOrigin;
+                    entity.ActorMove(new Vector3(next.X, next.Y, current.Z),
+                        (float)Math.Atan2(direction.X, direction.Y), movement.SpeedParam);
+                    movement.NetworkLastSent = next;
+                    movement.NetworkDestinationSent = final;
+                }
+            }
+            // 最后一个不足轮询间隔的分段按截止时间补发；终点包只发送一次，随后只等待实际到达。
+            movement.NextPollAt = movement.NetworkDestinationSent
+                ? now + NetworkPollIntervalSeconds
+                : Math.Min(now + NetworkPollIntervalSeconds, movement.UpdatedAt + movement.NetworkDuration);
             return false;
         }
 

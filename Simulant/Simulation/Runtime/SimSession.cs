@@ -17,6 +17,7 @@ namespace Simulant.Simulation.Runtime
 
         public bool IsRunning => _scheduler?.IsRunning == true;
         internal bool HasPendingCleanup => _entityManager.HasPendingCleanup;
+        internal double FailureCleanupDelaySeconds { get; set; } = 5;
 
         internal SimSession(PluginHost host, SimPresetBase preset)
         {
@@ -52,8 +53,17 @@ namespace Simulant.Simulation.Runtime
                     throw new InvalidOperationException("上次模拟的实体尚未完全回收，请先停止并重试清理。");
                 _scheduler = new SimScheduler((ex, node) =>
                 {
-                    try { _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{ex}"); }
-                    finally { Cleanup(); }
+                    var delay = HasPendingCleanup ? FailureCleanupDelaySeconds : 0;
+                    try
+                    {
+                        _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{ex}");
+                        if (delay > 0) _host.LogWarning($"后续时间轴已停止，保留当前演出 {delay:0.##} 秒后回收；手动停止可立即回收。");
+                    }
+                    finally
+                    {
+                        try { _scheduler.WaitForFailureDisplay(delay); }
+                        finally { Cleanup(); }
+                    }
                 });
                 try
                 {

@@ -6,6 +6,7 @@ using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
 using Simulant.Simulation.Runtime;
+using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
@@ -101,6 +102,8 @@ namespace Simulant.Content.U7b.Presets
         private bool _isPerfect;
         private int _remainingJudgements;
         private bool _feedbackDue;
+        private ActionArea _exaArea;
+        private ActionArea _spreadArea;
 
         protected override void OnStop()
         {
@@ -116,6 +119,8 @@ namespace Simulant.Content.U7b.Presets
             _remainingJudgements = 12 * 6;
             _feedbackDue = false;
             var leftOrder = ResolveExaFlareOrder(LeftExaFlareOrder);
+            _exaArea = ActionArea.FromAction(0xBB3D);
+            _spreadArea = ActionArea.FromAction(0xBB3F);
             var rightOrder = ResolveExaFlareOrder(RightExaFlareOrder);
 
             var me = _host.EntityProvider.GetMyself();
@@ -265,7 +270,7 @@ namespace Simulant.Content.U7b.Presets
             DummyExecute(pos, heading, 0xBB3D, 3f, () =>
             {
                 var player = _host.EntityProvider.GetMyself();
-                if (Vector2.Distance(new Vector2(pos.X, pos.Y), player.Pos) <= 6f)
+                if (_exaArea.Contains(player.Pos, new Vector2(pos.X, pos.Y), heading))
                 {
                     _isPerfect = false;
                     TriggernometryInterop.InvokeNamedCallback("LockOn", $"{player.Address}, m0489trg_b0c");
@@ -281,7 +286,7 @@ namespace Simulant.Content.U7b.Presets
                 if (!isSelf)
                 {
                     var player = _host.EntityProvider.GetMyself();
-                    if (Vector2.Distance(new Vector2(pos.X, pos.Y), player.Pos) <= 5f)
+                    if (_spreadArea.Contains(player.Pos, new Vector2(pos.X, pos.Y), 0))
                     {
                         _isPerfect = false;
                         TriggernometryInterop.InvokeNamedCallback("LockOn", $"{player.Address}, m0489trg_b0c");
