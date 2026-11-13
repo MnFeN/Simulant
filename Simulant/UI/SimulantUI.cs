@@ -22,13 +22,14 @@ namespace Simulant.UI
     public partial class SimulantUI : UserControl
     {
         private readonly PluginHost _host;
+        private ToolStripMenuItem _addEntityMenuItem;
+        private ToolStripMenuItem _debugMenuItem;
 
         internal SimulantUI(PluginHost host)
         {
             _host = host;
             InitializeComponent();
-            ConfigureEntityTestMenu();
-            ConfigureNetworkEntityMenu();
+            ConfigureMainMenu();
             new ToolTip(components).SetToolTip(btnInitPlugin, "重新初始化前，请先关闭防火墙并完成清理。");
             logView.Bind(_host); // would RefreshLogView
             presetControl.Bind(_host);
@@ -46,6 +47,48 @@ namespace Simulant.UI
         {
             using (var form = new ConfigurationForm(_host, splitMainV.Font))
                 form.ShowDialog(this);
+        }
+
+        private void btnMenu_Click(object sender, EventArgs e)
+            => btnMenu.ContextMenuStrip.Show(btnMenu, 0, btnMenu.Height);
+
+        private void ConfigureMainMenu()
+        {
+            var menu = new ContextMenuStrip(components) { Font = splitMainV.Font };
+            menu.Items.Add("配置", null, btnConfiguration_Click);
+            var debug = new ToolStripMenuItem("调试功能");
+            _addEntityMenuItem = new ToolStripMenuItem("添加实体")
+            {
+                ToolTipText = "单击生成网络 NPC 或场景物件；右键可生成玩家、使用本地备用方式或清理实体。网络生成需要开启防火墙。"
+            };
+            _debugMenuItem = new ToolStripMenuItem("调试")
+            {
+                ToolTipText = "单击测试网络 NPC；右键选择网络玩家、小队列表或本地三实体测试。运行时再次点击停止。"
+            };
+            debug.DropDownItems.AddRange(new ToolStripItem[] { _addEntityMenuItem, _debugMenuItem });
+            debug.DropDown.ShowItemToolTips = true;
+            menu.Items.Add(debug);
+            BindDebugMenuItem(menu, _addEntityMenuItem, ConfigureNetworkEntityMenu(), btnAddBNpc_Click);
+            BindDebugMenuItem(menu, _debugMenuItem, ConfigureEntityTestMenu(), btnDebug_Click);
+            menu.Opening += (_, __) => UpdateControlStates();
+            btnMenu.ContextMenuStrip = menu;
+        }
+
+        // 菜单项沿用旧按钮的左键操作和右键选项；右键不能同时触发生成或测试。
+        private static void BindDebugMenuItem(ContextMenuStrip menu, ToolStripMenuItem item,
+            ContextMenuStrip options, EventHandler command)
+        {
+            var rightClick = false;
+            menu.Opening += (_, __) => rightClick = false;
+            item.MouseDown += (_, e) => rightClick = e.Button == MouseButtons.Right;
+            item.Click += (sender, e) => { if (!rightClick) command(sender, e); };
+            item.MouseUp += (_, e) =>
+            {
+                if (e.Button != MouseButtons.Right) return;
+                var position = Cursor.Position;
+                menu.Close();
+                options.Show(position);
+            };
         }
 
         internal void StopCurrentSession()
@@ -95,8 +138,8 @@ namespace Simulant.UI
             chkToggleFirewall.Enabled = !_host.IsInitializing && (pluginReady || firewallPending);
             // 部分失败时仍保留勾选，用户可以继续关闭并重试剩余清理。
             SetFirewallToggleChecked(firewallPending);
-            btnDebug.Enabled = pluginReady;
-            btnAddBNpc.Enabled = pluginReady || _host.HasPendingDebugEntityCleanup;
+            _debugMenuItem.Enabled = pluginReady;
+            _addEntityMenuItem.Enabled = pluginReady || _host.HasPendingDebugEntityCleanup;
 
             // 防火墙开启：允许加载区域、退出模拟
             btnSimEnter.Enabled = firewallReady && !_switchingTerritory;
@@ -375,16 +418,14 @@ namespace Simulant.UI
             => await RunEntityTest((ModifierKeys & Keys.Shift) != 0
                 ? Test.EntityTestKind.LocalEntities : Test.EntityTestKind.NetworkNpc);
 
-        private void ConfigureEntityTestMenu()
+        private ContextMenuStrip ConfigureEntityTestMenu()
         {
             var menu = new ContextMenuStrip(components);
             menu.Items.Add("网络 NPC 测试", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkNpc));
             menu.Items.Add("网络玩家测试（职业套装与复制外观）", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkPlayer));
             menu.Items.Add("小队列表测试（血量、状态与仇恨）", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkParty));
             menu.Items.Add("本地三实体测试", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.LocalEntities));
-            btnDebug.ContextMenuStrip = menu;
-            new ToolTip(components).SetToolTip(btnDebug,
-                "单击测试网络 NPC；右键选择网络玩家、小队列表或本地三实体测试。运行时再次点击停止。");
+            return menu;
         }
 
         private async Task RunEntityTest(Test.EntityTestKind kind)

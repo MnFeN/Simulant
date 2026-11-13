@@ -12,7 +12,7 @@ namespace Simulant.UI
         private string _networkNpcInput = "4909, 3765, 90";
         private NetworkPlayerSpawnSpec _networkPlayerInput;
 
-        private void ConfigureNetworkEntityMenu()
+        private ContextMenuStrip ConfigureNetworkEntityMenu()
         {
             var menu = new ContextMenuStrip(components);
             var npc = menu.Items.Add("生成网络 NPC…", null, (_, __) => RunManualEntityAction(SpawnManualNetworkNpc));
@@ -34,9 +34,7 @@ namespace Simulant.UI
                 player.Enabled = ready;
                 local.Enabled = _host.PluginReady && !_host.IsInitializing && !_host.Disposed && !_switchingTerritory;
             };
-            btnAddBNpc.ContextMenuStrip = menu;
-            new ToolTip(components).SetToolTip(btnAddBNpc,
-                "单击生成网络 NPC 或场景物件；右键可生成玩家、使用本地备用方式或清理实体。网络生成需要开启防火墙。");
+            return menu;
         }
 
         private void RunManualEntityAction(Action action)
@@ -102,6 +100,6 @@ namespace Simulant.UI
 
         private void LogManualNetworkEntity(SimActor actor)
             => _host.LogSim($"网络角色已就绪：实体编号 {actor.Id:X8}，战斗列表槽号 {actor.Entity.Identity.Slot / 2}。" +
-                "请检查外观与选中状态；角色会保留，可从“添加实体”右键菜单清理。");
+                "请检查外观与选中状态；角色会保留，可从“菜单 → 调试功能 → 添加实体”的右键菜单清理。");
     }
 }

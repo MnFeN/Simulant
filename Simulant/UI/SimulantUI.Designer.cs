@@ -32,9 +32,8 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SimulantUI));
             this.splitMainV = new System.Windows.Forms.SplitContainer();
             this.tableL = new System.Windows.Forms.TableLayoutPanel();
-            this.btnDebug = new System.Windows.Forms.Button();
             this.btnInitPlugin = new System.Windows.Forms.Button();
-            this.btnConfiguration = new System.Windows.Forms.Button();
+            this.btnMenu = new System.Windows.Forms.Button();
             this.btnSelectTerritory = new System.Windows.Forms.Button();
             this.btnSimEnter = new System.Windows.Forms.Button();
             this.btnSimExit = new System.Windows.Forms.Button();
@@ -47,9 +46,6 @@
             this.splitMainH = new System.Windows.Forms.SplitContainer();
             this.presetControl = new Simulant.UI.PresetControl();
             this.logView = new Simulant.UI.LogView();
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
-            this.btnAddBNpc = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitMainV)).BeginInit();
             this.splitMainV.Panel1.SuspendLayout();
             this.splitMainV.Panel2.SuspendLayout();
@@ -61,7 +57,6 @@
             this.splitMainH.Panel1.SuspendLayout();
             this.splitMainH.Panel2.SuspendLayout();
             this.splitMainH.SuspendLayout();
-            this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // splitMainV
@@ -91,10 +86,8 @@
             this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 22.19101F));
             this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 27.80899F));
-            this.tableL.Controls.Add(this.btnAddBNpc, 0, 6);
-            this.tableL.Controls.Add(this.btnDebug, 1, 6);
             this.tableL.Controls.Add(this.btnInitPlugin, 0, 1);
-            this.tableL.Controls.Add(this.btnConfiguration, 0, 7);
+            this.tableL.Controls.Add(this.btnMenu, 0, 6);
             this.tableL.Controls.Add(this.btnSelectTerritory, 0, 2);
             this.tableL.Controls.Add(this.btnSimEnter, 0, 5);
             this.tableL.Controls.Add(this.btnSimExit, 1, 5);
@@ -107,9 +100,8 @@
             this.tableL.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableL.Location = new System.Drawing.Point(0, 0);
             this.tableL.Name = "tableL";
-            this.tableL.RowCount = 9;
+            this.tableL.RowCount = 8;
             this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 156F));
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -120,24 +112,6 @@
             this.tableL.Size = new System.Drawing.Size(340, 892);
             this.tableL.TabIndex = 0;
             this.tableL.TabStop = true;
-            // 
-            // btnDebug
-            // 
-            this.btnDebug.AutoSize = true;
-            this.btnDebug.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.tableL.SetColumnSpan(this.btnDebug, 2);
-            this.btnDebug.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnDebug.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnDebug.Location = new System.Drawing.Point(185, 476);
-            this.btnDebug.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.btnDebug.Name = "btnDebug";
-            this.btnDebug.Padding = new System.Windows.Forms.Padding(5);
-            this.btnDebug.Size = new System.Drawing.Size(140, 42);
-            this.btnDebug.TabIndex = 6;
-            this.btnDebug.TabStop = false;
-            this.btnDebug.Text = "调试";
-            this.btnDebug.UseVisualStyleBackColor = true;
-            this.btnDebug.Click += new System.EventHandler(this.btnDebug_Click);
             // 
             // btnInitPlugin
             // 
@@ -156,19 +130,19 @@
             this.btnInitPlugin.UseVisualStyleBackColor = true;
             this.btnInitPlugin.Click += new System.EventHandler(this.btnInitPlugin_Click);
             // 
-            // btnConfiguration
+            // btnMenu
             //
-            this.btnConfiguration.AutoSize = true;
-            this.btnConfiguration.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.tableL.SetColumnSpan(this.btnConfiguration, 3);
-            this.btnConfiguration.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnConfiguration.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.btnConfiguration.Name = "btnConfiguration";
-            this.btnConfiguration.Padding = new System.Windows.Forms.Padding(5);
-            this.btnConfiguration.TabIndex = 7;
-            this.btnConfiguration.Text = "配置";
-            this.btnConfiguration.UseVisualStyleBackColor = true;
-            this.btnConfiguration.Click += new System.EventHandler(this.btnConfiguration_Click);
+            this.btnMenu.AutoSize = true;
+            this.btnMenu.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.tableL.SetColumnSpan(this.btnMenu, 3);
+            this.btnMenu.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.btnMenu.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
+            this.btnMenu.Name = "btnMenu";
+            this.btnMenu.Padding = new System.Windows.Forms.Padding(5);
+            this.btnMenu.TabIndex = 6;
+            this.btnMenu.Text = "菜单";
+            this.btnMenu.UseVisualStyleBackColor = true;
+            this.btnMenu.Click += new System.EventHandler(this.btnMenu_Click);
             //
             // btnSelectTerritory
             // 
@@ -348,37 +322,6 @@
             this.logView.Size = new System.Drawing.Size(865, 465);
             this.logView.TabIndex = 0;
             // 
-            // contextMenuStrip1
-            // 
-            this.contextMenuStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripMenuItem2});
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(106, 28);
-            // 
-            // toolStripMenuItem2
-            // 
-            this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(105, 24);
-            this.toolStripMenuItem2.Text = "111";
-            // 
-            // btnAddBNpc
-            // 
-            this.btnAddBNpc.AutoSize = true;
-            this.btnAddBNpc.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.btnAddBNpc.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnAddBNpc.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnAddBNpc.Location = new System.Drawing.Point(15, 476);
-            this.btnAddBNpc.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.btnAddBNpc.Name = "btnAddBNpc";
-            this.btnAddBNpc.Padding = new System.Windows.Forms.Padding(5);
-            this.btnAddBNpc.Size = new System.Drawing.Size(140, 42);
-            this.btnAddBNpc.TabIndex = 11;
-            this.btnAddBNpc.TabStop = false;
-            this.btnAddBNpc.Text = "添加实体";
-            this.btnAddBNpc.UseVisualStyleBackColor = true;
-            this.btnAddBNpc.Click += new System.EventHandler(this.btnAddBNpc_Click);
-            // 
             // SimulantUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
@@ -399,7 +342,6 @@
             this.splitMainH.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitMainH)).EndInit();
             this.splitMainH.ResumeLayout(false);
-            this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -410,21 +352,17 @@
         private System.Windows.Forms.TableLayoutPanel tableL;
         private System.Windows.Forms.SplitContainer splitMainH;
         private Simulant.UI.LogView logView;
-        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.Label lblTerritory;
         private System.Windows.Forms.Button btnSimEnter;
         private System.Windows.Forms.Button btnSimExit;
         private System.Windows.Forms.Button btnInitPlugin;
-        private System.Windows.Forms.Button btnConfiguration;
+        private System.Windows.Forms.Button btnMenu;
         private System.Windows.Forms.Button btnSelectTerritory;
-        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem2;
         private System.Windows.Forms.PictureBox picLogo;
-        private System.Windows.Forms.Button btnDebug;
         private System.Windows.Forms.CheckBox chkToggleFirewall;
         private System.Windows.Forms.ComboBox cbxPhase;
         private System.Windows.Forms.Label lblTerritoryId;
         private System.Windows.Forms.NumericUpDown numTerritoryId;
         internal PresetControl presetControl;
-        private System.Windows.Forms.Button btnAddBNpc;
     }
 }
