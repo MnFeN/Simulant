@@ -1,7 +1,15 @@
 # 仿生石 · Simulant
 
-基于 ACT、使用游戏内原生画面的 FFXIV 本地副本模拟插件。  
+- 基于 ACT、使用游戏内原生画面的 FFXIV 本地副本模拟插件。    
 An ACT plugin for local FFXIV raid simulation using native in-game rendering.
+
+- 在游戏内本地创建模拟队友和敌方，利用游戏原生的技能释放、动作和特效播放，由插件内的时间轴脚本驱动副本流程演出。  
+Spawns simulated party members and enemies locally in the game client.   
+Its timeline scripts drive the encounter using the game's built-in abilities, animations, and visual effects.
+
+- 运行原理类似 Hyperborea、Brio 等卫月插件，副本演出均在客户端本地运行，无需搭建或连接私服。  
+It works in a similar way to Dalamud plugins such as Hyperborea and Brio.   
+Encounters run entirely on the client, with no need to set up or connect to a private server.
 
 ## 功能 · Features
 
@@ -57,7 +65,7 @@ Work in progress.
 > [!WARNING]
 > 此插件与卫月平台的一些插件存在兼容性问题。
 > 
-> 如果遇到游戏崩溃或初始化出错（如扫描不到某 Ptr），请尝试纯净启动，或仅开启卫月框架。
+> 如果遇到开启防火墙或进入副本时游戏崩溃、初始化出错等情况（如扫描不到某 Ptr），请尝试纯净启动，或仅开启卫月框架。
 
 - 初始化完成后，进入任意旅馆地图，勾选“启用防火墙”。此功能与卫月插件 [Hyperborea](https://github.com/kawaii/Hyperborea) 类似。
 
@@ -81,15 +89,8 @@ Work in progress.
 
 - 如果此过程中有任何一步导致游戏崩溃，请记录问题并重启 ACT。
 
-- 可选：如果文字或界面排版有问题，可以安装字体：
+- 可选：建议安装字体：
   
   [更纱黑体](https://github.com/be5invis/Sarasa-Gothic/releases)
 
   在 Single Family TTF Package 中下载 Mono 的压缩包并安装字体。
-
-## 开发文档 · Development
-
-- [机制时间轴开发](docs/Timeline.md)：节点定义、子轴组合、取消与实体生命周期。
-- [实体与模拟角色](docs/Entities.md)：Native / Entity / SimActor 边界、创建与借用、移动控制。
-- [网络角色生成](docs/NetworkEntities.md)：实验生成入口、原生移动边界、回收与当前验证范围。
-- [实体实机测试](docs/EntityTests.md)：测试入口、观察步骤和失败后的清理重试。
