@@ -45,7 +45,7 @@ namespace Simulant.Simulation.Options
         private static readonly object _lock = new object();
 
         /// <summary>
-        /// 将带有 <see cref="RandomEnumAttribute"/> 属性的枚举值自动随机化为 <see cref="RandomEnumAttribute"/> 指定的选项之一。<br />
+        /// 按 <see cref="RandomEnumAttribute"/> 指定的选项递归随机选择，直到得到不带该属性的枚举值。<br />
         /// 对于普通枚举值则直接返回原始值。
         /// </summary>
         public static T TryResolveRandom<T>(this T @enum) // 这里为了非枚举泛型类的 SimOption<T> 调用而不加 where
@@ -53,15 +53,25 @@ namespace Simulant.Simulation.Options
             if (!typeof(T).IsEnum)
                 throw new InvalidOperationException($"ResolveRandom 只能用于 enum 枚举类型，但传入了 {typeof(T).FullName}。");
 
+            return ResolveRandom(@enum, new HashSet<T>());
+        }
+
+        private static T ResolveRandom<T>(T @enum, HashSet<T> visited)
+        {
             var choices = @enum.GetRandomChoices();
 
             if (choices.Count == 0) // 没有 RandomEnumAttribute，直接返回原值
                 return @enum;
 
+            if (!visited.Add(@enum))
+                throw new InvalidOperationException($"RandomEnum 存在循环引用：{typeof(T).FullName}.{@enum}。");
+
+            T next;
             lock (_lock)
             {
-                return choices[_rnd.Next(choices.Count)];
+                next = choices[_rnd.Next(choices.Count)];
             }
+            return ResolveRandom(next, visited);
         }
 
         private static List<T> GetRandomChoices<T>(this T @enum)

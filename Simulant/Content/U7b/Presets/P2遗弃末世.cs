@@ -23,12 +23,30 @@ namespace Simulant.Content.U7b.Presets
         public override PhaseData Phase => U7b.P2_2;
         public override int Level => 100;
         public override Type SimLogicType => typeof(P2遗弃末世Logic);
-        public override string Description => "随机点名、塔方向与前后刀；按野队解法，A 组 1238、B 组 4567，闲人 TH 左、DPS 右。假队员在判定前最后一秒就位。半场刀命中仅提示叉并继续；扇形引导偏离解法方向超过 30° 时额外提示叉和默语，继续原有伤害判定。其他判定失败先播放本轮特效和错误叉，聊天提示原因，两秒后停止角色行为，保留现场直到手动停止，不扣除真实玩家血量。";
+        public override string Description => "按国服通用解法，A 组踩 1238 轮塔，B 组踩 4567 轮塔；攻略选项支持选择奇数轮站位、闲人左右分组方式。半场刀命中不中断机制，其他错误中断机制。扇形引导偏离解法方向超过 30° 时判定为错误。暂不扣除真实玩家血量。";
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
-            new ComboBoxOption<int>(nameof(P2遗弃末世Logic.PlayerSlot), "自己的职能", 0,
-                new Map<int> { [0] = "按当前职业", [1] = "MT", [2] = "ST", [3] = "H1", [4] = "H2",
+            new ComboBoxOption<int>(nameof(P2遗弃末世Logic.PlayerSlot), "自己的职能", 1,
+                new Map<int> { [1] = "MT", [2] = "ST", [3] = "H1", [4] = "H2",
                     [5] = "D1", [6] = "D2", [7] = "D3", [8] = "D4" }),
+            new ComboBoxOption<ForsakenAssignment>(nameof(P2遗弃末世Logic.Assignment), "自己的点名", ForsakenAssignment.Random,
+                new Map<ForsakenAssignment>
+                {
+                    [ForsakenAssignment.Random] = "全随机",
+                    [ForsakenAssignment.GroupARandom] = "A组随机（1238）",
+                    [ForsakenAssignment.GroupBRandom] = "B组随机（4567）",
+                    [ForsakenAssignment.GroupAFan] = "A组初始扇形",
+                    [ForsakenAssignment.GroupACircle] = "A组初始钢铁",
+                    [ForsakenAssignment.GroupAStackWithFan] = "A组初始分摊、同组扇形",
+                    [ForsakenAssignment.GroupAStackWithCircle] = "A组初始分摊、同组钢铁",
+                    [ForsakenAssignment.GroupBFan] = "B组初始扇形",
+                    [ForsakenAssignment.GroupBCircle] = "B组初始钢铁",
+                }, "限定自己所选职能的初始点名和踩塔组别，其余分配继续随机。分摊选项中的“同组”指与自己两两配对的队员。"),
+            new ComboBoxOption<bool>(nameof(P2遗弃末世Logic.HelpersByRole), "[遗弃末世] 闲人处理机制时的左右分组方式", true,
+                new Map<bool> { [false] = "初始扇形左 初始钢铁右", [true] = "TH 左 DPS 右" },
+                "“闲人”指的是当前不踩塔的人；指定处理奇数轮分摊、引导扇形和偶数轮超级跳的左右分组方式。"),
+            new ComboBoxOption<bool>(nameof(P2遗弃末世Logic.OptimizeMelee), "[遗弃末世] 奇数轮的站位", false,
+                new Map<bool> { [false] = "原版站位（分摊在两侧）", [true] = "近战优化（分摊在前方）" }),
         };
     }
 
@@ -52,6 +70,9 @@ namespace Simulant.Content.U7b.Presets
         private bool _environmentChanged;
 
         [SimOption] internal int PlayerSlot { get; set; }
+        [SimOption] internal ForsakenAssignment Assignment { get; set; }
+        [SimOption] internal bool HelpersByRole { get; set; }
+        [SimOption] internal bool OptimizeMelee { get; set; }
 
         public P2遗弃末世Logic(PluginHost host, SimPresetBase preset) : base(host, preset) { }
 
@@ -63,10 +84,9 @@ namespace Simulant.Content.U7b.Presets
             Array.Clear(_helpers, 0, _helpers.Length);
             var me = _host.EntityProvider.GetMyself();
             if (me == null || !me.IsAlive) throw new InvalidOperationException("未找到自身玩家，无法准备遗弃末世。");
-            _selfSlot = PlayerSlot == 0 ? GetDefaultSlot(me) : PlayerSlot - 1;
+            _selfSlot = PlayerSlot - 1;
             if (_selfSlot < 0 || _selfSlot >= 8) throw new InvalidOperationException("遗弃末世的职能必须在 MT 至 D4 范围内。");
-            var seed = Environment.TickCount;
-            _plan = ForsakenPlan.Create(new Random(seed));
+            _plan = ForsakenPlan.Create(new Random(), _selfSlot, Assignment, OptimizeMelee, HelpersByRole);
             for (var i = 0; i < 8; i++)
             {
                 _stacks[i] = 4;
@@ -74,7 +94,7 @@ namespace Simulant.Content.U7b.Presets
                 _markers[i] = _plan.InitialMarkers[i];
                 _triggered[i] = new List<int>();
             }
-            _host.LogSim($"[遗弃末世] 本次随机种子 {seed}，你的职能为 {Roles[_selfSlot]}；假队员正常跑速，最后一秒就位。");
+            _host.LogSim($"[遗弃末世] 你的职能为 {Roles[_selfSlot]}，{(_plan.GroupA[_selfSlot] ? "A 组（1238）" : "B 组（4567）")}，初始{MarkerName(_plan.InitialMarkers[_selfSlot])}；假队员正常跑速，最后一秒就位。");
 
             timeline.At(0, () => GeneratePartyMembers(_selfSlot + 1, PrepareEnemies), "准备遗弃末世小队");
         }
@@ -171,15 +191,6 @@ namespace Simulant.Content.U7b.Presets
             catch (Exception error) { (errors ?? (errors = new List<Exception>())).Add(error); }
             if (errors != null) throw new AggregateException("遗弃末世场地复位失败。", errors);
             _environmentChanged = false;
-        }
-
-        private int GetDefaultSlot(Character me)
-        {
-            if (JobsByRole[JobRole.Tank].Contains(me.Job)) return 0;
-            if (JobsByRole[JobRole.Healer].Contains(me.Job)) return 2;
-            if (JobsByRole[JobRole.PhysicalRanged].Contains(me.Job)) return 6;
-            if (JobsByRole[JobRole.MagicalRanged].Contains(me.Job)) return 7;
-            return 4;
         }
 
         private void CompleteMechanic()

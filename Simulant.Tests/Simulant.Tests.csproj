@@ -44,6 +44,7 @@
     <Compile Include="..\Simulant\Core\Zone\PhaseApplication.cs"><Link>Zone\PhaseApplication.cs</Link></Compile>
     <Compile Include="..\Simulant\Content\U7b\Presets\P5地火.Placement.cs"><Link>Content\P5地火.Placement.cs</Link></Compile>
     <Compile Include="..\Simulant\Content\U7b\Presets\P2遗弃末世.Plan.cs"><Link>Content\P2遗弃末世.Plan.cs</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Options\RandomEnumAttribute.cs"><Link>Options\RandomEnumAttribute.cs</Link></Compile>
     <Compile Include="..\Simulant\Content\U7b\Presets\P2遗弃末世.Timing.cs"><Link>Content\P2遗弃末世.Timing.cs</Link></Compile>
     <Compile Include="..\Simulant\Core\Entity\NetworkNpcSpawnSpec.cs"><Link>Entity\NetworkNpcSpawnSpec.cs</Link></Compile>
     <Compile Include="..\Simulant\Core\Entity\NetworkPlayerSpawnSpec.cs"><Link>Entity\NetworkPlayerSpawnSpec.cs</Link></Compile>
