@@ -6,7 +6,8 @@ namespace Simulant.Content.U7b.Presets
     internal partial class P5地火Logic
     {
         /// <summary>只计算整组位置；无法满足场地和队友间距时，不返回未经校验的布置。</summary>
-        internal static Vector2[] PlanSpreadPositions(Vector2 myPos, int memberCount, float minDistance, Random random)
+        internal static Vector2[] PlanSpreadPositions(Vector2 myPos, int memberCount, float minDistance, Random random,
+            Vector2[] origins = null, float maxTravel = float.PositiveInfinity)
         {
             var center = new Vector2(100, 100);
             const int maxAttemptsPerMember = 1000;
@@ -21,6 +22,8 @@ namespace Simulant.Content.U7b.Presets
                     var distance = Math.Sqrt(random.NextDouble()) * 15;
                     var pos = myPos + new Vector2((float)(Math.Cos(angle) * distance), (float)(Math.Sin(angle) * distance));
                     if (!(Vector2.Distance(center, pos) <= 20f)) continue;
+                    // 再分散时同时满足正常跑速的可达距离，不能生成必须瞬移才能到达的位置。
+                    if (origins != null && Vector2.Distance(origins[i], pos) > maxTravel) continue;
 
                     var separated = true;
                     for (var previous = 0; previous < i; previous++)

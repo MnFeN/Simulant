@@ -57,7 +57,7 @@ namespace Simulant
             {
                 run.CleanupErrors++;
                 _host.LogError("[实体测试] 回收失败：" + ex);
-            }) { Scheduler = run.Scheduler };
+            }) { Scheduler = run.Scheduler, PlayerBehavior = _host.Configuration.SimulatedParty.Copy() };
 
             try
             {

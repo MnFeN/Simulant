@@ -1,4 +1,5 @@
 using Simulant.Core.Entity;
+using Simulant.Simulation.Geometry;
 using System;
 using System.Numerics;
 using System.Threading;
@@ -12,6 +13,7 @@ namespace Simulant.Simulation.Runtime
         private readonly SimCastController _casts;
         private readonly SimMovementController _movement;
         private int _detached;
+        internal SimActorBehaviorController BehaviorController { get; set; }
 
         internal SimActor(Character entity, SimCastController casts, SimMovementController movement)
         {
@@ -52,8 +54,31 @@ namespace Simulant.Simulation.Runtime
             set { EnsureActive(); Entity.Job = value; }
         }
 
-        public void Cast(uint actionId, float? omenDelay = 0) => _casts.Cast(this, actionId, omenDelay);
-        public void Execute(uint actionId) => _casts.Execute(this, actionId);
+        public void Cast(uint actionId, float? omenDelay = 0)
+        { BehaviorController?.ManualAction(this); _casts.Cast(this, actionId, omenDelay); }
+        public void Execute(uint actionId)
+        { BehaviorController?.ManualAction(this); _casts.Execute(this, actionId); }
+
+        public void ConfigureBehavior(SimActorBehaviorOptions options)
+        {
+            EnsureActive();
+            if (BehaviorController == null) throw new InvalidOperationException("该角色不是本会话生成的网络假玩家。");
+            BehaviorController.Configure(this, options);
+        }
+
+        /// <summary>
+        /// 提交目的范围和目标时间（会话的绝对秒数）；实体自行安排出发、途中停顿与提前到达。
+        /// 可用 holdUntil 指定机制结束前保持站位，省略时保持至目标时间。
+        /// northHeading 是本机制相对北的场地朝向；接收指令时固定下来，不随其他机制改变。
+        /// 紧急移动立即直达，不绕路、贪刀或等待读条；Vector2 可直接作为零容差点位传入。
+        /// </summary>
+        public void MoveForMechanic(SimPosition destination, double arriveBy, double? holdUntil = null,
+            bool urgent = false, double northHeading = Math.PI)
+        {
+            EnsureActive();
+            if (BehaviorController == null) throw new InvalidOperationException("机制走位只支持本会话生成的网络假玩家。");
+            BehaviorController.MoveForMechanic(this, destination, arriveBy, holdUntil ?? arriveBy, urgent, northHeading);
+        }
 
         /// <summary>取消本会话的读条及其预兆，保留角色、移动及实体上不同技能编号的外部读条。</summary>
         public void StopCasting() => _casts.Cancel(this);
@@ -65,7 +90,7 @@ namespace Simulant.Simulation.Runtime
         /// </summary>
         public void MoveTo(Vector2 target, float speed = 6, bool faceMovement = true,
             ushort? animationId = null, Action onArrived = null)
-            => _movement.MoveTo(this, target, speed, faceMovement, animationId, onArrived);
+        { BehaviorController?.ManualMove(this); _movement.MoveTo(this, target, speed, faceMovement, animationId, onArrived); }
 
         /// <summary>
         /// 控制网络角色表中的角色向 ACT 的 X/Y 目标移动，沿用当前高度；原生客户端管理移动动画。
@@ -73,7 +98,7 @@ namespace Simulant.Simulation.Runtime
         /// speedParam 是每秒距离乘以 10 后的包内速度参数，默认 30；替换或停止会取消旧的同步到达回调。
         /// </summary>
         public void MoveNetworkTo(Vector2 target, byte speedParam = 30, Action onArrived = null)
-            => _movement.MoveNetworkTo(this, target, speedParam, onArrived);
+        { BehaviorController?.ManualMove(this); _movement.MoveNetworkTo(this, target, speedParam, onArrived); }
 
         /// <summary>停止本会话的移动，再通过 ActorMove 在当前位置转向，同时更新模型与目标圈。</summary>
         public void FaceNetwork(float heading)
@@ -89,7 +114,7 @@ namespace Simulant.Simulation.Runtime
         }
 
         /// <summary>停止本会话的本地或网络移动；不会接管直接调用 Entity.ActorMove 产生的移动。</summary>
-        public void StopMoving() => _movement.Stop(this);
+        public void StopMoving() { BehaviorController?.ManualMove(this); _movement.Stop(this); }
         public void SetReadyToDraw() { if (IsActive) Entity.SetReadyToDraw(); }
         public void EnableDraw() { if (IsActive) Entity.EnableDraw(); }
         public void Redraw() { if (IsActive) Entity.Redraw(); }
@@ -97,6 +122,7 @@ namespace Simulant.Simulation.Runtime
         /// <summary>解除关联并停止本会话的读条、本地及网络移动；保留实体及直接 ActorMove 产生的移动。</summary>
         internal void Detach()
         {
+            BehaviorController?.Remove(this);
             if (Interlocked.Exchange(ref _detached, 1) != 0)
             {
                 // 首次解除关联时原生停止可能失败，仍允许重试本次移动的清理。

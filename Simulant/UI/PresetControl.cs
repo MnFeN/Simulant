@@ -14,6 +14,7 @@ namespace Simulant.UI
         private SimPresetBase _preset;
         private SimSession _session;
         private readonly Timer _sessionStateTimer;
+        private readonly OptionEditor _optionEditor;
         private bool _displayedRunning;
         private bool _displayedPendingCleanup;
         private bool _displayedReadyToStart;
@@ -21,6 +22,7 @@ namespace Simulant.UI
         public PresetControl()
         {
             InitializeComponent();
+            _optionEditor = new OptionEditor(tableOptions, toolTip);
             _sessionStateTimer = new Timer(components) { Interval = 500 };
             _sessionStateTimer.Tick += (sender, e) =>
             {
@@ -77,53 +79,10 @@ namespace Simulant.UI
         }
 
         private void RebuildOptions(SimPresetBase preset)
-        {
-            ClearOptions();
-
-            foreach (var option in preset.Options)
-            {
-                option?.CreateUI(this, toolTip);
-            }
-
-            AddBottomOptionFillerRow();
-            tableOptions.PerformLayout();
-        }
+            => _optionEditor.Build(preset.Options);
 
         private void ClearOptions()
-        {
-            tableOptions.SuspendLayout();
-            try
-            {
-                var controls = new Control[tableOptions.Controls.Count];
-                tableOptions.Controls.CopyTo(controls, 0);
-                tableOptions.Controls.Clear();
-
-                foreach (var control in controls)
-                    control.Dispose();
-
-                tableOptions.RowStyles.Clear();
-                tableOptions.RowCount = 0;
-                AddTopOptionFillerRow();
-            }
-            finally
-            {
-                tableOptions.ResumeLayout();
-            }
-        }
-
-        /// <summary>在选项列表顶部添加一个占位行补充 Margin。 </summary>
-        private void AddTopOptionFillerRow()
-        {
-            tableOptions.RowCount += 1;
-            tableOptions.RowStyles.Add(new RowStyle(SizeType.Absolute, 5F));
-        }
-
-        /// <summary>在选项列表末尾添加一个占位行，占满剩余空间。 </summary>
-        private void AddBottomOptionFillerRow()
-        {
-            tableOptions.RowCount += 1;
-            tableOptions.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-        }
+            => _optionEditor.Clear();
 
         private void btnStart_Click(object sender, EventArgs e)
         {
@@ -217,58 +176,5 @@ namespace Simulant.UI
             btnEnd.Enabled = hasHost && (isRunning || hasPendingCleanup);
         }
 
-        #region Copy Style from dummy controls
-
-        internal void ApplyLabelStyle(Label label)
-        {
-            CopyCommonStyle(dummyLblTxt, label);
-        }
-
-        internal void ApplyCheckBoxStyle(CheckBox checkBox)
-        {
-            CopyCommonStyle(dummyChk, checkBox);
-
-            checkBox.AutoSize = dummyChk.AutoSize;
-            checkBox.TextAlign = dummyChk.TextAlign;
-            checkBox.UseVisualStyleBackColor = dummyChk.UseVisualStyleBackColor;
-        }
-
-        internal void ApplyTextBoxStyle(TextBox textBox)
-        {
-            CopyCommonStyle(dummyTxt, textBox);
-        }
-
-        internal void ApplyComboBoxStyle(ComboBox comboBox)
-        {
-            CopyCommonStyle(dummyCbx, comboBox);
-
-            comboBox.DropDownHeight = dummyCbx.DropDownHeight;
-            comboBox.DropDownStyle = dummyCbx.DropDownStyle;
-            comboBox.FormattingEnabled = dummyCbx.FormattingEnabled;
-            comboBox.IntegralHeight = dummyCbx.IntegralHeight;
-            comboBox.TabStop = dummyCbx.TabStop;
-        }
-
-        internal void ApplyNumericUpDownStyle(NumericUpDown num)
-        {
-            CopyCommonStyle(dummyNud, num);
-        }
-
-        private static void CopyCommonStyle(Control source, Control target)
-        {
-            if (source == null || target == null)
-                return;
-
-            target.Anchor = source.Anchor;
-            target.AutoSize = source.AutoSize;
-            target.Dock = source.Dock;
-            target.Margin = source.Margin;
-            target.Padding = source.Padding;
-            target.ResetFont();
-            target.ResetForeColor();
-            target.ResetBackColor();
-        }
-
-        #endregion Copy Style from dummy controls
     }
 }

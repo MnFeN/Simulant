@@ -14,6 +14,7 @@ namespace Simulant.Core.Entity
         public bool IsAlive => _registry.IsAlive(this);
         public uint Id { get; }
         public IntPtr Address { get; }
+        public Simulant.Game.FFCS.Client.Game.Object.ObjectKind ObjectKind { get; }
 
         internal EntityBase(EntityRegistry registry, EntityIdentity identity, EntityObservation observation)
         {
@@ -21,6 +22,7 @@ namespace Simulant.Core.Entity
             Identity = identity;
             Id = observation.EntityId;
             Address = observation.Address;
+            ObjectKind = observation.ObjectKind;
         }
 
         public void SetReadyToDraw() { }
@@ -89,6 +91,14 @@ namespace Simulant.Core.Entity
         }
 
         public Simulant.Game.FFCS.Client.Game.Character.Job Job { get; set; }
+        public uint HP { get; set; } = 10000;
+        public bool IsTargetable { get; set; } = true;
+        public bool IsWeaponDrawn { get; set; }
+        public void SetNetworkTarget(Character target) { }
+        internal void SetCastTarget(Character target) { }
+        public void ExecuteActionEffect(uint actionId, Character target) { }
+        public IntPtr ActorControl(Simulant.Game.ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
+        { return IntPtr.Zero; }
         internal byte[] NameBytes = new byte[64];
         internal Action BeforeNameWrite, AfterNameWrite;
         internal byte[] ReadNameBytes()
@@ -326,6 +336,7 @@ namespace Simulant.Game.ExtractedCsv.Rows
     {
         public int Index { get; set; }
         public float CastTime { get; set; }
+        public sbyte Range { get; set; }
         public ushort OmenId { get; set; }
         public short AnimationEndId { get; set; }
         public byte ShapeType { get; set; }

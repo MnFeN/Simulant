@@ -150,6 +150,7 @@ namespace Simulant.Content.U7b.Presets
 
         private void StartMechanic(SimActor boss, Character me, List<int> leftOrder, List<int> rightOrder)
         {
+            EntityManager.SetCombatTarget(boss);
             if (EnableAuxiliaryLines)
             {
                 CreateAuxiliaryLines();
@@ -183,7 +184,7 @@ namespace Simulant.Content.U7b.Presets
 
                 if (UseSpreadDummies)
                 {
-                    SpreadPartyMembers(me, 5.1f);
+                    SpreadPartyMembers(me, 5.1f, moving: true);
                 }
             }, "分散读条与队友走位");
 
@@ -358,7 +359,7 @@ Color: 1, 1, 1, 0.5";
             }
         }
 
-        private void SpreadPartyMembers(Character me, float minDistance)
+        private void SpreadPartyMembers(Character me, float minDistance, bool moving = false)
         {
             var myPos = me.Pos;
             var members = new List<SimActor>();
@@ -370,13 +371,20 @@ Color: 1, 1, 1, 0.5";
             }
 
             // 整组位置全部通过校验后再移动队友，布置失败时由会话统一清理。
-            var positions = PlanSpreadPositions(myPos, members.Count, minDistance, new Random());
+            var positions = PlanSpreadPositions(myPos, members.Count, minDistance, new Random(),
+                moving ? members.Select(member => member.Pos).ToArray() : null, maxTravel: 28.5f);
             for (var i = 0; i < members.Count; i++)
             {
                 var member = members[i];
                 var pos = positions[i];
-                member.Pos = pos;
-                member.Heading = (float)(PI + Atan2(pos.X - myPos.X, pos.Y - myPos.Y));
+                if (moving)
+                    member.MoveForMechanic(pos, Scheduler.ElapsedSeconds + 5.3,
+                        Scheduler.ElapsedSeconds + 6, urgent: true);
+                else
+                {
+                    member.Pos = pos;
+                    member.Heading = (float)(PI + Atan2(pos.X - myPos.X, pos.Y - myPos.Y));
+                }
             }
         }
 

@@ -15,6 +15,8 @@ namespace Simulant.Game.FFCS.Client.Game.Character
 
         public ActionTimelineSequencer TimelineSequencer => Ptr.As<ActionTimelineSequencer>(0x10);
         public MemoryField<byte> ModelState => Ptr.Field<byte>(0x2C0);
+        // FFCS：Flags3 的第 6 位表示武器已经拔出；只读状态，拔刀仍走 ActorControl。
+        public MemoryBitField IsWeaponDrawn => Ptr.BitField(0x34E, 6);
 
         public MemoryField<float> OverallSpeed => Ptr.Field<float>(0x2C8); // The overall speed which is applied to all slots as well as things like particles attached to the owner
         public MemoryField<ushort> BaseOverride => Ptr.Field<ushort>(0x2E6); // Forces base animation when character is in a Normal or AnimLock state

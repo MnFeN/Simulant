@@ -20,6 +20,8 @@ namespace Simulant.Simulation.Runtime
         private SimScheduler _scheduler;
         private SimCastController _casts;
         private SimMovementController _movement;
+        private SimActorBehaviorController _behaviors;
+        public SimActorBehaviorOptions PlayerBehavior { get; set; } = new SimActorBehaviorOptions();
         private bool _acceptingEntities;
         private bool _isClearing;
         private SimPartyService _partyService;
@@ -66,10 +68,12 @@ namespace Simulant.Simulation.Runtime
                         throw new InvalidOperationException("更换调度器前必须清理本次模拟。");
                     _casts?.Dispose();
                     _movement?.Dispose();
+                    _behaviors?.Dispose();
                     _scheduler = value;
                     _networkGeneration++;
                     _casts = new SimCastController(value);
                     _movement = new SimMovementController(value);
+                    _behaviors = new SimActorBehaviorController(value, _movement, _casts);
                     _acceptingEntities = true;
                 }
             }
@@ -103,7 +107,22 @@ namespace Simulant.Simulation.Runtime
                 if (!target.IsActive || _partyService?.IsOwnedBy(this) != true)
                     throw new InvalidOperationException("请先显示模拟小队并指定有效目标。");
                 _partyService.SetEnmity(this, target.Id, Party, enmity);
+                SetCombatTarget(target);
                 SchedulePartyEnmity();
+            }
+        }
+
+        /// <summary>设置假玩家的共同战斗目标；只允许本会话拥有的网络战斗 NPC，空值表示离开战斗。</summary>
+        public void SetCombatTarget(SimActor target)
+        {
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                if (target != null && (!target.IsActive || !_owned.Contains(target.Entity) ||
+                    target.Entity.ObjectKind != Simulant.Game.FFCS.Client.Game.Object.ObjectKind.BattleNpc ||
+                    target.Entity.Identity.Slot < 2 || target.Entity.Identity.Slot >= 200 || (target.Entity.Identity.Slot & 1) != 0))
+                    throw new ArgumentException("战斗目标必须是本会话拥有的有效网络战斗 NPC。", nameof(target));
+                _behaviors.SetTarget(target);
             }
         }
 
@@ -148,7 +167,11 @@ namespace Simulant.Simulation.Runtime
             lock (_gate)
             {
                 _owned.Add(entity);
-                return Attach(entity);
+                var actor = Attach(entity);
+                if (entity.ObjectKind == Simulant.Game.FFCS.Client.Game.Object.ObjectKind.Pc &&
+                    entity.Identity.Slot >= 2 && entity.Identity.Slot < 200 && (entity.Identity.Slot & 1) == 0)
+                    _behaviors.Add(actor, PlayerBehavior);
+                return actor;
             }
         }
 
@@ -267,6 +290,7 @@ namespace Simulant.Simulation.Runtime
             }
             try
             {
+                _behaviors?.Dispose();
                 foreach (var pending in networkSpawns)
                     if (pending.Actor == null && TryCleanup(() => _spawner.CancelNetworkCharacter(pending.Request)))
                         lock (_gate) _networkSpawns.Remove(pending);

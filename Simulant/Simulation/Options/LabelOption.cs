@@ -12,7 +12,7 @@ namespace Simulant.Simulation.Options
             _hint = hint;
         }
 
-        protected override Control CreateControl(PresetControl presetControl)
+        protected override Control CreateControl(OptionEditor editor)
         {
             return null; // No control, just a label
         }

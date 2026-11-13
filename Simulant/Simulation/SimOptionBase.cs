@@ -14,24 +14,24 @@ namespace Simulant.Simulation
         public Label Label { get; protected set; }
         public Control Control { get; protected set; }
 
-        protected virtual Label CreateLabel(PresetControl presetControl)
+        protected virtual Label CreateLabel(OptionEditor editor)
         {
             var label = new Label
             {
                 Text = _labelText,
             };
-            presetControl.ApplyLabelStyle(label);
+            editor.ApplyStyle(label);
             return label;
         }
 
-        protected abstract Control CreateControl(PresetControl presetControl);
+        protected abstract Control CreateControl(OptionEditor editor);
 
-        internal virtual void CreateUI(PresetControl presetControl, ToolTip toolTip)
+        internal virtual void CreateUI(OptionEditor editor, ToolTip toolTip)
         {
-            Label = CreateLabel(presetControl);
-            Control = CreateControl(presetControl);
+            Label = CreateLabel(editor);
+            Control = CreateControl(editor);
 
-            var table = presetControl.tableOptions;
+            var table = editor.Table;
             table.RowCount += 1;
             table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             table.Controls.Add(Label, 0, table.RowCount - 1);

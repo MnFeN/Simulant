@@ -16,6 +16,32 @@ namespace Simulant.Tests
     {
         private const int TimeoutMs = 5000;
 
+        internal static void SessionsUseIndependentSnapshotsOfGlobalBehavior()
+        {
+            var host = new PluginHost();
+            host.Configuration.SimulatedParty.AttackTarget = false;
+            host.Configuration.SimulatedParty.IdleRadius = 1.7;
+            using (var firstProbe = new SessionProbe())
+            using (var secondProbe = new SessionProbe())
+            using (var first = CreateSession(host, firstProbe))
+            using (var second = CreateSession(host, secondProbe))
+            {
+                first.Start();
+                second.Start();
+                var firstOptions = firstProbe.Logic.EntityManager.PlayerBehavior;
+                var secondOptions = secondProbe.Logic.EntityManager.PlayerBehavior;
+                Assert(!firstOptions.AttackTarget && !secondOptions.AttackTarget && firstOptions.IdleRadius == 1.7 && secondOptions.IdleRadius == 1.7,
+                    "不同预设的会话应读取同一份全局行为设置。");
+                Assert(!ReferenceEquals(firstOptions, secondOptions) && !ReferenceEquals(firstOptions, host.Configuration.SimulatedParty),
+                    "各会话必须保留独立快照，不能共享可变行为对象。");
+                host.Configuration.SimulatedParty.IdleRadius = 2.1;
+                Assert(firstOptions.IdleRadius == 1.7 && secondOptions.IdleRadius == 1.7, "更新全局设置不能改变已经开始的模拟。");
+                first.Stop();
+                first.Start();
+                Assert(firstProbe.Logic.EntityManager.PlayerBehavior.IdleRadius == 2.1, "再次开始模拟应读取新保存的设置。");
+            }
+        }
+
         internal static void SessionFailurePreservesSceneUntilExplicitStop()
         {
             using (var probe = new SessionProbe())
@@ -702,6 +728,7 @@ namespace Simulant.Core
 {
     public sealed class PluginHost
     {
+        internal Configuration Configuration { get; set; } = new Configuration();
         internal readonly Entity.EntitySpawner EntitySpawner = new Entity.EntitySpawner();
         internal readonly ConcurrentQueue<string> Errors = new ConcurrentQueue<string>();
         internal void LogError(string message) => Errors.Enqueue(message);

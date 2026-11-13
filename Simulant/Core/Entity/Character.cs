@@ -64,6 +64,25 @@ namespace Simulant.Core.Entity
         public Job Job { get => Native.ClassJob; set => Native.ClassJob.Set(value); }
         public CharacterModes Mode => Native.Mode;
         public byte ModeParam => Native.ModeParam;
+        public bool IsWeaponDrawn => Native.Timeline.IsWeaponDrawn;
+
+        /// <summary>通过 ActorControlTarget 更新角色的攻击目标；空目标表示取消选择。</summary>
+        public void SetNetworkTarget(Character target)
+        {
+            var id = target == null ? 0xE0000000u : (uint)target.Native.EntityId;
+            // Sapphire Chara::changeTarget：目标位于包尾 targetId，不能填在 a1 中。
+            // https://github.com/SapphireServer/Sapphire/blob/master/src/world/Actor/Chara.cpp
+            PacketDispatcher.HandleActorControl(Native.EntityId, ActorControlCategory.SetTarget,
+                0, 0, 0, 0, 0, 0, 0, 0, id, 0);
+        }
+
+        internal void SetCastTarget(Character target)
+        {
+            var native = target.Native;
+            var cast = Native.CastInfo;
+            cast.TargetId.Set(new GameObjectId { ObjectId = target.Id });
+            cast.TargetLocation.Set(native.Position);
+        }
         public uint CastingActionId
         {
             get

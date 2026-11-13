@@ -94,7 +94,7 @@ namespace Simulant.Content.U7b.Presets
                 _markers[i] = _plan.InitialMarkers[i];
                 _triggered[i] = new List<int>();
             }
-            _host.LogSim($"[遗弃末世] 你的职能为 {Roles[_selfSlot]}，{(_plan.GroupA[_selfSlot] ? "A 组（1238）" : "B 组（4567）")}，初始{MarkerName(_plan.InitialMarkers[_selfSlot])}；假队员正常跑速，最后一秒就位。");
+            _host.LogSim($"[遗弃末世] 你的职能为 {Roles[_selfSlot]}，{(_plan.GroupA[_selfSlot] ? "A 组（1238）" : "B 组（4567）")}，初始{MarkerName(_plan.InitialMarkers[_selfSlot])}；假队员自行安排走位，在目标时间前到达。");
 
             timeline.At(0, () => GeneratePartyMembers(_selfSlot + 1, PrepareEnemies), "准备遗弃末世小队");
         }
@@ -102,9 +102,10 @@ namespace Simulant.Content.U7b.Presets
         private void PrepareEnemies()
         {
             // 开场全队按职能预站位；进入机制后只控制假队员，真实玩家自行走位。
+            var random = new Random();
             for (var i = 0; i < 8; i++)
             {
-                Party[i].Pos = ForsakenPlan.InitialPosition(i);
+                Party[i].Pos = ForsakenPlan.InitialPosition(i, SimJobActions.For(Party[i].Job)?.Melee == true).Sample(random);
                 Party[i].Heading = Heading(Party[i].Pos, ForsakenPlan.Center);
             }
 

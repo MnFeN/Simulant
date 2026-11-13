@@ -1,3 +1,4 @@
+using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Options;
 using System;
 using System.Linq;
@@ -37,54 +38,219 @@ namespace Simulant.Content.U7b.Presets
         internal const float TowerRadius = 4;
         internal const float SpellRadius = 5;
         internal const int MemberCount = 8;
-
-        // 正北为前方；每组两人间隔两米，避免头顶点名重叠。
-        private static readonly Vector2[] InitialOffsets =
+        private const float TowerEdgeMargin = 0.05f;
+        private static readonly Vector2[] LocalTowerCenters =
         {
-            new Vector2(-6, -5), new Vector2(6, -5), new Vector2(-4, -5), new Vector2(4, -5),
-            new Vector2(-6, 5), new Vector2(6, 5), new Vector2(-4, 5), new Vector2(4, 5),
+            new Vector2(-(float)Math.Sqrt(32), (float)Math.Sqrt(32)),
+            new Vector2((float)Math.Sqrt(32), (float)Math.Sqrt(32)),
         };
 
-        internal static Vector2 InitialPosition(int slot)
+        // 参考点 (94.16974, 105.0749)、(95.60394, 103.6675) 的平均方向取最近的三度倍数。
+        private const double InitialDirection = -51 * Math.PI / 180;
+
+        internal static SimPosition InitialPosition(int slot, bool melee)
         {
             if (slot < 0 || slot >= MemberCount) throw new ArgumentOutOfRangeException(nameof(slot), "职能下标必须在 0 至 7 之间。");
-            return Center + InitialOffsets[slot];
+            var direction = slot < 4 ? InitialDirection : InitialDirection / 3;
+            if (slot % 2 != 0) direction = -direction;
+            return SimPosition.AnnularSector(Center, melee ? 5 : 7, direction, 1, Math.Abs(InitialDirection) / 6);
         }
 
         // 全部数组均使用 MT、ST、H1、H2、D1、D2、D3、D4 的零起始下标。
         private static readonly int[] Partners = { 2, 3, 0, 1, 6, 7, 4, 5 };
         private static readonly bool[] GroupAByRound = { true, true, true, false, false, false, false, true };
-        private static readonly Vector2[] OddSoakers =
+        private static readonly SimPosition[] OddSoakers =
         {
-            new Vector2(-5.66f, 9.16f), new Vector2(2.20f, 6.50f),
-            new Vector2(-6.30f, 4.70f), new Vector2(8.19f, 3.66f),
+            TowerCircle(new Vector2(-5.66f, 9.16f), 0), TowerCircle(new Vector2(2.20f, 6.50f), 1),
+            TowerCircle(new Vector2(-6.30f, 4.70f), 0), TowerCircle(new Vector2(8.19f, 3.66f), 1),
         };
-        private static readonly Vector2[] OddHelpers =
+        private static readonly SimPosition[] OddHelpers =
         {
             // 沿用用户修正后的左侧分摊闲人点位，避开半场刀覆盖。
-            new Vector2(-10.14f, 5.11f), new Vector2(-5.66f, 11.66f),
-            new Vector2(8.70f, 2.34f), new Vector2(9.59f, 3.45f),
+            TowerCircle(new Vector2(-10.14f, 5.11f)), TowerCircle(new Vector2(-5.66f, 11.66f)),
+            // 右侧近战使用左侧坦克的镜像点；远程沿右塔同一圆周向后移动两米。
+            TowerCircle(new Vector2(10.14f, 5.11f)), TowerCircle(AlongTower(new Vector2(10.14f, 5.11f), 1, 2)),
         };
-        private static readonly Vector2[] OddMeleeSoakers =
+        private static readonly SimPosition[] OddMeleeSoakers =
         {
-            new Vector2(-8, 8), new Vector2(8.13f, 8.13f),
-            new Vector2(-4.95f, 4.95f), new Vector2(5.66f, 2.16f),
+            TowerCircle(new Vector2(-8, 8), 0), TowerCircle(new Vector2(8.13f, 8.13f), 1),
+            TowerCircle(new Vector2(-4.95f, 4.95f), 0),
+            TowerCircle(new Vector2(5.66f, 2.16f) + Vector2.Normalize(new Vector2(-1, 1)), 1),
         };
-        private static readonly Vector2[] OddMeleeHelpers =
+        private static readonly SimPosition[] OddMeleeHelpers =
         {
-            new Vector2(-2.45f, 2.45f), new Vector2(-9, 9),
-            new Vector2(2.25f, 2.65f), new Vector2(2.65f, 2.25f),
+            TowerCircle(new Vector2(-2.45f, 2.45f)), TowerCircle(new Vector2(-9, 9)),
+            TowerCircle(new Vector2(2.25f, 2.65f)), TowerCircle(new Vector2(2.65f, 2.25f)),
         };
-        private static readonly Vector2[] EvenSoakers =
+        private static readonly Vector2[] EvenLeftOffsets = { new Vector2(-9.51f, 6.27f), new Vector2(-8.30f, 8.52f) };
+        private static readonly SimPosition[] EvenSoakers =
         {
-            new Vector2(-9.51f, 6.27f), new Vector2(-8.30f, 8.52f),
-            new Vector2(4.71f, 7.72f), new Vector2(8.69f, 3.22f),
+            // 两个扇环分别向彼此收进半个展角，外侧角边界仍经过各自原点位。
+            TowerArc(EvenLeftOffsets[0], 0, TowerRadius - 0.35f, 0.25f, EvenLeftOffsets[1]),
+            TowerArc(EvenLeftOffsets[1], 0, TowerRadius - 0.35f, 0.25f, EvenLeftOffsets[0]),
+            TowerCircle(new Vector2(4.71f, 7.72f), 1), TowerArc(new Vector2(8.69f, 3.22f), 1, TowerRadius - 0.5f, 0.4f),
         };
-        private static readonly Vector2[] EvenHelpers =
+        private static readonly SimPosition[] EvenHelpers =
         {
-            new Vector2(-1.90f, -3.50f), new Vector2(-3.20f, 2.40f),
-            new Vector2(3.97f, -3.55f), new Vector2(3.20f, 2.40f),
+            TowerCircle(new Vector2(-1.90f, -3.50f)), TowerArc(new Vector2(-3.20f, 2.40f), 0, TowerRadius + 0.5f, 0.4f),
+            TowerCircle(new Vector2(3.97f, -3.55f)), TowerArc(new Vector2(3.20f, 2.40f), 1, TowerRadius + 0.5f, 0.4f),
         };
+
+        static ForsakenPlan()
+        {
+            ConstrainSpellTolerances(OddSoakers, OddHelpers, true);
+            ConstrainSpellTolerances(OddMeleeSoakers, OddMeleeHelpers, true);
+            ConstrainSpellTolerances(EvenSoakers, EvenHelpers, false);
+        }
+
+        /// <summary>从一米圆形容差开始收缩，整个范围与两座塔的边界都至少相隔五厘米。</summary>
+        private static SimPosition TowerCircle(Vector2 position, int insideTower = -1)
+        {
+            var radius = 1f;
+            for (var tower = 0; tower < LocalTowerCenters.Length; tower++)
+            {
+                var distance = Vector2.Distance(position, LocalTowerCenters[tower]);
+                radius = Math.Min(radius, tower == insideTower
+                    ? TowerRadius - TowerEdgeMargin - distance
+                    : distance - TowerRadius - TowerEdgeMargin);
+            }
+            if (radius < 0) throw new InvalidOperationException("遗弃末世点位未留足塔边界余量，无法定义圆形容差。");
+            return SimPosition.Ellipse(position, radius);
+        }
+
+        /// <summary>按原点位确定角度；最外半径处的切向半宽为半米，可向另一点收进半个展角。</summary>
+        private static SimPosition TowerArc(Vector2 position, int tower, float radius, float radialTolerance, Vector2? towards = null)
+        {
+            var center = LocalTowerCenters[tower];
+            var heading = Math.Atan2(position.X - center.X, position.Y - center.Y);
+            var halfAngle = Math.Asin(0.5 / (radius + radialTolerance));
+            if (towards.HasValue)
+            {
+                var other = towards.Value - center;
+                var difference = Math.IEEERemainder(Math.Atan2(other.X, other.Y) - heading, 2 * Math.PI);
+                heading += Math.Sign(difference) * halfAngle;
+            }
+            return SimPosition.AnnularSector(center, radius, heading, radialTolerance, halfAngle);
+        }
+
+        private static Vector2 AlongTower(Vector2 position, int tower, float arcLength)
+        {
+            var offset = position - LocalTowerCenters[tower];
+            var angle = arcLength / offset.Length();
+            return LocalTowerCenters[tower] + new Vector2(
+                (float)(offset.X * Math.Cos(angle) - offset.Y * Math.Sin(angle)),
+                (float)(offset.X * Math.Sin(angle) + offset.Y * Math.Cos(angle)));
+        }
+
+        /// <summary>只在初始化时收缩三套固定布局；运行时各人独立取点，不重抽队伍或改变判定。</summary>
+        private static void ConstrainSpellTolerances(SimPosition[] soakers, SimPosition[] helpers, bool odd)
+        {
+            var original = soakers.Concat(helpers).ToArray();
+            var reference = original.Select(position => position.Midpoint()).ToArray();
+            var fanCount = odd ? 1 : 2;
+            var baits = Enumerable.Range(0, fanCount).Select(source => Enumerable.Range(0, MemberCount)
+                .Where(slot => slot != source).OrderBy(slot => Vector2.DistanceSquared(reference[source], reference[slot])).First()).ToArray();
+            var expected = new bool[4, MemberCount];
+            for (var source = fanCount; source < 4; source++)
+                for (var slot = 0; slot < MemberCount; slot++)
+                    expected[source, slot] = Vector2.Distance(reference[source], reference[slot]) <= SpellRadius;
+
+            var scales = new float[MemberCount];
+            Func<SimPosition[]> build = () => original.Select((position, slot) =>
+            {
+                double? heading = null;
+                if (!odd && slot < 2)
+                {
+                    // 缩角时仍固定踩一、踩二外侧的角边界，不能悄悄离开原点位对应的射线。
+                    var edge = EvenLeftOffsets[slot] - LocalTowerCenters[0];
+                    var angle = Math.Atan2(edge.X, edge.Y);
+                    heading = angle + Math.IEEERemainder(position.Heading - angle, 2 * Math.PI) * scales[slot];
+                }
+                return position.ScaleTolerance(scales[slot], heading);
+            }).ToArray();
+            Func<bool> safe = () => IndependentSpellsAreSafe(build(), odd, baits, expected);
+            if (!safe()) throw new InvalidOperationException("遗弃末世布局在零容差下仍存在重复受击，需先修正点位。");
+
+            // 先保留共同可用比例，再分别放宽各点，避免一个紧张的点位压缩所有人的容差。
+            var lower = 0f;
+            var upper = 1f;
+            for (var iteration = 0; iteration < 18; iteration++)
+            {
+                var scale = (lower + upper) * 0.5f;
+                for (var slot = 0; slot < MemberCount; slot++) scales[slot] = scale;
+                if (safe()) lower = scale; else upper = scale;
+            }
+            for (var slot = 0; slot < MemberCount; slot++) scales[slot] = lower;
+            for (var slot = 0; slot < MemberCount; slot++)
+            {
+                var min = scales[slot];
+                var max = 1f;
+                for (var iteration = 0; iteration < 18; iteration++)
+                {
+                    scales[slot] = (min + max) * 0.5f;
+                    if (safe()) min = scales[slot]; else max = scales[slot];
+                }
+                scales[slot] = min;
+            }
+            var constrained = build();
+            if (!IndependentSpellsAreSafe(constrained, odd, baits, expected))
+                throw new InvalidOperationException("遗弃末世容差收缩后仍无法保证独立取点安全。");
+            Array.Copy(constrained, 0, soakers, 0, soakers.Length);
+            Array.Copy(constrained, soakers.Length, helpers, 0, helpers.Length);
+        }
+
+        /// <summary>使用代表点周围的包围圆证明完整范围安全，而不是依赖少量随机样本碰巧通过。</summary>
+        private static bool IndependentSpellsAreSafe(SimPosition[] positions, bool odd, int[] baits, bool[,] expected)
+        {
+            const double margin = 0.05;
+            var points = positions.Select(position => position.Midpoint()).ToArray();
+            var deviation = positions.Select(position => position.DeviationRadius).ToArray();
+            for (var source = 0; source < 4; source++)
+            {
+                if (source >= baits.Length)
+                {
+                    for (var slot = 0; slot < MemberCount; slot++)
+                    {
+                        if (slot == source) continue;
+                        var distance = Vector2.Distance(points[source], points[slot]);
+                        var uncertainty = deviation[source] + deviation[slot];
+                        // 分摊必须始终带上指定队员，也必须始终排除后方引导扇形的闲人。
+                        if (expected[source, slot] ? distance + uncertainty > SpellRadius - margin
+                            : distance - uncertainty < SpellRadius + margin) return false;
+                    }
+                    continue;
+                }
+                var bait = baits[source];
+                var direction = points[bait] - points[source];
+                var distanceToBait = direction.Length();
+                var baitUncertainty = deviation[source] + deviation[bait];
+                // 独立偏移后的引导角度不超过既有三十度限制。
+                if (baitUncertainty > distanceToBait * 0.5 - margin) return false;
+                var baitAngle = Math.Asin(baitUncertainty / distanceToBait);
+                for (var slot = 0; slot < MemberCount; slot++)
+                {
+                    if (slot == source || slot == bait) continue;
+                    var other = points[slot] - points[source];
+                    var distance = other.Length();
+                    var uncertainty = deviation[source] + deviation[slot];
+                    if (distanceToBait + baitUncertainty + margin >= distance - uncertainty) return false;
+                    var angle = Math.Abs(Math.Atan2(direction.X * other.Y - direction.Y * other.X, Vector2.Dot(direction, other)));
+                    if (uncertainty >= distance || angle <= Math.PI / 4 + baitAngle + Math.Asin(uncertainty / distance) + 0.001)
+                        return false;
+                }
+            }
+            if (odd) return true;
+            for (var helper = 4; helper < MemberCount; helper++)
+                for (var slot = 0; slot < MemberCount; slot++)
+                {
+                    if (slot == helper) continue;
+                    if (Vector2.Distance(points[helper], points[slot]) - deviation[helper] - deviation[slot] < SpellRadius + margin)
+                        return false;
+                    if (slot < 4 && points[helper].Length() + deviation[helper] + margin >= points[slot].Length() - deviation[slot])
+                        return false;
+                }
+            return true;
+        }
 
         internal ForsakenMarker[] InitialMarkers { get; private set; }
         internal bool[] GroupA { get; private set; }
@@ -136,7 +302,7 @@ namespace Simulant.Content.U7b.Presets
                 var odd = index % 2 == 0;
                 var active = GroupAByRound[index] ? activeA : activeB;
                 var north = NormalizeDirection(initialNorth + rotation * index);
-                var localPositions = new Vector2[MemberCount];
+                var localPositions = new SimPosition[MemberCount];
                 var towerBySlot = Enumerable.Repeat(-1, MemberCount).ToArray();
                 for (var slot = 0; slot < MemberCount; slot++)
                 {
@@ -169,7 +335,7 @@ namespace Simulant.Content.U7b.Presets
 
                 // 同类头标以刚才踩塔时的左右顺序决定下一次的位置，不再按职业重新排序。
                 var nextActive = active.OrderBy(slot => MarkerOrder(markers[slot]))
-                    .ThenBy(slot => localPositions[slot].X).ThenBy(slot => slot).ToArray();
+                    .ThenBy(slot => localPositions[slot].Midpoint().X).ThenBy(slot => slot).ToArray();
                 if (GroupAByRound[index]) activeA = nextActive;
                 else activeB = nextActive;
 
@@ -178,14 +344,13 @@ namespace Simulant.Content.U7b.Presets
                 var bait = index == 7
                     ? Center + new Vector2(0, -8)
                     : Transform(new Vector2(0, future ? -8 : 8), nextNorth);
-                var diagonal = (float)Math.Sqrt(32);
                 plan.Rounds[index] = new ForsakenRoundPlan(
                     index + 1, north, (int[])active.Clone(), towerBySlot,
-                    localPositions.Select(position => Transform(position, north)).ToArray(),
-                    new[] { Transform(new Vector2(-diagonal, diagonal), north), Transform(new Vector2(diagonal, diagonal), north) },
+                    localPositions.Select(position => position.WithPosition(Transform(position.Pos, north))).ToArray(),
+                    LocalTowerCenters.Select(position => Transform(position, north)).ToArray(),
                     new[] { (byte)(NormalizeDirection(5 + north) + 1), (byte)(NormalizeDirection(3 + north) + 1) },
                     beforeMarkers, (ForsakenMarker[])markers.Clone(), beforeStacks, (int[])stacks.Clone(),
-                    future, bait, index == 7 && future ? Center + new Vector2(0, 8) : bait);
+                    future, bait, index == 7 && future ? Center + new Vector2(0, 5) : bait);
             }
 
             return plan;
@@ -240,8 +405,13 @@ namespace Simulant.Content.U7b.Presets
     {
         internal int Number { get; }
         internal int NorthDirection { get; }
+        /// <summary>本轮相对北在场地中的 ACT 朝向；点位范围使用它解释相对角度。</summary>
+        internal double NorthHeading => Math.PI - NorthDirection * Math.PI / 4;
         internal int[] Soakers { get; }
         internal int[] TowerBySlot { get; }
+        /// <summary>实际移动使用的容差范围；角度相对于 NorthHeading，不随中心坐标重复旋转。</summary>
+        internal SimPosition[] SafePositions { get; }
+        /// <summary>范围的代表落点，仅用于顺位、解法名单与诊断；不作为随机落点缓存。</summary>
         internal Vector2[] Positions { get; }
         internal Vector2[] TowerCenters { get; }
         internal byte[] TowerMapIndices { get; }
@@ -253,8 +423,16 @@ namespace Simulant.Content.U7b.Presets
         internal Vector2 BaitPosition { get; }
         internal Vector2 FinalDodgePosition { get; }
 
+        /// <summary>前三次按下一轮塔的相对北集合，最后一次按场地正北；最终前刀单独去背面圆形范围。</summary>
+        internal SimPosition GatheringPosition(bool melee, bool finalDodge = false)
+        {
+            if (Number == 8 && FutureEnd && finalDodge) return SimPosition.Ellipse(FinalDodgePosition, 3);
+            var heading = Number == 8 || FutureEnd ? Math.PI : 0;
+            return SimPosition.AnnularSector(ForsakenPlan.Center, melee ? 8 : 9.5f, heading, melee ? 1 : 1.5f, 8 * Math.PI / 180);
+        }
+
         internal ForsakenRoundPlan(int number, int northDirection, int[] soakers, int[] towerBySlot,
-            Vector2[] positions, Vector2[] towerCenters, byte[] towerMapIndices,
+            SimPosition[] safePositions, Vector2[] towerCenters, byte[] towerMapIndices,
             ForsakenMarker[] markersBefore, ForsakenMarker[] markersAfter, int[] stacksBefore, int[] stacksAfter,
             bool futureEnd, Vector2 baitPosition, Vector2 finalDodgePosition)
         {
@@ -262,7 +440,8 @@ namespace Simulant.Content.U7b.Presets
             NorthDirection = northDirection;
             Soakers = soakers;
             TowerBySlot = towerBySlot;
-            Positions = positions;
+            SafePositions = safePositions;
+            Positions = safePositions.Select(position => position.Midpoint(NorthHeading)).ToArray();
             TowerCenters = towerCenters;
             TowerMapIndices = towerMapIndices;
             MarkersBefore = markersBefore;

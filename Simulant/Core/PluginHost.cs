@@ -10,6 +10,7 @@ using Simulant.UI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,6 +36,8 @@ namespace Simulant.Core
         private volatile bool _disposeCompleted;
 
         internal PluginLog PluginLog = new PluginLog();
+        internal Configuration Configuration { get; private set; } = new Configuration();
+        internal string ConfigurationPath { get; } = Path.Combine(Application.StartupPath, "Config", "Simulant.config.xml");
 
         internal bool CsvReady { get; private set; }
         internal bool CsvLoading { get; private set; }
@@ -95,7 +98,8 @@ namespace Simulant.Core
                         SimEntityManager debugEntities = null;
                         try
                         {
-                            debugEntities = new SimEntityManager(EntitySpawner, ex => LogError("调试实体清理失败：" + ex));
+                            debugEntities = new SimEntityManager(EntitySpawner, ex => LogError("调试实体清理失败：" + ex))
+                            { PlayerBehavior = Configuration.SimulatedParty.Copy() };
                             debugEntities.Scheduler = debugScheduler;
                             debugScheduler.Start();
                         }
@@ -198,6 +202,16 @@ namespace Simulant.Core
             _statusLabel = pluginStatusText;
             pluginScreenSpace.Text = "仿生石";
 
+            try
+            {
+                Configuration = Simulant.Configuration.Load(ConfigurationPath);
+                if (!File.Exists(ConfigurationPath)) Configuration.Save(ConfigurationPath);
+            }
+            catch (Exception error)
+            {
+                LogError("读取或创建全局配置失败，本次使用默认设置，已有文件保持不变：" + error);
+            }
+
             _ui = new SimulantUI(this) { Dock = DockStyle.Fill };
             pluginScreenSpace.Controls.Add(_ui);
 
@@ -250,6 +264,15 @@ namespace Simulant.Core
                 CsvLoading = false;
                 _ui?.UpdateControlStates();
             }
+        }
+
+        internal void SaveConfiguration(Configuration configuration)
+        {
+            if (Disposed) throw new InvalidOperationException("插件已卸载，不能保存配置。");
+            var snapshot = configuration.Copy();
+            snapshot.Save(ConfigurationPath);
+            Configuration = snapshot;
+            LogRuntime("全局配置已保存，将用于下一次模拟。");
         }
 
         internal async Task InitAsync()

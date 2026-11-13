@@ -21,7 +21,7 @@ namespace Simulant.Simulation.Options
             _hint = hint;
         }
 
-        protected override Control CreateControl(PresetControl presetControl)
+        protected override Control CreateControl(OptionEditor editor)
         {
             var numericUpDown = new NumericUpDown
             {
@@ -30,7 +30,7 @@ namespace Simulant.Simulation.Options
                 DecimalPlaces = _decimalPlaces,
                 Value = (decimal)_default,
             }; 
-            presetControl.ApplyNumericUpDownStyle(numericUpDown);
+            editor.ApplyStyle(numericUpDown);
             return numericUpDown;
         }
 

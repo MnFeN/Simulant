@@ -42,6 +42,12 @@ namespace Simulant.UI
             await _host.InitAsync();
         }
 
+        private void btnConfiguration_Click(object sender, EventArgs e)
+        {
+            using (var form = new ConfigurationForm(_host, splitMainV.Font))
+                form.ShowDialog(this);
+        }
+
         internal void StopCurrentSession()
             => presetControl.StopCurrentSession();
 

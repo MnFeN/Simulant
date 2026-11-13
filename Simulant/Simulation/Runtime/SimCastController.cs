@@ -17,6 +17,7 @@ namespace Simulant.Simulation.Runtime
             public bool OmenVisible;
             public SimScheduledAction Completion;
             public SimScheduledAction PendingOmen;
+            public SimActor Target;
         }
 
         private readonly object _gate = new object();
@@ -34,7 +35,7 @@ namespace Simulant.Simulation.Runtime
             _log = log;
         }
 
-        public void Cast(SimActor actor, uint actionId, float? omenDelay = 0)
+        public void Cast(SimActor actor, uint actionId, float? omenDelay = 0, SimActor target = null)
         {
             if (actor == null) throw new ArgumentNullException(nameof(actor));
             if (omenDelay.HasValue && (float.IsNaN(omenDelay.Value) || float.IsInfinity(omenDelay.Value)))
@@ -51,12 +52,14 @@ namespace Simulant.Simulation.Runtime
                 {
                     ActionId = actionId,
                     EndsAt = _scheduler.ElapsedSeconds + action.CastTime,
-                    OmenTag = _tagPrefix + (++_castSequence)
+                    OmenTag = _tagPrefix + (++_castSequence),
+                    Target = target
                 };
                 _casts.Add(actor, state);
                 try
                 {
                     actor.Entity.SetCastInfo(actionId, action.CastTime);
+                    if (target != null) actor.Entity.SetCastTarget(target.Entity);
                     state.Completion = _scheduler.ScheduleAfter(action.CastTime,
                         () => Complete(actor, state, action), "技能 " + actionId + " 读条完成");
                     if (action.OmenId > 0 && omenDelay.HasValue)
@@ -78,7 +81,7 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        public void Execute(SimActor actor, uint actionId)
+        public void Execute(SimActor actor, uint actionId, SimActor target = null)
         {
             if (actor == null) throw new ArgumentNullException(nameof(actor));
             lock (_gate)
@@ -88,8 +91,21 @@ namespace Simulant.Simulation.Runtime
                 if (action == null) return;
                 CancelCore(actor);
                 if (_disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
-                ExecuteCore(actor, action);
+                ExecuteCore(actor, action, target);
             }
+        }
+
+        internal double Remaining(SimActor actor)
+        {
+            lock (_gate)
+                return _casts.TryGetValue(actor, out var state) ? Math.Max(0, state.EndsAt - _scheduler.ElapsedSeconds) : 0;
+        }
+
+        /// <summary>只取消自动战斗持有的带目标读条，保留副本显式开始的普通读条。</summary>
+        internal void CancelVisual(SimActor actor)
+        {
+            lock (_gate)
+                if (_casts.TryGetValue(actor, out var state) && state.Target != null) CancelCore(actor);
         }
 
         public void Cancel(SimActor actor)
@@ -135,15 +151,21 @@ namespace Simulant.Simulation.Runtime
                 if (!execute || _disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
                 // 清理预兆期间也可能有外部原生读条接管动画，必须重新读取当前技能。
                 var actionAfterCleanup = actor.Entity.CastingActionId;
-                if (actionAfterCleanup == 0 || actionAfterCleanup == state.ActionId) ExecuteCore(actor, action);
+                if (actionAfterCleanup == 0 || actionAfterCleanup == state.ActionId) ExecuteCore(actor, action, state.Target);
             }
         }
 
         private bool IsCurrent(SimActor actor, CastState state)
             => !_disposed && _casts.TryGetValue(actor, out var current) && ReferenceEquals(current, state);
 
-        private void ExecuteCore(SimActor actor, ActionRow action)
+        private void ExecuteCore(SimActor actor, ActionRow action, SimActor target = null)
         {
+            if (target != null)
+            {
+                if (target.IsActive && target.Entity.IsTargetable && target.Entity.HP != 0)
+                    actor.Entity.ExecuteActionEffect((uint)(int)action.Index, target.Entity);
+                return;
+            }
             if (action.AnimationEndId >= 0)
             {
                 actor.Entity.ResetBaseTimeline();

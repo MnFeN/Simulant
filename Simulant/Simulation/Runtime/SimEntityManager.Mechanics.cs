@@ -45,6 +45,7 @@ namespace Simulant.Simulation.Runtime
                 actors = _actors.Values.ToArray();
             }
             List<Exception> errors = null;
+            _behaviors?.Dispose();
             foreach (var mechanic in mechanics)
             {
                 try { mechanic.Interrupt(); }

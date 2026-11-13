@@ -34,7 +34,8 @@ namespace Simulant.Simulation.Runtime
 
         private const double TickIntervalSeconds = 0.016;
         private const double NetworkPollIntervalSeconds = 0.1;
-        private const float NetworkArrivalTolerance = 0.1f;
+        // 坐标量化在水平面的误差小于 2.2 厘米；不得用十厘米的提前完成吞掉机制边界余量。
+        internal const float NetworkArrivalTolerance = 0.025f;
         private readonly object _gate = new object();
         private readonly SimScheduler _scheduler;
         private readonly Action _onTick;

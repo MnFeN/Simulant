@@ -12,6 +12,7 @@ namespace Simulant.Simulation.Runtime
         private readonly PluginHost _host;
         private readonly SimLogicBase _logic;
         private readonly SimEntityManager _entityManager;
+        private readonly SimPresetBase _preset;
         private readonly object _lifecycleLock = new object();
         private SimScheduler _scheduler;
         private int _cleanupRequired;
@@ -24,6 +25,7 @@ namespace Simulant.Simulation.Runtime
         internal SimSession(PluginHost host, SimPresetBase preset)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
+            _preset = preset;
             _ = preset ?? throw new ArgumentNullException(nameof(preset));
             _ = preset.SimLogicType ?? throw new NullReferenceException($"{preset.GetType().Name} 预设类型未定义 SimLogicType，或 SimLogicType 为 null。");
 
@@ -59,7 +61,8 @@ namespace Simulant.Simulation.Runtime
                     _entityManager.Scheduler = _scheduler;
                     _logic.Scheduler = _scheduler;
                     Interlocked.Exchange(ref _cleanupRequired, 1);
-                    // UI 选项只在调用方读取；实体初始化与所有节点都在专用线程运行。
+                    // 行为来自插件全局配置；每次模拟取独立快照，不受窗口编辑或预设切换影响。
+                    _entityManager.PlayerBehavior = _host.Configuration.SimulatedParty.Copy();
                     _logic.Prepare();
                     _scheduler.Schedule(0, _logic.Start, "初始化模拟");
                     _scheduler.Start();

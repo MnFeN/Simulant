@@ -1,4 +1,6 @@
 using Simulant.Simulation.Mechanics;
+using Simulant.Simulation.Geometry;
+using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Linq;
@@ -58,15 +60,17 @@ namespace Simulant.Content.U7b.Presets
             // 奇数轮（第一轮除外）必须等前后刀全部锁面向；偶数轮则等待上一轮点名伤害结束。
             var earliest = TowerMovementAvailable(index);
             var arrival = TowerArrival(index);
-            var snapshotAt = TowerPositionSnapshot(index);
-            timeline.At(earliest, () => PlanPartyMovement(round.Positions, arrival, snapshotAt, $"第 {index + 1} 轮站位"),
-                $"倒排第 {index + 1} 轮队员出发时间");
+            timeline.At(earliest, () => PlanPartyMovement(round.SafePositions,
+                arrival, SpellHit[index] + 0.1, round.NorthHeading),
+                $"安排第 {index + 1} 轮队员站位");
             timeline.At(SpellHit[index], () => ResolveSpells(index), $"第 {index + 1} 轮钢铁、扇形与分摊判定");
         }
 
         private void AddEndAttacks(SimTimeline timeline, int pair)
         {
             var round = _plan.Rounds[pair * 2 + 1];
+            // 集合按下一轮塔的相对北布置；最后一轮集合与穿背使用场地正北。
+            var northHeading = pair < 3 ? _plan.Rounds[pair * 2 + 2].NorthHeading : Math.PI;
             timeline.At(EndCast[pair], () =>
             {
                 // 跳跃动作只改变表现位置；新一轮通过收包恢复中心与朝北面向。
@@ -105,41 +109,27 @@ namespace Simulant.Content.U7b.Presets
                         $"第 {pair + 1} 次隐藏复制体 {caster}");
                 }
             }
-            var firstLock = RowMin(CleaveLock, pair);
             timeline.At(SpellHit[pair * 2 + 1] + 0.15, () =>
-                PlanPartyMovement(Enumerable.Repeat(round.BaitPosition, 8).ToArray(), firstLock - 0.7, firstLock, "前后刀引导集合"),
-                $"倒排第 {pair + 1} 次前后刀集合");
+                PlanPartyMovement(Party.Select(actor => round.GatheringPosition(SimJobActions.For(actor.Job)?.Melee == true)).ToArray(),
+                    GatheringArrival(pair), RowMax(CleaveLock, pair), northHeading),
+                $"安排第 {pair + 1} 次前后刀集合");
             if (pair == 3 && round.FutureEnd)
             {
                 var firstHit = RowMin(CleaveHit, pair);
                 timeline.At(RowMax(CleaveLock, pair) + 0.1, () =>
-                    PlanPartyMovement(Enumerable.Repeat(round.FinalDodgePosition, 8).ToArray(), firstHit - 0.8, firstHit, "最后一次前刀穿背"),
+                    PlanPartyMovement(Party.Select(actor => round.GatheringPosition(SimJobActions.For(actor.Job)?.Melee == true, finalDodge: true)).ToArray(),
+                        firstHit, RowMax(CleaveHit, pair) + 0.2, northHeading, urgent: true),
                     "四名施法者锁定后安排最终穿背");
             }
         }
 
-        private void PlanPartyMovement(Vector2[] destinations, double arriveAt, double snapshotAt, string name)
+        private void PlanPartyMovement(SimPosition[] destinations, double arriveAt, double holdUntil, double northHeading, bool urgent = false)
         {
             for (var slot = 0; slot < 8; slot++)
             {
                 if (slot == _selfSlot) continue;
-                var actor = Party[slot];
-                var destination = destinations[slot];
-                var distance = Vector2.Distance(actor.Pos, destination);
-                if (distance <= 0.1f) continue;
-                var departure = _origin + Departure(actor.Pos, destination, arriveAt);
-                if (departure < Scheduler.ElapsedSeconds - 0.1)
-                    throw new InvalidOperationException($"{name}的移动窗口不足，{Roles[slot]}无法按正常跑速在最后一秒到达；请查看前一节点是否延迟。");
-                var member = slot;
-                Scheduler.Schedule(Math.Max(departure, Scheduler.ElapsedSeconds), () =>
-                    actor.MoveNetworkTo(destination, MoveSpeedParam, () =>
-                    {
-                        actor.FaceNetwork(Heading(actor.Pos, ForsakenPlan.Center));
-                        var remaining = _origin + snapshotAt - Scheduler.ElapsedSeconds;
-                        // 轮询只用于记录实际到位；判定始终在固定节点读取所有人的真实位置。
-                        if (remaining > 1.05 || remaining < 0)
-                            _host.LogWarning($"[遗弃末世] {Roles[member]}「{name}」到位偏差：距判定 {remaining:0.000} 秒。");
-                    }), Roles[slot] + "最后一秒就位：" + name);
+                // 解法只提供安全目的地和时间约束，出发、绕路、滑步与近战贪刀均由角色决定。
+                Party[slot].MoveForMechanic(destinations[slot], _origin + arriveAt, _origin + holdUntil, urgent, northHeading);
             }
         }
 

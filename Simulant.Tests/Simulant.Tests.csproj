@@ -17,10 +17,14 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Xml" />
     <Compile Include="Program.cs" />
+    <Compile Include="ConfigurationTests.cs" />
+    <Compile Include="..\Simulant\Configuration.cs"><Link>Configuration.cs</Link></Compile>
     <Compile Include="SessionTests.cs" />
     <Compile Include="EntityTests.cs" />
     <Compile Include="MovementTests.cs" />
+    <Compile Include="BehaviorMovementTests.cs" />
     <Compile Include="CastTests.cs" />
     <Compile Include="ManagerTests.cs" />
     <Compile Include="SessionStatusTests.cs" />
@@ -36,6 +40,7 @@
     <Compile Include="ForsakenTimingTests.cs" />
     <Compile Include="ForsakenMechanicTests.cs" />
     <Compile Include="ActionAreaTests.cs" />
+    <Compile Include="PositionToleranceTests.cs" />
     <Compile Include="MechanicTests.cs" />
     <Compile Include="ZonePhaseTests.cs" />
     <Compile Include="FirewallTests.cs" />
@@ -58,6 +63,9 @@
     <Compile Include="..\Simulant\Core\Entity\EntityIdentity.cs"><Link>Entity\EntityIdentity.cs</Link></Compile>
     <Compile Include="..\Simulant\Core\Entity\EntityRegistry.cs"><Link>Entity\EntityRegistry.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimActor.cs"><Link>Runtime\SimActor.cs</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimActorBehavior*.cs"><Link>Runtime\%(Filename)%(Extension)</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimJobActions.cs"><Link>Runtime\SimJobActions.cs</Link></Compile>
+    <Compile Include="..\Simulant\Game\ActorControlCategory.cs"><Link>Game\ActorControlCategory.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimCastController.cs"><Link>Runtime\SimCastController.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimOmenRenderer.cs"><Link>Runtime\SimOmenRenderer.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.cs"><Link>Runtime\SimEntityManager.cs</Link></Compile>

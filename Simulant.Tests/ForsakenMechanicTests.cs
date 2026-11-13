@@ -25,10 +25,14 @@ namespace Simulant.Tests
             {
                 for (var seed = 0; seed < 64; seed++)
                 {
-                    var plan = ForsakenPlan.Create(new Random(seed));
+                    var byRole = (seed & 2) == 0;
+                    var plan = ForsakenPlan.Create(new Random(seed), optimizeMelee: (seed & 1) != 0, helpersByRole: byRole);
+                    var swapped = !byRole && !plan.InitialMarkers.Take(4).Any(marker => marker == ForsakenMarker.Fan);
+                    var random = new Random(seed + 314159);
+                    for (var sample = 0; sample < 3; sample++)
                     foreach (var round in plan.Rounds)
                     {
-                        scene.Place(round);
+                        scene.Place(round, sample == 0 ? null : random);
                         var description = $"随机种子 {seed}，第 {round.Number} 轮：";
                         var towers = scene.Resolve(new MechanicGroup(CreateTowers(round)));
                         Assert(towers.Success, description + "实际塔判定失败：" + towers.Reason);
@@ -45,12 +49,16 @@ namespace Simulant.Tests
                         {
                             var source = round.Soakers[index];
                             var result = spells.Children[index];
-                            var expected = ExpectedSpellParticipants(round, source).ToArray();
+                            var expected = ExpectedSpellParticipants(round, source, swapped).ToArray();
                             AssertSlots(result.Participants, expected, description + "点名的实际受击成员不符合站位职责。");
                             if (round.MarkersBefore[source] == ForsakenMarker.Fan)
                             {
                                 Assert(fanTargets[source] == expected.Single(), description + "扇形应朝向最近的其他成员。");
                                 Assert(result.Participants.All(member => member.Actor != scene.Party[source]), description + "扇形不能把来源自己算作受击者。");
+                                var intended = round.Positions[expected.Single()] - round.Positions[source];
+                                var expectedHeading = Math.Atan2(intended.X, intended.Y);
+                                Assert(Math.Abs(Math.IEEERemainder(result.Heading - expectedHeading, 2 * Math.PI)) <= Math.PI / 6,
+                                    description + "容差内独立取点不应触发三十度扇形偏离报错。");
                             }
                             foreach (var participant in result.Participants) hits[participant.Slot]++;
                         }
@@ -147,18 +155,18 @@ namespace Simulant.Tests
         }
 
         // 预期集合依据解法中的角色职责给出；不再实现另一套圆或扇形数学判定。
-        private static IEnumerable<int> ExpectedSpellParticipants(ForsakenRoundPlan round, int source)
+        private static IEnumerable<int> ExpectedSpellParticipants(ForsakenRoundPlan round, int source, bool swapped = false)
         {
             var marker = round.MarkersBefore[source];
             var helpers = Enumerable.Range(0, 8).Where(slot => round.TowerBySlot[slot] < 0).ToArray();
             if (marker == ForsakenMarker.Fan)
                 return new[] { round.Number % 2 == 0
                     ? round.Soakers.Single(slot => slot != source && round.MarkersBefore[slot] == ForsakenMarker.Fan)
-                    : helpers.Single(slot => slot / 2 == 1) };
+                    : helpers.Single(slot => slot / 2 == (swapped ? 3 : 1)) };
             if (marker == ForsakenMarker.Circle) return new[] { source };
             if (round.TowerBySlot[source] == 0)
-                return new[] { source, round.Soakers.Single(slot => round.MarkersBefore[slot] == ForsakenMarker.Fan), helpers.Single(slot => slot / 2 == 0) };
-            return new[] { source, helpers.Single(slot => slot / 2 == 2), helpers.Single(slot => slot / 2 == 3) };
+                return new[] { source, round.Soakers.Single(slot => round.MarkersBefore[slot] == ForsakenMarker.Fan), helpers.Single(slot => slot / 2 == (swapped ? 2 : 0)) };
+            return new[] { source, helpers.Single(slot => slot / 2 == (swapped ? 0 : 2)), helpers.Single(slot => slot / 2 == (swapped ? 1 : 3)) };
         }
 
         private sealed class Scene : IDisposable
@@ -181,9 +189,10 @@ namespace Simulant.Tests
                 if (startScheduler) _scheduler.Start();
             }
 
-            internal void Place(ForsakenRoundPlan round)
+            internal void Place(ForsakenRoundPlan round, Random random = null)
             {
-                for (var slot = 0; slot < Party.Length; slot++) Party[slot].Pos = round.Positions[slot];
+                for (var slot = 0; slot < Party.Length; slot++) Party[slot].Pos = random == null
+                    ? round.Positions[slot] : round.SafePositions[slot].Sample(random, round.NorthHeading);
             }
 
             internal MechanicResult Resolve(MechanicGroup group)

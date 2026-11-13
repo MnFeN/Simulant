@@ -1,17 +1,11 @@
 using System;
 using System.Linq;
-using System.Numerics;
 
 namespace Simulant.Content.U7b.Presets
 {
     /// <summary>以 BABC 开始读条为原点的秒数。机制时序取自参考日志，人员分工由解法规划器决定。</summary>
     internal static class ForsakenTiming
     {
-        // ActorMove 速度字节为每秒距离乘以 10；正常跑速为 6。
-        // 网络移动控制器按经过时间发送沿途位置，不能把远端终点当作原生定速导航指令。
-        // 换算依据：https://github.com/anomek/AnoMech/blob/1646a7068c2071a3d1fd9e3c84550dfd3f1b6ade/AnoMech/Core/Native/Implementations/BattleCharaProxy.cs
-        internal const byte MoveSpeedParam = 60;
-        internal const double MoveSpeed = MoveSpeedParam / 10.0;
         internal static readonly double[] TowerShow = { 10.040, 20.068, 31.082, 41.081, 52.093, 62.134, 73.136, 83.165 };
         internal static readonly double[] TowerHit = { 20.202, 30.191, 41.216, 51.247, 62.222, 72.294, 83.253, 93.290 };
         internal static readonly double[] SpellHit = { 20.871, 30.816, 41.883, 51.914, 62.891, 72.958, 83.922, 93.914 };
@@ -36,10 +30,13 @@ namespace Simulant.Content.U7b.Presets
         // 偶数轮跳跃早于踩塔；全队必须先就位，避免跑动中的踩塔者误接近点圆。
         internal static double TowerPositionSnapshot(int index) => index % 2 == 0
             ? TowerHit[index] : Math.Min(TowerHit[index], RowMin(JumpHit, index / 2));
-        internal static double TowerArrival(int index) => TowerPositionSnapshot(index) - (index % 2 == 0 ? 0.85 : 0.90);
+        internal static double TowerArrival(int index) => index > 0 && index % 2 == 0
+            ? Math.Min(TowerHit[index], RowMin(CleaveHit, index / 2 - 1))
+            : TowerPositionSnapshot(index);
+        // 这里只声明机制允许离开和要求到位的时刻，具体何时出发、提前多久到达由实体决定。
         internal static double TowerMovementAvailable(int index) => index == 0 ? 8.7 : index % 2 == 0
-            ? RowMax(CleaveLock, index / 2 - 1) + 0.1 : SpellHit[index - 1] + 0.15;
-        internal static double Departure(Vector2 from, Vector2 to, double arrival) => arrival - Vector2.Distance(from, to) / MoveSpeed;
+            ? RowMax(CleaveLock, index / 2 - 1) + 0.01 : SpellHit[index - 1] + 0.15;
+        internal static double GatheringArrival(int pair) => RowMin(CleaveLock, pair);
         internal static double RowMin(double[,] values, int row) => Enumerable.Range(0, 4).Min(i => values[row, i]);
         internal static double RowMax(double[,] values, int row) => Enumerable.Range(0, 4).Max(i => values[row, i]);
     }

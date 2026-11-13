@@ -34,6 +34,7 @@
             this.tableL = new System.Windows.Forms.TableLayoutPanel();
             this.btnDebug = new System.Windows.Forms.Button();
             this.btnInitPlugin = new System.Windows.Forms.Button();
+            this.btnConfiguration = new System.Windows.Forms.Button();
             this.btnSelectTerritory = new System.Windows.Forms.Button();
             this.btnSimEnter = new System.Windows.Forms.Button();
             this.btnSimExit = new System.Windows.Forms.Button();
@@ -93,6 +94,7 @@
             this.tableL.Controls.Add(this.btnAddBNpc, 0, 6);
             this.tableL.Controls.Add(this.btnDebug, 1, 6);
             this.tableL.Controls.Add(this.btnInitPlugin, 0, 1);
+            this.tableL.Controls.Add(this.btnConfiguration, 0, 7);
             this.tableL.Controls.Add(this.btnSelectTerritory, 0, 2);
             this.tableL.Controls.Add(this.btnSimEnter, 0, 5);
             this.tableL.Controls.Add(this.btnSimExit, 1, 5);
@@ -154,6 +156,20 @@
             this.btnInitPlugin.UseVisualStyleBackColor = true;
             this.btnInitPlugin.Click += new System.EventHandler(this.btnInitPlugin_Click);
             // 
+            // btnConfiguration
+            //
+            this.btnConfiguration.AutoSize = true;
+            this.btnConfiguration.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.tableL.SetColumnSpan(this.btnConfiguration, 3);
+            this.btnConfiguration.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.btnConfiguration.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
+            this.btnConfiguration.Name = "btnConfiguration";
+            this.btnConfiguration.Padding = new System.Windows.Forms.Padding(5);
+            this.btnConfiguration.TabIndex = 7;
+            this.btnConfiguration.Text = "配置";
+            this.btnConfiguration.UseVisualStyleBackColor = true;
+            this.btnConfiguration.Click += new System.EventHandler(this.btnConfiguration_Click);
+            //
             // btnSelectTerritory
             // 
             this.btnSelectTerritory.AutoSize = true;
@@ -399,6 +415,7 @@
         private System.Windows.Forms.Button btnSimEnter;
         private System.Windows.Forms.Button btnSimExit;
         private System.Windows.Forms.Button btnInitPlugin;
+        private System.Windows.Forms.Button btnConfiguration;
         private System.Windows.Forms.Button btnSelectTerritory;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem2;
         private System.Windows.Forms.PictureBox picLogo;

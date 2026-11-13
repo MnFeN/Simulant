@@ -6,7 +6,7 @@ namespace Simulant.Core.Entity
 {
     public sealed partial class Character
     {
-        /// <summary>播放带目标的原生技能演出。效果列表为空，不产生伤害或状态；调用前应结束会话管理的读条和移动。</summary>
+        /// <summary>播放带目标的原生技能演出，不产生伤害或状态。调用前应结束对应读条；瞬发演出可以与移动并行。</summary>
         public void ExecuteActionEffect(uint actionId, Character target)
         {
             if (target == null) throw new ArgumentNullException(nameof(target));

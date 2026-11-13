@@ -17,10 +17,10 @@ namespace Simulant.Simulation.Options
             _hint = hint;
         }
 
-        protected override Control CreateControl(PresetControl presetControl)
+        protected override Control CreateControl(OptionEditor editor)
         {
             var comboBox = new ComboBox();
-            presetControl.ApplyComboBoxStyle(comboBox);
+            editor.ApplyStyle(comboBox);
 
             comboBox.Items.AddRange(_options.Values.Select(s => $" {s}").ToArray());
 

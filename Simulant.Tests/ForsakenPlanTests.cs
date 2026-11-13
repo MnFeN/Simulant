@@ -7,21 +7,22 @@ namespace Simulant.Tests
 {
     internal static class ForsakenPlanTests
     {
-        internal static void InitialPositionsSeparateRolePairsInFourCorners()
+        internal static void InitialPositionsGatherRolePairsInFourSectors()
         {
             var groups = new[] { new[] { 0, 2 }, new[] { 1, 3 }, new[] { 4, 6 }, new[] { 5, 7 } };
+            var directions = new[] { -51, 51, -17, 17 };
             for (var group = 0; group < groups.Length; group++)
             {
-                var positions = groups[group].Select(ForsakenPlan.InitialPosition).ToArray();
-                foreach (var position in positions)
+                var positions = groups[group].Select((slot, index) => ForsakenPlan.InitialPosition(slot, index == 0).Midpoint()).ToArray();
+                for (var index = 0; index < positions.Length; index++)
                 {
-                    var offset = position - ForsakenPlan.Center;
-                    Assert((offset.X < 0) == (group % 2 == 0) && (offset.Y < 0) == (group < 2),
-                        "开场应为 MT/H1 左前、ST/H2 右前、D1/D3 左后、D2/D4 右后。");
+                    var offset = positions[index] - ForsakenPlan.Center;
+                    Assert(Math.Abs(Math.Atan2(offset.X, offset.Y) * 180 / Math.PI - directions[group]) < 0.001,
+                        "四组队员应分别集中在负五十一、五十一、负十七、十七度方向。");
+                    Assert(Math.Abs(offset.Length() - (index == 0 ? 5 : 7)) < 0.0001f, "近战和远程代表点应分别距离场中五米、七米。");
                 }
-                Assert(Vector2.Distance(positions[0], positions[1]) >= 2, "同组队员须留出间距看清点名。");
             }
-            Assert(Enumerable.Range(0, 8).Select(ForsakenPlan.InitialPosition).Distinct().Count() == 8,
+            Assert(Enumerable.Range(0, 8).Select(slot => ForsakenPlan.InitialPosition(slot, slot < 2 || slot == 4 || slot == 5).Midpoint()).Distinct().Count() == 8,
                 "八名队员的开场位置不能重叠。");
         }
 
@@ -151,7 +152,7 @@ namespace Simulant.Tests
                     if (round.Number == 8)
                     {
                         Assert(round.BaitPosition == new Vector2(100, 92), "末次必须固定正北集合。");
-                        Assert(round.FinalDodgePosition == (round.FutureEnd ? new Vector2(100, 108) : new Vector2(100, 92)), "末次未来穿背，过去原地。");
+                        Assert(round.FinalDodgePosition == (round.FutureEnd ? new Vector2(100, 105) : new Vector2(100, 92)), "末次未来去背面五米处，过去原地。");
                         AssertCleaveSafe(round, new[] { round.FinalDodgePosition });
                         continue;
                     }
