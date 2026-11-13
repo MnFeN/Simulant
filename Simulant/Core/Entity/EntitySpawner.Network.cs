@@ -153,7 +153,7 @@ namespace Simulant.Core.Entity
                 try
                 {
                     // AnoMech 1646a706 的 SimPartyNpc.OnPacketSpawned 用 0xC8 完成玩家入场。
-                    if (request.ObjectKind == ObjectKind.Pc) entity.ActorControl(0xC8);
+                    if (request.ObjectKind == ObjectKind.Pc) entity.ActorControl(ActorControlCategory.ZoneIn);
                     entity.SetTargetable(request.Targetable);
                 }
                 catch

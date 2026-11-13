@@ -241,7 +241,7 @@ namespace Simulant.Core.Party
             if (_restoreCombat)
             {
                 EnsureContext();
-                self.ActorControl(0x04, 1);
+                self.ActorControl(ActorControlCategory.SetBattle, 1);
             }
         }
 
@@ -320,7 +320,7 @@ namespace Simulant.Core.Party
                     EnsureContext();
                     if (!_combatPlayer.IsAlive)
                         throw new InvalidOperationException("原玩家身份已经变化，不能恢复其战斗状态。");
-                    _combatPlayer.ActorControl(0x04, 0);
+                    _combatPlayer.ActorControl(ActorControlCategory.SetBattle, 0);
                 }
                 // 只有全部恢复成功后才能放弃责任；失败时可再次停止以重试。
                 Forget();

@@ -132,7 +132,7 @@ namespace Simulant.Core.Entity
         public float HitboxRadius => Native.HitboxRadius;
         /// <summary>客户端综合标志、加载状态等条件得出的可选中结果。</summary>
         public bool IsTargetable => Native.GetIsTargetable();
-        public void SetTargetable(bool targetable) => ActorControl(0x36, targetable ? 1u : 0u);
+        public void SetTargetable(bool targetable) => ActorControl(ActorControlCategory.Targetable, targetable ? 1u : 0u);
         public void EnableDraw() => Native.EnableDraw();
         public void DisableDraw() => Native.DisableDraw();
         public void SetReadyToDraw() => Native.SetReadyToDraw();
@@ -143,8 +143,8 @@ namespace Simulant.Core.Entity
             native.EnableDraw();
         }
 
-        public void SetEventState(byte eventState) => ActorControl(0x006A, eventState);
-        public IntPtr ActorControl(ushort category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
+        public void SetEventState(byte eventState) => ActorControl(ActorControlCategory.SetEventState, eventState);
+        public IntPtr ActorControl(ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
             => PacketDispatcher.HandleActorControl(Native.EntityId, category, a1, a2, a3, a4,
                 a5: 0, a6: 0, a7: 0, a8: 0, 0xE0000000, 0);
     }

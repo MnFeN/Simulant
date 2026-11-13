@@ -67,6 +67,32 @@ EntityManager.SetPartyEnmity(boss, 100, 80, 20, 15, 40, 35, 30, 25);
 
 停止、关闭防火墙、插件禁用以及插件主动切图均先恢复小队，再回收模拟角色。恢复失败会保留所有权并阻止删除队员，下次停止重试。主动删除或解除关联队员时也先更新名单。外部换图、退出或切换游戏进程使旧世界失效；随后不会向新世界写入旧快照。切换到另一个仍在运行的客户端时，不尝试跨进程恢复旧客户端，应先停止当前模拟。
 
+## ActorControl 分类
+
+`Simulant.Game.ActorControlCategory : ushort` 统一保存控制子类别。`EntityBase.ActorControl` 与 `PacketDispatcher.HandleActorControl` 都直接接收这个枚举，原生调用前统一转换成 `ushort`，不把枚举对象交给 GreyMagic。已有业务调用的类别编号、参数顺序及数值保持原样。
+
+```csharp
+using Simulant.Game;
+
+boss.Entity.ActorControl(ActorControlCategory.SetBattle, 1);
+boss.Entity.ActorControl(ActorControlCategory.TargetIcon, markerId);
+eventObject.ActorControl(ActorControlCategory.SetEventState, eventState);
+eventObject.ActorControl(ActorControlCategory.SetSharedGroupTimelineState, timelineState);
+```
+
+普通实体入口提供四个参数。需要 `ActorControlSelf` 的额外参数、或 `ActorControlTarget` 的目标 ID 时，使用完整的 `PacketDispatcher.HandleActorControl` 入口；例如 `SetTarget` 的目标应传入 `targetId`，不能误放到 `a1`。未知类别可显式转换为 `(ActorControlCategory)rawCategory`，方便后续回放解析；是否能够执行仍取决于对应版本的参数布局。
+
+枚举保留用户提供的 215 项名称与数值，补充 `HoT = 0x604` 和 `DoT = 0x605`。另外提供 `SetBattle`、`SetEventState`、`SetSharedGroupTimelineState`、`PlaySharedGroupTimeline` 和 `Knockback` 五个同值别名，方便直接表达常用操作。参数说明使用中文，不引入新的库依赖。
+
+本次核对来源：
+
+- [BossMod 控制分类](https://github.com/awgil/ffxiv_bossmod/blob/master/BossMod/Network/ServerIPC.cs)：其现有类别编号已包含在用户提供的列表中。
+- [Sapphire 控制分类](https://github.com/SapphireServer/Sapphire/blob/master/src/common/Network/CommonActorControl.h)：用于核对常用操作名称和参数说明；它对应的客户端版本不能直接等同于国服 7.57。
+- [FFXIV-Packet-Dissector 枚举](https://github.com/zhyupe/FFXIV-Packet-Dissector/blob/3d9c3b6b0e0067e626a0b75f958c5ac21e65a835/src/ffxiv_enum.lua)：核对历史分类名称与数值。
+- [Machina 国际服定义](https://github.com/ravahn/machina/blob/2bd9a7d291e1e54ce523a4c31daa93919e1c44fa/Machina.FFXIV/Headers/Global/Server_ActorControl.cs)：注明持续治疗与持续伤害从 7.10 起使用 `0x604`、`0x605`。[同提交的国服定义](https://github.com/ravahn/machina/blob/2bd9a7d291e1e54ce523a4c31daa93919e1c44fa/Machina.FFXIV/Headers/Chinese/Server_ActorControl.cs) 仍保留旧 `0x17`；因此保留三项，不据此宣称新参数已在国服实测。
+
+不同来源的命名冲突保留区分：`SetMaxGearSets = 0x230` 与 `SetMaxGearSetsSapphire = 0x320` 不是别名；Sapphire 所称的 `SetDutyActionActive = 0x5EA` 对应这里的 `SetDutyActionPresent`，这里的 `SetDutyActionActive` 仍按用户列表使用 `0x5EB`。`GainEffect` 等提示类别不能代替真实状态列表或血量同步。枚举属于包内子类别，不是回放文件中需要按版本识别的顶层 opcode。
+
 ## 会话回收
 
 从调度线程外停止时，顺序是：取消时间轴并等待当前节点退出，停止所有角色行为，清除本次读条预兆，最后回收自有实体。调度回调内停止会话不能等待自身退出，调用后应立即 `return`，不要继续访问已清理的实体。停止后的管理器不再接受生成或关联；清理完成后重新开始会话时绑定新的调度器。

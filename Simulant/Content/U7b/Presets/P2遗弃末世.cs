@@ -2,6 +2,7 @@ using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
+using Simulant.Game;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
 using Simulant.Simulation.Runtime;
@@ -125,7 +126,7 @@ namespace Simulant.Content.U7b.Presets
             var status = (ushort)(0x13DC + (ushort)marker - (ushort)ForsakenMarker.Stack);
             EntityManager.SetStatus(Party[slot], status, 9999, 0, _casters[0]);
             // 头标本身使用原生收包入口；第二参数是被点名者 ID。
-            Party[slot].Entity.ActorControl(0x22, (uint)marker, Party[slot].Id);
+            Party[slot].Entity.ActorControl(ActorControlCategory.TargetIcon, (uint)marker, Party[slot].Id);
         }
 
         private void SetTrouble(int slot)

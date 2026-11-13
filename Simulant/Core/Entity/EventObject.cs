@@ -10,7 +10,7 @@ namespace Simulant.Core.Entity
             : base(registry, identity, observation) { }
 
         public void SetSharedTimelineState(ushort sharedTimelineState)
-            => ActorControl(0x0199, sharedTimelineState);
+            => ActorControl(ActorControlCategory.SetSharedGroupTimelineState, sharedTimelineState);
         public void PlayAnimation(ushort bitMask) => PlayAnimation(0, bitMask, 0);
         public void PlayAnimation(ushort sharedTimelineState, ushort bitMask, ulong context = 0)
             => Native.PlayAnimation(sharedTimelineState, bitMask, context);

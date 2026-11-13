@@ -98,7 +98,7 @@ namespace Simulant
             var second = members[2];
             var firstStatusSlot = FindEmptyPartyTestStatusSlot(first);
             var secondStatusSlot = FindEmptyPartyTestStatusSlot(second);
-            boss.Entity.ActorControl(0x04, 1);
+            boss.Entity.ActorControl(ActorControlCategory.SetBattle, 1);
             SetPartyTestBossTarget(boss, first);
             run.Entities.SetPartyEnmity(boss, 5, 100, 90, 70, 60, 50, 40, 30);
             LogEntityTest(run, $"八人小队已就绪，从现在开始观察三十秒。请选中前方 NPC（{boss.Id:X8}）查看仇恨：测试骑士最高、测试白魔其次；自身会临时进入战斗，结束时恢复原状态，不修改自身血量和状态效果。");
@@ -152,7 +152,7 @@ namespace Simulant
         }
 
         private static void SetPartyTestBossTarget(SimActor boss, SimActor target)
-            => PacketDispatcher.HandleActorControl(boss.Id, 0x32, 0, 0, 0, 0, 0, 0, 0, 0, target.Id, 0);
+            => PacketDispatcher.HandleActorControl(boss.Id, ActorControlCategory.SetTarget, 0, 0, 0, 0, 0, 0, 0, 0, target.Id, 0);
 
         private static void SetPartyTestStatus(SimActor actor, int slot, ushort statusId, float remaining)
         {

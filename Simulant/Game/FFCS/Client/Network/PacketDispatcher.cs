@@ -137,11 +137,12 @@ namespace Simulant.Game.FFCS.Client.Network
         // original "40 55 53 57 41 54 41 56 48 8D AC 24 ? ? ? ? B8 ? ? ? ?"
         [SigPattern("44 8B 4F ? 44 8B 47 ? 89 44 24 ? 8B 47 ? 89 44 24 ? E8 * * * *")]
         public static IntPtr HandleActorControlFuncPtr { get; set; }
-        public static IntPtr HandleActorControl(uint objectId, ushort category, uint a1, uint a2, uint a3, uint a4, uint a5, uint a6, uint a7, uint a8, uint targetId, uint unk)
+        public static IntPtr HandleActorControl(uint objectId, ActorControlCategory category, uint a1, uint a2, uint a3, uint a4, uint a5, uint a6, uint a7, uint a8, uint targetId, uint unk)
         {
             if (HandleActorControlFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络角色控制函数尚未定位。");
-            return HandleActorControlFuncPtr.Call<IntPtr>(objectId, category, a1, a2, a3, a4, a5, a6, a7, a8, targetId, unk);
+            // 原生调用边界仍传 ushort，避免把枚举对象交给 GreyMagic 参数转换。
+            return HandleActorControlFuncPtr.Call<IntPtr>(objectId, (ushort)category, a1, a2, a3, a4, a5, a6, a7, a8, targetId, unk);
         }
 
     }
