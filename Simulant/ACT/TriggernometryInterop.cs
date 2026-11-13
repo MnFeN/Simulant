@@ -20,6 +20,11 @@ namespace Simulant.ACT
                 .FirstOrDefault(x => x.GetName().Name == "TriggernometryPlugin")
                 ?? throw new Exception($"[{nameof(TriggernometryInterop)}] 未找到 TriggernometryPlugin 程序集。");
 
+            var version = asm.GetName().Version;
+            var minimumVersion = new Version(2, 0, 0, 0);
+            if (version == null || version < minimumVersion)
+                throw new InvalidOperationException($"Triggernometry 版本过低（当前版本：{version?.ToString() ?? "未知"}，最低要求：{minimumVersion}）。请参考 https://github.com/MnFeN/Triggernometry 安装新版本。");
+
             var entityType = asm.GetType("Triggernometry.FFXIV.Entity")
                 ?? throw new Exception($"[{nameof(TriggernometryInterop)}] 未找到 Triggernometry.FFXIV.Entity。");
 
