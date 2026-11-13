@@ -24,7 +24,7 @@ namespace Simulant.Core.Entity
         public bool Targetable = true;
         /// <summary>默认复制自身的外貌、装备与染色；也可指定另一个有效玩家。</summary>
         public Character AppearanceSource;
-        /// <summary>优先使用已核实的职业预览套装；没有对应套装时保留复制的装备。</summary>
+        /// <summary>优先使用 99 级职业蓝装的外观；没有对应套装时保留复制的装备。</summary>
         public bool UseJobEquipment = true;
 
         internal unsafe SpawnPlayerPacket ToPacket(byte spawnIndex, PlayerAppearanceSnapshot appearance)

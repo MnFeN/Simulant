@@ -35,7 +35,7 @@ namespace Simulant.Tests
                         if (++calls == 3) scheduler.ScheduleAfter(0.04, finished.Set);
                     };
                     manager.SpawnNetworkPlayer((Job)19, actor => ready(actor, ObjectKind.Pc, (Job)19));
-                    manager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec(), actor => ready(actor, ObjectKind.BattleNpc, Job.Adv));
+                    manager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec(), actor => ready(actor, ObjectKind.BattleNpc, Job.ADV));
                     manager.SpawnNetworkPlayer(new NetworkPlayerSpawnSpec { Job = (Job)24 },
                         actor => ready(actor, ObjectKind.Pc, (Job)24));
                     Assert(scheduler.PendingCount == 1 && spawner.NetworkRequests.Select(request => request.EntityId).Distinct().Count() == 3,

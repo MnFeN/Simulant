@@ -51,6 +51,7 @@
     <Compile Include="..\Simulant\Core\Entity\PlayerAppearanceSnapshot.cs"><Link>Entity\PlayerAppearanceSnapshot.cs</Link></Compile>
     <Compile Include="..\Simulant\Core\Entity\JobEquipment.cs"><Link>Entity\JobEquipment.cs</Link></Compile>
     <Compile Include="..\Simulant\Game\PacketCodec.cs"><Link>Game\PacketCodec.cs</Link></Compile>
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Character\CharacterEnums.cs"><Link>Game\CharacterEnums.cs</Link></Compile>
     <Compile Include="..\Simulant\Replay\*.cs"><Link>Replay\%(Filename)%(Extension)</Link></Compile>
     <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\SpawnPackets.cs"><Link>Game\SpawnPackets.cs</Link></Compile>
     <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\NetworkSpawnPackets.cs"><Link>Game\NetworkSpawnPackets.cs</Link></Compile>

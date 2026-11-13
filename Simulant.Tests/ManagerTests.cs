@@ -618,7 +618,7 @@ namespace Simulant.Core.Entity
         {
             request = null;
             BeforeNetworkBegin?.Invoke(spec);
-            BeginNetworkSpawn(ObjectKind.BattleNpc, Job.Adv, out request);
+            BeginNetworkSpawn(ObjectKind.BattleNpc, Job.ADV, out request);
         }
 
         internal void BeginSpawnNetworkPlayer(NetworkPlayerSpawnSpec spec, out NetworkCharacterSpawnRequest request)

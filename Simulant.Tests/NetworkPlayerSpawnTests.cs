@@ -140,9 +140,9 @@ namespace Simulant.Tests
         {
             var appearance = CreateAppearance();
             var jobs = new[] { Job.PLD, Job.MNK, Job.WAR, Job.DRG, Job.BRD, Job.WHM, Job.BLM, Job.SMN };
-            var armors = new uint[] { 0x1002A, 0x1002C, 0x10025, 0x10024, 0x10029, 0x10027, 0x10028, 0x10084 };
-            var mainhands = new ulong[] { 0x1000A00C9, 0x100010130, 0x100070191, 0x1000101F8, 0x10001025B, 0x100060321, 0x1000203E9, 0x1000106A9 };
-            var offhands = new ulong[] { 0x1000B0065, 0x100010162, 0, 0, 0x1000402BA, 0, 0, 0 };
+            var armors = new uint[] { 0x10304, 0x10305, 0x10306, 0x10307, 0x10308, 0x10309, 0x1030A, 0x1030B };
+            var mainhands = new ulong[] { 0x1000200DC, 0x100010152, 0x1000101A1, 0x100010210, 0x10001027B, 0x10002033F, 0x100020409, 0x1000106D8 };
+            var offhands = new ulong[] { 0x100020072, 0x100010184, 0, 0, 0x1008202BA, 0, 0, 0 };
             for (var index = 0; index < jobs.Length; index++)
             {
                 var spec = new NetworkPlayerSpawnSpec { Job = jobs[index] };
@@ -159,13 +159,13 @@ namespace Simulant.Tests
                 Assert(packet.Common.Glasses[0] == 300 && packet.Common.Glasses[1] == 400,
                     "换职业校服不得移除复制的眼镜。");
             }
-            foreach (var job in new[] { Job.GLA, Job.SCH, (Job)39, Job.PCT })
+            foreach (var job in new[] { Job.GLA, Job.ACN, Job.BLU, Job.CRP })
             {
                 var packet = new NetworkPlayerSpawnSpec { Job = job }.ToPacket(2, appearance);
                 Assert(!JobEquipment.HasSet(job) && !JobEquipment.TryApply(job, ref packet.Common) &&
                     packet.Common.MainhandWeaponModel == appearance.MainhandWeaponModel &&
                     packet.Common.OffhandWeaponModel == appearance.OffhandWeaponModel && packet.Common.ClassJobId == (byte)job,
-                    "无已核实校服的职业必须保留来源武器，尤其不能把召唤师校服用于学者。");
+                    "没有 99 级职业套装的基础职业、青魔及生产采集职业必须保留来源武器。");
                 for (var slot = 0; slot < 10; slot++)
                     Assert(packet.Common.Equipment[slot] == appearance.Equipment[slot] &&
                         packet.Common.ModelStain2[slot] == appearance.Stain2[slot], "校服回退不得改写任何装备槽。");

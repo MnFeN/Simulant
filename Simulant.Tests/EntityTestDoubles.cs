@@ -366,16 +366,6 @@ namespace Simulant.ACT
     }
 }
 
-namespace Simulant.Game.FFCS.Client.Game.Character
-{
-    public enum Job : byte
-    {
-        Adv = 0, GLA = 1, PLD = 19, MNK = 20, WAR = 21, DRG = 22, BRD = 23,
-        WHM = 24, BLM = 25, SMN = 27, SCH = 28, DRK = 32, VPR = 41, PCT = 42
-    }
-    public enum CharacterModes : byte { None = 0, Normal = 1, Dead = 2, AnimLock = 8 }
-}
-
 namespace Simulant.Game
 {
     internal static class NativeTestExtensions

@@ -22,7 +22,7 @@ namespace Simulant.UI
         private readonly ComboBox _job = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
         private readonly NumericUpDown _level = new NumericUpDown { Minimum = 1, Maximum = 255, Width = 90 };
         private readonly TextBox _name = new TextBox { Dock = DockStyle.Fill };
-        private readonly CheckBox _jobEquipment = new CheckBox { Text = "优先使用已核实的职业套装", Checked = true, AutoSize = true };
+        private readonly CheckBox _jobEquipment = new CheckBox { Text = "优先使用 99 级职业套装", Checked = true, AutoSize = true };
         private readonly Label _equipmentHint = new Label { AutoSize = true, MaximumSize = new Size(420, 0) };
 
         internal NetworkPlayerForm(Job initialJob, byte initialLevel, NetworkPlayerSpawnSpec previous)
@@ -99,7 +99,7 @@ namespace Simulant.UI
         {
             var job = (Job)(_job.SelectedIndex + 1);
             _equipmentHint.Text = _jobEquipment.Checked && JobEquipment.HasSet(job)
-                ? "使用该职业的经典武器和五件护甲，保留自身饰品与眼镜。"
+                ? "使用该职业的 99 级蓝装武器和五件护甲，保留自身饰品与眼镜。"
                 : "复制自身全部装备；武器外观可能与所选职业不同。";
         }
 

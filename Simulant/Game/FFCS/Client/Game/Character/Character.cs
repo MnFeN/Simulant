@@ -130,26 +130,4 @@ namespace Simulant.Game.FFCS.Client.Game.Character
 
     }
 
-    // LogMessages for errors starting at 7700
-    public enum CharacterModes : byte
-    {
-        None = 0, // Mode is never used
-        Normal = 1, // Param always 0
-        Dead = 2,
-        EmoteLoop = 3, // Param is an EmoteMode entry
-        Mounted = 4, // Param always 0
-        Crafting = 5, // Param always 0
-        Gathering = 6,
-        MateriaAttach = 7,
-        AnimLock = 8, // Param always 0
-        Carrying = 9, // Param is a Carry entry
-        RidingPillion = 10, // Param is the pillion seat number
-        InPositionLoop = 11, // Param is an EmoteMode entry
-        RaceChocobo = 12,
-        TripleTriad = 13,
-        Lovm = 14, // Lord of Verminion
-        // CustomMatch = 15, // PvP, untested
-        Performance = 16, // Param is Perform row id (the instrument)
-    }
-
 }
