@@ -43,7 +43,7 @@ namespace Simulant.Content.U7b.Presets
         };
         private static readonly Vector2[] OddHelpers =
         {
-            new Vector2(-8.80f, 2.50f), new Vector2(-5.66f, 11.66f),
+            new Vector2(-10.14f, 5.11f), new Vector2(-5.66f, 11.66f),
             new Vector2(8.70f, 2.34f), new Vector2(9.59f, 3.45f),
         };
         private static readonly Vector2[] EvenSoakers =

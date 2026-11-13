@@ -1,3 +1,4 @@
+using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Linq;
@@ -15,7 +16,6 @@ namespace Simulant.Content.U7b.Presets
             timeline.At(0, () =>
             {
                 MapEffect(0x11, 8);
-                _casters[0].Heading = (float)Math.PI;
                 _casters[0].Cast(0xBABC);
             }, "遗弃末世读条");
             timeline.At(6.961, () => MapEffect(0x11, 2), "遗弃末世全屏效果");
@@ -35,7 +35,9 @@ namespace Simulant.Content.U7b.Presets
             timeline.At(113.043, () =>
             {
                 var remaining = Enumerable.Range(0, 8).Where(slot => _stacks[slot] != 0).ToArray();
-                if (remaining.Length != 0) Fail("制裁之光结算时仍有咏唱危机层数", remaining);
+                if (remaining.Length != 0)
+                    Fail(MechanicError.Rule("制裁之光", remaining, "结算时仍有咏唱危机层数。")
+                        .WithAttribution(remaining, "自身未完成规定的踩塔消层"));
                 CompleteMechanic();
             }, "制裁之光检查剩余层数");
             timeline.At(116.043, () =>
@@ -56,7 +58,8 @@ namespace Simulant.Content.U7b.Presets
             // 奇数轮（第一轮除外）必须等前后刀全部锁面向；偶数轮则等待上一轮点名伤害结束。
             var earliest = TowerMovementAvailable(index);
             var arrival = TowerArrival(index);
-            timeline.At(earliest, () => PlanPartyMovement(round.Positions, arrival, TowerHit[index], $"第 {index + 1} 轮站位"),
+            var snapshotAt = TowerPositionSnapshot(index);
+            timeline.At(earliest, () => PlanPartyMovement(round.Positions, arrival, snapshotAt, $"第 {index + 1} 轮站位"),
                 $"倒排第 {index + 1} 轮队员出发时间");
             timeline.At(SpellHit[index], () => ResolveSpells(index), $"第 {index + 1} 轮钢铁、扇形与分摊判定");
         }
@@ -66,7 +69,8 @@ namespace Simulant.Content.U7b.Presets
             var round = _plan.Rounds[pair * 2 + 1];
             timeline.At(EndCast[pair], () =>
             {
-                _casters[0].Pos = ForsakenPlan.Center;
+                // 跳跃动作只改变表现位置；新一轮通过收包恢复中心与朝北面向。
+                _casters[0].Entity.ActorMove(new Vector3(ForsakenPlan.Center, _casters[0].Pos3D.Z), (float)Math.PI);
                 _casters[0].Cast(round.FutureEnd ? 0xBAD2u : 0xBAD3u);
             }, $"第 {pair + 1} 次{(round.FutureEnd ? "未来" : "过去")}终结读条");
             timeline.At(RowMin(JumpHit, pair) - 0.09, () =>
@@ -130,7 +134,7 @@ namespace Simulant.Content.U7b.Presets
                 Scheduler.Schedule(Math.Max(departure, Scheduler.ElapsedSeconds), () =>
                     actor.MoveNetworkTo(destination, MoveSpeedParam, () =>
                     {
-                        actor.Heading = Heading(actor.Pos, ForsakenPlan.Center);
+                        actor.FaceNetwork(Heading(actor.Pos, ForsakenPlan.Center));
                         var remaining = _origin + snapshotAt - Scheduler.ElapsedSeconds;
                         // 轮询只用于记录实际到位；判定始终在固定节点读取所有人的真实位置。
                         if (remaining > 1.05 || remaining < 0)

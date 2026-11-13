@@ -140,7 +140,7 @@ namespace Simulant.Content.U7a.Presets
                     Play(SingleTimelineStartFromGlowing(lines[group * 2]));
                     Play(SingleTimelineStartFromGlowing(lines[group * 2 + 1]));
                 }, "地火分组发光");
-                mechanic.At(20, () => boss.Heading = (float)((int)CenterDir4 / 2.0 * PI - PI), "本体转向安全点");
+                mechanic.At(20, () => boss.FaceNetwork((float)((int)CenterDir4 / 2.0 * PI - PI)), "本体转向安全点");
                 mechanic.At(25, () => boss.Cast(0x9D76), "双分摊读条");
                 mechanic.At(42, () => EntityManager.Delete(boss), "回收本体");
                 Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体就绪后开始地火");

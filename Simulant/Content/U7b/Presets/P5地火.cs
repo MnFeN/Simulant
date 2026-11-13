@@ -273,7 +273,7 @@ namespace Simulant.Content.U7b.Presets
                 if (_exaArea.Contains(player.Pos, new Vector2(pos.X, pos.Y), heading))
                 {
                     _isPerfect = false;
-                    TriggernometryInterop.InvokeNamedCallback("LockOn", $"{player.Address}, m0489trg_b0c");
+                    throw new Simulant.Simulation.Mechanics.SimMechanicFailedException("地火判定失败：自身进入地火伤害范围。");
                 }
                 CompleteJudgement();
             });
@@ -289,7 +289,7 @@ namespace Simulant.Content.U7b.Presets
                     if (_spreadArea.Contains(player.Pos, new Vector2(pos.X, pos.Y), 0))
                     {
                         _isPerfect = false;
-                        TriggernometryInterop.InvokeNamedCallback("LockOn", $"{player.Address}, m0489trg_b0c");
+                        throw new Simulant.Simulation.Mechanics.SimMechanicFailedException("分散判定失败：自身进入其他队员的分散范围。");
                     }
                 }
                 CompleteJudgement();

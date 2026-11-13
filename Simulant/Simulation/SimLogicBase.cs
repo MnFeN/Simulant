@@ -223,6 +223,7 @@ namespace Simulant.Simulation
             var heading = myself.Heading;
             var members = new SimActor[jobs.Count];
             members[myPartyIdx - 1] = EntityManager.Attach(myself);
+            EntityManager.SetTemporaryName(members[myPartyIdx - 1], SimPartyNames.Get(myPartyIdx, myJob));
             var remaining = jobs.Count - 1;
             _preparingParty = true;
 
@@ -247,6 +248,7 @@ namespace Simulant.Simulation
                 EntityManager.SpawnNetworkPlayer(new NetworkPlayerSpawnSpec
                 {
                     Job = jobs[i].Value,
+                    Name = SimPartyNames.Get(i + 1, jobs[i].Value),
                     AppearanceSource = myself,
                     Pos = position,
                     Heading = heading,

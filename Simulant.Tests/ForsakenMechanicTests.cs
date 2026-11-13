@@ -81,7 +81,7 @@ namespace Simulant.Tests
         internal static void ForsakenMechanicsUseActualPositionsWhenThePlanIsBroken()
         {
             using (var rows = new ForsakenActionRows())
-            using (var scene = new Scene())
+            using (var scene = new Scene(startScheduler: false))
             {
                 var round = ForsakenPlan.Create(new Random(42)).Rounds[0];
                 scene.Place(round);
@@ -92,7 +92,7 @@ namespace Simulant.Tests
                 var towerMechanics = CreateTowers(round);
                 foreach (var tower in towerMechanics)
                     tower.Check = members => members.Any(member => remainingStacks[member.Slot] == 0) ? "踩塔者没有剩余层数。" : null;
-                var towers = scene.Resolve(new MechanicGroup(towerMechanics));
+                var towers = scene.Evaluate(new MechanicGroup(towerMechanics));
                 Assert(!towers.Success && !towers.Children[0].Success && towers.Children[1].Success,
                     "无层数闲人误入应使对应塔失败，不能按计划分工忽略实际入塔者。");
                 AssertSlots(towers.Children[0].Participants,
@@ -106,7 +106,7 @@ namespace Simulant.Tests
                 scene.Party[intruder].Pos = sourcePosition + Vector2.Normalize(round.Positions[originalBait] - sourcePosition);
                 var fanTargets = new Dictionary<int, int>();
                 var fanMechanic = CreateSpell(scene, round, fan, fanTargets);
-                var fanResult = scene.Resolve(new MechanicGroup(fanMechanic)).Children.Single();
+                var fanResult = scene.Evaluate(new MechanicGroup(fanMechanic)).Children.Single();
                 Assert(fanTargets[fan] == intruder, "更近的现场成员应抢走扇形诱导，不能继续朝计划目标判定。");
                 Assert(!fanResult.Success, "同方向的两名受击者应触发扇形人数失败。");
                 AssertSlots(fanResult.Participants, new[] { intruder, originalBait },
@@ -168,7 +168,7 @@ namespace Simulant.Tests
             private readonly SimEntityManager _manager;
             internal readonly SimActor[] Party;
 
-            internal Scene()
+            internal Scene(bool startScheduler = true)
             {
                 _scheduler = new SimScheduler((error, name) => _errors.Enqueue(error));
                 _manager = new SimEntityManager(new EntitySpawner()) { Scheduler = _scheduler };
@@ -178,7 +178,7 @@ namespace Simulant.Tests
                 var registry = new EntityRegistry(slot => observations[slot], observations.Length);
                 Party = Enumerable.Range(0, 8).Select(slot => _manager.Attach((Character)registry.Get((ushort)slot))).ToArray();
                 _manager.Party.AddRange(Party);
-                _scheduler.Start();
+                if (startScheduler) _scheduler.Start();
             }
 
             internal void Place(ForsakenRoundPlan round)
@@ -197,6 +197,14 @@ namespace Simulant.Tests
                     if (!_errors.IsEmpty) throw new AggregateException("遗弃末世集成测试收到调度异常。", _errors);
                     return group.Result ?? throw new Exception("机制未生成判定结果。");
                 }
+            }
+
+            internal MechanicResult Evaluate(MechanicGroup group)
+            {
+                Assert(!_scheduler.IsRunning, "失败站位用例仅验证判定数据，不能同时启动调度。");
+                _manager.RunMechanic(group);
+                try { return group.EvaluateForGroup(PartySnapshot.Capture(Party)); }
+                finally { group.Stop(); }
             }
 
             public void Dispose() { _scheduler.Dispose(); _manager.Clear(); }

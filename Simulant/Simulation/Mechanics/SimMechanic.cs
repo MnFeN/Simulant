@@ -24,6 +24,8 @@ namespace Simulant.Simulation.Mechanics
         public double ResolveAfter { get; set; }
         public Action<MechanicContext> Started { get; set; }
         public Action<MechanicContext> Cleanup { get; set; }
+        /// <summary>判定后先播放演出，无论成功失败；机制组会先播放全部子机制演出，再处理结果。</summary>
+        public Action<MechanicResult> Visual { get; set; }
         public Action<MechanicResult> Succeeded { get; set; }
         public Action<MechanicResult> Failed { get; set; }
         public Action<MechanicResult> Resolved { get; set; }
@@ -64,7 +66,7 @@ namespace Simulant.Simulation.Mechanics
                     if (!_stopping && scheduleResolution)
                         ScheduleAfter(ResolveAfter, Resolve, Name + "判定");
                 }
-                catch (Exception error) { StopAfterFailure(error); throw; }
+                catch { Interrupt(); throw; }
             }
         }
 
@@ -91,7 +93,7 @@ namespace Simulant.Simulation.Mechanics
                             if (!Context.IsWorldValid) { Stop(); return; }
                             action();
                         }
-                        catch (Exception error) { StopAfterFailure(error); throw; }
+                        catch { Interrupt(); throw; }
                     }
                 }, name ?? Name);
                 _nodes.Add(node);
@@ -102,6 +104,7 @@ namespace Simulant.Simulation.Mechanics
         {
             var snapshot = PartySnapshot.Capture(Context.Candidates);
             var result = EvaluateForGroup(snapshot);
+            PresentForGroup(result);
             PublishForGroup(result);
             Stop();
         }
@@ -115,6 +118,16 @@ namespace Simulant.Simulation.Mechanics
             }
         }
 
+        internal virtual void PresentForGroup(MechanicResult result)
+        {
+            lock (_gate)
+            {
+                if (_stopping || _completed) return;
+                if (!Context.IsWorldValid) { Stop(); return; }
+                Visual?.Invoke(result);
+            }
+        }
+
         internal virtual void PublishForGroup(MechanicResult result)
         {
             lock (_gate)
@@ -123,7 +136,12 @@ namespace Simulant.Simulation.Mechanics
                 if (!Context.IsWorldValid) { Stop(); return; }
                 Result = result;
                 if (result.Success) Succeeded?.Invoke(result);
-                else Failed?.Invoke(result);
+                else
+                {
+                    Failed?.Invoke(result);
+                    if (result.FailureSeverity == MechanicFailureSeverity.Fatal)
+                        throw new SimMechanicFailedException(Name, result.Reason);
+                }
                 if (!_stopping && Context.IsWorldValid) Resolved?.Invoke(result);
             }
         }
@@ -166,17 +184,24 @@ namespace Simulant.Simulation.Mechanics
             }
         }
 
-        private void StopAfterFailure(Exception failure)
+        /// <summary>中断未执行节点，保留实体、演出及清理责任，直到显式停止会话。</summary>
+        internal void Interrupt()
         {
-            if (_stopping) return;
-            try { Stop(); }
-            catch (Exception cleanupError) { throw new AggregateException("机制执行与清理均失败，请重试停止。", failure, cleanupError); }
+            lock (_gate)
+            {
+                if (!_claimed || _completed) return;
+                _stopping = true;
+                foreach (var node in _nodes) node.Cancel();
+                _nodes.Clear();
+                foreach (var child in Children) child.Interrupt();
+            }
         }
 
         private void ValidateCallbacks()
         {
             if (Started != null) SimTimeline.ValidateAction(Started, nameof(Started));
             if (Cleanup != null) SimTimeline.ValidateAction(Cleanup, nameof(Cleanup));
+            if (Visual != null) SimTimeline.ValidateAction(Visual, nameof(Visual));
             if (Succeeded != null) SimTimeline.ValidateAction(Succeeded, nameof(Succeeded));
             if (Failed != null) SimTimeline.ValidateAction(Failed, nameof(Failed));
             if (Resolved != null) SimTimeline.ValidateAction(Resolved, nameof(Resolved));

@@ -22,7 +22,7 @@ namespace Simulant.Content.U7b.Presets
         public override PhaseData Phase => U7b.P2_2;
         public override int Level => 100;
         public override Type SimLogicType => typeof(P2遗弃末世Logic);
-        public override string Description => "随机点名、塔方向与前后刀；按野队解法，A 组 1238、B 组 4567，闲人 TH 左、DPS 右。假队员在判定前最后一秒就位。判定失败会记录原因，不扣除真实玩家血量。";
+        public override string Description => "随机点名、塔方向与前后刀；按野队解法，A 组 1238、B 组 4567，闲人 TH 左、DPS 右。假队员在判定前最后一秒就位。半场刀命中仅提示叉并继续；扇形引导偏离解法方向超过 30° 时额外提示叉和默语，继续原有伤害判定。其他判定失败先播放本轮特效和错误叉，聊天提示原因，两秒后停止角色行为，保留现场直到手动停止，不扣除真实玩家血量。";
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
             new ComboBoxOption<int>(nameof(P2遗弃末世Logic.PlayerSlot), "自己的职能", 0,
@@ -102,7 +102,7 @@ namespace Simulant.Content.U7b.Presets
                     BNpcBaseId = i == 0 ? 19506u : 19513u,
                     BNpcNameId = 7131, ModelCharaId = (ushort)(i == 0 ? 4967 : 2137),
                     LayoutId = i == 0 ? 0xBC1728u : 0xBC172Fu,
-                    Level = 100, Pos = new Vector3(100, 100, 0), Targetable = i == 0,
+                    Level = 100, Pos = new Vector3(100, 100, 0), Heading = (float)Math.PI, Targetable = i == 0,
                 }, actor =>
                 {
                     _casters[index] = actor;
@@ -137,6 +137,7 @@ namespace Simulant.Content.U7b.Presets
         private void Effect(int helper, Vector2 position, float heading, uint action)
         {
             var actor = _helpers[helper];
+            // 隐藏的技能假人每次演出前初始化位置与朝向，不播放走位过程。
             actor.Pos = position;
             actor.Heading = heading;
             actor.Execute(action);
@@ -183,14 +184,18 @@ namespace Simulant.Content.U7b.Presets
         private void CompleteMechanic()
         {
             if (_mistakes == 0)
-                ShowResultMarker("m0489trg_a0c");
-            _host.LogSim($"[遗弃末世] 八轮塔与四轮前后刀结束，记录 {_mistakes} 项失误，涉及 {_failedPlayers.Count} 名队员；3 秒后回收。");
+                ShowResultMarker("m0489trg_a0c", _selfSlot);
+            _host.LogSim($"[遗弃末世] 八轮塔与四轮前后刀结束，记录 {_mistakes} 项失误，已标记 {_failedPlayers.Count} 名队员的个人失误；3 秒后回收。");
         }
 
-        private void ShowResultMarker(string marker)
+        private void ShowResultMarker(string marker, int slot)
         {
-            try { TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[_selfSlot].Address}, {marker}"); }
-            catch (Exception error) { _host.LogWarning("[遗弃末世] 结果提示特效显示失败：" + error.Message); }
+            try
+            {
+                if (slot < 0 || slot >= Party.Count || !Party[slot].IsActive) return;
+                TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[slot].Address}, {marker}");
+            }
+            catch (Exception error) { _host.LogWarning($"[遗弃末世] {Roles[slot]} 的结果提示特效显示失败：" + error.Message); }
         }
     }
 }

@@ -39,6 +39,7 @@ namespace Simulant.Simulation.Runtime
             set { EnsureActive(); Entity.Pos3D = value; }
         }
 
+        /// <summary>直接读取或初始化朝向；网络角色在机制中转向应使用 FaceNetwork，由客户端更新模型。</summary>
         public float Heading
         {
             get { EnsureActive(); return Entity.Heading; }
@@ -73,6 +74,19 @@ namespace Simulant.Simulation.Runtime
         /// </summary>
         public void MoveNetworkTo(Vector2 target, byte speedParam = 30, Action onArrived = null)
             => _movement.MoveNetworkTo(this, target, speedParam, onArrived);
+
+        /// <summary>停止本会话的移动，再通过 ActorMove 在当前位置转向，同时更新模型与目标圈。</summary>
+        public void FaceNetwork(float heading)
+        {
+            EnsureActive();
+            if (float.IsNaN(heading) || float.IsInfinity(heading))
+                throw new ArgumentOutOfRangeException(nameof(heading), "朝向必须为有限数。");
+            var slot = Entity.Identity.Slot;
+            if (slot < 2 || slot >= 200 || (slot & 1) != 0)
+                throw new InvalidOperationException("网络转向只支持网络角色，不能用于自身玩家或本地备用实体。");
+            StopMoving();
+            Entity.ActorMove(Entity.Pos3D, heading);
+        }
 
         /// <summary>停止本会话的本地或网络移动；不会接管直接调用 Entity.ActorMove 产生的移动。</summary>
         public void StopMoving() => _movement.Stop(this);

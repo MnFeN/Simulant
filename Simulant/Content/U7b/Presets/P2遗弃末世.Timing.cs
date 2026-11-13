@@ -33,7 +33,10 @@ namespace Simulant.Content.U7b.Presets
             { 82.852, 82.674, 82.897, 82.897 }, { 103.976, 103.618, 103.573, 103.797 },
         };
 
-        internal static double TowerArrival(int index) => TowerHit[index] - (index % 2 == 0 ? 0.85 : 0.90);
+        // 偶数轮跳跃早于踩塔；全队必须先就位，避免跑动中的踩塔者误接近点圆。
+        internal static double TowerPositionSnapshot(int index) => index % 2 == 0
+            ? TowerHit[index] : Math.Min(TowerHit[index], RowMin(JumpHit, index / 2));
+        internal static double TowerArrival(int index) => TowerPositionSnapshot(index) - (index % 2 == 0 ? 0.85 : 0.90);
         internal static double TowerMovementAvailable(int index) => index == 0 ? 8.7 : index % 2 == 0
             ? RowMax(CleaveLock, index / 2 - 1) + 0.1 : SpellHit[index - 1] + 0.15;
         internal static double Departure(Vector2 from, Vector2 to, double arrival) => arrival - Vector2.Distance(from, to) / MoveSpeed;

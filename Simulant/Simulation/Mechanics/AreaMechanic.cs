@@ -12,6 +12,8 @@ namespace Simulant.Simulation.Mechanics
         public ActionArea Area { get; set; }
         public Vector2 Center { get; set; }
         public float Heading { get; set; }
+        /// <summary>默认失败时中断；设为 Warning 时仍记录失败，但允许后续结算和时间轴继续。</summary>
+        public MechanicFailureSeverity FailureSeverity { get; set; } = MechanicFailureSeverity.Fatal;
         public SimActor Exclude { get; set; }
         public int? RequiredPlayers { get; set; }
         public int? MinPlayers { get; set; }
@@ -23,6 +25,8 @@ namespace Simulant.Simulation.Mechanics
 
         protected override void Validate()
         {
+            if (FailureSeverity != MechanicFailureSeverity.Warning && FailureSeverity != MechanicFailureSeverity.Fatal)
+                throw new ArgumentOutOfRangeException(nameof(FailureSeverity), "机制失败级别无效。");
             if (RequiredPlayers.HasValue && (MinPlayers.HasValue || MaxPlayers.HasValue))
                 throw new InvalidOperationException("指定人数不能与最少或最多人数同时设置。");
             if (RequiredPlayers < 0 || MinPlayers < 0 || MaxPlayers < 0 || MinPlayers > MaxPlayers)
@@ -44,7 +48,8 @@ namespace Simulant.Simulation.Mechanics
             else if (maximum.HasValue && participants.Count > maximum.Value)
                 reason = $"允许最多 {maximum.Value} 人，实际 {participants.Count} 人。";
             if (reason == null) reason = Check?.Invoke(participants);
-            return new MechanicResult(snapshot, participants, reason == null, reason, center, heading);
+            return new MechanicResult(snapshot, participants, reason == null, reason, center, heading,
+                failureSeverity: FailureSeverity);
         }
     }
 }

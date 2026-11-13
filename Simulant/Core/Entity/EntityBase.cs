@@ -117,6 +117,10 @@ namespace Simulant.Core.Entity
                 var native = Native;
                 native.Rotation.Set(value);
                 native.RotationModified();
+                // 初始化或本地备用实体直接设置朝向时，目标圈与模型必须同步。
+                var drawObject = native.DrawObject;
+                if (!drawObject.IsNull())
+                    drawObject.Rotation.Set(Quaternion.CreateFromAxisAngle(Vector3.UnitY, value));
             }
         }
         public float Scale

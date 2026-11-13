@@ -1,5 +1,7 @@
+using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Simulation;
+using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
@@ -14,44 +16,48 @@ namespace Simulant.Tests
     {
         private const int TimeoutMs = 5000;
 
-        internal static void SessionFailureKeepsEffectsBeforeCleanup()
+        internal static void SessionFailurePreservesSceneUntilExplicitStop()
         {
             using (var probe = new SessionProbe())
             using (var displaying = new ManualResetEventSlim())
             {
-                var host = new PluginHost { FirewallLog = message => displaying.Set() };
+                var host = new PluginHost();
                 var laterNodes = 0;
                 SimActor actor = null;
                 probe.StartAction = () =>
                 {
                     actor = probe.Logic.EntityManager.SpawnBNpc(1);
-                    probe.Logic.Scheduler.ScheduleAfter(0, () => { throw new InvalidOperationException("技能结算异常。"); });
+                    probe.Logic.Scheduler.ScheduleAfter(0, () => { throw new SimMechanicFailedException("塔内人数错误。"); });
                     probe.Logic.Scheduler.ScheduleAfter(0.05, () => laterNodes++);
                 };
                 using (var session = CreateSession(host, probe))
                 {
-                    session.FailureCleanupDelaySeconds = 0.3;
+                    TriggernometryInterop.OnChatCommand = _ => displaying.Set();
                     session.Start();
-                    Wait(displaying, "异常演出保留窗口");
+                    Wait(displaying, "机制失败的聊天提示");
                     Assert(!session.IsRunning && session.HasPendingCleanup && actor.Entity.IsAlive && probe.StopCount == 0,
                         "异常后应取消战斗时间轴，但保留实体让已提交的技能继续演出。");
                     Assert(probe.Logic.Scheduler.PendingCount == 0, "保留演出时不得继续执行后续战斗节点。");
-                    Wait(probe.Cleaned, "演出窗口结束后回收");
+                    Assert(TriggernometryInterop.ChatCommands.Count == 1 &&
+                        TriggernometryInterop.ChatCommands[0] == "/e <se.11>\n塔内人数错误。",
+                        "机制失败应通过 command 回调发送一条包含提示音、换行和原始原因的消息。");
+                    Assert(!probe.Cleaned.Wait(150) && host.EntitySpawner.Deleted.Count == 0,
+                        "中断后不得自动清场，必须等待显式停止。");
                     session.Stop();
                     Assert(laterNodes == 0 && probe.StopCount == 1 && !actor.Entity.IsAlive && !session.HasPendingCleanup,
-                        "演出窗口结束后必须只清理一次，期间不能放行后续技能。");
+                        "手动停止后必须只清理一次，期间不能放行后续技能。");
                 }
             }
         }
 
-        internal static void SessionExplicitStopInterruptsFailureDisplay()
-            => RunBoundedSessionScenario("显式停止打断异常演出", () =>
+        internal static void SessionExplicitStopClearsInterruptedScene()
+            => RunBoundedSessionScenario("显式停止清理中断现场", () =>
             {
                 foreach (var dispose in new[] { false, true })
                 using (var probe = new SessionProbe())
                 using (var displaying = new ManualResetEventSlim())
                 {
-                    var host = new PluginHost { FirewallLog = message => displaying.Set() };
+                    var host = new PluginHost();
                     probe.StartAction = () =>
                     {
                         probe.Logic.EntityManager.SpawnBNpc(1);
@@ -59,29 +65,30 @@ namespace Simulant.Tests
                     };
                     using (var session = CreateSession(host, probe))
                     {
-                        session.FailureCleanupDelaySeconds = 10;
+                        TriggernometryInterop.OnChatCommand = _ => displaying.Set();
                         session.Start();
-                        Wait(displaying, "等待显式停止的演出窗口");
+                        Wait(displaying, "等待显式停止的中断现场");
                         var elapsed = System.Diagnostics.Stopwatch.StartNew();
                         if (dispose) session.Dispose();
                         else session.Stop();
                         Assert(elapsed.Elapsed.TotalSeconds < 2,
-                            "手动停止或禁用必须立即唤醒调度线程，不能等待演出倒计时。");
+                            "手动停止或禁用必须及时完成清理。");
                         Assert(probe.StopCount == 1 && !session.HasPendingCleanup && host.EntitySpawner.Deleted.Count == 1,
-                            "中断演出窗口后必须完成一次实体回收。");
+                            "显式停止后必须完成一次实体回收。");
                     }
                 }
             });
 
-        internal static void SessionDelayedFailureCleanupCanRetry()
+        internal static void SessionInterruptedCleanupCanRetry()
         {
             using (var probe = new SessionProbe())
+            using (var reported = new ManualResetEventSlim())
             {
                 var host = new PluginHost();
                 var failDeletion = true;
                 host.EntitySpawner.BeforeDelete = actor =>
                 {
-                    if (failDeletion) throw new InvalidOperationException("演出结束后暂时无法回收。");
+                    if (failDeletion) throw new InvalidOperationException("暂时无法回收。");
                 };
                 probe.StartAction = () =>
                 {
@@ -90,11 +97,12 @@ namespace Simulant.Tests
                 };
                 using (var session = CreateSession(host, probe))
                 {
-                    session.FailureCleanupDelaySeconds = 0.01;
+                    TriggernometryInterop.OnChatCommand = _ => reported.Set();
                     session.Start();
-                    Wait(probe.Cleaned, "演出结束后的首次清理");
+                    Wait(reported, "异常中断的聊天提示");
+                    session.Stop();
                     Assert(session.HasPendingCleanup && host.EntitySpawner.Deleted.Count == 0,
-                        "延迟清理失败仍须保留实体及清理责任。");
+                        "手动清理失败仍须保留实体及清理责任。");
                     failDeletion = false;
                     session.Stop();
                     Assert(!session.HasPendingCleanup && host.EntitySpawner.Deleted.Count == 1 && probe.StopCount == 1,
@@ -131,28 +139,73 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionInitializationFailureCleansUpOnce()
+        internal static void SessionInitializationFailureWaitsForExplicitCleanup()
         {
             using (var probe = new SessionProbe())
+            using (var reported = new ManualResetEventSlim())
             {
                 var host = new PluginHost();
                 var callerThread = Thread.CurrentThread.ManagedThreadId;
                 probe.StartAction = () => { throw new InvalidOperationException("initialization failed"); };
                 using (var session = CreateSession(host, probe))
                 {
+                    TriggernometryInterop.OnChatCommand = _ => reported.Set();
                     session.Start();
-                    Wait(probe.Cleaned, "initialization failure cleanup");
-                    session.Stop(); // Also waits until the worker has returned from its error handler.
+                    Wait(reported, "初始化失败的聊天提示");
+                    Assert(!session.IsRunning && session.HasPendingCleanup && probe.StopCount == 0,
+                        "初始化失败即使没有生成实体，也要保留停止入口和清理责任。");
+                    Assert(TriggernometryInterop.ChatCommands.Count == 1 &&
+                        TriggernometryInterop.ChatCommands[0] == "/e <se.11>\n节点「初始化模拟」执行失败：initialization failed",
+                        "非机制异常的聊天提示应包含节点名称和原始原因。");
+                    session.Stop();
                     Assert(probe.StartCount == 1 && probe.StartThreadId != callerThread,
                         "Initialization must execute on the worker.");
-                    Assert(probe.StopCount == 1 && probe.StopThreadId == probe.StartThreadId,
-                        "A worker failure must clean up once on that worker.");
+                    Assert(probe.StopCount == 1 && probe.StopThreadId == callerThread,
+                        "中断后的清理必须由显式停止调用一次。");
                     Assert(probe.ClearCount == 1 && !session.IsRunning,
                         "A worker failure must clear entities and stop the session.");
                     Assert(host.Errors.Count == 1 && host.Errors.TryPeek(out var error) &&
                         error.Contains("initialization failed"), "The original worker failure must be logged once.");
                 }
                 Assert(probe.StopCount == 1, "Disposing a failed session must not repeat cleanup.");
+            }
+        }
+
+        internal static void SessionChatFailurePreservesSceneAndAllowsRestart()
+        {
+            using (var probe = new SessionProbe())
+            using (var reported = new ManualResetEventSlim())
+            using (var restarted = new ManualResetEventSlim())
+            {
+                var host = new PluginHost
+                {
+                    FirewallLog = message =>
+                    {
+                        if (message.StartsWith("模拟错误的聊天提示发送失败：")) reported.Set();
+                    }
+                };
+                SimActor actor = null;
+                probe.StartAction = () =>
+                {
+                    actor = probe.Logic.EntityManager.SpawnBNpc(1);
+                    throw new SimMechanicFailedException("分摊人数错误。");
+                };
+                using (var session = CreateSession(host, probe))
+                {
+                    TriggernometryInterop.OnChatCommand = _ => { throw new InvalidOperationException("回调暂时不可用。"); };
+                    session.Start();
+                    Wait(reported, "聊天提示失败的日志");
+                    Assert(session.HasPendingCleanup && actor.Entity.IsAlive && probe.StopCount == 0,
+                        "聊天回调失败不能触发清场或丢失清理责任。");
+                    probe.StartAction = () => restarted.Set();
+                    session.Start();
+                    Wait(restarted, "中断后的再次启动");
+                    Assert(!actor.Entity.IsAlive && probe.StopCount == 1 && session.IsRunning,
+                        "再次启动应先清理上次保留现场，再运行新时间轴。");
+                    session.Stop();
+                    Assert(probe.StopCount == 2 && !session.HasPendingCleanup,
+                        "重新开始后的停止应完成自己的清理周期。");
+                }
             }
         }
 
@@ -241,6 +294,31 @@ namespace Simulant.Tests
                         "Each run must prepare, initialize, and clean up exactly once.");
                 }
                 Assert(probe.StopCount == 2, "Dispose must not repeat either completed run's cleanup.");
+            }
+        }
+
+        internal static void SessionNormalTimelineCompletionDoesNotRetainFailureState()
+        {
+            using (var probe = new SessionProbe())
+            using (var completed = new AutoResetEvent(false))
+            {
+                probe.StartAction = () =>
+                {
+                    probe.Logic.EntityManager.SpawnBNpc(1);
+                    probe.Logic.EntityManager.Clear();
+                    probe.Logic.Scheduler.Cancel();
+                    completed.Set();
+                };
+                using (var session = CreateSession(new PluginHost(), probe))
+                {
+                    session.Start();
+                    Assert(completed.WaitOne(TimeoutMs), "正常时间轴未完成。");
+                    Assert(!session.IsRunning && !session.HasPendingCleanup,
+                        "正常完成并清理的时间轴不得被标记为失败留场，否则开始按钮无法再次使用。");
+                    session.Start();
+                    Assert(completed.WaitOne(TimeoutMs) && probe.StartCount == 2 && !session.HasPendingCleanup,
+                        "正常完成后应能直接再次开始，不必额外点击停止。");
+                }
             }
         }
 
@@ -526,7 +604,11 @@ namespace Simulant.Tests
         }
 
         private static SimSession CreateSession(PluginHost host, SessionProbe probe)
-            => new SimSession(host, new SessionTestPreset(probe));
+        {
+            TriggernometryInterop.ChatCommands.Clear();
+            TriggernometryInterop.OnChatCommand = null;
+            return new SimSession(host, new SessionTestPreset(probe));
+        }
 
         internal static void Wait(ManualResetEventSlim signal, string description)
             => Assert(signal.Wait(TimeoutMs), "Timed out waiting for " + description + ".");

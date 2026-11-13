@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Simulant.Simulation.Mechanics
 {
-    /// <summary>同一快照先完成全部子机制的判定，再执行子结果和组结果回调。</summary>
+    /// <summary>同一快照先完成全部判定，再播放全部演出，最后执行子结果和组结果回调。</summary>
     public sealed class MechanicGroup : SimMechanic
     {
         private readonly IReadOnlyList<SimMechanic> _children;
@@ -36,8 +36,18 @@ namespace Simulant.Simulation.Mechanics
         {
             var results = _children.Select(child => child.EvaluateForGroup(snapshot)).ToArray();
             var participants = results.SelectMany(result => result.Participants).GroupBy(member => member.Slot).Select(group => group.First());
+            // 只汇总实际失败项；仅提示的子机制不能被外层机制组升级为中断。
+            var severity = results.Any(result => !result.Success && result.FailureSeverity == MechanicFailureSeverity.Fatal)
+                ? MechanicFailureSeverity.Fatal : MechanicFailureSeverity.Warning;
             return new MechanicResult(snapshot, participants, results.All(result => result.Success),
-                string.Join("；", results.Where(result => !result.Success).Select(result => result.Reason)), children: results);
+                string.Join("；", results.Where(result => !result.Success).Select(result => result.Reason)),
+                children: results, failureSeverity: severity);
+        }
+
+        internal override void PresentForGroup(MechanicResult result)
+        {
+            for (var i = 0; i < _children.Count; i++) _children[i].PresentForGroup(result.Children[i]);
+            base.PresentForGroup(result);
         }
 
         internal override void PublishForGroup(MechanicResult result)

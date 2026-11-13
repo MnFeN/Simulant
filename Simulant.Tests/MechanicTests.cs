@@ -1,4 +1,5 @@
 using Simulant.Core.Entity;
+using Simulant.Game.ExtractedCsv;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Runtime;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
+using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
 
 namespace Simulant.Tests
 {
@@ -42,7 +44,6 @@ namespace Simulant.Tests
         internal static void AreaMechanicKeepsInvalidSoakersInItsResult()
         {
             using (var scene = new Scene())
-            using (var finished = new ManualResetEventSlim())
             {
                 scene.Player.Pos = new Vector2(10, 10);
                 scene.Other.Pos = new Vector2(11, 10);
@@ -55,23 +56,25 @@ namespace Simulant.Tests
                     Started = context => order.Add("开始"),
                     Check = members => members.Any(member => member.Slot == 1) ? "队员没有所需层数。" : null,
                     Succeeded = result => order.Add("成功"),
-                    Failed = result => order.Add("失败"),
-                    Resolved = result =>
+                    Failed = result =>
                     {
                         Assert(result.Participants.Count == 2 && !result.Success && result.Reason == "队员没有所需层数。" &&
                             result.Center == new Vector2(10, 10) && result.Heading == 1.25f,
                             "额外条件失败不得把实际踩塔者从人数或冻结结果中筛掉。");
-                        order.Add("结果");
+                        order.Add("失败");
                     },
-                    Cleanup = context => { order.Add("清理"); finished.Set(); },
+                    Resolved = result => order.Add("结果"),
+                    Cleanup = context => order.Add("清理"),
                 };
                 scene.Manager.RunMechanic(mechanic);
                 scene.Scheduler.Start();
-                Await(finished);
+                Await(scene.ErrorReported);
                 scene.Scheduler.Dispose();
-                scene.AssertNoError();
-                Assert(order.SequenceEqual(new[] { "开始", "失败", "结果", "清理" }), "机制回调顺序不正确。");
+                Assert(scene.Errors.Count == 1 && scene.Errors[0] is SimMechanicFailedException &&
+                    order.SequenceEqual(new[] { "开始", "失败" }), "失败应报告原因并立即中断，不能推进结果回调或清理现场。");
                 Throws<InvalidOperationException>(() => scene.Manager.RunMechanic(mechanic));
+                scene.Manager.Clear();
+                Assert(order.SequenceEqual(new[] { "开始", "失败", "清理" }), "显式停止时才应清理失败机制。");
             }
         }
 
@@ -166,7 +169,8 @@ namespace Simulant.Tests
                         if (failures) throw new InvalidOperationException("模拟清理失败。");
                     },
                 };
-                Throws<AggregateException>(() => scene.Manager.RunMechanic(mechanic));
+                Throws<InvalidOperationException>(() => scene.Manager.RunMechanic(mechanic));
+                Assert(cleanups == 0 && created.IsActive, "开始回调部分成功后失败时应保留现场，不立刻清理。");
                 scene.Manager.Clear();
                 Assert(scene.Manager.HasPendingCleanup && created.Entity.IsAlive && scene.Spawner.Deleted.Count == 0,
                     "机制清理失败必须保留实体与恢复责任。");
@@ -174,12 +178,12 @@ namespace Simulant.Tests
                 Throws<InvalidOperationException>(() => scene.Manager.Scheduler = restart);
                 failures = false;
                 scene.Manager.Clear();
-                Assert(!scene.Manager.HasPendingCleanup && !created.Entity.IsAlive && scene.Player.Entity.IsAlive && cleanups == 3,
+                Assert(!scene.Manager.HasPendingCleanup && !created.Entity.IsAlive && scene.Player.Entity.IsAlive && cleanups == 2,
                     "再次停止应重试清理，再回收自有实体，保留真实玩家。");
             }
         }
 
-        internal static void MechanicCallbackFailureStillCleansUp()
+        internal static void MechanicCallbackFailureRetainsSceneUntilStopped()
         {
             using (var scene = new Scene())
             using (var cleaned = new ManualResetEventSlim())
@@ -191,13 +195,14 @@ namespace Simulant.Tests
                     Cleanup = context => cleaned.Set(),
                 });
                 scene.Scheduler.Start();
-                Await(cleaned);
                 Await(scene.ErrorReported);
                 scene.Scheduler.Dispose();
-                Assert(scene.Errors.Count == 1 && scene.Scheduler.PendingCount == 0,
-                    "结果回调失败应执行清理，并把异常交回同一调度器。");
-                Assert(scene.Errors[0].StackTrace.Contains(nameof(MechanicCallbackFailureStillCleansUp)),
-                    "机制清理后重新抛出异常应保留实际失败回调的调用栈。");
+                Assert(scene.Errors.Count == 1 && scene.Scheduler.PendingCount == 0 && !cleaned.IsSet && scene.Player.IsActive,
+                    "结果回调失败应取消后续节点并保留现场，把异常交回同一调度器。");
+                Assert(scene.Errors[0].StackTrace.Contains(nameof(MechanicCallbackFailureRetainsSceneUntilStopped)),
+                    "机制中断后重新抛出异常应保留实际失败回调的调用栈。");
+                scene.Manager.Clear();
+                Assert(cleaned.IsSet, "手动停止后才执行失败机制的清理回调。");
             }
         }
 
@@ -222,6 +227,120 @@ namespace Simulant.Tests
                 scene.Manager.Clear();
                 scene.AssertNoError();
                 Assert(writes == 0 && !scene.Manager.HasPendingCleanup, "回调使世界失效后，不得继续演出或向新地图执行旧清理。");
+            }
+        }
+
+        internal static void MechanicFailureInterruptsGroupAndPreservesActorsAndCasting()
+        {
+            const int actionId = 41001;
+            var rows = CsvManager.Instance.Get<ActionRow>();
+            var hadPrevious = rows.TryGetValue(actionId, out var previous);
+            rows[actionId] = new ActionRow { Index = actionId, CastTime = 60, AnimationEndId = -1 };
+            try
+            {
+                using (var scene = new Scene())
+                {
+                    var helper = scene.Manager.SpawnBNpc(1);
+                    scene.Player.Cast(actionId);
+                    scene.Player.MoveTo(new Vector2(100, 0));
+                    scene.Other.MoveTo(new Vector2(100, 0));
+                    var checks = 0;
+                    var callbacks = new List<string>();
+                    var cleanups = 0;
+                    scene.Manager.RunMechanic(new AreaMechanic
+                    {
+                        Area = ActionArea.Circle(2), ResolveAfter = 100,
+                        Cleanup = context => cleanups++,
+                    });
+                    scene.Manager.RunMechanic(new MechanicGroup(
+                        new AreaMechanic
+                        {
+                            Name = "测试双人塔", Area = ActionArea.Circle(2),
+                            Check = members => { checks++; return "缺少一人。"; },
+                            Failed = result => callbacks.Add("失败演出"),
+                            Resolved = result => callbacks.Add("不应减层"),
+                            Cleanup = context => cleanups++,
+                        },
+                        new AreaMechanic
+                        {
+                            Area = ActionArea.Circle(2),
+                            Check = members => { checks++; return null; },
+                            Resolved = result => callbacks.Add("不应释放后续技能"),
+                            Cleanup = context => cleanups++,
+                        })
+                    {
+                        Resolved = result => callbacks.Add("不应推进整轮"),
+                        Cleanup = context => cleanups++,
+                    });
+                    scene.Scheduler.Start();
+                    Await(scene.ErrorReported);
+                    scene.Scheduler.Dispose();
+                    Assert(checks == 2 && callbacks.SequenceEqual(new[] { "失败演出" }),
+                        "同组应先完成全部判定，但首次失败后不得执行结果回调和后续演出。");
+                    Assert(scene.Errors.Count == 1 && scene.Errors[0].Message == "测试双人塔：缺少一人。",
+                        "失败异常必须包含对应机制名和实际原因。");
+                    Assert(cleanups == 0 && scene.Player.IsActive && scene.Other.IsActive && helper.IsActive &&
+                        scene.Spawner.Deleted.Count == 0 && scene.Manager.Party.Count == 2,
+                        "中断必须保留小队、实体与所有已开始机制的清理责任。");
+                    Assert(!scene.Player.IsMoving && !scene.Other.IsMoving && scene.Scheduler.PendingCount == 0 &&
+                        scene.Player.Entity.CastingActionId == actionId && scene.Player.Entity.FinalizedCasts.Count == 0,
+                        "中断应停止移动及后续节点，同时保留现有读条动画。");
+                    scene.Manager.Clear();
+                    Assert(cleanups == 4 && scene.Player.Entity.CastingActionId == 0 && !helper.Entity.IsAlive &&
+                        scene.Player.Entity.IsAlive && !scene.Manager.HasPendingCleanup,
+                        "手动停止才应清理全部机制、结束演出并回收自有实体。");
+                }
+            }
+            finally
+            {
+                if (hadPrevious) rows[actionId] = previous;
+                else rows.Remove(actionId);
+            }
+        }
+
+        internal static void MechanicInterruptContinuesAfterMovementStopFailure()
+        {
+            using (var scene = new Scene())
+            using (var started = new ManualResetEventSlim())
+            {
+                var helper = scene.Manager.SpawnBNpc(1);
+                scene.Other.Entity.OnActorMove = (position, heading, speed) => started.Set();
+                scene.Other.MoveNetworkTo(new Vector2(100, 0));
+                helper.MoveTo(new Vector2(100, 0));
+                scene.Scheduler.Start();
+                Await(started);
+                scene.Scheduler.Dispose();
+                scene.Other.Entity.OnActorMove = (position, heading, speed) => { throw new InvalidOperationException("模拟停止移动包失败。"); };
+                Throws<AggregateException>(() => scene.Manager.Interrupt());
+                Assert(!helper.IsMoving && helper.IsActive && scene.Other.IsActive,
+                    "某角色停止失败不能阻止停止其余角色，且不能回收任何角色。");
+                scene.Other.Entity.OnActorMove = null;
+                scene.Manager.Clear();
+                Assert(!scene.Manager.HasPendingCleanup, "手动停止应重试失败移动并完成回收。");
+            }
+        }
+
+        internal static void MechanicManualStopCanCleanOwnedResourcesAfterInterruption()
+        {
+            using (var scene = new Scene())
+            {
+                var helper = scene.Manager.SpawnBNpc(1);
+                var cleanups = 0;
+                scene.Manager.RunMechanic(new AreaMechanic
+                {
+                    Area = ActionArea.Circle(2), ResolveAfter = 100,
+                    Cleanup = context => { context.Entities.Delete(helper); cleanups++; },
+                });
+                scene.Manager.RunMechanic(new AreaMechanic
+                {
+                    Area = ActionArea.Circle(2), ResolveAfter = 100,
+                    Cleanup = context => cleanups++,
+                });
+                scene.Manager.Interrupt();
+                Throws<InvalidOperationException>(() => scene.Manager.Delete(helper));
+                scene.Manager.Clear();
+                Assert(cleanups == 2 && !helper.Entity.IsAlive && !scene.Manager.HasPendingCleanup,
+                    "整体停止期间，各机制必须能释放自己创建的资源，不受其他待清理机制阻挡。");
             }
         }
 
@@ -291,8 +410,11 @@ namespace Simulant.Tests
                         Started = context => laterStarted++,
                         Cleanup = context => laterCleanup++,
                     })));
+                Assert(firstCleanup == 0 && laterStarted == 0 && laterCleanup == 0,
+                    "组的首项开始失败时应保留已经产生的演出，并中断后续开始回调。");
+                scene.Manager.Clear();
                 Assert(firstCleanup == 1 && laterStarted == 0 && laterCleanup == 0,
-                    "组的首项开始失败时，只清理已经进入开始回调的项，不能释放后续尚未创建的资源。");
+                    "手动停止仅清理已开始的项，不能释放尚未创建的资源。");
             }
         }
 
@@ -307,7 +429,12 @@ namespace Simulant.Tests
 
             internal Scene()
             {
-                Scheduler = new SimScheduler((error, name) => { Errors.Add(error); ErrorReported.Set(); });
+                Scheduler = new SimScheduler((error, name) =>
+                {
+                    Errors.Add(error);
+                    try { Manager.Interrupt(); }
+                    finally { ErrorReported.Set(); }
+                });
                 Manager = new SimEntityManager(Spawner) { Scheduler = Scheduler };
                 Player = Manager.Attach(Spawner.World.CreateCharacter(0));
                 Other = Manager.Attach(Spawner.World.CreateCharacter(2));

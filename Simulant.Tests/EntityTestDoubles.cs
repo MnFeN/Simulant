@@ -89,6 +89,20 @@ namespace Simulant.Core.Entity
         }
 
         public Simulant.Game.FFCS.Client.Game.Character.Job Job { get; set; }
+        internal byte[] NameBytes = new byte[64];
+        internal Action BeforeNameWrite, AfterNameWrite;
+        internal byte[] ReadNameBytes()
+        {
+            if (!IsAlive) throw new InvalidOperationException("名字读取访问了已失效的实体。");
+            return (byte[])NameBytes.Clone();
+        }
+        internal void SetNameBytes(byte[] bytes)
+        {
+            if (!IsAlive) throw new InvalidOperationException("改名访问了已失效的实体。");
+            BeforeNameWrite?.Invoke();
+            NameBytes = (byte[])bytes.Clone();
+            AfterNameWrite?.Invoke();
+        }
         internal sealed class NetworkMove
         {
             internal Vector3 Position;
@@ -329,14 +343,26 @@ namespace Simulant.ACT
     {
         internal static readonly List<string> Commands = new List<string>();
         internal static Action<string> OnCommand;
+        internal static readonly List<string> ChatCommands = new List<string>();
+        internal static Action<string> OnChatCommand;
         public static void InvokeNamedCallback(string name, string command)
         {
+            if (name == "command")
+            {
+                ChatCommands.Add(command);
+                OnChatCommand?.Invoke(command);
+                return;
+            }
             if (name != "PictoACT") throw new InvalidOperationException("非预期的回调：" + name);
             Commands.Add(command);
             OnCommand?.Invoke(command);
         }
 
-        internal static void Reset() { Commands.Clear(); OnCommand = null; }
+        internal static void Reset()
+        {
+            Commands.Clear(); OnCommand = null;
+            ChatCommands.Clear(); OnChatCommand = null;
+        }
     }
 }
 
@@ -345,7 +371,7 @@ namespace Simulant.Game.FFCS.Client.Game.Character
     public enum Job : byte
     {
         Adv = 0, GLA = 1, PLD = 19, MNK = 20, WAR = 21, DRG = 22, BRD = 23,
-        WHM = 24, BLM = 25, SMN = 27, SCH = 28, PCT = 42
+        WHM = 24, BLM = 25, SMN = 27, SCH = 28, DRK = 32, VPR = 41, PCT = 42
     }
     public enum CharacterModes : byte { None = 0, Normal = 1, Dead = 2, AnimLock = 8 }
 }

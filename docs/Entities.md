@@ -88,15 +88,18 @@ boss.StopCasting();
 
 ## 移动
 
-网络角色优先使用客户端移动插值：
+模拟实体的非初始化移动和转向优先使用 ActorMove，由客户端处理模型插值和动画；普通走位使用 `MoveNetworkTo`，原地转向使用 `FaceNetwork`：
 
 ```csharp
 boss.MoveNetworkTo(new Vector2(100, 90), speedParam: 30,
     onArrived: () => boss.Cast(0x7BA2));
 boss.StopMoving();
+boss.FaceNetwork((float)Math.PI); // 原地转向北。
 ```
 
-`MoveNetworkTo` 只向网络角色发送一次 `ActorMove`，由客户端完成移动和动画。控制器约每 100 ms 读取实际位置确认到达，不逐帧写坐标；到达后执行回调，30 秒未到达则报告超时。`speedParam` 保留协议字节的语义，不与本地 `MoveTo` 的浮点速度参数混用。停止或替换时发送当前位置作为新目标，并取消旧到达回调。此方式不接受自身或本地备用表中的角色。
+`MoveNetworkTo` 约每 100 ms 按经过时间发送沿途位置的 `ActorMove`，由客户端完成插值和动画；包内位置是该时刻的位置，不是远端导航终点。控制器读取实际位置确认到达，到达后执行回调，30 秒未到达则报告超时。`speedParam` 是每秒距离乘以 10 后的协议字节。停止或替换时发送当前位置，并取消旧到达回调。此方式不接受自身或本地备用表中的角色。
+
+`FaceNetwork` 先停止本会话移动，再发送当前位置与目标朝向。初始化应优先在生成参数中填写 `Pos` 和 `Heading`；直接写位置、朝向不产生移动动画，只用于初始布置、隐藏技能假人的演出定位或本地备用实体。直接设置时必须同步有效的 `DrawObject`，否则可能只改变逻辑坐标或目标圈，模型不会跟着移动或转向。不要用直接写 `Heading` 代替机制中的网络转向。
 
 原有本地插值保留为备用：
 

@@ -45,6 +45,12 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         public IntPtr GetName()
             => Ptr.CallVFunc<IntPtr>(6);
 
+        // 来源：FFXIVClientStructs 的 GameObject.SetName；原生入口同时通知名牌刷新。
+        [SigPattern("E8 * * * * 48 8B 16 48 8B 4F")]
+        public static IntPtr SetNameFuncPtr { get; set; }
+        public void SetName(IntPtr name)
+            => SetNameFuncPtr.Call(Ptr, name);
+
         public float GetRadius(bool adjustByTransformation = true)
             => Ptr.CallVFunc<float>(7, adjustByTransformation);
 

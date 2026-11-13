@@ -165,11 +165,11 @@ namespace Simulant.Simulation.Timeline
             if (join) _worker.Join();
         }
 
-        /// <summary>异常中止后，在原调度线程保留演出；显式释放可立即唤醒，不再执行任何节点。</summary>
+        /// <summary>中断后在原调度线程等待演出，不再运行节点；手动停止或卸载可立即唤醒。</summary>
         internal void WaitForFailureDisplay(double seconds)
         {
             SimTimeline.ValidateSeconds(seconds, nameof(seconds));
-            if (!IsSchedulerThread) throw new InvalidOperationException("异常演出等待只能在调度线程执行。");
+            if (!IsSchedulerThread) throw new InvalidOperationException("演出等待只能在调度线程执行。");
             var wait = Stopwatch.StartNew();
             lock (_gate)
             {

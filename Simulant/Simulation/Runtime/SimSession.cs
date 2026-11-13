@@ -1,4 +1,6 @@
+using Simulant.ACT;
 using Simulant.Core;
+using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Threading;
@@ -13,11 +15,11 @@ namespace Simulant.Simulation.Runtime
         private readonly object _lifecycleLock = new object();
         private SimScheduler _scheduler;
         private int _cleanupRequired;
+        private int _failureRetained;
         private volatile bool _disposed;
 
         public bool IsRunning => _scheduler?.IsRunning == true;
-        internal bool HasPendingCleanup => _entityManager.HasPendingCleanup;
-        internal double FailureCleanupDelaySeconds { get; set; } = 5;
+        internal bool HasPendingCleanup => _entityManager.HasPendingCleanup || Volatile.Read(ref _failureRetained) != 0;
 
         internal SimSession(PluginHost host, SimPresetBase preset)
         {
@@ -51,20 +53,7 @@ namespace Simulant.Simulation.Runtime
                     throw new ObjectDisposedException(nameof(SimSession));
                 if (HasPendingCleanup)
                     throw new InvalidOperationException("上次模拟的实体尚未完全回收，请先停止并重试清理。");
-                _scheduler = new SimScheduler((ex, node) =>
-                {
-                    var delay = HasPendingCleanup ? FailureCleanupDelaySeconds : 0;
-                    try
-                    {
-                        _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{ex}");
-                        if (delay > 0) _host.LogWarning($"后续时间轴已停止，保留当前演出 {delay:0.##} 秒后回收；手动停止可立即回收。");
-                    }
-                    finally
-                    {
-                        try { _scheduler.WaitForFailureDisplay(delay); }
-                        finally { Cleanup(); }
-                    }
-                });
+                _scheduler = new SimScheduler(HandleFailure);
                 try
                 {
                     _entityManager.Scheduler = _scheduler;
@@ -79,6 +68,34 @@ namespace Simulant.Simulation.Runtime
                 {
                     StopCore();
                     throw;
+                }
+            }
+        }
+
+        private void HandleFailure(Exception error, string node)
+        {
+            Interlocked.Exchange(ref _failureRetained, 1);
+            var reason = error is SimMechanicFailedException ? error.Message :
+                $"节点「{node ?? "未命名"}」执行失败：{error.Message}";
+            try
+            {
+                if (error is SimMechanicFailedException) _host.LogWarning(reason);
+                else _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{error}");
+            }
+            finally
+            {
+                try
+                {
+                    try { TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + reason); }
+                    catch (Exception chatError) { _host.LogWarning("模拟错误的聊天提示发送失败：" + chatError.Message); }
+                }
+                finally
+                {
+                    // 当前判定的演出已提交；取消后续机制后留出两秒，再停止角色行为。
+                    // 普通执行异常仍立即中断，手动停止可提前结束等待。
+                    if (error is SimMechanicFailedException) _scheduler.WaitForFailureDisplay(2);
+                    try { _entityManager.Interrupt(); }
+                    catch (Exception interruptError) { _host.LogError("中断模拟行为失败，已保留清理责任：" + interruptError); }
                 }
             }
         }
@@ -104,6 +121,7 @@ namespace Simulant.Simulation.Runtime
 
         private void Cleanup()
         {
+            Interlocked.Exchange(ref _failureRetained, 0);
             if (Interlocked.Exchange(ref _cleanupRequired, 0) != 0)
                 _logic.Stop();
             else if (HasPendingCleanup)

@@ -24,6 +24,7 @@
     <Compile Include="CastTests.cs" />
     <Compile Include="ManagerTests.cs" />
     <Compile Include="SessionStatusTests.cs" />
+    <Compile Include="PartyNameTests.cs" />
     <Compile Include="EntityTestDoubles.cs" />
     <Compile Include="NetworkSpawnTests.cs" />
     <Compile Include="NetworkManagerTests.cs" />
@@ -60,6 +61,8 @@
     <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.cs"><Link>Runtime\SimEntityManager.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Network.cs"><Link>Runtime\SimEntityManager.Network.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Statuses.cs"><Link>Runtime\SimEntityManager.Statuses.cs</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Names.cs"><Link>Runtime\SimEntityManager.Names.cs</Link></Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimPartyNames.cs"><Link>Runtime\SimPartyNames.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Mechanics.cs"><Link>Runtime\SimEntityManager.Mechanics.cs</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Geometry\*.cs"><Link>Geometry\%(Filename)%(Extension)</Link></Compile>
     <Compile Include="..\Simulant\Simulation\Mechanics\*.cs"><Link>Mechanics\%(Filename)%(Extension)</Link></Compile>

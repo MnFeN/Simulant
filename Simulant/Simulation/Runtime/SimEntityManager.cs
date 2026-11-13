@@ -33,7 +33,7 @@ namespace Simulant.Simulation.Runtime
             get
             {
                 lock (_gate)
-                    return _isClearing || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 ||
+                    return _isClearing || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 || _names.Count != 0 ||
                         _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true ||
                         _partyService?.IsOwnedBy(this) == true;
             }
@@ -58,6 +58,8 @@ namespace Simulant.Simulation.Runtime
                         throw new InvalidOperationException("上次模拟的小队列表尚未恢复，请先重试清理。");
                     if (_statuses.Count != 0)
                         throw new InvalidOperationException("上次模拟的点名状态尚未清理，请先重试停止。");
+                    if (_names.Count != 0)
+                        throw new InvalidOperationException("上次模拟的玩家名字尚未恢复，请先重试停止。");
                     if (_mechanics.Count != 0)
                         throw new InvalidOperationException("上次模拟的机制尚未清理，请先重试停止。");
                     if (_actors.Count != 0 || _owned.Count != 0 || _networkSpawns.Count != 0)
@@ -186,9 +188,10 @@ namespace Simulant.Simulation.Runtime
             {
                 if (!_actors.TryGetValue(actor.Entity.Identity, out var current) || !ReferenceEquals(current, actor))
                     return;
-                if (_mechanics.Any(mechanic => mechanic.HasFailedCleanup))
-                    throw new InvalidOperationException("仍有机制清理失败，不能提前解除角色关联，请重试停止模拟。");
+                if (!_isClearing && _mechanics.Any(mechanic => mechanic.HasFailedCleanup))
+                    throw new InvalidOperationException("仍有机制尚未清理，不能提前解除角色关联，请重试停止模拟。");
                 ClearStatuses(actor.Entity);
+                RestoreNames(actor.Entity);
                 _partyService?.RemoveMember(this, actor.Id);
                 try { actor.Dispose(); }
                 finally
@@ -212,9 +215,10 @@ namespace Simulant.Simulation.Runtime
             {
                 // 延迟回收可能发生在 Clear 之后；不再拥有就不接触原生对象。
                 if (!_owned.Contains(entity)) return;
-                if (_mechanics.Any(mechanic => mechanic.HasFailedCleanup))
-                    throw new InvalidOperationException("仍有机制清理失败，不能提前回收实体，请重试停止模拟。");
+                if (!_isClearing && _mechanics.Any(mechanic => mechanic.HasFailedCleanup))
+                    throw new InvalidOperationException("仍有机制尚未清理，不能提前回收实体，请重试停止模拟。");
                 ClearStatuses(entity);
+                RestoreNames(entity);
                 // 列表移除失败时保留实体，避免界面仍引用已回收的队员。
                 _partyService?.RemoveMember(this, entity.Id);
                 try
@@ -285,12 +289,13 @@ namespace Simulant.Simulation.Runtime
                 foreach (var actor in actors)
                     TryCleanup(actor.Dispose);
                 TryCleanup(() => ClearStatuses());
+                TryCleanup(() => RestoreNames());
                 var partyRestored = _partyService == null || TryCleanup(() => _partyService.Restore(this));
                 if (partyRestored)
                     foreach (var entity in owned)
                     {
                         lock (_gate)
-                            if (HasStatusDependency(entity)) continue;
+                            if (HasStatusDependency(entity) || _names.Any(name => name.Actor.Identity == entity.Identity)) continue;
                         if (TryCleanup(() => _spawner.Delete(entity)))
                             lock (_gate) _owned.Remove(entity);
                     }
