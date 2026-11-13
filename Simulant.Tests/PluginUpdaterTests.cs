@@ -29,7 +29,7 @@ namespace Simulant.Tests
             {
                 updater.CheckAsync().GetAwaiter().GetResult();
                 Assert(requests.SequenceEqual(new[] { PluginUpdater.ReleasesUrl }), "正常检查不能访问备用源或下载 DLL。");
-                Assert(warnings.Single() == "当前版本 0.1.0.0，检查到新版本 0.2.0.0，请在左侧菜单中下载更新", "关闭自动安装时应使用指定提示。");
+                Assert(warnings.Single() == "当前版本 0.1.0.0，检查到新版本 0.2.0.0，请在左侧菜单中下载更新（数据源：GitHub）", "关闭自动安装时应使用指定提示并注明来源。");
                 Assert(File.ReadAllText(path) == "原插件", "仅检查时不能修改插件。");
             });
         }
@@ -41,7 +41,7 @@ namespace Simulant.Tests
                 {
                     updater.CheckAsync().GetAwaiter().GetResult();
                     Assert(requests.SequenceEqual(new[] { PluginUpdater.ReleasesUrl, PluginUpdater.FallbackVersionUrl }), "应按 GitHub、网盘的顺序回退。");
-                    Assert(warnings.Single().Contains("检查到新版本 0.2.0.0"), "网盘检查成功后应提示新版本。");
+                    Assert(warnings.Single().Contains("检查到新版本 0.2.0.0") && warnings.Single().EndsWith("（数据源：123 网盘）"), "网盘检查成功后应提示新版本并注明实际来源。");
                 });
         }
 
@@ -50,7 +50,7 @@ namespace Simulant.Tests
             WithUpdater(true, (url, token) => Text("<html>服务暂不可用</html>"), (updater, warnings, requests, path) =>
             {
                 updater.CheckAsync().GetAwaiter().GetResult();
-                Assert(warnings.Single() == "从 GitHub 及 123 网盘尝试获取更新均失败。", "无效网页不能当作有效版本。");
+                Assert(warnings.Single() == "从 GitHub 及 123 网盘尝试获取更新均失败。（数据源：GitHub、123 网盘）", "无效网页不能当作有效版本。");
                 Assert(requests.Count == 2 && File.ReadAllText(path) == "原插件", "检查失败不能尝试安装。");
             });
         }
@@ -62,7 +62,7 @@ namespace Simulant.Tests
                 ++githubCalls == 1 ? FailedResponse() : Text(Page("v0.2.0.0")), (updater, warnings, requests, path) =>
             {
                 updater.CheckAsync().GetAwaiter().GetResult();
-                Assert(warnings.Single() == "当前版本 0.1.0.0，检查到新版本 0.3.0.0，但访问 GitHub 下载失败，请在左侧菜单中手动安装更新", "安装不可用时应保留已发现的新版本提示。");
+                Assert(warnings.Single() == "当前版本 0.1.0.0，检查到新版本 0.3.0.0，但访问 GitHub 下载失败，请在左侧菜单中手动安装更新（数据源：123 网盘）", "安装不可用时应保留已发现的新版本及其来源。");
                 Assert(requests.Count == 3 && File.ReadAllText(path) == "原插件", "不能把旧版当作网盘提示的新版安装。");
             });
         }
@@ -89,7 +89,7 @@ namespace Simulant.Tests
                         updater.CheckAsync().GetAwaiter().GetResult();
                         Assert(File.ReadAllBytes(path).SequenceEqual(bytes), "应替换 ACT 原始路径中的 DLL。");
                         Assert(requests.Count(url => url.Contains("/download/")) == 1, "等待重启期间不应重复下载。");
-                        Assert(warnings.Count == 2 && warnings.All(text => text == "已从 0.1.0.0 版本更新至 0.2.0.0 版本，请重启 ACT"), "安装完成后应提示重启 ACT。");
+                        Assert(warnings.Count == 2 && warnings.All(text => text == "已从 0.1.0.0 版本更新至 0.2.0.0 版本，请重启 ACT（数据源：GitHub）"), "安装完成后应提示重启 ACT 并注明来源。");
                         Assert(Directory.GetFiles(Path.GetDirectoryName(path)).Length == 1, "安装成功不应保留备份或临时文件。");
                     }));
         }
@@ -121,11 +121,18 @@ namespace Simulant.Tests
         public static void CurrentOrOlderReleaseIsNotDownloaded()
         {
             foreach (var version in new[] { "v0.1.0.0", "v0.0.4.2" })
-                WithUpdater(true, (url, token) => Text(Page(version)), (updater, warnings, requests, path) =>
+            foreach (var fallback in new[] { false, true })
+            {
+                var logs = new List<string>();
+                WithUpdater(true, (url, token) => url == PluginUpdater.FallbackVersionUrl ? Text(version) :
+                    fallback ? FailedResponse() : Text(Page(version)), (updater, warnings, requests, path) =>
                 {
                     updater.CheckAsync().GetAwaiter().GetResult();
-                    Assert(requests.Count == 1 && warnings.Count == 0 && File.ReadAllText(path) == "原插件", "相同或更旧的版本不应自动安装。");
-                });
+                    Assert(requests.Count == (fallback ? 2 : 1) && warnings.Count == 0 && File.ReadAllText(path) == "原插件", "相同或更旧的版本不应自动安装。");
+                    Assert(logs.Single() == "当前版本 0.1.0.0，暂无更新。（数据源：" + (fallback ? "123 网盘" : "GitHub") + "）",
+                        "暂无更新时应注明实际使用的数据源。");
+                }, logs.Add);
+            }
         }
 
         public static void UnloadingCancelsRequestsAndRejectsConcurrentUpdates()
@@ -152,7 +159,7 @@ namespace Simulant.Tests
         private static Task<HttpResponseMessage> FailedResponse() => Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
 
         private static void WithUpdater(bool autoInstall, Func<string, CancellationToken, Task<HttpResponseMessage>> respond,
-            Action<PluginUpdater, List<string>, List<string>, string> test)
+            Action<PluginUpdater, List<string>, List<string>, string> test, Action<string> runtime = null)
         {
             var root = Path.Combine(Path.GetDirectoryName(typeof(PluginUpdaterTests).Assembly.Location), "update-test-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
@@ -162,7 +169,7 @@ namespace Simulant.Tests
             var requests = new List<string>();
             try
             {
-                using (var updater = new PluginUpdater(() => path, new Version(0, 1, 0, 0), () => autoInstall, warnings.Add, _ => { },
+                using (var updater = new PluginUpdater(() => path, new Version(0, 1, 0, 0), () => autoInstall, warnings.Add, runtime ?? (_ => { }),
                     new ResponseHandler((url, token) => { requests.Add(url); return respond(url, token); })))
                     test(updater, warnings, requests, path);
             }

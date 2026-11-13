@@ -57,6 +57,8 @@ namespace Simulant.Core
             }
 
             Version available = null;
+            var source = "GitHub";
+            string Source() => $"（数据源：{source}）";
             try
             {
                 // 在调用线程取得 ACT 登记的原始路径；从字节加载的程序集没有 Location。
@@ -69,23 +71,24 @@ namespace Simulant.Core
                 }
                 catch (Exception) when (!_stop.IsCancellationRequested && !install)
                 {
+                    source = "123 网盘";
                     available = ParseVersion(await GetTextAsync(FallbackVersionUrl).ConfigureAwait(false));
                 }
 
                 _stop.Token.ThrowIfCancellationRequested();
                 if (_installedVersion != null && available <= _installedVersion)
                 {
-                    _warning($"已从 {_currentVersion} 版本更新至 {_installedVersion} 版本，请重启 ACT");
+                    _warning($"已从 {_currentVersion} 版本更新至 {_installedVersion} 版本，请重启 ACT{Source()}");
                     return;
                 }
                 if (available < _currentVersion || (!install && available == _currentVersion))
                 {
-                    _runtime($"当前版本 {_currentVersion}，暂无更新。");
+                    _runtime($"当前版本 {_currentVersion}，暂无更新。{Source()}");
                     return;
                 }
                 if (!install && !_autoInstall())
                 {
-                    _warning($"当前版本 {_currentVersion}，检查到新版本 {available}，请在左侧菜单中下载更新");
+                    _warning($"当前版本 {_currentVersion}，检查到新版本 {available}，请在左侧菜单中下载更新{Source()}");
                     return;
                 }
 
@@ -96,20 +99,24 @@ namespace Simulant.Core
                     var githubVersion = ParseVersion(Uri.UnescapeDataString(tag));
                     if (githubVersion < available) throw new InvalidDataException("GitHub 尚未提供检查到的新版本。");
                     available = githubVersion;
+                    source = "GitHub";
                 }
                 await DownloadAndReplaceAsync(tag, available, path).ConfigureAwait(false);
-                _warning($"已从 {_currentVersion} 版本更新至 {available} 版本，请重启 ACT");
+                _warning($"已从 {_currentVersion} 版本更新至 {available} 版本，请重启 ACT{Source()}");
             }
             catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
             catch (Exception error)
             {
                 if (_stop.IsCancellationRequested) return;
                 if (available != null)
-                    _warning($"当前版本 {_currentVersion}，检查到新版本 {available}，但访问 GitHub 下载失败，请在左侧菜单中手动安装更新");
+                    _warning($"当前版本 {_currentVersion}，检查到新版本 {available}，但访问 GitHub 下载失败，请在左侧菜单中手动安装更新{Source()}");
                 else if (install)
-                    _warning("访问 GitHub 安装更新失败，请稍后重试，或在左侧菜单中打开发布页面。");
+                    _warning($"访问 GitHub 安装更新失败，请稍后重试，或在左侧菜单中打开发布页面。{Source()}");
                 else
-                    _warning("从 GitHub 及 123 网盘尝试获取更新均失败。");
+                {
+                    source = "GitHub、123 网盘";
+                    _warning($"从 GitHub 及 123 网盘尝试获取更新均失败。{Source()}");
+                }
                 _runtime("更新失败原因：" + error.Message);
             }
             finally
