@@ -43,7 +43,7 @@ namespace Simulant
                     CheckEntityTest(run, Vector3.Distance(actor.Pos3D, spec.Pos) < 0.15f,
                         $"{spec.Name} 的出生位置正确");
                     LogEntityTest(run, $"{spec.Name}：实体 {actor.Id:X8}，网络槽 {actor.Entity.Identity.Slot / 2}；" +
-                        (JobEquipment.HasSet(spec.Job) ? "使用 99 级职业蓝装，外貌复制自身。" : "没有对应的职业套装，保留自身装备与外貌。"));
+                        (JobEquipment.HasSet(spec.Job) ? "使用幻境·秘影武器与 99 级职业蓝装护甲，外貌复制自身。" : "没有对应的职业套装，保留自身装备与外貌。"));
                     WaitForNetworkTargetability(run, actor, true, () =>
                     {
                         CheckEntityTest(run, true, $"{spec.Name} 完成入场并可选中");

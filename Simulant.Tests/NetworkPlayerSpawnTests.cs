@@ -141,8 +141,8 @@ namespace Simulant.Tests
             var appearance = CreateAppearance();
             var jobs = new[] { Job.PLD, Job.MNK, Job.WAR, Job.DRG, Job.BRD, Job.WHM, Job.BLM, Job.SMN };
             var armors = new uint[] { 0x10304, 0x10305, 0x10306, 0x10307, 0x10308, 0x10309, 0x1030A, 0x1030B };
-            var mainhands = new ulong[] { 0x1000200DC, 0x100010152, 0x1000101A1, 0x100010210, 0x10001027B, 0x10002033F, 0x100020409, 0x1000106D8 };
-            var offhands = new ulong[] { 0x100020072, 0x100010184, 0, 0, 0x1008202BA, 0, 0, 0 };
+            var mainhands = new ulong[] { 0x2001900DC, 0x200010156, 0x2000401A2, 0x200120210, 0x200010280, 0x200260328, 0x200090409, 0x2000106E7 };
+            var offhands = new ulong[] { 0x200190072, 0x200010188, 0, 0, 0x1009602BA, 0, 0, 0 };
             for (var index = 0; index < jobs.Length; index++)
             {
                 var spec = new NetworkPlayerSpawnSpec { Job = jobs[index] };
