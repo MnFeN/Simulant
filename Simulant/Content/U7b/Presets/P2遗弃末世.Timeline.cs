@@ -73,7 +73,7 @@ namespace Simulant.Content.U7b.Presets
             var northHeading = pair < 3 ? _plan.Rounds[pair * 2 + 2].NorthHeading : Math.PI;
             timeline.At(EndCast[pair], () =>
             {
-                // 跳跃动作只改变表现位置；新一轮通过收包恢复中心与朝北面向。
+                // 上轮跳跃已改变实际落点；新一轮通过收包恢复中心与朝北面向。
                 _casters[0].Entity.ActorMove(new Vector3(ForsakenPlan.Center, _casters[0].Pos3D.Z), (float)Math.PI);
                 _casters[0].Cast(round.FutureEnd ? 0xBAD2u : 0xBAD3u);
             }, $"第 {pair + 1} 次{(round.FutureEnd ? "未来" : "过去")}终结读条");
@@ -81,6 +81,7 @@ namespace Simulant.Content.U7b.Presets
             {
                 for (var caster = 1; caster < 4; caster++)
                 {
+                    // 分身仍隐藏时初始化本轮出场位置，出现后的跳跃落地使用 ActorMove。
                     _casters[caster].Pos = ForsakenPlan.Center;
                     _casters[caster].EnableDraw();
                     _casters[caster].SetReadyToDraw();

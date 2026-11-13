@@ -121,6 +121,7 @@ namespace Simulant.Content.U7b.Presets
         }
 
         private void SelectJumpTargets()
+            // 本体取最近者，三个分身依次取第二至第四近者，不按动作包的先后重新选人。
             => _jumpTargets = PartySnapshot.Capture(Party).Nearest(ForsakenPlan.Center, 4).Select(player => player.Slot).ToArray();
 
         private void ResolveJumps(ForsakenRoundPlan round, int[] sources)
@@ -138,11 +139,21 @@ namespace Simulant.Content.U7b.Presets
                     Failed = result => ReportJumpFailure(round, target, result),
                     Visual = result =>
                     {
+                        var direction = result.Center - ForsakenPlan.Center;
+                        var distance = direction.Length();
+                        var landing = ForsakenPlan.Center + (distance > 4 ? direction * (1 - 4 / distance) : Vector2.Zero);
+                        var position = new Vector3(landing, actor.Pos3D.Z);
+                        var heading = distance > 0.0001f ? Heading(ForsakenPlan.Center, result.Center) : (float)Math.PI;
                         actor.StopCasting();
                         actor.Entity.ResetBaseTimeline();
-                        actor.FaceNetwork(Heading(actor.Pos, result.Center));
-                        // 网络位置仍在中心，跳跃的表现位移交给带目标的原生动作效果。
+                        actor.FaceNetwork(heading);
+                        // 圆形伤害仍以目标为中心；施法者沿场中心到目标的方向，停在目标前四米。
                         actor.Entity.ExecuteActionEffect(action, Party[target].Entity);
+                        // 回放在动作效果后约 0.65 秒以速度参数 90 更新落点，后续半场刀读取该实体位置。
+                        Scheduler.ScheduleAfter(0.65, () =>
+                        {
+                            if (actor.IsActive) actor.Entity.ActorMove(position, heading, 90);
+                        }, $"第 {round.Number} 轮跳跃落地 {source + 1}");
                     },
                     Resolved = result =>
                     {
