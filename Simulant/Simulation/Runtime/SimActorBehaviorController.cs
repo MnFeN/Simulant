@@ -128,6 +128,7 @@ namespace Simulant.Simulation.Runtime
                     if (!inCombat) { CancelOwnCast(state); continue; }
                     if (targetable && state.Options.AttackTarget)
                     {
+                        UpdateMeleeReturn(state, now);
                         if (now >= state.NextFacing && !actor.IsMoving)
                         { FaceTarget(actor); state.NextFacing = now + 0.5; }
                         UpdateAction(state, now);

@@ -35,33 +35,43 @@ namespace Simulant.Simulation.Runtime
                 // 关闭延迟与紧急意图都直接就位，不让自动读条、滑步、贪刀或绕路推迟移动。
                 var immediate = urgent || !state.Options.DelayArrival;
                 var plan = new MovePlan { Destination = destination, Latest = arriveBy, HoldUntil = holdUntil, Immediate = immediate,
-                    NotBefore = immediate ? now : arriveBy - 1 };
-                if (Vector2.Distance(position, destination) > SimMovementController.NetworkArrivalTolerance)
+                    NotBefore = immediate ? now : arriveBy - 1,
+                    Arrival = immediate ? now : arriveBy - 0.25 - _random.NextDouble() * 0.35 };
+                var origin = position;
+                if (!immediate && state.Options.AttackTarget && state.Actions?.Melee == true &&
+                    _target != null && _target.IsActive && _target.Entity.IsTargetable && _target.Entity.HP != 0)
                 {
-                    var origin = position;
-                    if (!immediate && state.Options.AttackTarget && state.Actions?.Melee == true &&
-                        _target != null && _target.IsActive && _target.Entity.IsTargetable)
+                    var center = _target.Pos;
+                    var offset = position - center;
+                    var destinationOffset = destination - center;
+                    var radius = _target.Entity.HitboxRadius + 2;
+                    var outside = offset.Length() > radius + 1;
+                    if (outside || destinationOffset.Length() > radius + 1)
                     {
-                        var offset = destination - _target.Pos;
-                        var radius = _target.Entity.HitboxRadius + 2;
-                        if (offset.Length() > radius + 1)
-                        {
-                            var staging = _target.Pos + Vector2.Normalize(offset) * radius;
-                            // 只在确有时间时靠近目标方向的近战边缘，之后再延后离开。
-                            if (Vector2.Distance(origin, staging) > 0.3f &&
-                                now + (Vector2.Distance(origin, staging) + Vector2.Distance(staging, destination)) / 6 + 1 < arriveBy)
-                            { plan.Points.Add(staging); plan.StageFirst = true; origin = staging; }
-                        }
+                        // 远处先沿当前方向返回最近的近战边缘；圈内则提前靠近下一站位的方向。
+                        var staging = center + Vector2.Normalize(outside ? offset : destinationOffset) * radius;
+                        // 往返路程、两段更新余量之外，至少留一秒输出，避免刚回来就折返。
+                        if (Vector2.Distance(origin, staging) > 0.3f &&
+                            now + (Vector2.Distance(origin, staging) + Vector2.Distance(staging, destination)) / 6 + 1.6 < plan.Arrival)
+                        { plan.Points.Add(staging); plan.StageFirst = true; origin = staging; }
                     }
+                }
+                // 即使下一次仍站在原点，只要有空闲也可先回近战，随后再回来处理机制。
+                if (plan.StageFirst || Vector2.Distance(position, destination) > SimMovementController.NetworkArrivalTolerance)
+                {
                     plan.Points.AddRange(CreateRoute(origin, destination, immediate ? 0 : state.Options.RouteAngleDegrees, _random));
+                    if (plan.StageFirst && now + TravelTime(position, plan) + 1 > plan.Arrival)
+                    {
+                        plan.Points.Clear(); plan.StageFirst = false;
+                        plan.Points.AddRange(CreateRoute(position, destination, state.Options.RouteAngleDegrees, _random));
+                    }
                     if (now + TravelTime(position, plan) > arriveBy)
                     { plan.Points.Clear(); plan.Points.Add(destination); plan.StageFirst = false; }
                     if (now + TravelTime(position, plan) > arriveBy)
                         throw new InvalidOperationException($"假玩家 {actor.Job}（{actor.Id:X8}）的移动窗口不足，无法以正常跑速在截止前到达。");
                     // 延迟到达只推迟实体自己的出发安排，仍预留更新余量；关闭或紧急时尽早出发。
                     var earliest = now + TravelTime(position, plan);
-                    plan.Arrival = !immediate
-                        ? Math.Max(earliest, arriveBy - 0.25 - _random.NextDouble() * 0.35) : earliest;
+                    plan.Arrival = Math.Max(earliest, plan.Arrival);
                 }
                 else plan.Arrived = true;
                 _movement.Stop(actor);
@@ -72,6 +82,24 @@ namespace Simulant.Simulation.Runtime
                 if (immediate) CancelOwnCast(state);
                 QueueTick();
             }
+        }
+
+        /// <summary>机制站位约束结束后，近战主动回到可攻击距离；不依赖空闲走动的半径与冷却。</summary>
+        private void UpdateMeleeReturn(State state, double now)
+        {
+            if (state.Actions?.Melee != true || state.Move != null || state.ManualMovement || state.Actor.IsMoving) return;
+            var position = state.Actor.Pos;
+            var offset = position - _targetPosition;
+            var radius = _targetRadius + 2;
+            if (offset.Length() <= radius + 1) return;
+            var destination = _targetPosition + Vector2.Normalize(offset) * radius;
+            var plan = new MovePlan { Destination = destination, Immediate = true, HoldUntil = now };
+            plan.Points.Add(destination);
+            plan.Arrival = now + TravelTime(position, plan);
+            plan.Latest = plan.Arrival + 1;
+            state.Move = plan;
+            // 后续闲逛以新的近战位置为中心，不再回到已经结束的远处机制点。
+            state.Anchor = destination;
         }
 
         private void UpdateMovement(State state, double now)

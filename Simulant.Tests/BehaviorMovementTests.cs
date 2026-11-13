@@ -171,13 +171,108 @@ namespace Simulant.Tests
                 "很小的站位修正不应额外插入拐点。");
         }
 
+        internal static void IdleMeleeReturnsAfterTheHoldAndYieldsToNewMechanics()
+        {
+            Exception failure = null;
+            using (var finished = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var melee = CreateActor(behavior, movement, casts, job: Job.VPR, position: new Vector2(10, 0));
+                var immediate = CreateActor(behavior, movement, casts, delayArrival: false, job: Job.DRK, position: new Vector2(10, 0));
+                var retarget = CreateActor(behavior, movement, casts, job: Job.MNK, position: new Vector2(20, 0));
+                var ranged = CreateActor(behavior, movement, casts, job: Job.BRD, position: new Vector2(10, 0));
+                var disabled = CreateActor(behavior, movement, casts, job: Job.VPR, position: new Vector2(10, 0));
+                disabled.ConfigureBehavior(new SimActorBehaviorOptions { AttackTarget = false, IdleRadius = 0 });
+                foreach (var actor in new[] { melee, immediate, retarget, ranged, disabled })
+                    actor.MoveForMechanic(actor.Pos, 0.5, holdUntil: 1.5, urgent: true);
+                var boss = new SimActor(new EntityTestWorld().CreateCharacter(0), casts, movement);
+                boss.Entity.HitboxRadius = 2;
+                behavior.SetTarget(boss);
+                scheduler.Schedule(1.2, () =>
+                {
+                    Assert(melee.Pos.X == 10 && immediate.Pos.X == 10 && retarget.Pos.X == 20,
+                        "机制判定要求保持站位时，近战不能提前离开远处的安全点。");
+                });
+                scheduler.Schedule(2, () =>
+                {
+                    Assert(retarget.IsMoving && retarget.Pos.X < 20, "机制结束后应主动返回近战，不等待空闲走动冷却。");
+                    retarget.MoveForMechanic(new Vector2(22, 0), 3.7, holdUntil: 4.5, urgent: true);
+                });
+                scheduler.Schedule(3.8, () =>
+                {
+                    Assert(melee.Pos == new Vector2(4, 0) && immediate.Pos == new Vector2(4, 0),
+                        "空闲近战应回到身位圈外两米，即使空闲半径为零或关闭延迟到达。");
+                    Assert(retarget.Pos == new Vector2(22, 0) && !retarget.IsMoving,
+                        "新的紧急站位应立即取代返回近战的路线。");
+                    Assert(ranged.Pos.X == 10 && disabled.Pos.X == 10,
+                        "远程与关闭攻击的角色不应主动贴近 Boss。");
+                    finished.Set();
+                });
+                scheduler.Start();
+                Assert(finished.Wait(6500), "机制结束返回近战的检查未完成。");
+                scheduler.Dispose();
+                Assert(failure == null, "机制结束返回近战失败：" + failure);
+            }
+        }
+
+        internal static void MeleeUsesTheGapBeforeTheNextMechanicWithoutMissingItsDeadline()
+        {
+            Exception failure = null;
+            using (var finished = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var normal = CreateActor(behavior, movement, casts, job: Job.VPR, position: new Vector2(10, 0));
+                var tight = CreateActor(behavior, movement, casts, job: Job.VPR, position: new Vector2(10, 0));
+                var urgent = CreateActor(behavior, movement, casts, job: Job.VPR, position: new Vector2(10, 0));
+                var immediate = CreateActor(behavior, movement, casts, delayArrival: false, job: Job.VPR, position: new Vector2(10, 0));
+                foreach (var actor in new[] { normal, tight, urgent, immediate })
+                    actor.MoveForMechanic(actor.Pos, 0.5, holdUntil: 1, urgent: true);
+                var boss = new SimActor(new EntityTestWorld().CreateCharacter(0), casts, movement);
+                boss.Entity.HitboxRadius = 2;
+                behavior.SetTarget(boss);
+                scheduler.Schedule(1, () =>
+                {
+                    normal.MoveForMechanic(new Vector2(10, 0), 6, holdUntil: 7);
+                    tight.MoveForMechanic(new Vector2(12, 0), 3, holdUntil: 7);
+                    urgent.MoveForMechanic(new Vector2(12, 0), 6, holdUntil: 7, urgent: true);
+                    immediate.MoveForMechanic(new Vector2(12, 0), 6, holdUntil: 7);
+                });
+                scheduler.Schedule(3.1, () =>
+                {
+                    Assert(normal.Pos == new Vector2(4, 0) && !normal.IsMoving,
+                        "下一次仍使用原来的远处站位时，有足够空闲应先回到近战输出。");
+                    foreach (var actor in new[] { tight, urgent, immediate })
+                        Assert(actor.Pos == new Vector2(12, 0) && actor.Entity.NetworkMoves.TrueForAll(move => move.Position.X >= 10),
+                            "时间紧张、紧急移动或关闭延迟到达时不能绕回近战。");
+                });
+                scheduler.Schedule(6.2, () =>
+                {
+                    Assert(normal.Pos == new Vector2(10, 0) && !normal.IsMoving,
+                        "返回近战输出后仍应按时回到原定机制站位，并保持到判定结束。");
+                    finished.Set();
+                });
+                scheduler.Start();
+                Assert(finished.Wait(9000), "机制间隔返回近战的检查未完成。");
+                scheduler.Dispose();
+                Assert(failure == null, "机制间隔返回近战失败：" + failure);
+            }
+        }
+
         private static SimActor CreateActor(SimActorBehaviorController behavior, SimMovementController movement, SimCastController casts,
-            bool delayArrival = true)
+            bool delayArrival = true, Job job = Job.ADV, Vector2 position = default(Vector2))
         {
             var actor = new SimActor(new EntityTestWorld().CreateCharacter(2), casts, movement);
+            actor.Entity.Job = job;
+            actor.Entity.Pos = position;
             // 测试适配器模拟客户端收到 ActorMove 后的位置更新。
-            actor.Entity.OnActorMove = (position, _, __) => actor.Entity.Pos3D = position;
-            behavior.Add(actor, new SimActorBehaviorOptions { DelayArrival = delayArrival, RouteAngleDegrees = 0 });
+            actor.Entity.OnActorMove = (next, _, __) => actor.Entity.Pos3D = next;
+            behavior.Add(actor, new SimActorBehaviorOptions { DelayArrival = delayArrival, RouteAngleDegrees = 0, IdleRadius = 0 });
             return actor;
         }
 

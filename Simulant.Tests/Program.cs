@@ -37,6 +37,8 @@ namespace Simulant.Tests
                 BehaviorMovementTests.SmallCorrectionsReachTheRequestedRange,
                 BehaviorMovementTests.ImmediateArrivalInterruptsAutomaticCasting,
                 BehaviorMovementTests.RoutesRespectAnglesAndScaleWithDistance,
+                BehaviorMovementTests.IdleMeleeReturnsAfterTheHoldAndYieldsToNewMechanics,
+                BehaviorMovementTests.MeleeUsesTheGapBeforeTheNextMechanicWithoutMissingItsDeadline,
                 MechanicTests.SnapshotReadsOnceAndKeepsOriginalSlots,
                 MechanicTests.AreaMechanicKeepsInvalidSoakersInItsResult,
                 MechanicTests.MechanicGroupEvaluatesEverythingBeforeAnyCallback,
