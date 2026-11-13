@@ -28,7 +28,7 @@ namespace Simulant.Content.U7b
         static U7b()
         {
             var spawnPos = new Vector3(100, 100, 0);
-            var mapEffects = Enumerable.Repeat<ushort>(0x4, 0x24).ToList();
+            var mapEffects = Enumerable.Repeat<ushort?>(0x4, 0x24).ToList();
             mapEffects[0x11] = 0x1;
             mapEffects[0x12] = 0x1;
 

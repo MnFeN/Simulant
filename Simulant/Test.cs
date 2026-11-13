@@ -209,7 +209,8 @@ namespace Simulant
             for (uint slot = 0; slot < phaseData.MapEffectFlags.Count; slot++)
             {
                 var flag = phaseData.MapEffectFlags[(int)slot];
-                _host.EnvironmentService.PlayMapEffect(slot, flag);
+                if (flag.HasValue)
+                    _host.EnvironmentService.PlayMapEffect(slot, flag.Value);
             }
         }
 

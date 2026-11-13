@@ -12,9 +12,10 @@ namespace Simulant.Core.Environment
         public readonly byte Weather;
         public readonly ushort BGM;
         public readonly Vector3? Spawn;
-        public readonly IReadOnlyList<ushort> MapEffectFlags;
+        /// <summary>下标为地图效果槽位；值为 null 时跳过该槽位。</summary>
+        public readonly IReadOnlyList<ushort?> MapEffectFlags;
 
-        public PhaseData(string name, byte weather, ushort bgm, Vector3? spawn, IEnumerable<ushort> mapEffectFlags)
+        public PhaseData(string name, byte weather, ushort bgm, Vector3? spawn, IEnumerable<ushort?> mapEffectFlags)
         {
             Name = name;
             Weather = weather;
@@ -23,7 +24,7 @@ namespace Simulant.Core.Environment
             MapEffectFlags = mapEffectFlags.ToList();
         }
 
-        public static PhaseData Empty => new PhaseData("无数据", 0, 0, null, Enumerable.Empty<ushort>());
+        public static PhaseData Empty => new PhaseData("无数据", 0, 0, null, Enumerable.Empty<ushort?>());
 
         public override string ToString()
             => $"[阶段] {Name}";

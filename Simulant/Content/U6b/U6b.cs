@@ -25,7 +25,7 @@ namespace Simulant.Content.U6b
         static U6b()
         {
             var spawnPos = new Vector3(100, 100, 0);
-            var mapEffects = Enumerable.Repeat<ushort>(0x4, 0x16).ToList();
+            var mapEffects = Enumerable.Repeat<ushort?>(0x4, 0x16).ToList();
             mapEffects[0] = 0x1; // 电网
 
             var p1Effects = mapEffects.ToList();

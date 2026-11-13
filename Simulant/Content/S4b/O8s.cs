@@ -19,7 +19,7 @@ namespace Simulant.Content.S4b
         static O8s()
         {
             var spawnPos = new Vector3(0, 0, 0);
-            var mapEffects = new ushort[0];
+            var mapEffects = new ushort?[0];
 
             门神P1 = new PhaseData("门神 P1", 77, 529, spawnPos, mapEffects);
             门神P2 = new PhaseData("门神 P2", 78, 530, spawnPos, mapEffects);

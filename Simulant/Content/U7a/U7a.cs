@@ -31,7 +31,7 @@ namespace Simulant.Content.U7a
             // 电网属于天气
 
             var spawnPos = new Vector3(100, 100, 0);
-            var mapEffects = Enumerable.Repeat<ushort>(0x4, 0x35).ToList();
+            var mapEffects = Enumerable.Repeat<ushort?>(0x4, 0x35).ToList();
 
             var p1Effects = mapEffects.ToList();
             P1 = new PhaseData("P1", 2, 20134, spawnPos, p1Effects);
