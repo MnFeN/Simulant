@@ -11,7 +11,7 @@
 		<AppDesignerFolder>Properties</AppDesignerFolder>
 
 		<UseWindowsForms>true</UseWindowsForms>
-		<Version>0.0.4.2</Version>
+		<Version>0.1.0.0</Version>
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 		<!-- 仅自动生成程序集版本和文件版本，其余元数据保留在 AssemblyInfo.cs。 -->
 		<GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
