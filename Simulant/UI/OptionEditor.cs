@@ -38,11 +38,15 @@ namespace Simulant.UI
 
         internal void Clear()
         {
-            _toolTip?.RemoveAll();
             var controls = new Control[Table.Controls.Count];
             Table.Controls.CopyTo(controls, 0);
             Table.Controls.Clear();
-            foreach (var control in controls) control.Dispose();
+            foreach (var control in controls)
+            {
+                // 多个选项卡可能共用提示组件，只移除当前编辑器的提示。
+                _toolTip?.SetToolTip(control, null);
+                control.Dispose();
+            }
             Table.RowStyles.Clear();
             Table.RowCount = 1;
             Table.RowStyles.Add(new RowStyle(SizeType.Absolute, 5));
