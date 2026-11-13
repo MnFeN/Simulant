@@ -23,6 +23,7 @@ namespace Simulant.Content.U7b.Presets
         public override string Author { get; } = "阿洛";
         public override DateTime LastUpdated { get; } = new DateTime(2026, 6, 12);
         public override PhaseData Phase { get; } = U7b.P5;
+        public override WaymarkLayout Waymarks => U7b.Waymarks;
         public override int Level => 100;
         public override Type SimLogicType { get; } = typeof(P5地火Logic);
         public override string Description { get; } = "当前 Boss 模型与读条名称疑似因高难副本加密而无法正常显示。";

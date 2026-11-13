@@ -7,6 +7,8 @@ namespace Simulant.Content.U7a
     [SimTerritory(1238)]
     public static class U7a
     {
+        public static readonly WaymarkLayout Waymarks = WaymarkLayout.Center(100, 100, 0).Circle("A1D4C3B2", true, 10);
+
         [Phase(10)]
         public static readonly PhaseData P1;
         [Phase(15)]

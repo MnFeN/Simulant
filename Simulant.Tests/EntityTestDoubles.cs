@@ -356,8 +356,16 @@ namespace Simulant.ACT
         internal static Action<string> OnCommand;
         internal static readonly List<string> ChatCommands = new List<string>();
         internal static Action<string> OnChatCommand;
+        internal static readonly List<string> WaymarkCommands = new List<string>();
+        internal static Action<string> OnWaymarkCommand;
         public static void InvokeNamedCallback(string name, string command)
         {
+            if (name == "place")
+            {
+                WaymarkCommands.Add(command);
+                OnWaymarkCommand?.Invoke(command);
+                return;
+            }
             if (name == "command")
             {
                 ChatCommands.Add(command);
@@ -373,6 +381,7 @@ namespace Simulant.ACT
         {
             Commands.Clear(); OnCommand = null;
             ChatCommands.Clear(); OnChatCommand = null;
+            WaymarkCommands.Clear(); OnWaymarkCommand = null;
         }
     }
 }

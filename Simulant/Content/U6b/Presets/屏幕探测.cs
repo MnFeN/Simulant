@@ -17,6 +17,7 @@ namespace Simulant.Content.U6b.Presets
         public override string Author { get; } = "Simulant";
         public override DateTime LastUpdated { get; } = new DateTime(2026, 4, 21);
         public override PhaseData Phase { get; } = U6b.P3;
+        public override WaymarkLayout Waymarks => U6b.Waymarks;
         public override int Level => 90;
         public override Type SimLogicType { get; } = typeof(U6b3_屏幕探测Logic);
         public override string Description { get; } = "占位符";

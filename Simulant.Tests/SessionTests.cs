@@ -657,6 +657,7 @@ namespace Simulant.Tests
 
     internal sealed class SessionProbe : IDisposable
     {
+        internal Simulant.Core.Environment.WaymarkLayout Waymarks;
         internal Action PrepareAction;
         internal Action StartAction;
         internal Action StopAction;
@@ -683,6 +684,7 @@ namespace Simulant.Tests
         internal readonly SessionProbe Probe;
         internal SessionTestPreset(SessionProbe probe) { Probe = probe; }
         public override Type SimLogicType => typeof(SessionTestLogic);
+        public override Simulant.Core.Environment.WaymarkLayout Waymarks => Probe.Waymarks;
     }
 
     internal sealed class SessionTestLogic : SimLogicBase
@@ -744,6 +746,7 @@ namespace Simulant.Simulation
     public abstract class SimPresetBase
     {
         public abstract Type SimLogicType { get; }
+        public virtual Simulant.Core.Environment.WaymarkLayout Waymarks => null;
     }
 
     public abstract class SimLogicBase

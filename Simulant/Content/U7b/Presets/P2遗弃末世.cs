@@ -21,6 +21,7 @@ namespace Simulant.Content.U7b.Presets
         public override string Author => "阿洛";
         public override DateTime LastUpdated => new DateTime(2026, 11, 13);
         public override PhaseData Phase => U7b.P2_2;
+        public override WaymarkLayout Waymarks => U7b.Waymarks;
         public override int Level => 100;
         public override Type SimLogicType => typeof(P2遗弃末世Logic);
         public override string Description => "按国服通用解法，A 组踩 1238 轮塔，B 组踩 4567 轮塔；攻略选项支持选择奇数轮站位、闲人左右分组方式。半场刀引导偏离超过 30° 时判定为错误，半场刀偏离及命中队员不中断机制，其他错误中断机制。暂不扣除真实玩家血量。";

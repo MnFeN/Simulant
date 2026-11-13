@@ -54,8 +54,9 @@ namespace Simulant.Simulation.Runtime
             set { EnsureActive(); Entity.Job = value; }
         }
 
-        public void Cast(uint actionId, float? omenDelay = 0)
-        { BehaviorController?.ManualAction(this); _casts.Cast(this, actionId, omenDelay); }
+        /// <summary>读条并播放技能；指定目标时沿用原生带目标演出，不产生实际伤害。</summary>
+        public void Cast(uint actionId, float? omenDelay = 0, SimActor target = null)
+        { BehaviorController?.ManualAction(this); _casts.Cast(this, actionId, omenDelay, target); }
         public void Execute(uint actionId)
         { BehaviorController?.ManualAction(this); _casts.Execute(this, actionId); }
 

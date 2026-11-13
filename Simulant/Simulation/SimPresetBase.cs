@@ -17,6 +17,8 @@ namespace Simulant.Simulation
         public abstract string Author { get; }
         public abstract DateTime LastUpdated { get; }
         public abstract PhaseData Phase { get; }
+        /// <summary>开始模拟时放置、停止时清除的本地场地标点；不需要标点时保持 null。</summary>
+        public virtual WaymarkLayout Waymarks => null;
         public abstract string Description { get; }
         /// <summary>占位预设设为 false，保留展示信息但禁止创建模拟会话。</summary>
         public virtual bool IsImplemented => true;

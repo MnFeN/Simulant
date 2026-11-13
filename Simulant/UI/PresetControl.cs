@@ -140,7 +140,7 @@ namespace Simulant.UI
             finally
             {
                 if (_session?.HasPendingCleanup == true)
-                    _host?.LogError("模拟实体尚未完全回收，已保留会话。请再次点击“停止”重试；清理完成前不能开始新模拟。");
+                    _host?.LogError("模拟实体或场地标点尚未完全清理，已保留会话。请再次点击“停止”重试；清理完成前不能开始新模拟。");
                 else
                     _session = null;
                 if (!IsDisposed && !Disposing)

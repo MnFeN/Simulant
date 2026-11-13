@@ -6,6 +6,16 @@ namespace Simulant.Content.U5a
     [SimTerritory(887)]
     public static class U5a
     {
+        public static readonly WaymarkLayout Waymarks = WaymarkLayout.Center(100, 100, 0)
+            .At("A", 0, -13.75)
+            .At("B", 18, 0)
+            .At("C", 0, 13.75)
+            .At("D", -13.75, 0)
+            .At("1", 6, 0)
+            .At("2", 0, 11.35)
+            .At("3", 15.5, -2)
+            .At("4", 15.5, 2);
+
         [Phase(10)]
         public static readonly PhaseData P1;
         [Phase(20)]

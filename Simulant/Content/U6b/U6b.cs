@@ -7,6 +7,8 @@ namespace Simulant.Content.U6b
     [SimTerritory(1122)]
     public static class U6b
     {
+        public static readonly WaymarkLayout Waymarks = WaymarkLayout.Center(100, 100, 0).Circle("A4D3C2B1", true, 13);
+
         [Phase(10)]
         public static readonly PhaseData P1;
         [Phase(20)]

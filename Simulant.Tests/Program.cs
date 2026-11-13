@@ -19,6 +19,11 @@ namespace Simulant.Tests
             {
                 ConfigurationTests.ConfigurationRoundTripsAndKeepsDefaultsForMissingOptions,
                 ConfigurationTests.InvalidConfigurationAndFailedSavesPreserveTheOriginalFile,
+                WaymarkTests.InitialLayoutsKeepCoordinatesAndRotateTogether,
+                WaymarkTests.PlaceJsonUsesGameAxesAndInvariantNumbers,
+                WaymarkTests.SessionOwnsPlacementAndIdempotentCleanup,
+                WaymarkTests.FailedPlacementAndCleanupRetainRetryResponsibility,
+                WaymarkTests.InterruptedSceneKeepsWaymarksUntilExplicitStop,
                 SessionTests.SessionsUseIndependentSnapshotsOfGlobalBehavior,
                 ActionAreaTests.CirclesAndDonutsUseClosedBoundaries,
                 ActionAreaTests.RectanglesUseActHeadingAndFullDimensions,

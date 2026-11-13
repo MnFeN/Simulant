@@ -19,6 +19,7 @@ namespace Simulant.Content.U6b.Presets
         public override string Author { get; } = "阿洛";
         public override DateTime LastUpdated { get; } = new DateTime(2026, 5, 12);
         public override PhaseData Phase { get; } = U6b.P6;
+        public override WaymarkLayout Waymarks => U6b.Waymarks;
         public override int Level => 90;
         public override Type SimLogicType { get; } = typeof(U6b6_宇宙天箭Logic);
         public override string Description { get; } = "目前仅实现了宇宙天箭部分，并未实现分散/分摊后续机制。";

@@ -19,6 +19,7 @@ namespace Simulant.Content.U7a.Presets
         public override string Author { get; } = "阿洛";
         public override DateTime LastUpdated { get; } = new DateTime(2026, 5, 12);
         public override PhaseData Phase { get; } = U7a.P5;
+        public override WaymarkLayout Waymarks => U7a.Waymarks;
         public override int Level => 100;
         public override Type SimLogicType { get; } = typeof(P5地火Logic);
         public override string Description { get; } = null;

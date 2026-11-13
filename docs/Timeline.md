@@ -45,6 +45,41 @@ internal sealed class ExampleTimelineLogic : SimLogicBase
 
 示例中的读条、提示、三次判定和回收，分别计划在根时间轴开始后的第 3、5、7/9/11、13 秒执行。基类在 `BuildTimeline` 返回后以当时的实际时钟建立根时间轴的原点，初始化实体的耗时不会挤占示例中的 3 秒准备阶段。初始化工作仍应保持简短，因为它与机制节点共用调度线程。
 
+## 场地标点
+
+副本共用的初始标点放在副本定义类中，预设只需声明一行：
+
+```csharp
+public override WaymarkLayout Waymarks => U7b.Waymarks;
+```
+
+`SimSession` 在第一个时间轴节点之前，通过 Triggernometry 的 `place` 回调放置整套本地标点；停止、取消或释放会话时统一清除。机制错误保留现场时也保留标点，直到手动停止。放置中途抛错会尝试清理，清理回调失败时保留责任，下一次停止重试。未声明布局的预设不操作标点，O8S 异三角采用这一方式。
+
+`WaymarkLayout.Center(x, y, z)` 创建布局，标点名称统一使用字符串 `"A"`～`"D"`、`"1"`～`"4"`：
+
+```csharp
+// 北起逆时针 A、1、D、4、C、3、B、2；正点 12 米，斜点 12√2 米。
+var circle = WaymarkLayout.Center(100, 100, 0)
+    .Circle("A1D4C3B2", true, 12, 12 * Math.Sqrt(2));
+
+// 圆周排列字符串必须显式提供。
+var omega = WaymarkLayout.Center(100, 100, 0).Circle("A4D3C2B1", true, 13);
+
+// 正北位于 A、D 的中间方向；半径按 10、12、14、10 循环。
+var between = WaymarkLayout.Center(100, 100, 0).Circle("ABCD", false, 10, 12, 14);
+
+// 相对于给定原点的直角坐标、极坐标，可混用。
+var custom = WaymarkLayout.Center(100, 100, 0)
+    .Rotate(Math.PI / 2)
+    .At("A", 0, -13.75f)
+    .At("1", 6, 0, -1)
+    .Polar("B", 10, Math.PI / 2);
+```
+
+坐标与模拟实体一致：XY 是地面、Z 是高度；角度用弧度，0 朝南、π 朝北，正向为逆时针。`Rotate` 设置整套布局的相对北朝向，默认 π，可省略；无论放在点位定义前后都对整套布局生效，重复调用替换朝向。`At`、`Polar` 使用布局内的相对坐标。`Circle(order, startFromNorth, params radii)` 的排列和起点方式必填，至少提供一个半径，按顺序循环使用；`true` 时首点在相对北，`false` 时首点向逆时针偏移半个间隔，相对北位于首末两点之间的角平分线上。`ToPlaceJson()` 统一转换成 PostNamazu 的 X、Y 高度、Z 地面坐标，使用不受区域设置影响的小数格式，显式设置 `LocalOnly: true`、`Log: false`，未设置的标点以 `Active: false` 清除。
+
+现有布局：绝欧半径 13 米、顺序 `A4D3C2B1`；绝伊甸半径 10 米、顺序 `A1D4C3B2`；绝妖星正点 12 米、斜点 12√2 米、顺序同绝伊甸。绝亚的非规则布局保存在 `U5a.Waymarks` 中，标点高度为 0；P4 神圣大审判预设直接引用这套布局。
+
 ## 定义节点
 
 所有时间参数单位为秒，必须是有限的非负数。
