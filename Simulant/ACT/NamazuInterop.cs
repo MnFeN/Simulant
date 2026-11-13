@@ -26,10 +26,19 @@ namespace Simulant.ACT
                     x.pluginObj.GetType().ToString() == "PostNamazu.PostNamazu")
                 ?? throw new Exception($"[{nameof(NamazuInterop)}] 未找到 PostNamazu 插件，或插件未启用。");
 
+            if (pluginData.cbEnabled?.Checked != true)
+                throw new InvalidOperationException($"[{nameof(NamazuInterop)}] PostNamazu 插件未启用，请先在 ACT 插件列表中启用鲶鱼精邮差。");
+
             var rawPlugin = pluginData.pluginObj;
+            var version = rawPlugin.GetType().Assembly.GetName().Version;
+            var minimumVersion = new Version(1, 3, 6, 7);
+            if (version == null || version < minimumVersion)
+                throw new InvalidOperationException($"[{nameof(NamazuInterop)}] PostNamazu 版本过低（当前版本：{version?.ToString() ?? "未知"}，最低要求：{minimumVersion}）。请在 Triggernometry 远程库中的自检工具箱中尝试检查鲶鱼精邮差版本。");
+
             var plugin = new NamazuPlugin(rawPlugin);
-            if (!plugin.IsReady)
-                throw new Exception($"[{nameof(NamazuInterop)}] PostNamazu 插件未准备就绪，可能是游戏未启动或插件未就绪。");
+            var readinessError = plugin.GetReadinessError();
+            if (readinessError != null)
+                throw new InvalidOperationException($"[{nameof(NamazuInterop)}] {readinessError}");
 
             // var scheduler = new GreyMagicCallScheduler(plugin.Memory, frameLeaseMs: 10);
 
