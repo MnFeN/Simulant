@@ -25,7 +25,9 @@ namespace Simulant.Content.U5a.Presets
         public override WaymarkLayout Waymarks => U5a.Waymarks;
         public override int Level => 80;
         public override Type SimLogicType => typeof(P4神圣大审判Logic);
-        public override string Description => "记忆三组地火预兆，依次躲避爆炸，最后接株连分摊演出。地火命中画叉并继续，株连不检查人数。左、中、右按北起第 4 行、西起第 2～4 列的命中位置命名。";
+        public override string Description => 
+            "记忆三组地火预兆，依次躲避爆炸，株连分摊仅为演出效果。\n\n" +
+            "左、中、右指各包含 Boss 南侧三个地火之一的三组预兆。";
 
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {

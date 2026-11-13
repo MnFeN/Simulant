@@ -26,7 +26,8 @@ namespace Simulant.Content.U7b.Presets
         public override WaymarkLayout Waymarks => U7b.Waymarks;
         public override int Level => 100;
         public override Type SimLogicType { get; } = typeof(P5地火Logic);
-        public override string Description { get; } = "当前 Boss 模型与读条名称疑似因高难副本加密而无法正常显示。";
+        public override string Description { get; } =
+            "7.x 版本中，如果本次 FF14 游戏运行阶段未真正进入过绝妖星副本，Boss 模型与读条名称会因加密而无法正常显示。";
 
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
