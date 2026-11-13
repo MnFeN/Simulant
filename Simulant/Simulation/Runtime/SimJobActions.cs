@@ -6,13 +6,23 @@ namespace Simulant.Simulation.Runtime
     /// <summary>只用于演出的简短循环，不模拟职业资源、连击条件或实际伤害。编号取自项目内 Action 表。</summary>
     internal sealed class SimJobActions
     {
+        /// <summary>循环中的一次演出；Instant 可跳过技能表的读条，不需要模拟对应增益。</summary>
+        internal readonly struct Step
+        {
+            public readonly uint Id;
+            public readonly bool Instant;
+
+            public Step(uint id, bool instant = false) { Id = id; Instant = instant; }
+            public static implicit operator Step(uint id) => new Step(id);
+        }
+
         public readonly bool Melee;
-        public readonly uint[] Loop;
+        public readonly Step[] Loop;
         public readonly uint MovingAction;
         public readonly uint DistantAction;
         public bool Caster => MovingAction != 0;
 
-        private SimJobActions(bool melee, uint movingAction, uint distantAction, params uint[] loop)
+        private SimJobActions(bool melee, uint movingAction, uint distantAction, params Step[] loop)
         { Melee = melee; MovingAction = movingAction; DistantAction = distantAction; Loop = loop; }
 
         private static readonly Dictionary<Job, SimJobActions> Jobs = new Dictionary<Job, SimJobActions>
@@ -21,7 +31,7 @@ namespace Simulant.Simulation.Runtime
             [Job.WAR] = new SimJobActions(true, 0, 46, 31, 37, 42), // 重劈、凶残裂、暴风斩
             [Job.DRK] = new SimJobActions(true, 0, 3624, 3617, 3623, 3632), // 重斩、吸收斩、噬魂斩
             [Job.GNB] = new SimJobActions(true, 0, 16143, 16137, 16139, 16145), // 利刃斩、残暴弹、迅连斩
-            [Job.MNK] = new SimJobActions(true, 0, 0, 53, 54, 56), // 连击、正拳、崩拳；远处不凭空挥拳
+            [Job.MNK] = new SimJobActions(true, 0, 36949, 53, 54, 56), // 连击、正拳、崩拳；远处绝空拳
             [Job.DRG] = new SimJobActions(true, 0, 90, 75, 78, 84), // 精准刺、贯通刺、直刺
             [Job.NIN] = new SimJobActions(true, 0, 2247, 2240, 2242, 2255), // 双刃旋、绝风、旋风刃
             [Job.SAM] = new SimJobActions(true, 0, 7486, 7477, 7478, 7481), // 刃风、阵风、月光
@@ -36,9 +46,10 @@ namespace Simulant.Simulation.Runtime
             [Job.SGE] = new SimJobActions(false, 24314, 0, 24312), // 注药 III／均衡注药 III
             [Job.BLM] = new SimJobActions(false, 7420, 0, 3577, 3577, 3577, 3576), // 炽炎、冰澈／霹雷
             [Job.SMN] = new SimJobActions(false, 7426, 0, 3579), // 毁荡／毁绝
-            [Job.RDM] = new SimJobActions(false, 7517, 0, 7524, 7511), // 震荡、赤飞石／飞刺
+            [Job.RDM] = new SimJobActions(false, 7517, 0,
+                37004, new Step(25855, instant: true), 37004, new Step(25856, instant: true)), // 激荡交替接瞬发赤暴雷、赤暴风；移动时飞刺
             [Job.PCT] = new SimJobActions(false, 34662, 0, 34650, 34651, 34652), // 火炎之红、疾风之绿、流水之蓝／神圣之白
-            [Job.BLU] = new SimJobActions(false, 11423, 0, 11385, 18308), // 水炮、音爆／投掷沙丁鱼
+            [Job.BLU] = new SimJobActions(false, 11423, 0, 18308), // 音爆／投掷沙丁鱼
         };
 
         public static SimJobActions For(Job job)

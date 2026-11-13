@@ -168,12 +168,13 @@ namespace Simulant.Simulation.Runtime
             if (actions == null || now < state.NextAction || actor.Entity.CastingActionId != 0 || _casts.Remaining(actor) > 0) return;
             var distance = Vector2.Distance(actor.Pos, _targetPosition) - _targetRadius;
             var moving = actor.IsMoving || MustRun(state, now);
+            var step = actions.Loop[state.ActionIndex % actions.Loop.Length];
             var id = actions.Caster && moving ? actions.MovingAction :
-                actions.Melee && distance > 3 ? actions.DistantAction : actions.Loop[state.ActionIndex % actions.Loop.Length];
+                actions.Melee && distance > 3 ? actions.DistantAction : step.Id;
             if (id == 0 || !CsvManager.Instance.Get<ActionRow>().TryGetValue((int)id, out var action)) return;
             var range = action.Range >= 0 ? action.Range : actions.Melee ? 3 : 25;
             if (distance > range) return;
-            var castTime = action.CastTime;
+            var castTime = id == step.Id && step.Instant ? 0 : action.CastTime;
             if (castTime > 0 && (moving || !CanWait(state, now, castTime + 0.3)))
             {
                 if (!actions.Caster) return;
@@ -188,7 +189,7 @@ namespace Simulant.Simulation.Runtime
             }
             else _casts.Execute(actor, id, _target);
             state.NextAction = now + Math.Max(2.5, castTime) + _random.NextDouble() * 0.12;
-            if (id == actions.Loop[state.ActionIndex % actions.Loop.Length]) state.ActionIndex = (state.ActionIndex + 1) % actions.Loop.Length;
+            if (id == step.Id) state.ActionIndex = (state.ActionIndex + 1) % actions.Loop.Length;
         }
 
         private void UpdateIdle(State state, double now)
