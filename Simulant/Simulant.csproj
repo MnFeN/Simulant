@@ -34,6 +34,7 @@
 		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
 
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+		<PublishDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '..', 'publish'))</PublishDir>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
@@ -181,5 +182,12 @@
 		<None Remove="Game\ExtractedCsv\RawExd\**\*.csv" />
 		<EmbeddedResource Include="Game\ExtractedCsv\RawExd\**\*.csv" />
 	</ItemGroup>
+
+	<!-- 发布只保留插件本体；依赖、调试符号和配置文件仍可正常生成到构建目录。 -->
+	<Target Name="PublishOnlyPluginAssembly" AfterTargets="ComputeFilesToPublish">
+		<ItemGroup>
+			<ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.RelativePath)' != '$(TargetFileName)'" />
+		</ItemGroup>
+	</Target>
 
 </Project>
