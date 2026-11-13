@@ -38,21 +38,17 @@ namespace Simulant.Content.U7a.Presets
                     [CenterDir4.E] = "东 (3)",
                 }),
 
-            new ComboBoxOption<FirstLineDir8>(
-                nameof(P5地火Logic.FirstLineDir8),
+            new ComboBoxOption<FirstLineDir4>(
+                nameof(P5地火Logic.FirstLineDir4),
                 "地火第一根线相对于安全点的方向",
-                FirstLineDir8.Random,
-                new Map<FirstLineDir8>
+                FirstLineDir4.Random,
+                new Map<FirstLineDir4>
                 {
-                    [FirstLineDir8.Random] = "随机",
-                    [FirstLineDir8.N] = "北 (0)",
-                    [FirstLineDir8.NW] = "西北 (1)",
-                    [FirstLineDir8.W] = "西 (2)",
-                    [FirstLineDir8.SW] = "西南 (3)",
-                    [FirstLineDir8.S] = "南 (4)",
-                    [FirstLineDir8.SE] = "东南 (5)",
-                    [FirstLineDir8.E] = "东 (6)",
-                    [FirstLineDir8.NE] = "东北 (7)",
+                    [FirstLineDir4.Random] = "随机",
+                    [FirstLineDir4.N] = "北 (0)",
+                    [FirstLineDir4.W] = "西 (1)",
+                    [FirstLineDir4.S] = "南 (2)",
+                    [FirstLineDir4.E] = "东 (3)",
                 }),
 
             new ComboBoxOption<RotateDirection>(
@@ -76,11 +72,11 @@ namespace Simulant.Content.U7a.Presets
         N = 0, W = 1, S = 2, E = 3
     }
 
-    internal enum FirstLineDir8
+    internal enum FirstLineDir4
     {
-        [RandomEnum(N, NW, W, SW, S, SE, E, NE)]
+        [RandomEnum(N, W, S, E)]
         Random = -1,
-        N = 0, NW = 1, W = 2, SW = 3, S = 4, SE = 5, E = 6, NE = 7
+        N = 0, W = 1, S = 2, E = 3
     }
 
     internal enum RotateDirection
@@ -97,7 +93,7 @@ namespace Simulant.Content.U7a.Presets
         internal CenterDir4 CenterDir4 { get; set; }
 
         [SimOption]
-        internal FirstLineDir8 FirstLineDir8 { get; set; }
+        internal FirstLineDir4 FirstLineDir4 { get; set; }
 
         [SimOption]
         internal RotateDirection RotateDirection { get; set; }
@@ -202,7 +198,7 @@ namespace Simulant.Content.U7a.Presets
         {
             int centerDir4 = (int)CenterDir4;
             bool isClockWise = RotateDirection == RotateDirection.ClockWise;
-            int firstLineDir8 = (int)FirstLineDir8;
+            int firstLineDir8 = (int)FirstLineDir4 * 2;
 
             // 八角星中心方向（0~3）
             double theta4 = centerDir4 * (PI / 2) - PI;
