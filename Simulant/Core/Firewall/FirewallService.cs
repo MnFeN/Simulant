@@ -18,6 +18,7 @@ namespace Simulant.Core.Firewall
             internal IntPtr Cave;
             internal bool NeedsRestore;
             internal bool Enabled;
+            internal Action RestoreNetworkTimeout;
         }
 
         private readonly PluginHost _host;
@@ -134,6 +135,11 @@ namespace Simulant.Core.Firewall
             LogSafely(() => _host.LogVerbose($"OnReceivePacket at {(ulong)vFuncOnReceivePtr:X}"));
             var state = CaptureHook(memory, processHandle, vFuncOnReceivePtr, 5);
             _receive = state;
+            try { state.RestoreNetworkTimeout = XivPluginInterop.SuspendNetworkTimeout(); }
+            catch
+            {
+                LogSafely(() => _host.LogWarning("禁用解析插件收包计时器失败，如果右下角出现无法接收数据的 ACT 弹窗属于正常现象。"));
+            }
 
             // 可以拦截全部收包，恢复后不会掉线
             // patch:
@@ -160,6 +166,7 @@ namespace Simulant.Core.Firewall
             if (state == null) return;
             if (_processResetPending && !IsCapturedProcessAvailable(state))
             {
+                state.RestoreNetworkTimeout?.Invoke();
                 _receive = null;
                 return;
             }
@@ -169,6 +176,7 @@ namespace Simulant.Core.Firewall
                 WriteExact(state, state.Target, state.Original);
                 state.NeedsRestore = false;
             }
+            state.RestoreNetworkTimeout?.Invoke();
             _receive = null;
             LogSafely(() => _host.LogRuntime("收包 Hook 已关闭，恢复正常收包。"));
         }

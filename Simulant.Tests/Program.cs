@@ -17,6 +17,9 @@ namespace Simulant.Tests
         {
             var tests = new Action[]
             {
+                CosmoArrowTests.RoutesMatchRolesAndAvoidEveryArrow,
+                CosmoArrowTests.FollowupsUseActualTargetsAndOnlyAttributeUnsafePositions,
+                CosmoArrowTests.NetworkMovementCompletesBothRoutesWithoutHittingArrows,
                 ConfigurationTests.ConfigurationRoundTripsAndKeepsDefaultsForMissingOptions,
                 ConfigurationTests.InvalidConfigurationAndFailedSavesPreserveTheOriginalFile,
                 WaymarkTests.InitialLayoutsKeepCoordinatesAndRotateTogether,
@@ -199,6 +202,7 @@ namespace Simulant.Tests
                 ZonePhaseTests.PhaseCancellationBetweenPassesPreventsSecondWrite,
                 ZonePhaseTests.PhaseApplicationRetainsCallingContextAndRecoversFromFailure,
                 FirewallTests.FirewallEnableAndDisableAreIdempotent,
+                FirewallTests.FirewallTimeoutFailureOnlyWarnsAndRebindingRestoresOriginalInstance,
                 FirewallTests.FirewallEnableFailuresRollBackEveryCompletedStage,
                 FirewallTests.FirewallEnableRollbackFailureRetainsOwnershipAndOriginalErrors,
                 FirewallTests.FirewallDisableRetriesOnlyTheFailedHook,

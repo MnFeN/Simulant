@@ -16,6 +16,7 @@ namespace Simulant.Tests
             {
                 scene.Host.FirewallLog = _ => throw new InvalidOperationException("模拟日志失败。");
                 scene.Service.Enable();
+                Assert(scene.Parser.NetworkTimeout == int.MaxValue, "开启收包拦截时应暂停解析插件的自动断流提示。");
                 Assert(scene.Service.IsEnabled && scene.Service.HasActiveHooks && scene.Service.HasPendingCleanup,
                     "完整启用必须同时报告两个入口和清理责任。");
                 Assert(scene.Memory.Blocks[scene.Receive].SequenceEqual(new byte[] { 0x31, 0xC0, 0xC3, 0x90, 0x90 }),
@@ -99,6 +100,7 @@ namespace Simulant.Tests
                     ReferenceEquals(error.InnerExceptions[1], cleanup), "日志异常不能掩盖开启异常与清理异常。");
                 Assert(scene.Service.HasPendingCleanup && scene.Service.HasActiveHooks && !scene.Service.IsEnabled,
                     "回滚失败必须保留真实入口的清理责任，不能报告完整开启。");
+                Assert(scene.Parser.NetworkTimeout == int.MaxValue, "收包补丁尚未恢复时不能提前恢复诊断阈值。");
                 var allocations = scene.Memory.AllocateCalls;
                 var writes = scene.Memory.Writes.Count;
                 Throws<InvalidOperationException>(scene.Service.Enable);
@@ -232,6 +234,7 @@ namespace Simulant.Tests
                         "明确关闭或句柄变化的旧进程只能丢弃旧归属。");
                     Assert(scene.Memory.Writes.Count == writes && scene.Memory.FreeAttempts.Count == 0,
                         "丢弃失效归属不能对旧地址执行恢复或释放。");
+                    Assert(scene.Parser.NetworkTimeout == 60, "游戏进程已退出时仍需恢复 ACT 内的原诊断阈值。");
                     AssertUntouched(nextMemory);
                 }
             }
@@ -340,6 +343,28 @@ namespace Simulant.Tests
                 memory.AllocateCalls == 0 && memory.FreeAttempts.Count == 0,
                 "旧归属的清理不能读取、写入、分配或释放新进程的内存。");
 
+        internal static void FirewallTimeoutFailureOnlyWarnsAndRebindingRestoresOriginalInstance()
+        {
+            using (var scene = new FirewallScene())
+            {
+                var warned = false;
+                scene.Host.FirewallLog = message => warned |= message == "禁用解析插件收包计时器失败，如果右下角出现无法接收数据的 ACT 弹窗属于正常现象。";
+                XivPluginInterop.plugin = null;
+                scene.Service.Enable();
+                Assert(scene.Service.IsEnabled && warned, "禁用计时器失败时只能警告，防火墙仍应正常开启。");
+                scene.Service.Disable();
+                scene.AssertRestored();
+
+                XivPluginInterop.plugin = scene.Parser;
+                scene.Service.Enable();
+                var replacement = new FFXIV_ACT_Plugin.FFXIV_ACT_Plugin();
+                XivPluginInterop.plugin = replacement;
+                scene.Service.Disable();
+                scene.AssertRestored();
+                Assert(replacement.NetworkTimeout == 60, "恢复必须作用于原实例，不能修改重新绑定的解析插件。");
+            }
+        }
+
         private static T Throws<T>(Action action) where T : Exception
         {
             try { action(); }
@@ -362,6 +387,7 @@ namespace Simulant.Tests
                 { 0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x4C, 0x89, 0x64, 0x24, 0x18 };
             internal readonly GreyMagicExternalProcessMemory Memory = new GreyMagicExternalProcessMemory();
             internal readonly PluginHost Host = new PluginHost();
+            internal readonly FFXIV_ACT_Plugin.FFXIV_ACT_Plugin Parser = new FFXIV_ACT_Plugin.FFXIV_ACT_Plugin();
             internal readonly FirewallService Service;
 
             internal FirewallScene()
@@ -374,6 +400,7 @@ namespace Simulant.Tests
                 AddressStore.HeartBeatOpcodeLocatePtr = Heartbeat;
                 Framework.ReceiveTarget = Receive;
                 Framework.BeforeResolve = null;
+                XivPluginInterop.plugin = Parser;
                 Service = new FirewallService(Host);
             }
 
@@ -389,7 +416,8 @@ namespace Simulant.Tests
 
             internal void AssertRestored()
                 => Assert(Memory.Blocks[Receive].SequenceEqual(ReceiveOriginal) &&
-                    Memory.Blocks[Send].SequenceEqual(SendOriginal), "两个原函数入口都必须恢复到开启前的字节。");
+                    Memory.Blocks[Send].SequenceEqual(SendOriginal) && Parser.NetworkTimeout == 60,
+                    "两个原函数入口及解析插件诊断阈值都必须恢复到开启前的状态。");
 
             public void Dispose()
             {
@@ -398,6 +426,7 @@ namespace Simulant.Tests
                 Framework.BeforeResolve = null;
                 Service.ResetProcess();
                 NamazuInterop.Plugin = null;
+                XivPluginInterop.plugin = null;
                 AddressStore.OnSendPacketFuncPtr = IntPtr.Zero;
                 AddressStore.HeartBeatOpcodeLocatePtr = IntPtr.Zero;
                 Framework.ReceiveTarget = IntPtr.Zero;

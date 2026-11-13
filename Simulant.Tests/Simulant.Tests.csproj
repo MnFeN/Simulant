@@ -20,6 +20,8 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Web.Extensions" />
     <Compile Include="Program.cs" />
+    <Compile Include="CosmoArrowTests.cs" />
+    <Compile Include="..\Simulant\Content\U6b\Presets\宇宙天箭.Plan.cs"><Link>Content\宇宙天箭.Plan.cs</Link></Compile>
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="..\Simulant\Configuration.cs"><Link>Configuration.cs</Link></Compile>
     <Compile Include="SessionTests.cs" />
@@ -54,6 +56,7 @@
     <Compile Include="ZonePhaseTests.cs" />
     <Compile Include="FirewallTests.cs" />
     <Compile Include="FirewallTestDoubles.cs" />
+    <Compile Include="..\Simulant\ACT\XivPluginInterop.cs"><Link>ACT\XivPluginInterop.cs</Link></Compile>
     <Compile Include="..\Simulant\Core\Firewall\FirewallService.cs"><Link>Firewall\FirewallService.cs</Link></Compile>
     <Compile Include="..\Simulant\Core\Zone\PhaseApplication.cs"><Link>Zone\PhaseApplication.cs</Link></Compile>
     <Compile Include="..\Simulant\Content\U7b\Presets\P5地火.Placement.cs"><Link>Content\P5地火.Placement.cs</Link></Compile>

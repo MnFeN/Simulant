@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,6 +13,23 @@ namespace Simulant.ACT
         /// 解析插件实例
         /// </summary>
         internal static FFXIV_ACT_Plugin.FFXIV_ACT_Plugin plugin;
+
+        /// <summary>暂停解析插件的自动断流提示，返回恢复原阈值的操作；不修改收包时间戳或失败计数。</summary>
+        internal static Action SuspendNetworkTimeout()
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var current = plugin;
+            var collection = current?.GetType().GetField("_dataCollection", flags)?.GetValue(current);
+            var monitor = collection?.GetType().GetField("_monitor", flags)?.GetValue(collection);
+            var timeout = monitor?.GetType().GetField("<Timeout>k__BackingField", flags);
+            if (timeout?.FieldType != typeof(int))
+                throw new InvalidOperationException("未找到解析插件的收包计时器阈值。");
+
+            var original = (int)timeout.GetValue(monitor);
+            timeout.SetValue(monitor, int.MaxValue);
+            // 捕获原实例，避免插件重新绑定后把旧阈值写入新实例。
+            return () => timeout.SetValue(monitor, original);
+        }
 
         /// <summary>
         /// 获取FFXIV解析插件的区域信息。

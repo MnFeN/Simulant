@@ -2,6 +2,34 @@ using System;
 using System.Collections.Generic;
 using Simulant.Game.FFCS.Client.System.Framework;
 
+// 保留真实解析插件的私有字段结构，验证反射修改与原实例恢复。
+namespace FFXIV_ACT_Plugin
+{
+    public sealed class FFXIV_ACT_Plugin
+    {
+        private readonly TestDataCollection _dataCollection = new TestDataCollection();
+        public TestDataRepository DataRepository { get; } = new TestDataRepository();
+        internal int NetworkTimeout => _dataCollection.NetworkTimeout;
+
+        private sealed class TestDataCollection
+        {
+            private readonly TestMonitor _monitor = new TestMonitor();
+            internal int NetworkTimeout => _monitor.CurrentTimeout;
+        }
+
+        private sealed class TestMonitor
+        {
+            private int Timeout { get; } = 60;
+            internal int CurrentTimeout => Timeout;
+        }
+    }
+
+    public sealed class TestDataRepository
+    {
+        public int GetSelectedLanguageID() => 5;
+    }
+}
+
 // 防火墙测试链接实际服务，仅替换外部进程内存、入口地址解析和日志宿主。
 namespace Simulant.ACT
 {
