@@ -10,7 +10,7 @@ namespace Simulant.Tests
     // 替代原生对象表；测试不会读写游戏内存。
     internal static class EntityTests
     {
-        internal static void RegistryReusesOneWrapperPerLifetime()
+        public static void RegistryReusesOneWrapperPerLifetime()
         {
             var world = new EntityTestWorld();
             world.Objects[0] = Observe(100, 10);
@@ -28,7 +28,7 @@ namespace Simulant.Tests
                 "并发查询不得为同一生命周期创建多个包装对象。");
         }
 
-        internal static void RegistryInvalidatesDisappearedAndReusedSlots()
+        public static void RegistryInvalidatesDisappearedAndReusedSlots()
         {
             var world = new EntityTestWorld();
             var observed = Observe(100, 10);
@@ -51,7 +51,7 @@ namespace Simulant.Tests
                 "槽位对象被替换后，生命周期身份必须更新。");
         }
 
-        internal static void RegistryDetectsRecycledAddressFingerprint()
+        public static void RegistryDetectsRecycledAddressFingerprint()
         {
             var world = new EntityTestWorld();
             world.Objects[0] = Observe(100, 10);
@@ -67,7 +67,7 @@ namespace Simulant.Tests
                 "原生类型改变后，身份和包装对象类型都必须更新。");
         }
 
-        internal static void RegistryTombstoneAndExplicitCreationAreSafe()
+        public static void RegistryTombstoneAndExplicitCreationAreSafe()
         {
             var world = new EntityTestWorld();
             world.Objects[0] = Observe(100, 10, ObjectKind.EventObj);
@@ -92,7 +92,7 @@ namespace Simulant.Tests
                 "原生观察数据改变后，必须解除旧的失效标记。");
         }
 
-        internal static void RegistryResetInvalidatesTheWholeWorld()
+        public static void RegistryResetInvalidatesTheWholeWorld()
         {
             var world = new EntityTestWorld();
             world.Objects[0] = Observe(100, 10);
@@ -107,7 +107,7 @@ namespace Simulant.Tests
                 "不同世界中槽位和原生字段相同的对象必须具有不同的世界代次。");
         }
 
-        internal static void RegistryKeepsDistinctObjectsWithSharedGameIds()
+        public static void RegistryKeepsDistinctObjectsWithSharedGameIds()
         {
             var world = new EntityTestWorld();
             world.Objects[0] = Observe(100, 0xE0000000);
@@ -117,7 +117,7 @@ namespace Simulant.Tests
                 "使用相同占位游戏 ID 的本地对象必须通过槽位和生命周期区分。");
         }
 
-        internal static void RegistryCleanupRetryMatchesOnlyTheOriginalLifetime()
+        public static void RegistryCleanupRetryMatchesOnlyTheOriginalLifetime()
         {
             var world = new EntityTestWorld();
             world.Objects[0] = Observe(100, 10);

@@ -16,7 +16,7 @@ namespace Simulant.Tests
     {
         private const int TimeoutMs = 5000;
 
-        internal static void SessionsUseIndependentSnapshotsOfGlobalBehavior()
+        public static void SessionsUseIndependentSnapshotsOfGlobalBehavior()
         {
             var host = new PluginHost();
             host.Configuration.SimulatedParty.AttackTarget = false;
@@ -42,7 +42,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionFailurePreservesSceneUntilExplicitStop()
+        public static void SessionFailurePreservesSceneUntilExplicitStop()
         {
             using (var probe = new SessionProbe())
             using (var displaying = new ManualResetEventSlim())
@@ -76,7 +76,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionExplicitStopClearsInterruptedScene()
+        public static void SessionExplicitStopClearsInterruptedScene()
             => RunBoundedSessionScenario("显式停止清理中断现场", () =>
             {
                 foreach (var dispose in new[] { false, true })
@@ -105,7 +105,7 @@ namespace Simulant.Tests
                 }
             });
 
-        internal static void SessionInterruptedCleanupCanRetry()
+        public static void SessionInterruptedCleanupCanRetry()
         {
             using (var probe = new SessionProbe())
             using (var reported = new ManualResetEventSlim())
@@ -137,7 +137,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionPrepareFailureRollsBack()
+        public static void SessionPrepareFailureRollsBack()
         {
             using (var probe = new SessionProbe())
             {
@@ -165,7 +165,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionInitializationFailureWaitsForExplicitCleanup()
+        public static void SessionInitializationFailureWaitsForExplicitCleanup()
         {
             using (var probe = new SessionProbe())
             using (var reported = new ManualResetEventSlim())
@@ -197,7 +197,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionChatFailurePreservesSceneAndAllowsRestart()
+        public static void SessionChatFailurePreservesSceneAndAllowsRestart()
         {
             using (var probe = new SessionProbe())
             using (var reported = new ManualResetEventSlim())
@@ -235,7 +235,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStopWaitsForInitializationBeforeCleanup()
+        public static void SessionStopWaitsForInitializationBeforeCleanup()
         {
             using (var probe = new SessionProbe())
             using (var entered = new ManualResetEventSlim())
@@ -293,7 +293,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionCanRestartAfterStop()
+        public static void SessionCanRestartAfterStop()
         {
             using (var probe = new SessionProbe())
             using (var initialized = new AutoResetEvent(false))
@@ -323,7 +323,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionNormalTimelineCompletionDoesNotRetainFailureState()
+        public static void SessionNormalTimelineCompletionDoesNotRetainFailureState()
         {
             using (var probe = new SessionProbe())
             using (var completed = new AutoResetEvent(false))
@@ -348,7 +348,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionDisposeIsIdempotent()
+        public static void SessionDisposeIsIdempotent()
         {
             using (var probe = new SessionProbe())
             {
@@ -378,7 +378,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionRetainsFailedCleanupAndRejectsRestart()
+        public static void SessionRetainsFailedCleanupAndRejectsRestart()
         {
             using (var probe = new SessionProbe())
             using (var initialized = new AutoResetEvent(false))
@@ -432,7 +432,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionDisposeRetriesPendingNetworkCleanup()
+        public static void SessionDisposeRetriesPendingNetworkCleanup()
         {
             using (var probe = new SessionProbe())
             using (var queued = new ManualResetEventSlim())
@@ -475,16 +475,16 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionCallbackCanStopWhileExternalStopWaits()
+        public static void SessionCallbackCanStopWhileExternalStopWaits()
             => VerifyConcurrentStopReentry("停止", session => session.Stop(), null, false);
 
-        internal static void SessionCallbackCanDisposeWhileExternalStopWaits()
+        public static void SessionCallbackCanDisposeWhileExternalStopWaits()
             => VerifyConcurrentStopReentry("释放", session => session.Dispose(), null, true);
 
-        internal static void SessionCallbackCannotRestartWhileExternalStopWaits()
+        public static void SessionCallbackCannotRestartWhileExternalStopWaits()
             => VerifyConcurrentStopReentry("重新开始", session => session.Start(), typeof(InvalidOperationException), false);
 
-        internal static void SessionSynchronousCallbacksCannotRestart()
+        public static void SessionSynchronousCallbacksCannotRestart()
             => RunBoundedSessionScenario("准备及停止回调内重启", () =>
             {
                 var probe = new SessionProbe();

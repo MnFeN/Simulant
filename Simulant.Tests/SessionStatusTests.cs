@@ -9,7 +9,7 @@ namespace Simulant.Tests
 {
     internal static class SessionStatusTests
     {
-        internal static void SessionStatusesPreserveOriginalAndRefreshOwnedSlot()
+        public static void SessionStatusesPreserveOriginalAndRefreshOwnedSlot()
         {
             using (var scene = new Scene())
             {
@@ -34,7 +34,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStatusesValidateActorsAndCapacityBeforeNativeCall()
+        public static void SessionStatusesValidateActorsAndCapacityBeforeNativeCall()
         {
             using (var scene = new Scene())
             {
@@ -56,7 +56,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStatusesRetainCleanupAfterPartialSetFailure()
+        public static void SessionStatusesRetainCleanupAfterPartialSetFailure()
         {
             using (var scene = new Scene())
             {
@@ -68,7 +68,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStatusesRejectReadbackMismatchAndPreserveResponsibility()
+        public static void SessionStatusesRejectReadbackMismatchAndPreserveResponsibility()
         {
             using (var scene = new Scene())
             {
@@ -100,7 +100,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStatusesRetryRemovalBeforeReleasingSource()
+        public static void SessionStatusesRetryRemovalBeforeReleasingSource()
         {
             using (var scene = new Scene())
             using (var restart = new SimScheduler())
@@ -119,7 +119,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStatusesTreatReplacementAndExpiryAsReleased()
+        public static void SessionStatusesTreatReplacementAndExpiryAsReleased()
         {
             using (var scene = new Scene())
             {
@@ -134,7 +134,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStatusesWorldChangeSkipsOldAddress()
+        public static void SessionStatusesWorldChangeSkipsOldAddress()
         {
             using (var scene = new Scene())
             {
@@ -147,7 +147,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStatusesDeleteAndDetachCleanDependenciesFirst()
+        public static void SessionStatusesDeleteAndDetachCleanDependenciesFirst()
         {
             using (var scene = new Scene())
             {
@@ -164,7 +164,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SessionStatusesRetryPartialRemovalWithoutTouchingOtherStatuses()
+        public static void SessionStatusesRetryPartialRemovalWithoutTouchingOtherStatuses()
         {
             using (var scene = new Scene())
             {

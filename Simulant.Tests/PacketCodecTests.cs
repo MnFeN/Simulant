@@ -5,7 +5,7 @@ namespace Simulant.Tests
 {
     internal static class PacketCodecTests
     {
-        internal static void CoordinateEncodingClampsBeforeIntegerConversion()
+        public static void CoordinateEncodingClampsBeforeIntegerConversion()
         {
             foreach (var coordinate in new[] { 1001f, 1e10f, float.MaxValue })
                 Assert(PacketCodec.EncodeUShortCoord(coordinate) == ushort.MaxValue,
@@ -15,7 +15,7 @@ namespace Simulant.Tests
                     "超出下界的有限坐标必须截断至下界：" + coordinate);
         }
 
-        internal static void CoordinateAndHeadingEncodingRejectNonFiniteInputs()
+        public static void CoordinateAndHeadingEncodingRejectNonFiniteInputs()
         {
             foreach (var value in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
             {
@@ -24,7 +24,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void PacketCoordinateAndHeadingQuantizationRemainStable()
+        public static void PacketCoordinateAndHeadingQuantizationRemainStable()
         {
             Assert(PacketCodec.EncodeUShortCoord(-1000) == 0 && PacketCodec.EncodeUShortCoord(0) == 32768 &&
                 PacketCodec.EncodeUShortCoord(1000) == ushort.MaxValue && PacketCodec.EncodeUShortHeading(0) == 32768,

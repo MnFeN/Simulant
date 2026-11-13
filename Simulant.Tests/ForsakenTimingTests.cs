@@ -8,7 +8,7 @@ namespace Simulant.Tests
 {
     internal static class ForsakenTimingTests
     {
-        internal static void MovementDeadlinesFollowSnapshotsWithoutLeavingThePreviousMechanicEarly()
+        public static void MovementDeadlinesFollowSnapshotsWithoutLeavingThePreviousMechanicEarly()
         {
             for (var seed = 0; seed < 512; seed++)
             {

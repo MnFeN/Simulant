@@ -13,7 +13,7 @@ namespace Simulant.Tests
 {
     internal static class CastTests
     {
-        internal static void ReplacingCastCancelsOldCompletionAndDelayedOmen()
+        public static void ReplacingCastCancelsOldCompletionAndDelayedOmen()
         {
             using (var scene = new CastTestScene())
             {
@@ -32,7 +32,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void CastCancelAndDisposeRemovePendingWork()
+        public static void CastCancelAndDisposeRemovePendingWork()
         {
             using (var scene = new CastTestScene())
             {
@@ -60,7 +60,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void StopCastingPreservesMovementAndAllowsRecast()
+        public static void StopCastingPreservesMovementAndAllowsRecast()
         {
             using (var scene = new CastTestScene())
             {
@@ -89,7 +89,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void OmenTagsAreIndependentAcrossActorsAndRecasts()
+        public static void OmenTagsAreIndependentAcrossActorsAndRecasts()
         {
             using (var scene = new CastTestScene())
             {
@@ -111,7 +111,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ExternalCastAndRecycledEntityAreProtected()
+        public static void ExternalCastAndRecycledEntityAreProtected()
         {
             using (var scene = new CastTestScene())
             {
@@ -137,7 +137,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReentrantOmenReplacementSurvivesOuterCallbackFailure()
+        public static void ReentrantOmenReplacementSurvivesOuterCallbackFailure()
         {
             using (var scene = new CastTestScene())
             {
@@ -168,7 +168,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void CompletionRemovalCanStartANewCastWithoutOverwritingIt()
+        public static void CompletionRemovalCanStartANewCastWithoutOverwritingIt()
         {
             using (var scene = new CastTestScene())
             using (var replaced = new ManualResetEventSlim())
@@ -194,7 +194,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void CastCancellationReentryPreservesTheNewerCast()
+        public static void CastCancellationReentryPreservesTheNewerCast()
         {
             foreach (var executeOuter in new[] { false, true })
             using (var scene = new CastTestScene())
@@ -218,7 +218,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void CastCancellationReentryCannotResumeAfterCleanup()
+        public static void CastCancellationReentryCannotResumeAfterCleanup()
         {
             foreach (var executeOuter in new[] { false, true })
             foreach (var disposeController in new[] { false, true })
@@ -245,7 +245,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void CompletionRemovalPreservesAnExternalReplacementCast()
+        public static void CompletionRemovalPreservesAnExternalReplacementCast()
         {
             using (var scene = new CastTestScene())
             using (var replaced = new ManualResetEventSlim())
@@ -271,7 +271,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void DelayedOmenSamplesCurrentPositionWithInvariantNumbers()
+        public static void DelayedOmenSamplesCurrentPositionWithInvariantNumbers()
         {
             using (var scene = new CastTestScene())
             using (var shown = new ManualResetEventSlim())
@@ -301,7 +301,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void CastDisposeCleansEveryActorAfterCallbackFailure()
+        public static void CastDisposeCleansEveryActorAfterCallbackFailure()
         {
             using (var scene = new CastTestScene())
             {
@@ -325,7 +325,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void CompletionReadFailureStillRemovesOmenAndState()
+        public static void CompletionReadFailureStillRemovesOmenAndState()
         {
             using (var scene = new CastTestScene())
             {

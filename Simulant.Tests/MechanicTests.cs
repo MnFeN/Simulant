@@ -15,7 +15,7 @@ namespace Simulant.Tests
 {
     internal static class MechanicTests
     {
-        internal static void SnapshotReadsOnceAndKeepsOriginalSlots()
+        public static void SnapshotReadsOnceAndKeepsOriginalSlots()
         {
             using (var scene = new Scene())
             {
@@ -41,7 +41,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void AreaMechanicKeepsInvalidSoakersInItsResult()
+        public static void AreaMechanicKeepsInvalidSoakersInItsResult()
         {
             using (var scene = new Scene())
             {
@@ -78,7 +78,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicGroupEvaluatesEverythingBeforeAnyCallback()
+        public static void MechanicGroupEvaluatesEverythingBeforeAnyCallback()
         {
             using (var scene = new Scene())
             using (var finished = new ManualResetEventSlim())
@@ -118,7 +118,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicNodesUsePlannedTimeAndCancelWithTheirOwner()
+        public static void MechanicNodesUsePlannedTimeAndCancelWithTheirOwner()
         {
             using (var scene = new Scene())
             using (var finished = new ManualResetEventSlim())
@@ -145,7 +145,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicPartialStartRetainsCleanupAndActorsForRetry()
+        public static void MechanicPartialStartRetainsCleanupAndActorsForRetry()
         {
             using (var scene = new Scene())
             using (var restart = new SimScheduler())
@@ -183,7 +183,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicCallbackFailureRetainsSceneUntilStopped()
+        public static void MechanicCallbackFailureRetainsSceneUntilStopped()
         {
             using (var scene = new Scene())
             using (var cleaned = new ManualResetEventSlim())
@@ -206,7 +206,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicWorldChangeSkipsRemainingCallbacksAndCleanup()
+        public static void MechanicWorldChangeSkipsRemainingCallbacksAndCleanup()
         {
             using (var scene = new Scene())
             using (var reset = new ManualResetEventSlim())
@@ -230,7 +230,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicFailureInterruptsGroupAndPreservesActorsAndCasting()
+        public static void MechanicFailureInterruptsGroupAndPreservesActorsAndCasting()
         {
             const int actionId = 41001;
             var rows = CsvManager.Instance.Get<ActionRow>();
@@ -298,7 +298,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicInterruptContinuesAfterMovementStopFailure()
+        public static void MechanicInterruptContinuesAfterMovementStopFailure()
         {
             using (var scene = new Scene())
             using (var started = new ManualResetEventSlim())
@@ -320,7 +320,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicManualStopCanCleanOwnedResourcesAfterInterruption()
+        public static void MechanicManualStopCanCleanOwnedResourcesAfterInterruption()
         {
             using (var scene = new Scene())
             {
@@ -344,7 +344,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicGroupReuseDoesNotCancelAnExistingOwner()
+        public static void MechanicGroupReuseDoesNotCancelAnExistingOwner()
         {
             using (var scene = new Scene())
             {
@@ -362,7 +362,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicResourceCleanupDoesNotCancelParallelMechanics()
+        public static void MechanicResourceCleanupDoesNotCancelParallelMechanics()
         {
             using (var scene = new Scene())
             {
@@ -377,7 +377,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicValidationHappensBeforeStart()
+        public static void MechanicValidationHappensBeforeStart()
         {
             using (var scene = new Scene())
             {
@@ -390,7 +390,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MechanicGroupDoesNotCleanUnstartedChildren()
+        public static void MechanicGroupDoesNotCleanUnstartedChildren()
         {
             using (var scene = new Scene())
             {

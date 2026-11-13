@@ -18,7 +18,7 @@ namespace Simulant.Tests
 {
     internal static class ForsakenMechanicTests
     {
-        internal static void RandomForsakenPlansResolveThroughProductionMechanics()
+        public static void RandomForsakenPlansResolveThroughProductionMechanics()
         {
             using (var rows = new ForsakenActionRows())
             using (var scene = new Scene())
@@ -86,7 +86,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ForsakenMechanicsUseActualPositionsWhenThePlanIsBroken()
+        public static void ForsakenMechanicsUseActualPositionsWhenThePlanIsBroken()
         {
             using (var rows = new ForsakenActionRows())
             using (var scene = new Scene(startScheduler: false))

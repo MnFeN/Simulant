@@ -17,7 +17,7 @@ namespace Simulant.Tests
         private static void Assert(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
         private static ActionArea Arrow(CosmoArrowPlan.Shot shot) => ActionArea.Rectangle(shot.Action == 0x7BA3 ? 40 : 100, shot.Action == 0x7BA3 ? 10 : 5);
 
-        internal static void RoutesMatchRolesAndAvoidEveryArrow()
+        public static void RoutesMatchRolesAndAvoidEveryArrow()
         {
             Assert(CosmoArrowPlan.InitialPosition(ArrowOccurrence.First, 0) == new Vector2(92.5f, 92.5f), "MT 应从左上起步。");
             Assert(CosmoArrowPlan.InitialPosition(ArrowOccurrence.First, 1) == new Vector2(107.5f, 92.5f), "ST 应从右上起步。");
@@ -77,7 +77,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FollowupsUseActualTargetsAndOnlyAttributeUnsafePositions()
+        public static void FollowupsUseActualTargetsAndOnlyAttributeUnsafePositions()
         {
             foreach (var mode in Modes)
             {
@@ -101,7 +101,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkMovementCompletesBothRoutesWithoutHittingArrows()
+        public static void NetworkMovementCompletesBothRoutesWithoutHittingArrows()
         {
             Exception failure = null;
             using (var finished = new ManualResetEventSlim())

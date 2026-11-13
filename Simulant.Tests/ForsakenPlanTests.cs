@@ -7,7 +7,7 @@ namespace Simulant.Tests
 {
     internal static class ForsakenPlanTests
     {
-        internal static void InitialPositionsGatherRolePairsInFourSectors()
+        public static void InitialPositionsGatherRolePairsInFourSectors()
         {
             var groups = new[] { new[] { 0, 2 }, new[] { 1, 3 }, new[] { 4, 6 }, new[] { 5, 7 } };
             var directions = new[] { -51, 51, -17, 17 };
@@ -26,7 +26,7 @@ namespace Simulant.Tests
                 "八名队员的开场位置不能重叠。");
         }
 
-        internal static void InitialAssignmentsKeepRoleDistributionAndPartnerGroups()
+        public static void InitialAssignmentsKeepRoleDistributionAndPartnerGroups()
         {
             var partners = new[] { 2, 3, 0, 1, 6, 7, 4, 5 };
             var initialPatterns = new System.Collections.Generic.HashSet<string>();
@@ -47,7 +47,7 @@ namespace Simulant.Tests
             Assert(initialPatterns.Count == 32, "随机测试必须覆盖辅助/输出钢扇互换和全部分摊选择。");
         }
 
-        internal static void EveryRandomRoundHasTwoSoakersAndOneSafeSpellPerMember()
+        public static void EveryRandomRoundHasTwoSoakersAndOneSafeSpellPerMember()
         {
             for (var seed = 0; seed < 512; seed++)
             {
@@ -100,7 +100,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void GroupsClearAllStacksAndPreservePreviousLeftRightPriority()
+        public static void GroupsClearAllStacksAndPreservePreviousLeftRightPriority()
         {
             var aRounds = new[] { 1, 2, 3, 8 };
             for (var seed = 0; seed < 256; seed++)
@@ -134,7 +134,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MapEffectsAndCleaveBaitsMatchTheirWorldPositions()
+        public static void MapEffectsAndCleaveBaitsMatchTheirWorldPositions()
         {
             for (var seed = 0; seed < 256; seed++)
             {

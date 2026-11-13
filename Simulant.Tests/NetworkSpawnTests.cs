@@ -14,7 +14,7 @@ namespace Simulant.Tests
 {
     internal static class NetworkSpawnTests
     {
-        internal static unsafe void NetworkPacketLayoutPreservesNativeOffsets()
+        public static unsafe void NetworkPacketLayoutPreservesNativeOffsets()
         {
             Assert(sizeof(SpawnNpcPacket) == 0x290 && sizeof(CommonSpawnData) == 0x278 &&
                 sizeof(DespawnCharacterPacket) == 1, "网络生成或删除包的大小发生了变化。");
@@ -29,7 +29,7 @@ namespace Simulant.Tests
                 "删除包必须以网络槽位编号开头。");
         }
 
-        internal static void NetworkSpawnDefaultsUseCsvAndActCoordinates()
+        public static void NetworkSpawnDefaultsUseCsvAndActCoordinates()
         {
             CsvManager.Instance.Get<BNpcBase>().Clear();
             CsvManager.Instance.Get<BNpcName>().Clear();
@@ -63,7 +63,7 @@ namespace Simulant.Tests
                 "解析默认值不得改写调用者的可复用参数。");
         }
 
-        internal static void NetworkSpawnOverridesDoNotRequireCsvRows()
+        public static void NetworkSpawnOverridesDoNotRequireCsvRows()
         {
             CsvManager.Instance.Get<BNpcBase>().Clear();
             CsvManager.Instance.Get<BNpcName>().Clear();
@@ -107,7 +107,7 @@ namespace Simulant.Tests
             Assert(spec.ToPacket(6).Common.EventId == 0, "显式清空事件编号后，构包不得自动恢复副本关联。");
         }
 
-        internal static unsafe void NetworkSpawnCopiesAppearanceIntoEachPacket()
+        public static unsafe void NetworkSpawnCopiesAppearanceIntoEachPacket()
         {
             var spec = CreateSpec();
             var equipment = Enumerable.Range(1, 10).Select(value => (uint)value * 0x10001).ToArray();
@@ -133,7 +133,7 @@ namespace Simulant.Tests
                 "构包不得替换调用者的输入数组。");
         }
 
-        internal static unsafe void NetworkSpawnNamesEndAtCompleteUtf8Characters()
+        public static unsafe void NetworkSpawnNamesEndAtCompleteUtf8Characters()
         {
             var spec = CreateSpec();
             spec.Name = new string('甲', 11);
@@ -153,7 +153,7 @@ namespace Simulant.Tests
             Throws<ArgumentException>(() => spec.ToPacket(1));
         }
 
-        internal static void NetworkSpawnRejectsInvalidValuesBeforeUsingCsv()
+        public static void NetworkSpawnRejectsInvalidValuesBeforeUsingCsv()
         {
             var spec = CreateSpec();
             foreach (var value in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
@@ -193,7 +193,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkSpawnReportsMissingRowsAndAllowsUnnamedActors()
+        public static void NetworkSpawnReportsMissingRowsAndAllowsUnnamedActors()
         {
             CsvManager.Instance.Get<BNpcBase>().Clear();
             CsvManager.Instance.Get<BNpcName>().Clear();

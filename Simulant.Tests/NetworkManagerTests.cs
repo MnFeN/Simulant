@@ -12,7 +12,7 @@ namespace Simulant.Tests
 {
     internal static class NetworkManagerTests
     {
-        internal static void NetworkPlayersAndNpcsSharePollingAndPreserveKinds()
+        public static void NetworkPlayersAndNpcsSharePollingAndPreserveKinds()
         {
             var spawner = new EntitySpawner();
             Exception failure = null;
@@ -58,7 +58,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkPlayersValidateBeforeSpawningAndCancelWithNpcs()
+        public static void NetworkPlayersValidateBeforeSpawningAndCancelWithNpcs()
         {
             var spawner = new EntitySpawner();
             using (var scheduler = new SimScheduler())
@@ -83,7 +83,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkBatchSharesPollingAndReadyRunsOnce()
+        public static void NetworkBatchSharesPollingAndReadyRunsOnce()
         {
             var spawner = new EntitySpawner();
             Exception failure = null;
@@ -126,7 +126,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ClearCancelsPendingNetworkSpawnsAndRejectsReuse()
+        public static void ClearCancelsPendingNetworkSpawnsAndRejectsReuse()
         {
             var spawner = new EntitySpawner();
             var calls = 0;
@@ -157,7 +157,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkCleanupRetriesFailedCancellationWithoutDeliveringOldCallbacks()
+        public static void NetworkCleanupRetriesFailedCancellationWithoutDeliveringOldCallbacks()
         {
             var spawner = new EntitySpawner();
             var failedAttempts = 0;
@@ -223,7 +223,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirstReadyCallbackCanClearPendingBatch()
+        public static void FirstReadyCallbackCanClearPendingBatch()
         {
             var spawner = new EntitySpawner { NetworkReady = true };
             var calls = 0;
@@ -252,7 +252,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkReadyCallbackCanCancelScheduler()
+        public static void NetworkReadyCallbackCanCancelScheduler()
         {
             var spawner = new EntitySpawner { NetworkReady = true };
             var calls = 0;
@@ -280,7 +280,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkSpawnTimeoutCancelsRequest()
+        public static void NetworkSpawnTimeoutCancelsRequest()
         {
             var spawner = new EntitySpawner();
             Exception failure = null;
@@ -309,7 +309,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkReadyFailureClearsWholeBatch()
+        public static void NetworkReadyFailureClearsWholeBatch()
         {
             var spawner = new EntitySpawner { NetworkReady = true };
             var expected = new InvalidOperationException("就绪回调失败");
@@ -347,7 +347,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkTimeoutClearsReadyAndWaitingBatch()
+        public static void NetworkTimeoutClearsReadyAndWaitingBatch()
         {
             var spawner = new EntitySpawner();
             Exception failure = null;
@@ -387,7 +387,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void StoppedSchedulerRejectsNewNetworkRequestAndRollsItBack()
+        public static void StoppedSchedulerRejectsNewNetworkRequestAndRollsItBack()
         {
             foreach (var hasPending in new[] { false, true })
             {
@@ -414,7 +414,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FailedNetworkQueueRollbackRetainsRequestForCleanup()
+        public static void FailedNetworkQueueRollbackRetainsRequestForCleanup()
         {
             var spawner = new EntitySpawner();
             var cancelAttempts = 0;
@@ -456,7 +456,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkDispatchAndRollbackFailureRemainOwnedBySession()
+        public static void NetworkDispatchAndRollbackFailureRemainOwnedBySession()
         {
             var spawner = new EntitySpawner();
             var dispatchFailure = new InvalidOperationException("生成包提交失败");
@@ -504,7 +504,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkDispatchRollbackSuccessLeavesNoPendingRequest()
+        public static void NetworkDispatchRollbackSuccessLeavesNoPendingRequest()
         {
             var spawner = new EntitySpawner();
             var expected = new InvalidOperationException("发包失败但回滚成功");
@@ -534,7 +534,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkPreflightFailureCreatesNoCleanupRecord()
+        public static void NetworkPreflightFailureCreatesNoCleanupRecord()
         {
             var spawner = new EntitySpawner();
             var expected = new ArgumentException("原生预留前的参数检查失败");
@@ -568,7 +568,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void InvalidNetworkCallbacksAndTimeoutsDoNotBeginSpawning()
+        public static void InvalidNetworkCallbacksAndTimeoutsDoNotBeginSpawning()
         {
             var spawner = new EntitySpawner();
             using (var scheduler = new SimScheduler())
@@ -596,7 +596,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkReadyCallbacksRunOutsideManagerLock()
+        public static void NetworkReadyCallbacksRunOutsideManagerLock()
         {
             var spawner = new EntitySpawner { NetworkReady = true };
             Exception failure = null;
@@ -641,7 +641,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void RestartDoesNotDeliverOldNetworkRequests()
+        public static void RestartDoesNotDeliverOldNetworkRequests()
         {
             var spawner = new EntitySpawner();
             var oldCalls = 0;

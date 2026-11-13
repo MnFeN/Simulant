@@ -7,7 +7,7 @@ namespace Simulant.Tests
 {
     internal static class ConfigurationTests
     {
-        internal static void ConfigurationRoundTripsAndKeepsDefaultsForMissingOptions()
+        public static void ConfigurationRoundTripsAndKeepsDefaultsForMissingOptions()
         {
             WithPath(path =>
             {
@@ -46,7 +46,7 @@ namespace Simulant.Tests
             });
         }
 
-        internal static void InvalidConfigurationAndFailedSavesPreserveTheOriginalFile()
+        public static void InvalidConfigurationAndFailedSavesPreserveTheOriginalFile()
         {
             WithPath(path =>
             {

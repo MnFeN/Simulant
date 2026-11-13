@@ -12,7 +12,7 @@ namespace Simulant.Tests
 {
     internal static class NetworkPlayerSpawnTests
     {
-        internal static unsafe void PlayerPacketLayoutPreservesNativeOffsets()
+        public static unsafe void PlayerPacketLayoutPreservesNativeOffsets()
         {
             Assert(sizeof(SpawnPlayerPacket) == 0x298 && sizeof(CommonSpawnData) == 0x278,
                 "玩家生成包或共用角色数据的大小不正确。");
@@ -25,7 +25,7 @@ namespace Simulant.Tests
                 "第二染色或眼镜字段必须紧接十个装备模型槽。");
         }
 
-        internal static void PlayerAppearanceSnapshotDecodesNativeBytesIndependently()
+        public static void PlayerAppearanceSnapshotDecodesNativeBytesIndependently()
         {
             var data = new byte[0x268];
             const ulong mainhand = 0xA1B2C3D4E5F60718;
@@ -58,7 +58,7 @@ namespace Simulant.Tests
             Throws<ArgumentException>(() => PlayerAppearanceSnapshot.FromDrawData(new byte[0x269]));
         }
 
-        internal static void PlayerSpawnDefaultsUseSourceAppearanceAndExplicitJob()
+        public static void PlayerSpawnDefaultsUseSourceAppearanceAndExplicitJob()
         {
             var appearance = CreateAppearance();
             var spec = new NetworkPlayerSpawnSpec { Job = (Job)24, UseJobEquipment = false, Pos = new Vector3(1, 2, 3) };
@@ -82,7 +82,7 @@ namespace Simulant.Tests
                 "玩家应默认可选中；构包不得把快照默认值写回可复用参数。");
         }
 
-        internal static unsafe void PlayerSpawnPacketsOwnTheirAppearanceBytes()
+        public static unsafe void PlayerSpawnPacketsOwnTheirAppearanceBytes()
         {
             var appearance = CreateAppearance();
             var spec = new NetworkPlayerSpawnSpec { Job = (Job)19, UseJobEquipment = false };
@@ -108,7 +108,7 @@ namespace Simulant.Tests
                 "外观数组末项、第二个眼镜或副手模型不得丢失。");
         }
 
-        internal static void PlayerSpawnOverridesAndNamesAreIndependentOfSource()
+        public static void PlayerSpawnOverridesAndNamesAreIndependentOfSource()
         {
             var appearance = CreateAppearance();
             var spec = new NetworkPlayerSpawnSpec
@@ -136,7 +136,7 @@ namespace Simulant.Tests
             Assert(ReadName(spec.ToPacket(4, appearance)) == "模拟玩家", "无来源名字时必须有明确的玩家默认名字。");
         }
 
-        internal static unsafe void PlayerJobEquipmentPreservesFaceAccessoriesAndFallback()
+        public static unsafe void PlayerJobEquipmentPreservesFaceAccessoriesAndFallback()
         {
             var appearance = CreateAppearance();
             var jobs = new[] { Job.PLD, Job.MNK, Job.WAR, Job.DRG, Job.BRD, Job.WHM, Job.BLM, Job.SMN };
@@ -174,7 +174,7 @@ namespace Simulant.Tests
                 appearance.MainhandWeaponModel == 0x0102030405060708, "应用校服不得修改供其他生成请求共用的外观快照。");
         }
 
-        internal static void PlayerSpawnRejectsInvalidVitalsJobsAndAppearance()
+        public static void PlayerSpawnRejectsInvalidVitalsJobsAndAppearance()
         {
             var appearance = CreateAppearance();
             var spec = new NetworkPlayerSpawnSpec { Job = Job.PLD };

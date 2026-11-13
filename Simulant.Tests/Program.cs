@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,258 +16,43 @@ namespace Simulant.Tests
 
         private static int Main()
         {
-            var tests = new Action[]
+            // 测试类中无参数的 public static void 方法自动执行；辅助方法使用 internal 或 private。
+            var tests = typeof(Program).Assembly.GetTypes()
+                .Where(type => type.Namespace == typeof(Program).Namespace && !type.IsNested && type.IsAbstract && type.IsSealed
+                    && (type == typeof(Program) || type.Name.EndsWith("Tests", StringComparison.Ordinal)))
+                .SelectMany(type => type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly))
+                .Where(method => method.IsPublic && !method.IsGenericMethod && method.ReturnType == typeof(void)
+                    && method.GetParameters().Length == 0)
+                .OrderBy(method => method.DeclaringType.FullName, StringComparer.Ordinal)
+                .ThenBy(method => method.Name, StringComparer.Ordinal)
+                .ToArray();
+
+            if (tests.Length == 0)
             {
-                CosmoArrowTests.RoutesMatchRolesAndAvoidEveryArrow,
-                CosmoArrowTests.FollowupsUseActualTargetsAndOnlyAttributeUnsafePositions,
-                CosmoArrowTests.NetworkMovementCompletesBothRoutesWithoutHittingArrows,
-                ConfigurationTests.ConfigurationRoundTripsAndKeepsDefaultsForMissingOptions,
-                ConfigurationTests.InvalidConfigurationAndFailedSavesPreserveTheOriginalFile,
-                WaymarkTests.InitialLayoutsKeepCoordinatesAndRotateTogether,
-                WaymarkTests.PlaceJsonUsesGameAxesAndInvariantNumbers,
-                WaymarkTests.SessionOwnsPlacementAndIdempotentCleanup,
-                WaymarkTests.FailedPlacementAndCleanupRetainRetryResponsibility,
-                WaymarkTests.InterruptedSceneKeepsWaymarksUntilExplicitStop,
-                SessionTests.SessionsUseIndependentSnapshotsOfGlobalBehavior,
-                ActionAreaTests.CirclesAndDonutsUseClosedBoundaries,
-                ActionAreaTests.RectanglesUseActHeadingAndFullDimensions,
-                ActionAreaTests.ConesHandleAcuteHalfPlaneAndReflexAngles,
-                ActionAreaTests.InvalidAreasAndCoordinatesFailClearly,
-                ActionAreaTests.ActionRowsUseVerifiedShapesAndCasterHitboxes,
-                ActionAreaTests.ActionRowsResolveStandardOmenDimensions,
-                ActionAreaTests.ActionRowsRequireExplicitUnknownDimensions,
-                ActionAreaTests.ActionRowsValidateOverridesAndUnsupportedTypes,
-                PositionToleranceTests.AnnularSectorUsesMidRadiusAndRelativeHeading,
-                PositionToleranceTests.ForsakenTolerancesStayOnTheirAssignedSideOfEveryTower,
-                PositionToleranceTests.ForsakenLeftTowerArcsKeepTheirOriginalOuterAngularEdges,
-                PositionToleranceTests.ForsakenInitialAndGatheringRangesMatchRolesAndNorth,
-                PositionToleranceTests.ForsakenToleranceRoutesFitNormalRunningSpeed,
-                BehaviorMovementTests.EntityChoosesDepartureAndHonorsDeadlineAndUrgency,
-                BehaviorMovementTests.SmallCorrectionsReachTheRequestedRange,
-                BehaviorMovementTests.ImmediateArrivalInterruptsAutomaticCasting,
-                BehaviorMovementTests.RoutesRespectAnglesAndScaleWithDistance,
-                BehaviorMovementTests.IdleMeleeReturnsAfterTheHoldAndYieldsToNewMechanics,
-                BehaviorMovementTests.MeleeUsesTheGapBeforeTheNextMechanicWithoutMissingItsDeadline,
-                MechanicTests.SnapshotReadsOnceAndKeepsOriginalSlots,
-                MechanicTests.AreaMechanicKeepsInvalidSoakersInItsResult,
-                MechanicTests.MechanicGroupEvaluatesEverythingBeforeAnyCallback,
-                MechanicTests.MechanicGroupDoesNotCleanUnstartedChildren,
-                MechanicTests.MechanicNodesUsePlannedTimeAndCancelWithTheirOwner,
-                MechanicTests.MechanicPartialStartRetainsCleanupAndActorsForRetry,
-                MechanicTests.MechanicCallbackFailureRetainsSceneUntilStopped,
-                MechanicTests.MechanicFailureInterruptsGroupAndPreservesActorsAndCasting,
-                MechanicTests.MechanicInterruptContinuesAfterMovementStopFailure,
-                MechanicTests.MechanicManualStopCanCleanOwnedResourcesAfterInterruption,
-                MechanicTests.MechanicWorldChangeSkipsRemainingCallbacksAndCleanup,
-                MechanicTests.MechanicGroupReuseDoesNotCancelAnExistingOwner,
-                MechanicTests.MechanicResourceCleanupDoesNotCancelParallelMechanics,
-                MechanicTests.MechanicValidationHappensBeforeStart,
-                ForsakenPlanTests.InitialAssignmentsKeepRoleDistributionAndPartnerGroups,
-                ForsakenPlanTests.InitialPositionsGatherRolePairsInFourSectors,
-                ForsakenPlanTests.EveryRandomRoundHasTwoSoakersAndOneSafeSpellPerMember,
-                ForsakenPlanTests.GroupsClearAllStacksAndPreservePreviousLeftRightPriority,
-                ForsakenPlanTests.MapEffectsAndCleaveBaitsMatchTheirWorldPositions,
-                ForsakenTimingTests.MovementDeadlinesFollowSnapshotsWithoutLeavingThePreviousMechanicEarly,
-                ForsakenMechanicTests.RandomForsakenPlansResolveThroughProductionMechanics,
-                ForsakenMechanicTests.ForsakenMechanicsUseActualPositionsWhenThePlanIsBroken,
-                TimelineComposition,
-                SnapshotIsolation,
-                InvalidInputIsAtomic,
-                RejectAsyncVoidActions,
-                StableDeadlineOrdering,
-                NestedTimelineUsesPlannedTime,
-                EarlierDeadlineWakesWorker,
-                CancelOneNodeAndRepairHeap,
-                ExceptionCancelsBeforeReporting,
-                CancelDoesNotInterruptCallback,
-                StopRaceDoesNotReportAnError,
-                DisposeWaitsForCallback,
-                CallbackCanDisposeScheduler,
-                ConcurrentCancellation,
-                ConcurrentProducersAndStop,
-                FiftyThousandNodesUseOneWorker,
-                SessionTests.SessionPrepareFailureRollsBack,
-                SessionTests.SessionFailurePreservesSceneUntilExplicitStop,
-                SessionTests.SessionExplicitStopClearsInterruptedScene,
-                SessionTests.SessionInterruptedCleanupCanRetry,
-                SessionTests.SessionInitializationFailureWaitsForExplicitCleanup,
-                SessionTests.SessionChatFailurePreservesSceneAndAllowsRestart,
-                SessionTests.SessionStopWaitsForInitializationBeforeCleanup,
-                SessionTests.SessionCanRestartAfterStop,
-                SessionTests.SessionNormalTimelineCompletionDoesNotRetainFailureState,
-                SessionTests.SessionDisposeIsIdempotent,
-                SessionTests.SessionRetainsFailedCleanupAndRejectsRestart,
-                SessionTests.SessionDisposeRetriesPendingNetworkCleanup,
-                SessionTests.SessionCallbackCanStopWhileExternalStopWaits,
-                SessionTests.SessionCallbackCanDisposeWhileExternalStopWaits,
-                SessionTests.SessionCallbackCannotRestartWhileExternalStopWaits,
-                SessionTests.SessionSynchronousCallbacksCannotRestart,
-                EntityTests.RegistryReusesOneWrapperPerLifetime,
-                EntityTests.RegistryInvalidatesDisappearedAndReusedSlots,
-                EntityTests.RegistryDetectsRecycledAddressFingerprint,
-                EntityTests.RegistryTombstoneAndExplicitCreationAreSafe,
-                EntityTests.RegistryResetInvalidatesTheWholeWorld,
-                EntityTests.RegistryKeepsDistinctObjectsWithSharedGameIds,
-                EntityTests.RegistryCleanupRetryMatchesOnlyTheOriginalLifetime,
-                MovementTests.MovementSharesOneTickAndSchedulerThread,
-                MovementTests.MovementRetargetsTheCurrentPosition,
-                MovementTests.MovementStopAndDisposeCancelTheTick,
-                MovementTests.MovementDropsDetachedAndRecycledEntities,
-                MovementTests.MovementRejectsRestartWhenItsQueuedTickWasCancelled,
-                MovementTests.MovementRejectsInvalidInputWithoutReplacingMove,
-                MovementTests.MovementAdvanceClampsLongFramesAndPreservesSpeed,
-                MovementTests.ArrivalResetsAnimationBeforeOneSchedulerCallback,
-                MovementTests.StopRetargetDeleteAndDetachDiscardOldArrival,
-                MovementTests.ArrivalCallbackCanChainSelfAndRetargetAnotherActor,
-                MovementTests.ArrivalCallbackCanCancelOtherCompletedArrivals,
-                MovementTests.ArrivalCallbackCanCancelItsScheduler,
-                MovementTests.ArrivalCallbackDoesNotHoldTheMovementLock,
-                MovementTests.InvalidArrivalCallbackPreservesTheCurrentMovement,
-                MovementTests.MovementCleanupPreservesExternalAnimationEvenWithTheSameId,
-                MovementTests.MovementYieldsAnimationToCastingWithoutRestartingIt,
-                MovementTests.ActorDetachStopsBehaviorEvenWhenCastCleanupFails,
-                MovementTests.NetworkMovementSharesPollingAndUsesActualArrival,
-                MovementTests.NetworkMovementStreamsElapsedPositionsWithoutEarlyCompletion,
-                MovementTests.NetworkAndLocalMovementReplaceEachOtherAndChainCallbacks,
-                MovementTests.NetworkMovementStopFailuresRemainRetryable,
-                MovementTests.NetworkMovementTimeoutStopsWithoutArriving,
-                MovementTests.NetworkMovementRejectsInvalidOrCancelledRequestsBeforeDispatch,
-                MovementTests.NetworkMovementNeverStopsARecycledEntity,
-                MovementTests.ManagerRetainsFailedBorrowedNetworkMovementCleanup,
-                MovementTests.NetworkMovementDetachingDuringDispatchStillStopsTheOwnedMove,
-                CastTests.ReplacingCastCancelsOldCompletionAndDelayedOmen,
-                CastTests.CastCancelAndDisposeRemovePendingWork,
-                CastTests.StopCastingPreservesMovementAndAllowsRecast,
-                CastTests.OmenTagsAreIndependentAcrossActorsAndRecasts,
-                CastTests.ExternalCastAndRecycledEntityAreProtected,
-                CastTests.ReentrantOmenReplacementSurvivesOuterCallbackFailure,
-                CastTests.CompletionRemovalCanStartANewCastWithoutOverwritingIt,
-                CastTests.CastCancellationReentryPreservesTheNewerCast,
-                CastTests.CastCancellationReentryCannotResumeAfterCleanup,
-                CastTests.CompletionRemovalPreservesAnExternalReplacementCast,
-                CastTests.DelayedOmenSamplesCurrentPositionWithInvariantNumbers,
-                CastTests.CastDisposeCleansEveryActorAfterCallbackFailure,
-                CastTests.CompletionReadFailureStillRemovesOmenAndState,
-                ManagerTests.ManagerClearsOwnedEntitiesAndOnlyDetachesBorrowedActors,
-                ManagerTests.ManagerRejectsCreationOutsideItsSessionAndSupportsRestart,
-                ManagerTests.ManagerCleanupContinuesAfterReleaseAndLoggingFailures,
-                ManagerTests.ManagerRetriesFailedOwnedCleanupBeforeRestart,
-                ManagerTests.ManagerRetriesUndeliveredLocalCreationAndBlocksRestart,
-                ManagerTests.ManagerCreationCleanupPreservesOtherManagersEntities,
-                ManagerTests.ManagerWorldResetReleasesUndeliveredCreationBarrier,
-                ManagerTests.ManagerBlocksRestartDuringCleanupAndPreservesNewControllers,
-                ManagerTests.ManagerDeletingOneActorPreservesOtherMovementAndCast,
-                ManagerTests.ManagerStopAndRestartDiscardAllPreviousBehaviors,
-                ManagerTests.ManagerRestoresPartyBeforeDeletingItsMembersAndRetriesFailure,
-                ManagerTests.ManagerUsesOneEnmityRefreshAndCancelsOnClear,
-                SessionStatusTests.SessionStatusesPreserveOriginalAndRefreshOwnedSlot,
-                SessionStatusTests.SessionStatusesValidateActorsAndCapacityBeforeNativeCall,
-                SessionStatusTests.SessionStatusesRetainCleanupAfterPartialSetFailure,
-                SessionStatusTests.SessionStatusesRejectReadbackMismatchAndPreserveResponsibility,
-                SessionStatusTests.SessionStatusesRetryRemovalBeforeReleasingSource,
-                SessionStatusTests.SessionStatusesTreatReplacementAndExpiryAsReleased,
-                SessionStatusTests.SessionStatusesWorldChangeSkipsOldAddress,
-                SessionStatusTests.SessionStatusesDeleteAndDetachCleanDependenciesFirst,
-                SessionStatusTests.SessionStatusesRetryPartialRemovalWithoutTouchingOtherStatuses,
-                PartyNameTests.PartyNamesCombineRoleAndActualJob,
-                PartyNameTests.TemporaryNamesRestoreBorrowedPlayersOnStopAndDetach,
-                PartyNameTests.TemporaryNamesRetainRestoreResponsibilityAfterFailedCalls,
-                PartyNameTests.TemporaryNamesPreserveExternalChangesAndReusedEntities,
-                PartyNameTests.TemporaryNamesRejectRepeatedOrForeignOwners,
-                PacketCodecTests.CoordinateEncodingClampsBeforeIntegerConversion,
-                PacketCodecTests.CoordinateAndHeadingEncodingRejectNonFiniteInputs,
-                PacketCodecTests.PacketCoordinateAndHeadingQuantizationRemainStable,
-                ReplayTests.ReplayReadsHeaderChaptersAndPackets,
-                ReplayTests.ReplayPreservesUnknownPacketsAndOriginalOrdering,
-                ReplayTests.ReplayReadsZeroAndMaximumPayloads,
-                ReplayTests.ReplayAcceptsUnfinalizedAndMismatchedDeclaredLengths,
-                ReplayTests.ReplayRejectsInvalidMagicVersionAndChapterCount,
-                ReplayTests.ReplayReportsTruncatedHeaderAndChapterTableOffsets,
-                ReplayTests.ReplayReportsTruncatedPacketHeaderAndPayloadOffsets,
-                ReplayTests.ReplayPreservesUnfinalizedChapterOffsets,
-                ReplayTests.ReplayHandlesShortReads,
-                ReplayTests.ReplayCanEnumerateAgainAfterCompletionOrAbandonment,
-                ReplayTests.ReplayRejectsConcurrentEnumerationAndDisposedAccess,
-                ReplayTests.ReplayHonorsStreamOwnershipAndCapabilities,
-                ReplayTests.ReplayOpcodeRecognitionRequiresExplicitProfile,
-                ReplayTests.ReplayOpcodeLengthConflictAndAmbiguityRemainUnconfirmed,
-                ReplayTests.ReplayRecordMarkersAndInvalidClassificationInputs,
-                ReplayTests.ReplayExportPreservesInputAndListsEveryPacket,
-                ReplayTests.ReplayExportRejectsExistingAndSourceDirectoryOutputs,
-                ReplayTests.ReplayExportNeverPublishesTruncatedPacketLists,
-                ReplayTests.ReplayExportReportsBothUnfinalizedAndMismatchedHeader,
-                PresetPlacementTests.SpreadPlacementKeepsEveryMemberInsideArenaAndSeparated,
-                PresetPlacementTests.SpreadPlacementRejectsImpossibleLayoutInsteadOfReturningFallback,
-                ZonePhaseTests.PhaseCancellationStopsPendingApplication,
-                ZonePhaseTests.PhaseReplacementCannotResumeStaleApplication,
-                ZonePhaseTests.PhaseCancellationBetweenPassesPreventsSecondWrite,
-                ZonePhaseTests.PhaseApplicationRetainsCallingContextAndRecoversFromFailure,
-                FirewallTests.FirewallEnableAndDisableAreIdempotent,
-                FirewallTests.FirewallTimeoutFailureOnlyWarnsAndRebindingRestoresOriginalInstance,
-                FirewallTests.FirewallEnableFailuresRollBackEveryCompletedStage,
-                FirewallTests.FirewallEnableRollbackFailureRetainsOwnershipAndOriginalErrors,
-                FirewallTests.FirewallDisableRetriesOnlyTheFailedHook,
-                FirewallTests.FirewallFreeFailureRetriesWithoutRewritingRestoredCode,
-                FirewallTests.FirewallCleanupUsesCapturedMemoryAndTargetsAfterProcessSwitch,
-                FirewallTests.FirewallProcessSwitchRetainsLiveCleanupFailuresForRetry,
-                FirewallTests.FirewallProcessResetDiscardsOnlyUnavailableOwnership,
-                FirewallTests.FirewallProcessResetRetryHandlesLaterExitAndResetsMode,
-                FirewallTests.FirewallRejectsIncompleteCaptureBeforePatching,
-                FirewallTests.FirewallHeartbeatReadStaysBoundToCapturedProcess,
-                NetworkSpawnTests.NetworkPacketLayoutPreservesNativeOffsets,
-                NetworkSpawnTests.NetworkSpawnDefaultsUseCsvAndActCoordinates,
-                NetworkSpawnTests.NetworkSpawnOverridesDoNotRequireCsvRows,
-                NetworkSpawnTests.NetworkSpawnCopiesAppearanceIntoEachPacket,
-                NetworkSpawnTests.NetworkSpawnNamesEndAtCompleteUtf8Characters,
-                NetworkSpawnTests.NetworkSpawnRejectsInvalidValuesBeforeUsingCsv,
-                NetworkSpawnTests.NetworkSpawnReportsMissingRowsAndAllowsUnnamedActors,
-                NetworkPlayerSpawnTests.PlayerPacketLayoutPreservesNativeOffsets,
-                NetworkPlayerSpawnTests.PlayerAppearanceSnapshotDecodesNativeBytesIndependently,
-                NetworkPlayerSpawnTests.PlayerSpawnDefaultsUseSourceAppearanceAndExplicitJob,
-                NetworkPlayerSpawnTests.PlayerSpawnPacketsOwnTheirAppearanceBytes,
-                NetworkPlayerSpawnTests.PlayerSpawnOverridesAndNamesAreIndependentOfSource,
-                NetworkPlayerSpawnTests.PlayerJobEquipmentPreservesFaceAccessoriesAndFallback,
-                NetworkPlayerSpawnTests.PlayerSpawnRejectsInvalidVitalsJobsAndAppearance,
-                NetworkManagerTests.NetworkPlayersAndNpcsSharePollingAndPreserveKinds,
-                NetworkManagerTests.NetworkPlayersValidateBeforeSpawningAndCancelWithNpcs,
-                NetworkManagerTests.NetworkBatchSharesPollingAndReadyRunsOnce,
-                NetworkManagerTests.ClearCancelsPendingNetworkSpawnsAndRejectsReuse,
-                NetworkManagerTests.NetworkCleanupRetriesFailedCancellationWithoutDeliveringOldCallbacks,
-                NetworkManagerTests.FirstReadyCallbackCanClearPendingBatch,
-                NetworkManagerTests.NetworkReadyCallbackCanCancelScheduler,
-                NetworkManagerTests.NetworkSpawnTimeoutCancelsRequest,
-                NetworkManagerTests.NetworkReadyFailureClearsWholeBatch,
-                NetworkManagerTests.NetworkTimeoutClearsReadyAndWaitingBatch,
-                NetworkManagerTests.StoppedSchedulerRejectsNewNetworkRequestAndRollsItBack,
-                NetworkManagerTests.FailedNetworkQueueRollbackRetainsRequestForCleanup,
-                NetworkManagerTests.NetworkDispatchAndRollbackFailureRemainOwnedBySession,
-                NetworkManagerTests.NetworkDispatchRollbackSuccessLeavesNoPendingRequest,
-                NetworkManagerTests.NetworkPreflightFailureCreatesNoCleanupRecord,
-                NetworkManagerTests.InvalidNetworkCallbacksAndTimeoutsDoNotBeginSpawning,
-                NetworkManagerTests.NetworkReadyCallbacksRunOutsideManagerLock,
-                NetworkManagerTests.RestartDoesNotDeliverOldNetworkRequests
-            };
+                Console.Error.WriteLine("未发现可运行的测试，请检查测试方法的声明。");
+                return 1;
+            }
 
             var failures = 0;
             foreach (var test in tests)
             {
                 try
                 {
-                    test();
-                    Console.WriteLine("PASS " + test.Method.Name);
+                    ((Action)test.CreateDelegate(typeof(Action)))();
+                    Console.WriteLine("通过：" + test.DeclaringType.Name + "." + test.Name);
                 }
                 catch (Exception exception)
                 {
                     failures++;
-                    Console.Error.WriteLine("FAIL " + test.Method.Name + ": " + exception);
+                    Console.Error.WriteLine("失败：" + test.DeclaringType.Name + "." + test.Name + "：" + exception);
                 }
             }
 
-            Console.WriteLine("{0}/{1} tests passed.", tests.Length - failures, tests.Length);
+            Console.WriteLine("测试通过：{0}/{1}。", tests.Length - failures, tests.Length);
             return failures == 0 ? 0 : 1;
         }
 
-        private static void TimelineComposition()
+        public static void TimelineComposition()
         {
             Action noop = () => { };
             var repeated = new List<int>();
@@ -293,7 +79,7 @@ namespace Simulant.Tests
                 new SimTimeline().At(2, unordered).After(0.5, noop).Snapshot().Select(node => node.Seconds));
         }
 
-        private static void SnapshotIsolation()
+        public static void SnapshotIsolation()
         {
             var calls = new List<string>();
             var child = new SimTimeline().At(0, () => calls.Add("original"));
@@ -313,7 +99,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void InvalidInputIsAtomic()
+        public static void InvalidInputIsAtomic()
         {
             Action noop = () => { };
             var timeline = new SimTimeline().At(1, noop);
@@ -350,7 +136,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void StableDeadlineOrdering()
+        public static void StableDeadlineOrdering()
         {
             var calls = new List<string>();
             using (var finished = new ManualResetEventSlim())
@@ -369,7 +155,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void RejectAsyncVoidActions()
+        public static void RejectAsyncVoidActions()
         {
             Action asyncAction = async () => await Task.Yield();
             Action<int> asyncRepeat = async _ => await Task.Yield();
@@ -389,7 +175,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void NestedTimelineUsesPlannedTime()
+        public static void NestedTimelineUsesPlannedTime()
         {
             var calls = new List<string>();
             using (var entered = new ManualResetEventSlim())
@@ -425,7 +211,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void EarlierDeadlineWakesWorker()
+        public static void EarlierDeadlineWakesWorker()
         {
             using (var finished = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
@@ -441,7 +227,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void CancelOneNodeAndRepairHeap()
+        public static void CancelOneNodeAndRepairHeap()
         {
             const int count = 2048;
             var seen = new List<int>();
@@ -473,7 +259,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void ExceptionCancelsBeforeReporting()
+        public static void ExceptionCancelsBeforeReporting()
         {
             var expected = new InvalidOperationException("expected node failure");
             Exception reported = null;
@@ -505,7 +291,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void CancelDoesNotInterruptCallback()
+        public static void CancelDoesNotInterruptCallback()
         {
             using (var entered = new ManualResetEventSlim())
             using (var release = new ManualResetEventSlim())
@@ -537,7 +323,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void DisposeWaitsForCallback()
+        public static void DisposeWaitsForCallback()
         {
             using (var entered = new ManualResetEventSlim())
             using (var release = new ManualResetEventSlim())
@@ -578,7 +364,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void StopRaceDoesNotReportAnError()
+        public static void StopRaceDoesNotReportAnError()
         {
             foreach (var disposeInsideCallback in new[] { false, true })
             using (var entered = new ManualResetEventSlim())
@@ -607,7 +393,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void CallbackCanDisposeScheduler()
+        public static void CallbackCanDisposeScheduler()
         {
             using (var finished = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
@@ -626,7 +412,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void ConcurrentCancellation()
+        public static void ConcurrentCancellation()
         {
             using (var start = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
@@ -656,7 +442,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void ConcurrentProducersAndStop()
+        public static void ConcurrentProducersAndStop()
         {
             using (var start = new ManualResetEventSlim())
             using (var firstScheduled = new ManualResetEventSlim())
@@ -689,7 +475,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void FiftyThousandNodesUseOneWorker()
+        public static void FiftyThousandNodesUseOneWorker()
         {
             const int count = 50000;
             ThreadPool.GetAvailableThreads(out var workersBefore, out var portsBefore);

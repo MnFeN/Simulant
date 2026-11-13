@@ -9,7 +9,7 @@ namespace Simulant.Tests
 {
     internal static class ZonePhaseTests
     {
-        internal static void PhaseCancellationStopsPendingApplication()
+        public static void PhaseCancellationStopsPendingApplication()
         {
             var application = new PhaseApplication((_, token) => Task.Delay(Timeout.Infinite, token));
             var prepared = 0;
@@ -24,7 +24,7 @@ namespace Simulant.Tests
             Assert(applied == 1, "新阶段应只应用一次。");
         }
 
-        internal static void PhaseReplacementCannotResumeStaleApplication()
+        public static void PhaseReplacementCannotResumeStaleApplication()
         {
             var delay = new ControlledDelay();
             var application = new PhaseApplication(delay.Wait);
@@ -38,7 +38,7 @@ namespace Simulant.Tests
             Assert(oldWrites == 0 && newWrites == 1, "恢复后的旧阶段不能覆盖新阶段。");
         }
 
-        internal static void PhaseCancellationBetweenPassesPreventsSecondWrite()
+        public static void PhaseCancellationBetweenPassesPreventsSecondWrite()
         {
             var delay = new ControlledDelay();
             var application = new PhaseApplication(delay.Wait);
@@ -52,7 +52,7 @@ namespace Simulant.Tests
                 "两次应用之间退出时，不得执行第二次环境写入。");
         }
 
-        internal static void PhaseApplicationRetainsCallingContextAndRecoversFromFailure()
+        public static void PhaseApplicationRetainsCallingContextAndRecoversFromFailure()
         {
             var previousContext = SynchronizationContext.Current;
             var context = new PumpContext();

@@ -6,7 +6,7 @@ namespace Simulant.Tests
 {
     internal static class PresetPlacementTests
     {
-        internal static void SpreadPlacementKeepsEveryMemberInsideArenaAndSeparated()
+        public static void SpreadPlacementKeepsEveryMemberInsideArenaAndSeparated()
         {
             var center = new Vector2(100, 100);
             foreach (var minDistance in new[] { 3f, 5.1f })
@@ -26,7 +26,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SpreadPlacementRejectsImpossibleLayoutInsteadOfReturningFallback()
+        public static void SpreadPlacementRejectsImpossibleLayoutInsteadOfReturningFallback()
         {
             foreach (var scenario in new[]
             {

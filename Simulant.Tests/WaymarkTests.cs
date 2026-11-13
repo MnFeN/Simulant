@@ -17,7 +17,7 @@ namespace Simulant.Tests
 {
     internal static class WaymarkTests
     {
-        internal static void InitialLayoutsKeepCoordinatesAndRotateTogether()
+        public static void InitialLayoutsKeepCoordinatesAndRotateTogether()
         {
             Near(U7a.Waymarks["A"], 100, 90);
             Near(U7a.Waymarks["1"], 92.928932f, 92.928932f);
@@ -61,7 +61,7 @@ namespace Simulant.Tests
             Throws<ArgumentOutOfRangeException>(() => WaymarkLayout.Center(0, 0).Circle("ABCD", true, 2, -1));
         }
 
-        internal static void PlaceJsonUsesGameAxesAndInvariantNumbers()
+        public static void PlaceJsonUsesGameAxesAndInvariantNumbers()
         {
             var culture = Thread.CurrentThread.CurrentCulture;
             try
@@ -86,7 +86,7 @@ namespace Simulant.Tests
             finally { Thread.CurrentThread.CurrentCulture = culture; }
         }
 
-        internal static void SessionOwnsPlacementAndIdempotentCleanup()
+        public static void SessionOwnsPlacementAndIdempotentCleanup()
         {
             TriggernometryInterop.Reset();
             try
@@ -121,7 +121,7 @@ namespace Simulant.Tests
             finally { TriggernometryInterop.Reset(); }
         }
 
-        internal static void FailedPlacementAndCleanupRetainRetryResponsibility()
+        public static void FailedPlacementAndCleanupRetainRetryResponsibility()
         {
             TriggernometryInterop.Reset();
             try
@@ -144,7 +144,7 @@ namespace Simulant.Tests
             finally { TriggernometryInterop.Reset(); }
         }
 
-        internal static void InterruptedSceneKeepsWaymarksUntilExplicitStop()
+        public static void InterruptedSceneKeepsWaymarksUntilExplicitStop()
         {
             TriggernometryInterop.Reset();
             try

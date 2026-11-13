@@ -16,7 +16,7 @@ namespace Simulant.Tests
 {
     internal static class ManagerTests
     {
-        internal static void ManagerClearsOwnedEntitiesAndOnlyDetachesBorrowedActors()
+        public static void ManagerClearsOwnedEntitiesAndOnlyDetachesBorrowedActors()
         {
             var spawner = new EntitySpawner();
             using (var scheduler = new SimScheduler())
@@ -43,7 +43,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerRejectsCreationOutsideItsSessionAndSupportsRestart()
+        public static void ManagerRejectsCreationOutsideItsSessionAndSupportsRestart()
         {
             var spawner = new EntitySpawner();
             var manager = new SimEntityManager(spawner);
@@ -67,7 +67,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerCleanupContinuesAfterReleaseAndLoggingFailures()
+        public static void ManagerCleanupContinuesAfterReleaseAndLoggingFailures()
         {
             var spawner = new EntitySpawner();
             var errors = 0;
@@ -93,7 +93,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerRetriesFailedOwnedCleanupBeforeRestart()
+        public static void ManagerRetriesFailedOwnedCleanupBeforeRestart()
         {
             var spawner = new EntitySpawner();
             var errors = 0;
@@ -134,7 +134,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerBlocksRestartDuringCleanupAndPreservesNewControllers()
+        public static void ManagerBlocksRestartDuringCleanupAndPreservesNewControllers()
         {
             var spawner = new EntitySpawner();
             Exception cleanupFailure = null;
@@ -204,7 +204,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerRetriesUndeliveredLocalCreationAndBlocksRestart()
+        public static void ManagerRetriesUndeliveredLocalCreationAndBlocksRestart()
         {
             var spawnAttempts = new Action<SimEntityManager>[]
             {
@@ -258,7 +258,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerCreationCleanupPreservesOtherManagersEntities()
+        public static void ManagerCreationCleanupPreservesOtherManagersEntities()
         {
             var spawner = new EntitySpawner();
             using (var firstScheduler = new SimScheduler())
@@ -286,7 +286,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerWorldResetReleasesUndeliveredCreationBarrier()
+        public static void ManagerWorldResetReleasesUndeliveredCreationBarrier()
         {
             var spawner = new EntitySpawner();
             using (var first = new SimScheduler())
@@ -314,7 +314,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerDeletingOneActorPreservesOtherMovementAndCast()
+        public static void ManagerDeletingOneActorPreservesOtherMovementAndCast()
         {
             TriggernometryInterop.Reset();
             CsvManager.Instance.Get<ActionRow>().Clear();
@@ -376,7 +376,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerStopAndRestartDiscardAllPreviousBehaviors()
+        public static void ManagerStopAndRestartDiscardAllPreviousBehaviors()
         {
             TriggernometryInterop.Reset();
             CsvManager.Instance.Get<ActionRow>().Clear();
@@ -457,7 +457,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerRestoresPartyBeforeDeletingItsMembersAndRetriesFailure()
+        public static void ManagerRestoresPartyBeforeDeletingItsMembersAndRetriesFailure()
         {
             var spawner = new EntitySpawner();
             var party = new Simulant.Core.Party.SimPartyService();
@@ -502,7 +502,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerUsesOneEnmityRefreshAndCancelsOnClear()
+        public static void ManagerUsesOneEnmityRefreshAndCancelsOnClear()
         {
             var spawner = new EntitySpawner();
             var party = new Simulant.Core.Party.SimPartyService();

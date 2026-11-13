@@ -11,7 +11,7 @@ namespace Simulant.Tests
 {
     internal static class MovementTests
     {
-        internal static void MovementSharesOneTickAndSchedulerThread()
+        public static void MovementSharesOneTickAndSchedulerThread()
         {
             var world = new EntityTestWorld();
             var firstTarget = new Vector2(1, 0);
@@ -47,7 +47,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MovementRetargetsTheCurrentPosition()
+        public static void MovementRetargetsTheCurrentPosition()
         {
             var world = new EntityTestWorld();
             var target = new Vector2(-1, 2);
@@ -83,7 +83,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MovementStopAndDisposeCancelTheTick()
+        public static void MovementStopAndDisposeCancelTheTick()
         {
             var world = new EntityTestWorld();
             using (var finished = new ManualResetEventSlim())
@@ -113,7 +113,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MovementDropsDetachedAndRecycledEntities()
+        public static void MovementDropsDetachedAndRecycledEntities()
         {
             var world = new EntityTestWorld();
             Exception failure = null;
@@ -139,7 +139,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MovementRejectsRestartWhenItsQueuedTickWasCancelled()
+        public static void MovementRejectsRestartWhenItsQueuedTickWasCancelled()
         {
             foreach (var stopFirst in new[] { false, true })
             {
@@ -158,7 +158,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MovementRejectsInvalidInputWithoutReplacingMove()
+        public static void MovementRejectsInvalidInputWithoutReplacingMove()
         {
             var world = new EntityTestWorld();
             var target = Vector2.One;
@@ -185,7 +185,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MovementAdvanceClampsLongFramesAndPreservesSpeed()
+        public static void MovementAdvanceClampsLongFramesAndPreservesSpeed()
         {
             var advanced = SimMovementController.Advance(Vector2.Zero, new Vector2(3, 4), 2, 0.5, out var arrived);
             Near(new Vector2(0.6f, 0.8f), advanced);
@@ -199,7 +199,7 @@ namespace Simulant.Tests
             Assert(!arrived && advanced == Vector2.Zero, "经过时间为零时不得移动角色。");
         }
 
-        internal static void ArrivalResetsAnimationBeforeOneSchedulerCallback()
+        public static void ArrivalResetsAnimationBeforeOneSchedulerCallback()
         {
             var world = new EntityTestWorld();
             Exception failure = null;
@@ -230,7 +230,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void StopRetargetDeleteAndDetachDiscardOldArrival()
+        public static void StopRetargetDeleteAndDetachDiscardOldArrival()
         {
             var spawner = new Simulant.Core.Entity.EntitySpawner();
             Exception failure = null;
@@ -279,7 +279,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ArrivalCallbackCanChainSelfAndRetargetAnotherActor()
+        public static void ArrivalCallbackCanChainSelfAndRetargetAnotherActor()
         {
             var world = new EntityTestWorld();
             Exception failure = null;
@@ -321,7 +321,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ArrivalCallbackCanCancelOtherCompletedArrivals()
+        public static void ArrivalCallbackCanCancelOtherCompletedArrivals()
         {
             foreach (var cancellation in new[] { 0, 1, 2 })
             {
@@ -356,7 +356,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ArrivalCallbackCanCancelItsScheduler()
+        public static void ArrivalCallbackCanCancelItsScheduler()
         {
             var world = new EntityTestWorld();
             var calls = 0;
@@ -380,7 +380,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ArrivalCallbackDoesNotHoldTheMovementLock()
+        public static void ArrivalCallbackDoesNotHoldTheMovementLock()
         {
             var world = new EntityTestWorld();
             Exception failure = null;
@@ -420,7 +420,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void InvalidArrivalCallbackPreservesTheCurrentMovement()
+        public static void InvalidArrivalCallbackPreservesTheCurrentMovement()
         {
             var world = new EntityTestWorld();
             var calls = 0;
@@ -452,7 +452,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MovementCleanupPreservesExternalAnimationEvenWithTheSameId()
+        public static void MovementCleanupPreservesExternalAnimationEvenWithTheSameId()
         {
             foreach (ushort externalAnimation in new ushort[] { 13, 14 })
             {
@@ -483,7 +483,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MovementYieldsAnimationToCastingWithoutRestartingIt()
+        public static void MovementYieldsAnimationToCastingWithoutRestartingIt()
         {
             var world = new EntityTestWorld();
             Exception failure = null;
@@ -533,7 +533,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ActorDetachStopsBehaviorEvenWhenCastCleanupFails()
+        public static void ActorDetachStopsBehaviorEvenWhenCastCleanupFails()
         {
             var world = new EntityTestWorld();
             var entity = world.CreateCharacter(0);
@@ -580,7 +580,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkMovementSharesPollingAndUsesActualArrival()
+        public static void NetworkMovementSharesPollingAndUsesActualArrival()
         {
             Exception failure = null;
             using (var arrived = new CountdownEvent(2))
@@ -643,7 +643,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkMovementStreamsElapsedPositionsWithoutEarlyCompletion()
+        public static void NetworkMovementStreamsElapsedPositionsWithoutEarlyCompletion()
         {
             Exception failure = null;
             var samples = new List<Tuple<double, Vector3>>();
@@ -690,7 +690,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkAndLocalMovementReplaceEachOtherAndChainCallbacks()
+        public static void NetworkAndLocalMovementReplaceEachOtherAndChainCallbacks()
         {
             Exception failure = null;
             var obsoleteCalls = 0;
@@ -739,7 +739,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkMovementStopFailuresRemainRetryable()
+        public static void NetworkMovementStopFailuresRemainRetryable()
         {
             foreach (var mode in new[] { "停止", "解除关联", "释放控制器" })
             {
@@ -771,7 +771,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkMovementTimeoutStopsWithoutArriving()
+        public static void NetworkMovementTimeoutStopsWithoutArriving()
         {
             Exception failure = null;
             var callbackCalls = 0;
@@ -793,7 +793,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkMovementRejectsInvalidOrCancelledRequestsBeforeDispatch()
+        public static void NetworkMovementRejectsInvalidOrCancelledRequestsBeforeDispatch()
         {
             var world = new EntityTestWorld();
             using (var scheduler = new SimScheduler())
@@ -838,7 +838,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ManagerRetainsFailedBorrowedNetworkMovementCleanup()
+        public static void ManagerRetainsFailedBorrowedNetworkMovementCleanup()
         {
             var spawner = new Simulant.Core.Entity.EntitySpawner();
             var cleanupErrors = 0;
@@ -872,7 +872,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkMovementDetachingDuringDispatchStillStopsTheOwnedMove()
+        public static void NetworkMovementDetachingDuringDispatchStillStopsTheOwnedMove()
         {
             Exception failure = null;
             Exception detachFailure = null;
@@ -908,7 +908,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void NetworkMovementNeverStopsARecycledEntity()
+        public static void NetworkMovementNeverStopsARecycledEntity()
         {
             var world = new EntityTestWorld();
             using (var sent = new ManualResetEventSlim())

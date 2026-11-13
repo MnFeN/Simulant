@@ -10,7 +10,7 @@ namespace Simulant.Tests
 {
     internal static class FirewallTests
     {
-        internal static void FirewallEnableAndDisableAreIdempotent()
+        public static void FirewallEnableAndDisableAreIdempotent()
         {
             using (var scene = new FirewallScene())
             {
@@ -45,7 +45,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallEnableFailuresRollBackEveryCompletedStage()
+        public static void FirewallEnableFailuresRollBackEveryCompletedStage()
         {
             // 分别覆盖收包短写、分配失败、代码洞短写/异常、入口短写/异常及心跳地址缺失。
             for (var stage = 0; stage < 8; stage++)
@@ -82,7 +82,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallEnableRollbackFailureRetainsOwnershipAndOriginalErrors()
+        public static void FirewallEnableRollbackFailureRetainsOwnershipAndOriginalErrors()
         {
             using (var scene = new FirewallScene())
             {
@@ -113,7 +113,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallDisableRetriesOnlyTheFailedHook()
+        public static void FirewallDisableRetriesOnlyTheFailedHook()
         {
             foreach (var failReceive in new[] { true, false })
             foreach (var shortWrite in new[] { true, false })
@@ -146,7 +146,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallFreeFailureRetriesWithoutRewritingRestoredCode()
+        public static void FirewallFreeFailureRetriesWithoutRewritingRestoredCode()
         {
             foreach (var throws in new[] { false, true })
             {
@@ -173,7 +173,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallCleanupUsesCapturedMemoryAndTargetsAfterProcessSwitch()
+        public static void FirewallCleanupUsesCapturedMemoryAndTargetsAfterProcessSwitch()
         {
             foreach (var useReset in new[] { false, true })
             {
@@ -192,7 +192,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallProcessSwitchRetainsLiveCleanupFailuresForRetry()
+        public static void FirewallProcessSwitchRetainsLiveCleanupFailuresForRetry()
         {
             using (var scene = new FirewallScene())
             {
@@ -216,7 +216,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallProcessResetDiscardsOnlyUnavailableOwnership()
+        public static void FirewallProcessResetDiscardsOnlyUnavailableOwnership()
         {
             foreach (var closed in new[] { true, false })
             {
@@ -240,7 +240,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallProcessResetRetryHandlesLaterExitAndResetsMode()
+        public static void FirewallProcessResetRetryHandlesLaterExitAndResetsMode()
         {
             foreach (var singleHookRetry in new[] { false, true })
             foreach (var processClosed in new[] { false, true })
@@ -290,7 +290,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallRejectsIncompleteCaptureBeforePatching()
+        public static void FirewallRejectsIncompleteCaptureBeforePatching()
         {
             foreach (var failReceive in new[] { true, false })
             {
@@ -317,7 +317,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void FirewallHeartbeatReadStaysBoundToCapturedProcess()
+        public static void FirewallHeartbeatReadStaysBoundToCapturedProcess()
         {
             using (var scene = new FirewallScene())
             {
@@ -343,7 +343,7 @@ namespace Simulant.Tests
                 memory.AllocateCalls == 0 && memory.FreeAttempts.Count == 0,
                 "旧归属的清理不能读取、写入、分配或释放新进程的内存。");
 
-        internal static void FirewallTimeoutFailureOnlyWarnsAndRebindingRestoresOriginalInstance()
+        public static void FirewallTimeoutFailureOnlyWarnsAndRebindingRestoresOriginalInstance()
         {
             using (var scene = new FirewallScene())
             {

@@ -9,7 +9,7 @@ namespace Simulant.Tests
 {
     internal static class PartyNameTests
     {
-        internal static void PartyNamesCombineRoleAndActualJob()
+        public static void PartyNamesCombineRoleAndActualJob()
         {
             Assert(SimPartyNames.Get(1, Job.DRK) == "MT黑骑" && SimPartyNames.Get(5, Job.VPR) == "D1蝰蛇" &&
                 SimPartyNames.Get(3, Job.WHM) == "H1白魔" && SimPartyNames.Get(8, Job.PCT) == "D4绘灵",
@@ -19,7 +19,7 @@ namespace Simulant.Tests
             Throws<ArgumentOutOfRangeException>(() => SimPartyNames.Get(1, (Job)255));
         }
 
-        internal static void TemporaryNamesRestoreBorrowedPlayersOnStopAndDetach()
+        public static void TemporaryNamesRestoreBorrowedPlayersOnStopAndDetach()
         {
             using (var scene = new Scene())
             {
@@ -38,7 +38,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void TemporaryNamesRetainRestoreResponsibilityAfterFailedCalls()
+        public static void TemporaryNamesRetainRestoreResponsibilityAfterFailedCalls()
         {
             using (var scene = new Scene())
             using (var nextScheduler = new SimScheduler())
@@ -57,7 +57,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void TemporaryNamesPreserveExternalChangesAndReusedEntities()
+        public static void TemporaryNamesPreserveExternalChangesAndReusedEntities()
         {
             using (var scene = new Scene())
             {
@@ -76,7 +76,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void TemporaryNamesRejectRepeatedOrForeignOwners()
+        public static void TemporaryNamesRejectRepeatedOrForeignOwners()
         {
             using (var scene = new Scene())
             using (var scheduler = new SimScheduler())

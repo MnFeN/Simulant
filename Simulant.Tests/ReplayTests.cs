@@ -12,7 +12,7 @@ namespace Simulant.Tests
     {
         private const int DataOffset = 0x36C;
 
-        internal static void ReplayReadsHeaderChaptersAndPackets()
+        public static void ReplayReadsHeaderChaptersAndPackets()
         {
             var bytes = CreateReplay(new Packet(0x123, 1500, 0x10203040, new byte[] { 1, 2, 3 }),
                 new Packet(0x456, 2000, 0x50607080, new byte[] { 4, 5 }));
@@ -63,7 +63,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayPreservesUnknownPacketsAndOriginalOrdering()
+        public static void ReplayPreservesUnknownPacketsAndOriginalOrdering()
         {
             var bytes = CreateReplay(new Packet(0xFFFF, 90, uint.MaxValue, new byte[] { 8 }),
                 new Packet(0xF123, 90, 0, new byte[] { 9 }), new Packet(0, 10, 1, new byte[] { 10 }));
@@ -79,7 +79,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayReadsZeroAndMaximumPayloads()
+        public static void ReplayReadsZeroAndMaximumPayloads()
         {
             var large = Enumerable.Range(0, ushort.MaxValue).Select(index => (byte)(index * 17)).ToArray();
             using (var reader = Open(CreateReplay(new Packet(1, 0, 0, new byte[0]), new Packet(2, uint.MaxValue, 0, large))))
@@ -91,7 +91,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayAcceptsUnfinalizedAndMismatchedDeclaredLengths()
+        public static void ReplayAcceptsUnfinalizedAndMismatchedDeclaredLengths()
         {
             foreach (var declaredLength in new uint[] { 0, 1, uint.MaxValue })
             {
@@ -118,7 +118,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayRejectsInvalidMagicVersionAndChapterCount()
+        public static void ReplayRejectsInvalidMagicVersionAndChapterCount()
         {
             var magic = CreateReplay();
             magic[4] ^= 0xFF;
@@ -137,14 +137,14 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayReportsTruncatedHeaderAndChapterTableOffsets()
+        public static void ReplayReportsTruncatedHeaderAndChapterTableOffsets()
         {
             var bytes = CreateReplay();
             foreach (var length in new[] { 0, 10, 0x67, 0x68, 0x6B, DataOffset - 1 })
                 RejectAt(() => Open(bytes.Take(length).ToArray()), 0);
         }
 
-        internal static void ReplayReportsTruncatedPacketHeaderAndPayloadOffsets()
+        public static void ReplayReportsTruncatedPacketHeaderAndPayloadOffsets()
         {
             var complete = CreateReplay(new Packet(1, 0, 1, new byte[] { 1, 2, 3 }));
             for (var remaining = 1; remaining < 12; remaining++)
@@ -167,7 +167,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayPreservesUnfinalizedChapterOffsets()
+        public static void ReplayPreservesUnfinalizedChapterOffsets()
         {
             var bytes = CreateReplay(new Packet(1, 0, 0, new byte[0]));
             SetUInt32(bytes, 0x68, 64);
@@ -185,7 +185,7 @@ namespace Simulant.Tests
                     "不可信的章节偏移不能被直接用作读取位置，也不能产生整数溢出。");
         }
 
-        internal static void ReplayHandlesShortReads()
+        public static void ReplayHandlesShortReads()
         {
             var bytes = CreateReplay(new Packet(1, 12, 34, new byte[] { 5, 6, 7, 8, 9 }));
             using (var stream = new LimitedReadStream(bytes, 3))
@@ -197,7 +197,7 @@ namespace Simulant.Tests
                 RejectAt(() => reader.ReadPackets().ToArray(), DataOffset + 13);
         }
 
-        internal static void ReplayCanEnumerateAgainAfterCompletionOrAbandonment()
+        public static void ReplayCanEnumerateAgainAfterCompletionOrAbandonment()
         {
             using (var reader = Open(CreateReplay(new Packet(1, 0, 0, new byte[0]), new Packet(2, 0, 0, new byte[0]))))
             {
@@ -209,7 +209,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayRejectsConcurrentEnumerationAndDisposedAccess()
+        public static void ReplayRejectsConcurrentEnumerationAndDisposedAccess()
         {
             var reader = Open(CreateReplay(new Packet(1, 0, 0, new byte[0]), new Packet(2, 0, 0, new byte[0])));
             using (reader)
@@ -228,7 +228,7 @@ namespace Simulant.Tests
                 Throws<ObjectDisposedException>(() => enumerator.MoveNext());
         }
 
-        internal static void ReplayHonorsStreamOwnershipAndCapabilities()
+        public static void ReplayHonorsStreamOwnershipAndCapabilities()
         {
             foreach (var leaveOpen in new[] { false, true })
             {
@@ -251,7 +251,7 @@ namespace Simulant.Tests
             Throws<ArgumentException>(() => new ReplayReader(closedStream));
         }
 
-        internal static void ReplayOpcodeRecognitionRequiresExplicitProfile()
+        public static void ReplayOpcodeRecognitionRequiresExplicitProfile()
         {
             foreach (var version in new uint[] { 0, 757, uint.MaxValue })
             {
@@ -265,7 +265,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayOpcodeLengthConflictAndAmbiguityRemainUnconfirmed()
+        public static void ReplayOpcodeLengthConflictAndAmbiguityRemainUnconfirmed()
         {
             var conflict = ReplayPacketCatalog.Classify(0, 0x217, 24, ReplayPacketCatalog.China757Profile);
             Assert(string.IsNullOrEmpty(conflict.Name) && conflict.Confidence == ReplayPacketConfidence.LengthConflict,
@@ -279,7 +279,7 @@ namespace Simulant.Tests
                 "未知操作码和未知长度不得被猜成已知包。");
         }
 
-        internal static void ReplayRecordMarkersAndInvalidClassificationInputs()
+        public static void ReplayRecordMarkersAndInvalidClassificationInputs()
         {
             var marker = ReplayPacketCatalog.Classify(uint.MaxValue, 0xF003, 4);
             Assert(marker.Name == "IDScramble" && marker.Confidence == ReplayPacketConfidence.RecordMarker,
@@ -291,7 +291,7 @@ namespace Simulant.Tests
             Throws<ArgumentException>(() => ReplayPacketCatalog.Classify(0, 0, 0, "不支持的版本"));
         }
 
-        internal static void ReplayExportPreservesInputAndListsEveryPacket()
+        public static void ReplayExportPreservesInputAndListsEveryPacket()
         {
             using (var directory = new ExportTestDirectory())
             {
@@ -314,7 +314,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayExportRejectsExistingAndSourceDirectoryOutputs()
+        public static void ReplayExportRejectsExistingAndSourceDirectoryOutputs()
         {
             using (var directory = new ExportTestDirectory())
             {
@@ -336,7 +336,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayExportNeverPublishesTruncatedPacketLists()
+        public static void ReplayExportNeverPublishesTruncatedPacketLists()
         {
             using (var directory = new ExportTestDirectory())
             {
@@ -355,7 +355,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ReplayExportReportsBothUnfinalizedAndMismatchedHeader()
+        public static void ReplayExportReportsBothUnfinalizedAndMismatchedHeader()
         {
             using (var directory = new ExportTestDirectory())
             {

@@ -12,7 +12,7 @@ namespace Simulant.Tests
 {
     internal static class BehaviorMovementTests
     {
-        internal static void EntityChoosesDepartureAndHonorsDeadlineAndUrgency()
+        public static void EntityChoosesDepartureAndHonorsDeadlineAndUrgency()
         {
             Exception failure = null;
             using (var finished = new ManualResetEventSlim())
@@ -60,7 +60,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void SmallCorrectionsReachTheRequestedRange()
+        public static void SmallCorrectionsReachTheRequestedRange()
         {
             Exception failure = null;
             using (var finished = new ManualResetEventSlim())
@@ -85,7 +85,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void ImmediateArrivalInterruptsAutomaticCasting()
+        public static void ImmediateArrivalInterruptsAutomaticCasting()
         {
             var actions = CsvManager.Instance.Get<ActionRow>();
             actions.TryGetValue(25859, out var original);
@@ -133,7 +133,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void RoutesRespectAnglesAndScaleWithDistance()
+        public static void RoutesRespectAnglesAndScaleWithDistance()
         {
             var left = false;
             var right = false;
@@ -171,7 +171,7 @@ namespace Simulant.Tests
                 "很小的站位修正不应额外插入拐点。");
         }
 
-        internal static void IdleMeleeReturnsAfterTheHoldAndYieldsToNewMechanics()
+        public static void IdleMeleeReturnsAfterTheHoldAndYieldsToNewMechanics()
         {
             Exception failure = null;
             using (var finished = new ManualResetEventSlim())
@@ -218,7 +218,7 @@ namespace Simulant.Tests
             }
         }
 
-        internal static void MeleeUsesTheGapBeforeTheNextMechanicWithoutMissingItsDeadline()
+        public static void MeleeUsesTheGapBeforeTheNextMechanicWithoutMissingItsDeadline()
         {
             Exception failure = null;
             using (var finished = new ManualResetEventSlim())

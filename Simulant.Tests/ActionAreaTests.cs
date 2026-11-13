@@ -9,7 +9,7 @@ namespace Simulant.Tests
 {
     internal static class ActionAreaTests
     {
-        internal static void CirclesAndDonutsUseClosedBoundaries()
+        public static void CirclesAndDonutsUseClosedBoundaries()
         {
             var circle = ActionArea.Circle(5);
             var origin = new Vector2(100, 100);
@@ -31,7 +31,7 @@ namespace Simulant.Tests
             Assert(!huge.Contains(new Vector2(-float.MaxValue, 0), new Vector2(float.MaxValue, 0), 0), "有限坐标相减不能因单精度溢出而误判。");
         }
 
-        internal static void RectanglesUseActHeadingAndFullDimensions()
+        public static void RectanglesUseActHeadingAndFullDimensions()
         {
             var rectangle = ActionArea.Rectangle(8, 4);
             var origin = new Vector2(100, 100);
@@ -48,7 +48,7 @@ namespace Simulant.Tests
             Assert(rectangle.Contains(new Vector2(92, 98), origin, -east), "负朝向应使矩形向 -X 延伸。");
         }
 
-        internal static void ConesHandleAcuteHalfPlaneAndReflexAngles()
+        public static void ConesHandleAcuteHalfPlaneAndReflexAngles()
         {
             var cone = ActionArea.Cone(10, 90);
             var origin = new Vector2(100, 100);
@@ -77,7 +77,7 @@ namespace Simulant.Tests
             Assert(!full.Contains(new Vector2(100, 89.999f), origin, 0), "360 度扇形仍应受半径约束。");
         }
 
-        internal static void InvalidAreasAndCoordinatesFailClearly()
+        public static void InvalidAreasAndCoordinatesFailClearly()
         {
             foreach (var value in new[] { 0f, -1f, float.NaN, float.PositiveInfinity, float.NegativeInfinity })
             {
@@ -100,7 +100,7 @@ namespace Simulant.Tests
             Expect<ArgumentOutOfRangeException>(() => circle.Contains(Vector2.Zero, Vector2.Zero, float.NaN), "非有限朝向必须拒绝。");
         }
 
-        internal static void ActionRowsUseVerifiedShapesAndCasterHitboxes()
+        public static void ActionRowsUseVerifiedShapesAndCasterHitboxes()
         {
             foreach (var shape in new byte[] { 2, 3, 4, 5, 12, 13 })
             {
@@ -128,7 +128,7 @@ namespace Simulant.Tests
             });
         }
 
-        internal static void ActionRowsResolveStandardOmenDimensions()
+        public static void ActionRowsResolveStandardOmenDimensions()
         {
             WithAction(new ActionRow { ShapeType = 13, ScaleY = 10, OmenId = 1, Omen = new Omen { Name = "vfx/omen/eff/gl_fan090_1bf.avfx" } }, actionId =>
             {
@@ -153,7 +153,7 @@ namespace Simulant.Tests
             });
         }
 
-        internal static void ActionRowsRequireExplicitUnknownDimensions()
+        public static void ActionRowsRequireExplicitUnknownDimensions()
         {
             foreach (var name in new[] { "", "custom_omen", "m0532om_fan01x", "gl_fan000_test", "gl_fan361_test", "gl_fan0900_test", "gl_fan090_fan120_test" })
             {
@@ -175,7 +175,7 @@ namespace Simulant.Tests
                 Expect<InvalidOperationException>(() => ActionArea.FromAction(actionId), "没有预兆编号时不得使用无效的预兆元数据。"));
         }
 
-        internal static void ActionRowsValidateOverridesAndUnsupportedTypes()
+        public static void ActionRowsValidateOverridesAndUnsupportedTypes()
         {
             WithAction(new ActionRow { ShapeType = 13, ScaleY = 10, OmenId = 1, Omen = new Omen { Name = "gl_fan090_1bf" } }, actionId =>
             {

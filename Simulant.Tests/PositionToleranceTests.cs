@@ -9,7 +9,7 @@ namespace Simulant.Tests
 {
     internal static class PositionToleranceTests
     {
-        internal static void AnnularSectorUsesMidRadiusAndRelativeHeading()
+        public static void AnnularSectorUsesMidRadiusAndRelativeHeading()
         {
             var center = new Vector2(100, 100);
             var sector = SimPosition.AnnularSector(center, 4.5f, Math.PI / 2, 0.4f, Math.PI / 12);
@@ -40,7 +40,7 @@ namespace Simulant.Tests
             Reject(() => SimPosition.AnnularSector(center, float.MaxValue, 0, float.MaxValue, 0));
         }
 
-        internal static void ForsakenTolerancesStayOnTheirAssignedSideOfEveryTower()
+        public static void ForsakenTolerancesStayOnTheirAssignedSideOfEveryTower()
         {
             foreach (var optimize in new[] { false, true })
                 foreach (var byRole in new[] { false, true })
@@ -68,7 +68,7 @@ namespace Simulant.Tests
                     }
         }
 
-        internal static void ForsakenLeftTowerArcsKeepTheirOriginalOuterAngularEdges()
+        public static void ForsakenLeftTowerArcsKeepTheirOriginalOuterAngularEdges()
         {
             var plan = ForsakenPlan.Create(new Random(1));
             var original = new[] { new Vector2(-9.51f, 6.27f), new Vector2(-8.30f, 8.52f) };
@@ -94,7 +94,7 @@ namespace Simulant.Tests
                 }
         }
 
-        internal static void ForsakenInitialAndGatheringRangesMatchRolesAndNorth()
+        public static void ForsakenInitialAndGatheringRangesMatchRolesAndNorth()
         {
             for (var slot = 0; slot < 8; slot++)
             {
@@ -151,7 +151,7 @@ namespace Simulant.Tests
         }
 
         private static Vector2 Direction(double heading) => new Vector2((float)Math.Sin(heading), (float)Math.Cos(heading));
-        internal static void ForsakenToleranceRoutesFitNormalRunningSpeed()
+        public static void ForsakenToleranceRoutesFitNormalRunningSpeed()
         {
             for (var seed = 0; seed < 32; seed++)
             {
