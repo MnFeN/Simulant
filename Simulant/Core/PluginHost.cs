@@ -37,6 +37,7 @@ namespace Simulant.Core
 
         internal PluginLog PluginLog = new PluginLog();
         internal Configuration Configuration { get; private set; } = new Configuration();
+        internal PluginUpdater Updater { get; }
         internal string ConfigurationPath { get; } = Path.Combine(Application.StartupPath, "Config", "Simulant.config.xml");
 
         internal bool CsvReady { get; private set; }
@@ -212,6 +213,9 @@ namespace Simulant.Core
                 LogError("读取或创建全局配置失败，本次使用默认设置，已有文件保持不变：" + error);
             }
 
+            Updater = new PluginUpdater(
+                () => ActGlobals.oFormActMain?.ActPlugins.FirstOrDefault(x => x.pluginObj?.GetType() == typeof(PluginMain))?.pluginFile?.FullName,
+                typeof(PluginMain).Assembly.GetName().Version, () => Configuration.AutoInstallUpdates, LogWarning, LogRuntime);
             _ui = new SimulantUI(this) { Dock = DockStyle.Fill };
             pluginScreenSpace.Controls.Add(_ui);
 
@@ -231,6 +235,7 @@ namespace Simulant.Core
             _statusLabel.Text = "仿生石已启动。";
 
             _ = LoadCsvAsync();
+            _ = Updater.CheckAsync();
         }
 
         internal async Task LoadCsvAsync()
@@ -373,6 +378,7 @@ namespace Simulant.Core
                         initializationPending = IsInitializing;
                     }
                     if (_ui != null && !_ui.IsDisposed) _ui.Enabled = false;
+                    Updater?.Dispose();
 
                     List<Exception> failures = null;
                     void TryCleanup(string message, Action cleanup)

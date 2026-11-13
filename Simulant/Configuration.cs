@@ -11,11 +11,12 @@ namespace Simulant
     public sealed class Configuration
     {
         public SimActorBehaviorOptions SimulatedParty { get; set; } = new SimActorBehaviorOptions();
+        public bool AutoInstallUpdates { get; set; } = true;
 
         internal Configuration Copy()
         {
             if (SimulatedParty == null) throw new InvalidOperationException("全局配置缺少模拟队员设置。");
-            return new Configuration { SimulatedParty = SimulatedParty.Copy() };
+            return new Configuration { SimulatedParty = SimulatedParty.Copy(), AutoInstallUpdates = AutoInstallUpdates };
         }
 
         internal static Configuration Load(string path)

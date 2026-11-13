@@ -16,6 +16,7 @@ namespace Simulant.UI
         private readonly PluginHost _host;
         private readonly Configuration _draft;
         private readonly List<SimOptionBase> _partyOptions;
+        private readonly List<SimOptionBase> _updateOptions;
 
         internal ConfigurationForm(PluginHost host, Font font)
         {
@@ -39,6 +40,17 @@ namespace Simulant.UI
             partyTab.Controls.Add(table);
             new OptionEditor(table, toolTip).Build(_partyOptions);
             tabs.TabPages.Add(partyTab);
+
+            var updateTab = new TabPage("更新") { AutoScroll = true, Padding = new Padding(5) };
+            var updateTable = new TableLayoutPanel();
+            _updateOptions = new List<SimOptionBase>
+            {
+                new CheckBoxOption(nameof(Configuration.AutoInstallUpdates), "自动安装更新", _draft.AutoInstallUpdates,
+                    "开启插件时异步检查更新；发现新版本后自动下载安装，重启 ACT 后生效。")
+            };
+            updateTab.Controls.Add(updateTable);
+            new OptionEditor(updateTable, toolTip).Build(_updateOptions);
+            tabs.TabPages.Add(updateTab);
 
             var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true,
                 FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(8) };
@@ -70,6 +82,7 @@ namespace Simulant.UI
             try
             {
                 foreach (var option in _partyOptions) option.ApplyTo(_draft.SimulatedParty);
+                foreach (var option in _updateOptions) option.ApplyTo(_draft);
                 _host.SaveConfiguration(_draft);
                 DialogResult = DialogResult.OK;
             }

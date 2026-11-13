@@ -56,6 +56,18 @@ namespace Simulant.UI
         {
             var menu = new ContextMenuStrip(components) { Font = splitMainV.Font };
             menu.Items.Add("配置", null, btnConfiguration_Click);
+            var update = new ToolStripMenuItem("更新");
+            update.DropDownItems.Add("检查更新", null, async (_, __) => await _host.Updater.CheckAsync());
+            update.DropDownItems.Add("安装更新", null, async (_, __) => await _host.Updater.InstallAsync());
+            update.DropDownItems.Add("打开发布页面", null, (_, __) =>
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(PluginUpdater.ReleasesUrl) { UseShellExecute = true });
+                }
+                catch (Exception error) { _host.LogError("打开发布页面失败：" + error.Message); }
+            });
+            menu.Items.Add(update);
             var debug = new ToolStripMenuItem("调试功能");
             _addEntityMenuItem = new ToolStripMenuItem("添加实体")
             {

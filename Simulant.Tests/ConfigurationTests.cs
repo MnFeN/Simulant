@@ -7,6 +7,21 @@ namespace Simulant.Tests
 {
     internal static class ConfigurationTests
     {
+        public static void AutomaticUpdatesDefaultToEnabledAndPersist()
+        {
+            WithPath(path =>
+            {
+                Assert(Configuration.Load(path).AutoInstallUpdates, "新配置应默认自动安装更新。");
+                new Configuration().Save(path);
+                File.WriteAllText(path, "<Simulant />");
+                var configuration = Configuration.Load(path);
+                Assert(configuration.AutoInstallUpdates, "旧配置缺少更新选项时应默认开启。");
+                configuration.AutoInstallUpdates = false;
+                configuration.Copy().Save(path);
+                Assert(!Configuration.Load(path).AutoInstallUpdates, "关闭自动更新后，编辑副本与保存读取都应保留设置。");
+            });
+        }
+
         public static void ConfigurationRoundTripsAndKeepsDefaultsForMissingOptions()
         {
             WithPath(path =>

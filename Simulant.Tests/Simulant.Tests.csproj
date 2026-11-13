@@ -16,6 +16,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Web.Extensions" />
@@ -23,6 +24,8 @@
     <Compile Include="CosmoArrowTests.cs" />
     <Compile Include="..\Simulant\Content\U6b\Presets\宇宙天箭.Plan.cs"><Link>Content\宇宙天箭.Plan.cs</Link></Compile>
     <Compile Include="ConfigurationTests.cs" />
+    <Compile Include="PluginUpdaterTests.cs" />
+    <Compile Include="..\Simulant\Core\PluginUpdater.cs"><Link>Core\PluginUpdater.cs</Link></Compile>
     <Compile Include="..\Simulant\Configuration.cs"><Link>Configuration.cs</Link></Compile>
     <Compile Include="SessionTests.cs" />
     <Compile Include="WaymarkTests.cs" />
