@@ -1,5 +1,3 @@
-// from Triggernometry
-
 using System;
 using System.Linq;
 using System.Globalization;
@@ -54,6 +52,8 @@ namespace Simulant.Utils.Maths
             AddOperator("=", false, 2, binaryOperation: (a, b) => IsZero(a - b) ? 1 : 0);
             AddOperator("≠", false, 2, binaryOperation: (a, b) => IsZero(a - b) ? 0 : 1);
             AddOperator("!=", false, 2, binaryOperation: (a, b) => IsZero(a - b) ? 0 : 1);
+            AddOperator("≈", false, 2, binaryOperation: (a, b) => Math.Abs(a - b) <= 0.5 ? 1 : 0);
+            AddOperator("!≈", false, 2, binaryOperation: (a, b) => Math.Abs(a - b) > 0.5 ? 1 : 0);
             AddOperator("&", false, 2, binaryOperation: (a, b) => Truncate(a) & Truncate(b));           // bitwise and
             AddOperator("⊕", false, 2, binaryOperation: (a, b) => Truncate(a) ^ Truncate(b));           // bitwise xor
             AddOperator("|", false, 2, binaryOperation: (a, b) => Truncate(a) | Truncate(b));           // bitwise or
@@ -89,7 +89,7 @@ namespace Simulant.Utils.Maths
             LocalFunctions.Add("radtodeg", x => x[0] / Math.PI * 180.0);
             LocalFunctions.Add("degtorad", x => x[0] / 180.0 * Math.PI);
             LocalFunctions.Add("DirToRad", DirectionToRadFunction);
-            LocalFunctions.Add("dir2rad", DirectionToRadFunction); // old name
+            LocalFunctions.Add("dir2rad", DirectionToRadFunction); // 兼容旧名称
             LocalFunctions.Add("distance", DistanceFunction);
             LocalFunctions.Add("d", DistanceFunction);
             LocalFunctions.Add("manhattandistance", L1DistanceFunction);
@@ -108,9 +108,13 @@ namespace Simulant.Utils.Maths
             LocalFunctions.Add("isanglebetween", IsAngleBetweenFunction);
             LocalFunctions.Add("isθbetween", IsAngleBetweenFunction);
             LocalFunctions.Add("RadToDir", RoundirFunction);
+            LocalFunctions.Add("roundir", RoundirFunction); // 兼容旧名称
             LocalFunctions.Add("VecToDir", RoundvecFunction);
+            LocalFunctions.Add("roundvec", RoundvecFunction); // 兼容旧名称
             LocalFunctions.Add("random", x => RandomNumber(x[0], x[1]));
             LocalFunctions.Add("sqrt", x => Math.Sqrt(x[0]));
+            LocalFunctions.Add("rem", x => Math.IEEERemainder(x[0], x[1]));
+            LocalFunctions.Add("mod", x => ModFunction(x[0], x[1], x.Length > 2 ? x[2] : 0));
             LocalFunctions.Add("root", x => Math.Pow(x[0], 1.0 / x[1]));
             LocalFunctions.Add("pow", x => Math.Pow(x[0], x[1]));
             LocalFunctions.Add("exp", x => Math.Exp(x[0]));
@@ -118,10 +122,22 @@ namespace Simulant.Utils.Maths
             LocalFunctions.Add("round", RoundFunction);
             LocalFunctions.Add("max", MaxFunction);
             LocalFunctions.Add("min", MinFunction);
+            LocalFunctions.Add("Lerp", LerpFunction);
+            LocalFunctions.Add("LerpAngle", LerpAngleFunction);
+            LocalFunctions.Add("LerpAngleCW", LerpAngleCWFunction);
+            LocalFunctions.Add("LerpAngleCCW", LerpAngleCCWFunction);
+            LocalFunctions.Add("LerpDir", LerpDirFunction);
+            LocalFunctions.Add("LerpDirCW", LerpDirCWFunction);
+            LocalFunctions.Add("LerpDirCCW", LerpDirCCWFunction);
             LocalFunctions.Add("truncate", x => Truncate(x[0]));
             LocalFunctions.Add("floor", x => Math.Floor(x[0] + TOLERANCE));
             LocalFunctions.Add("ceiling", x => Math.Ceiling(x[0] - TOLERANCE));
             LocalFunctions.Add("sign", x => IsZero(x[0]) ? 0 : Math.Sign(x[0]));
+            LocalFunctions.Add("or", x => OrFunction(x));
+            LocalFunctions.Add("and", x => AndFunction(x));
+            LocalFunctions.Add("if", x => IfFunction(x[0], x[1], x[2]));
+            LocalFunctions.Add("between", BetweenFunction);
+            LocalFunctions.Add("in", InFunction);
 
             // Numeric String Functions:
             // Mathparser string function parameters should not contain '('  ')'  ','  ' ' as part of the string.
@@ -133,12 +149,18 @@ namespace Simulant.Utils.Maths
             LocalStringFunctions.Add("parsedmg", x => ParseDamage(x));
             LocalStringFunctions.Add("len", x => x[0].Length);
             LocalStringFunctions.Add("freq", x => Frequency(x));
+            LocalStringFunctions.Add("nextETms", x => NextETms(x));
 
             // Numeric Variables:
             // local variables such as pi can also be added into the parser.
             LocalVariables.Add("pi", Math.PI);
             LocalVariables.Add("π", Math.PI);
-
+            LocalVariables.Add("pi2", Math.PI * 2);
+            LocalVariables.Add("pi05", Math.PI / 2);
+            LocalVariables.Add("pi025", Math.PI / 4);
+            LocalVariables.Add("pi0125", Math.PI / 8);
+            LocalVariables.Add("pitorad", 180.0 / Math.PI);
+            LocalVariables.Add("piofrad", Math.PI / 180.0);
             // to-do:
             // hex2dec(e) 按现在的逻辑会将 e 处理为常数而报错。
             // 鉴于 Math.E 在 FF14 触发器中几乎不会使用，且 hex2dec() 进制转换方法已有 "0x" 前缀替代，
@@ -174,14 +196,31 @@ namespace Simulant.Utils.Maths
                 return (long)(x - tolerance);
         }
 
-        public static double ModFunction(double a, double b)
+        public static double ModFunction(double a, double b, double min = 0)
         {
-            return (a % b + b) % b;
+            return ((a - min) % b + b) % b + min;
         }
 
         public static double IfFunction(double a, double b, double c)
         {
             return IsZero(a) ? c : b;
+        }
+
+        /// <summary>判断数值是否位于闭区间内，边界沿用数值比较的容差。</summary>
+        public static double BetweenFunction(double[] input)
+        {
+            return input[1] <= input[0] + TOLERANCE && input[0] <= input[2] + TOLERANCE ? 1 : 0;
+        }
+
+        /// <summary>判断首个数值是否与后续任一数值相等，沿用数值相等的容差。</summary>
+        public static double InFunction(double[] input)
+        {
+            for (int i = 1; i < input.Length; i++)
+            {
+                if (IsZero(input[0] - input[i]))
+                    return 1;
+            }
+            return 0;
         }
 
         public static double OrFunction(double[] x)
@@ -435,6 +474,93 @@ namespace Simulant.Utils.Maths
             return min;
         }
 
+        public static double LerpFunction(double[] input)
+        {
+            double a = input[0];
+            double b = input[1];
+            double t = input[2];
+
+            return a + (b - a) * t;
+        }
+
+        public static double LerpAngleFunction(double[] input)
+        {
+            double a = input[0];
+            double b = input[1];
+            double t = input[2];
+
+            return NormalizeRad(a + NormalizeRad(b - a) * t);
+        }
+
+        public static double LerpAngleCWFunction(double[] input)
+        {
+            double a = input[0];
+            double b = input[1];
+            double t = input[2];
+
+            return NormalizeRad(a - ModFunction(a - b, 2 * Math.PI) * t);
+        }
+
+        public static double LerpAngleCCWFunction(double[] input)
+        {
+            double a = input[0];
+            double b = input[1];
+            double t = input[2];
+
+            return NormalizeRad(a + ModFunction(b - a, 2 * Math.PI) * t);
+        }
+
+        private static double NormalizeRad(double rad)
+        {
+            return ModFunction(rad + Math.PI, 2 * Math.PI) - Math.PI;
+        }
+
+        public static double LerpDirFunction(double[] input)
+        {
+            double a = input[0];
+            double b = input[1];
+            double n = input[2];
+            double t = input[3];
+
+            return NormalizeDirValue(a + NormalizeDirDelta(b - a, n) * t, n);
+        }
+
+        public static double LerpDirCWFunction(double[] input)
+        {
+            double a = input[0];
+            double b = input[1];
+            double n = input[2];
+            double t = input[3];
+
+            double segments = Math.Abs(n);
+            return NormalizeDirValue(a - ModFunction(a - b, segments) * t, n);
+        }
+
+        public static double LerpDirCCWFunction(double[] input)
+        {
+            double a = input[0];
+            double b = input[1];
+            double n = input[2];
+            double t = input[3];
+
+            double segments = Math.Abs(n);
+            return NormalizeDirValue(a + ModFunction(b - a, segments) * t, n);
+        }
+
+        private static double NormalizeDirValue(double dir, double n)
+        {
+            double segments = Math.Abs(n);
+            return n > 0 
+                ? ModFunction(dir, segments) 
+                : ModFunction(dir + 0.5, segments) - 0.5;
+        }
+
+        private static double NormalizeDirDelta(double delta, double n)
+        {
+            double segments = Math.Abs(n);
+            return ModFunction(delta + segments / 2.0, segments) - segments / 2.0;
+        }
+
         #endregion
 
         #region Numeric String Functions (Definition)
@@ -512,6 +638,35 @@ namespace Simulant.Utils.Maths
             }
             else { return 0; }
         }
+        /// <summary>返回距离下一个指定艾欧泽亚时间的毫秒数。</summary>
+        public static double NextETms(string[] input)
+        {
+            string etString = input[0];
+            double totalMin = 0;
+            try
+            {
+                if (etString.Contains(':'))
+                {
+                    double etHour = int.Parse(etString.Substring(0, etString.IndexOf(':')), CultureInfo);
+                    double etMin = double.Parse(etString.Substring(etString.IndexOf(':') + 1), CultureInfo);
+                    totalMin = etHour * 60.0 + etMin;
+                    if (etHour < 0 || etMin < 0 || etMin > 60) { throw new Exception(); }
+                }
+                else
+                {
+                    totalMin = double.Parse(etString, CultureInfo);
+                }
+                if (totalMin < 0 || totalMin > 1440) { throw new Exception(); }
+            }
+            catch
+            {
+                throw new FormatException($"无法将“{etString}”解析为艾欧泽亚时间：nextETms({string.Join(", ", input)})。");
+            }
+
+            long epochTicks = DateTime.UtcNow.Ticks - new DateTime(1970, 1, 1).Ticks;
+            TimeSpan ez = new DateTime((long)Math.Round(epochTicks * (3600.0 / 175))).TimeOfDay;
+            return Math.Round((totalMin - ez.TotalMinutes + 1440) % 1440 * ETmin2sec * 1000);
+        }
 
         #endregion
 
@@ -587,6 +742,12 @@ namespace Simulant.Utils.Maths
         {
             if (string.IsNullOrWhiteSpace(mathExpression))
                 return 0.0;
+            // 单个十六进制数直接解析。
+            if (mathExpression.Length > 2 && mathExpression.Length <= 18
+                && mathExpression[0] == '0' && mathExpression[1] == 'x'
+                && long.TryParse(mathExpression.Substring(2), NumberStyles.AllowHexSpecifier, CultureInfo, out long hexValue))
+                return double.Parse(hexValue.ToString(CultureInfo), CultureInfo);
+            // 单个数值直接解析。
             if (double.TryParse(mathExpression, NumberStyles.Float, CultureInfo, out var result))
                 return result;
             return MathParserLogic(Lexer(mathExpression));
@@ -621,7 +782,7 @@ namespace Simulant.Utils.Maths
 
             // delete all spaces to avoid the splitting error of +/- when parsing strings like "1 + -1".
             // ignore all \r and \n to support multi-line input when writing long expressions
-            expr = expr.Replace(" ", "").Replace("\r", "").Replace("\n", "");
+            expr = expr.Replace(" ", "").Replace("\r", "").Replace("\n", "").Replace("⏎", "");
 
             // degree → rad
             expr = expr.Replace("°", "*0.01745329251994329576923690768488612");
@@ -731,7 +892,7 @@ namespace Simulant.Utils.Maths
                 var close = tokens.IndexOf(")", open);
                 if (open >= close || open < 0)
                 {
-                    throw new ArithmeticException($"数学表达式中括号未闭合: '{string.Join(" ", tokens)}'。原始表达式: '{string.Join(" ", originalTokens)}'");
+                    throw new ArithmeticException($"数学表达式中括号未闭合：'{string.Join(" ", tokens)}'。原始表达式：'{string.Join(" ", originalTokens)}'");
                 }
 
                 // create a sublist of the tokens inside (...)
@@ -871,28 +1032,37 @@ namespace Simulant.Utils.Maths
             }
             catch
             {
-                throw new ArithmeticException($"无法解析数学表达式 '{string.Join(" ", tokens)}'。原始表达式：'{string.Join(" ", originalTokens)}'", null);
+                throw new ArithmeticException($"无法解析数学表达式 '{string.Join(" ", tokens)}'。原始表达式：'{string.Join(" ", originalTokens)}'");
             }
 
-            foreach (string op in OperatorOrder)
+            // 纯数值二元表达式只计算对应运算符，不必遍历其他运算符。
+            IEnumerable<string> operators = OperatorOrder;
+            if (tokens.Count == 3 && OperatorOrder.Contains(tokens[1])
+                && OperatorArity.TryGetValue(tokens[1], out int arity) && arity == 2
+                && BinaryOperation.TryGetValue(tokens[1], out var operation) && operation != null
+                && double.TryParse(tokens[0], NumberStyles.Float, CultureInfo, out _)
+                && double.TryParse(tokens[2], NumberStyles.Float, CultureInfo, out _))
+                operators = new[] { tokens[1] };
+
+            foreach (string op in operators)
             {
                 try
                 {
+                    // 复用循环条件中已找到的运算符位置。
+                    int opPlace;
                     // string operator
                     if (op == "==")
                     {
-                        while (tokens.IndexOf(op) != -1)
+                        while ((opPlace = tokens.IndexOf(op)) != -1)
                         {
-                            int opPlace = tokens.IndexOf(op);
                             ApplyStringEqual(tokens, opPlace);
                         }
                         continue;
                     }
                     if (op == "??")
                     {
-                        while (tokens.IndexOf(op) != -1)
+                        while ((opPlace = tokens.LastIndexOf(op)) != -1)
                         {
-                            int opPlace = tokens.LastIndexOf(op);
                             ApplyStringCoalescing(tokens, opPlace, originalTokens);
                         }
                         continue;
@@ -901,9 +1071,9 @@ namespace Simulant.Utils.Maths
                     switch (OperatorArity[op])
                     {
                         case 1:
-                            while (tokens.IndexOf(op) != -1)
+                            while ((opPlace = tokens.IndexOf(op)) != -1)
                             {
-                                var opPlace = OperatorRightAssociative[op] ? tokens.LastIndexOf(op) : tokens.IndexOf(op);
+                                if (OperatorRightAssociative[op]) opPlace = tokens.LastIndexOf(op);
                                 if (tokens[opPlace + 1] == "+" || tokens[opPlace + 1] == "-")
                                 {
                                     ApplyPlusMinusToNumber(tokens, opPlace + 1);
@@ -916,9 +1086,9 @@ namespace Simulant.Utils.Maths
                             }
                             break;
                         case 2:
-                            while (tokens.IndexOf(op) != -1)
+                            while ((opPlace = tokens.IndexOf(op)) != -1)
                             {
-                                var opPlace = OperatorRightAssociative[op] ? tokens.LastIndexOf(op) : tokens.IndexOf(op);
+                                if (OperatorRightAssociative[op]) opPlace = tokens.LastIndexOf(op);
 
                                 if ((op == "+" || op == "-")
                                     && (opPlace == 0 || OperatorArity.ContainsKey(tokens[opPlace - 1])))
@@ -939,10 +1109,8 @@ namespace Simulant.Utils.Maths
                             }
                             break;
                         case 3: // currently only for  "? :"
-                            while (tokens.IndexOf(op) != -1)
+                            while ((opPlace = tokens.LastIndexOf(op)) != -1)
                             {
-                                //var opPlace = (OperatorRightAssociative[op]) ? tokens.LastIndexOf(op) : tokens.IndexOf(op);
-                                var opPlace = tokens.LastIndexOf(op);
                                 if (tokens[opPlace + 2] != ":") { throw new Exception(); }
                                 var result = IsZero(double.Parse(tokens[opPlace - 1], CultureInfo)) 
                                            ? double.Parse(tokens[opPlace + 3], CultureInfo)
@@ -957,9 +1125,15 @@ namespace Simulant.Utils.Maths
                 }
                 catch
                 {
-                    throw new ArithmeticException($"'{op}' 无法应用于表达式 '{string.Join(" ", tokens)}'。原始表达式: '{string.Join(" ", originalTokens)}'");
+                    throw new ArithmeticException($"'{op}' 无法应用于表达式 '{string.Join(" ", tokens)}'。原始表达式：'{string.Join(" ", originalTokens)}'");
                 }
             }
+
+            if (tokens.Count != 1)
+            {
+                throw new ArithmeticException($"无法解析数学表达式 '{string.Join(" ", tokens)}'。原始表达式：'{string.Join(" ", originalTokens)}'");
+            }
+
             return double.Parse(tokens[0], CultureInfo);
         }
         /// <summary> Combine the plus/minus and the next number in the tokens list. </summary>
@@ -1003,7 +1177,7 @@ namespace Simulant.Utils.Maths
         {   // a ?? b  means  (a is numeric) ? a : b
             if (opIndex == tokens.Count - 1)        // [..., "??"]
             {
-                throw new ArithmeticException($"'??' 无法应用于表达式 '{string.Join(" ", tokens)}'。原始表达式: '{string.Join(" ", originalTokens)}'");
+                throw new ArithmeticException($"'??' 无法应用于表达式 '{string.Join(" ", tokens)}'。原始表达式：'{string.Join(" ", originalTokens)}'");
             }
             else if (opIndex == 0)                  // ["??", ...]
             {
