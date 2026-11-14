@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulant.Tests", "Simulant.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReplayInspector", "tools\ReplayInspector\ReplayInspector.csproj", "{7B94AE6F-69BF-4B60-8293-BBB3805E565C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Lumina.ACT", "Lumina.ACT", "{F19547B0-2530-C31D-7EF8-D0D622B26AB9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lumina.Core", "Lumina.ACT\Lumina.Core\Lumina.Core.csproj", "{47254088-9BE3-4EEC-8D4B-00C326354246}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,9 +31,16 @@ Global
 		{7B94AE6F-69BF-4B60-8293-BBB3805E565C}.Debug|Any CPU.Build.0 = Debug|AnyCPU
 		{7B94AE6F-69BF-4B60-8293-BBB3805E565C}.Release|Any CPU.ActiveCfg = Release|AnyCPU
 		{7B94AE6F-69BF-4B60-8293-BBB3805E565C}.Release|Any CPU.Build.0 = Release|AnyCPU
+		{47254088-9BE3-4EEC-8D4B-00C326354246}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47254088-9BE3-4EEC-8D4B-00C326354246}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47254088-9BE3-4EEC-8D4B-00C326354246}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47254088-9BE3-4EEC-8D4B-00C326354246}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{47254088-9BE3-4EEC-8D4B-00C326354246} = {F19547B0-2530-C31D-7EF8-D0D622B26AB9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EB93DC5F-DEDC-4573-8393-6656A7B0A2FC}

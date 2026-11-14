@@ -152,7 +152,7 @@ namespace Simulant.UI
         {
             if (_host == null || !_host.PluginReady || _host.IsInitializing || _host.Disposed)
                 return "插件尚未就绪，请先完成初始化。";
-            if (!_host.CsvReady || _host.CsvLoading)
+            if (!_host.GameDataReady || _host.GameDataLoading)
                 return "数据尚未加载完成，请稍后开始模拟。";
             if (_host.IsSwitchingTerritory)
                 return "区域与阶段正在加载，请等待加载完成后再开始模拟。";

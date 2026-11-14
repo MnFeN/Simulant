@@ -1,5 +1,4 @@
-﻿using Simulant.Game.ExtractedCsv.Rows;
-using System;
+﻿using System;
 
 namespace Simulant.Game
 {

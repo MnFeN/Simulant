@@ -1,8 +1,8 @@
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Simulation.Runtime
 {
@@ -43,35 +43,35 @@ namespace Simulant.Simulation.Runtime
             lock (_gate)
             {
                 if (_disposed || !actor.IsActive) return;
-                var action = ResolveAction(actionId);
-                if (action == null) return;
+                if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action)) return;
+                var castTime = action.Cast100ms / 10f;
                 CancelCore(actor);
                 // 移除预兆会调用外部代码；它可能已清理角色或开始更新的读条。
                 if (_disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
                 var state = new CastState
                 {
                     ActionId = actionId,
-                    EndsAt = _scheduler.ElapsedSeconds + action.CastTime,
+                    EndsAt = _scheduler.ElapsedSeconds + castTime,
                     OmenTag = _tagPrefix + (++_castSequence),
                     Target = target
                 };
                 _casts.Add(actor, state);
                 try
                 {
-                    actor.Entity.SetCastInfo(actionId, action.CastTime);
+                    actor.Entity.SetCastInfo(actionId, castTime);
                     if (target != null) actor.Entity.SetCastTarget(target.Entity);
-                    state.Completion = _scheduler.ScheduleAfter(action.CastTime,
+                    state.Completion = _scheduler.ScheduleAfter(castTime,
                         () => Complete(actor, state, action), "技能 " + actionId + " 读条完成");
-                    if (action.OmenId > 0 && omenDelay.HasValue)
+                    if (action.Omen.RowId > 0 && omenDelay.HasValue)
                     {
                         var delay = Math.Max(0, omenDelay.Value);
                         if (delay == 0)
                             ShowOmen(actor, state, action);
-                        else if (delay < action.CastTime - 0.3)
+                        else if (delay < castTime - 0.3)
                             state.PendingOmen = _scheduler.ScheduleAfter(delay,
                                 () => ShowOmen(actor, state, action), "技能 " + actionId + " 预兆");
                     }
-                    _log?.Invoke($"开始读条：技能 {actionId}（{action.CastTime:0.0} 秒）");
+                    _log?.Invoke($"开始读条：技能 {actionId}（{castTime:0.0} 秒）");
                 }
                 catch
                 {
@@ -87,8 +87,7 @@ namespace Simulant.Simulation.Runtime
             lock (_gate)
             {
                 if (_disposed || !actor.IsActive) return;
-                var action = ResolveAction(actionId);
-                if (action == null) return;
+                if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action)) return;
                 CancelCore(actor);
                 if (_disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
                 ExecuteCore(actor, action, target);
@@ -163,15 +162,16 @@ namespace Simulant.Simulation.Runtime
             if (target != null)
             {
                 if (target.IsActive && target.Entity.IsTargetable && target.Entity.HP != 0)
-                    actor.Entity.ExecuteActionEffect((uint)(int)action.Index, target.Entity);
+                    actor.Entity.ExecuteActionEffect(action.RowId, target.Entity);
                 return;
             }
-            if (action.AnimationEndId >= 0)
+            var timeline = unchecked((int)action.AnimationEnd.RowId);
+            if (timeline >= 0)
             {
                 actor.Entity.ResetBaseTimeline();
-                actor.Entity.PlayBlendTimeline((ushort)action.AnimationEndId);
+                actor.Entity.PlayBlendTimeline((ushort)timeline);
             }
-            _log?.Invoke($"已执行技能：{action.Index}；结束动画：{action.AnimationEndId}");
+            _log?.Invoke($"已执行技能：{action.RowId}；结束动画：{timeline}");
         }
 
         private void CancelCore(SimActor actor)
@@ -195,9 +195,6 @@ namespace Simulant.Simulation.Runtime
                 if (state.OmenVisible) _omens.Remove(state.OmenTag);
             }
         }
-
-        private static ActionRow ResolveAction(uint actionId)
-            => CsvManager.Instance.Get<ActionRow>().TryGetValue((int)actionId, out var action) ? action : null;
 
         public void Dispose()
         {

@@ -1,11 +1,11 @@
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant
 {
@@ -41,10 +41,10 @@ namespace Simulant
             var castTime = 0f;
             if (kind == EntityTestKind.NetworkNpc || kind == EntityTestKind.LocalEntities)
             {
-                if (!CsvManager.Instance.Get<ActionRow>().TryGetValue((int)EntityTestActionId, out var action) ||
-                    action.CastTime < 3 || action.OmenId == 0 || action.AnimationEndId < 0)
+                if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(EntityTestActionId, out var action) ||
+                    (action.Cast100ms / 10f) < 3 || action.Omen.RowId == 0 || unchecked((int)action.AnimationEnd.RowId) < 0)
                     throw new InvalidOperationException("实体测试技能数据不完整，需要带读条、预兆和结束动画的流体摆动。");
-                castTime = action.CastTime;
+                castTime = (action.Cast100ms / 10f);
             }
 
             var run = new EntityBehaviorRun();
@@ -102,7 +102,7 @@ namespace Simulant
 
         private void EnsureEntityTestReady()
         {
-            if (_host.Disposed || !_host.PluginReady || _host.IsInitializing || !_host.CsvReady)
+            if (_host.Disposed || !_host.PluginReady || _host.IsInitializing || !_host.GameDataReady)
                 throw new InvalidOperationException("请等待插件初始化和 CSV 加载完成后再运行实体测试。");
             if (!_host.FirewallEnabled)
                 throw new InvalidOperationException("请先启用防火墙，再运行实体测试。");

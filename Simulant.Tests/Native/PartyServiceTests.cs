@@ -817,6 +817,8 @@ namespace Simulant.Tests.Native
 
     public sealed class PartyPlugin
     {
+        public string State => "Ready";
+        public readonly object CallScheduler = new object();
         private readonly object PluginUi = new object();
         public static readonly IntPtr NameFunction = new IntPtr(0x101), UpdateFunction = new IntPtr(0x102),
             StatusFunction = new IntPtr(0x103), VitalsFunction = new IntPtr(0x104),

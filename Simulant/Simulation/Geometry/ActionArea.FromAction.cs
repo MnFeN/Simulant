@@ -1,9 +1,8 @@
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Simulation.Geometry
 {
@@ -20,31 +19,23 @@ namespace Simulant.Simulation.Geometry
             float? coneAngleDegrees = null, float? innerRadius = null)
         {
             RequireNonNegative(casterHitboxRadius, nameof(casterHitboxRadius), "施法者碰撞半径");
-            ActionRow action;
-            try
-            {
-                if (actionId > int.MaxValue || !CsvManager.Instance.Get<ActionRow>().TryGetValue((int)actionId, out action) || action == null)
-                    throw new InvalidOperationException($"技能 {actionId} 不在 Action 表中，请更新技能表，或使用明确的 Circle、Cone、Rectangle、Donut 范围。");
-            }
-            catch (KeyNotFoundException exception)
-            {
-                throw new InvalidOperationException($"创建技能 {actionId} 的范围前需要加载 Action 表。", exception);
-            }
+            if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action))
+                throw new InvalidOperationException($"当前客户端的 Action 表中不存在技能 {actionId}，请确认客户端版本，或显式指定技能范围。");
 
             // CastType 的范围和碰撞半径规则参考 BossMod 的 AbilityInfo。
             // https://github.com/awgil/ffxiv_bossmod/blob/6e410ef8bb912fc70e3c1f97eedfb77a7dc4dfc0/BossMod/Replay/Analysis/AbilityInfo.cs
-            var range = (float)action.ScaleY;
-            switch (action.ShapeType)
+            var range = (float)action.EffectRange;
+            switch (action.CastType)
             {
                 case 2: return Circle(range);
                 case 3: return Cone(range + casterHitboxRadius, ResolveConeAngle(actionId, action, coneAngleDegrees));
-                case 4: return Rectangle(range + casterHitboxRadius, action.ScaleX * 2);
+                case 4: return Rectangle(range + casterHitboxRadius, action.XAxisModifier);
                 case 5: return Circle(range + casterHitboxRadius);
                 case 10: return Donut(ResolveInnerRadius(actionId, action, innerRadius), range);
-                case 12: return Rectangle(range, action.ScaleX * 2);
+                case 12: return Rectangle(range, action.XAxisModifier);
                 case 13: return Cone(range, ResolveConeAngle(actionId, action, coneAngleDegrees));
                 default:
-                    throw new NotSupportedException($"技能 {actionId} 的 CastType={action.ShapeType} 尚无已确认的范围定义，请显式使用 Circle、Cone、Rectangle、Donut，或补充该类型的规则。");
+                    throw new NotSupportedException($"技能 {actionId} 的 CastType={action.CastType} 尚无已确认的范围定义，请显式使用 Circle、Cone、Rectangle、Donut，或补充该类型的规则。");
             }
         }
 
@@ -68,15 +59,14 @@ namespace Simulant.Simulation.Geometry
                 && int.TryParse(matches[0].Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var outer)
                 && int.TryParse(matches[0].Groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var inner)
                 && outer > 0 && inner > 0 && inner < outer)
-                return action.ScaleY * ((float)inner / outer);
+                return action.EffectRange * ((float)inner / outer);
             throw new InvalidOperationException($"技能 {actionId} 的圆环内半径无法从预兆名称确定，请向 FromAction 传入 innerRadius（世界距离）。");
         }
 
         private static string GetOmenName(ActionRow action)
         {
-            if (action.OmenId == 0) return string.Empty;
-            try { return action.Omen?.Name ?? string.Empty; }
-            catch (KeyNotFoundException) { return string.Empty; }
+            if (action.Omen.RowId == 0) return string.Empty;
+            return action.Omen.ValueNullable?.Path.ExtractText() ?? string.Empty;
         }
     }
 }

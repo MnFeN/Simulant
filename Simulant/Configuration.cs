@@ -12,11 +12,13 @@ namespace Simulant
     {
         public SimActorBehaviorOptions SimulatedParty { get; set; } = new SimActorBehaviorOptions();
         public bool AutoInstallUpdates { get; set; } = true;
+        public string FfxivPath { get; set; } = string.Empty;
 
         internal Configuration Copy()
         {
             if (SimulatedParty == null) throw new InvalidOperationException("全局配置缺少模拟队员设置。");
-            return new Configuration { SimulatedParty = SimulatedParty.Copy(), AutoInstallUpdates = AutoInstallUpdates };
+            return new Configuration { SimulatedParty = SimulatedParty.Copy(), AutoInstallUpdates = AutoInstallUpdates,
+                FfxivPath = FfxivPath?.Trim() ?? string.Empty };
         }
 
         internal static Configuration Load(string path)

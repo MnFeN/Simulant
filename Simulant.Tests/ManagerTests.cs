@@ -1,6 +1,6 @@
 using Simulant.ACT;
 using Simulant.Core.Entity;
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Tests
@@ -317,7 +317,7 @@ namespace Simulant.Tests
         public static void ManagerDeletingOneActorPreservesOtherMovementAndCast()
         {
             TriggernometryInterop.Reset();
-            CsvManager.Instance.Get<ActionRow>().Clear();
+            GameDataService.Instance.GetSheet<ActionRow>().Clear();
             AddCombinedAction(1, 0.4f, true);
             AddCombinedAction(2, 0.4f, true);
             var spawner = new EntitySpawner();
@@ -379,7 +379,7 @@ namespace Simulant.Tests
         public static void ManagerStopAndRestartDiscardAllPreviousBehaviors()
         {
             TriggernometryInterop.Reset();
-            CsvManager.Instance.Get<ActionRow>().Clear();
+            GameDataService.Instance.GetSheet<ActionRow>().Clear();
             AddCombinedAction(1, 0.4f, true);
             AddCombinedAction(2, 0.04f, false);
             var spawner = new EntitySpawner();
@@ -514,8 +514,9 @@ namespace Simulant.Tests
                 var manager = new SimEntityManager(spawner) { Scheduler = scheduler };
                 try
                 {
-                    var boss = manager.SpawnBNpc(1);
                     var member = manager.SpawnBNpc(2);
+                    // 替身按顺序分配槽位，战斗目标必须使用有效的偶数网络槽。
+                    var boss = manager.SpawnBNpc(1);
                     manager.Party.Add(member);
                     Throws<InvalidOperationException>(() => manager.SetPartyEnmity(boss, 100));
                     manager.ShowParty(party);
@@ -544,11 +545,11 @@ namespace Simulant.Tests
 
         private static void AddCombinedAction(int id, float castTime, bool omen)
         {
-            CsvManager.Instance.Get<ActionRow>()[id] = new ActionRow
+            GameDataService.Instance.GetSheet<ActionRow>()[id] = new ActionRow
             {
-                Index = id, CastTime = castTime, AnimationEndId = (short)(100 + id),
-                OmenId = (ushort)(omen ? 1 : 0), ShapeType = 2, ScaleY = 5,
-                Omen = new Simulant.Game.ExtractedCsv.Rows.Omen { Name = "组合测试预兆" }
+                RowId = (uint)id, Cast100ms = checked((ushort)(castTime * 10)), AnimationEnd = (short)(100 + id),
+                CastType = 2, EffectRange = 5,
+                Omen = new Lumina.Excel.RowRef<Lumina.Excel.Sheets.Omen> { RowId = (uint)(omen ? 1 : 0), ValueNullable = new Lumina.Excel.Sheets.Omen { Path = "组合测试预兆" } }
             };
         }
 

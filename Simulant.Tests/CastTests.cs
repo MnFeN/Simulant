@@ -1,5 +1,5 @@
 using Simulant.ACT;
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
@@ -7,7 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Tests
 {
@@ -173,7 +173,7 @@ namespace Simulant.Tests
             using (var scene = new CastTestScene())
             using (var replaced = new ManualResetEventSlim())
             {
-                scene.AddAction(1, 0.35f, omen: true);
+                scene.AddAction(1, 0.4f, omen: true);
                 scene.AddAction(2, 1);
                 var actor = scene.Actor(0);
                 actor.Cast(1);
@@ -250,7 +250,7 @@ namespace Simulant.Tests
             using (var scene = new CastTestScene())
             using (var replaced = new ManualResetEventSlim())
             {
-                scene.AddAction(1, 0.35f, omen: true);
+                scene.AddAction(1, 0.4f, omen: true);
                 var actor = scene.Actor(0);
                 actor.Cast(1);
                 var oldTag = Tag(TriggernometryInterop.Commands.Single());
@@ -329,7 +329,7 @@ namespace Simulant.Tests
         {
             using (var scene = new CastTestScene())
             {
-                scene.AddAction(1, 0.35f, omen: true);
+                scene.AddAction(1, 0.4f, omen: true);
                 var actor = scene.Actor(0);
                 actor.Cast(1);
                 var shownTag = Tag(TriggernometryInterop.Commands.Single());
@@ -374,7 +374,7 @@ namespace Simulant.Tests
             internal CastTestScene()
             {
                 TriggernometryInterop.Reset();
-                CsvManager.Instance.Get<ActionRow>().Clear();
+                GameDataService.Instance.GetSheet<ActionRow>().Clear();
                 Scheduler = new SimScheduler((error, _) => _failure = error);
                 Casts = new SimCastController(Scheduler);
                 Movement = new SimMovementController(Scheduler);
@@ -383,11 +383,11 @@ namespace Simulant.Tests
             internal SimActor Actor(ushort slot) => new SimActor(World.CreateCharacter(slot), Casts, Movement);
             internal void AddAction(int id, float castTime, bool omen = false)
             {
-                CsvManager.Instance.Get<ActionRow>()[id] = new ActionRow
+                GameDataService.Instance.GetSheet<ActionRow>()[id] = new ActionRow
                 {
-                    Index = id, CastTime = castTime, AnimationEndId = (short)(100 + id),
-                    OmenId = (ushort)(omen ? 1 : 0), ShapeType = 2, ScaleY = 5,
-                    Omen = new Simulant.Game.ExtractedCsv.Rows.Omen { Name = "test_omen_" + id }
+                    RowId = (uint)id, Cast100ms = checked((ushort)(castTime * 10)), AnimationEnd = (short)(100 + id),
+                    CastType = 2, EffectRange = 5,
+                    Omen = new Lumina.Excel.RowRef<Lumina.Excel.Sheets.Omen> { RowId = (uint)(omen ? 1 : 0), ValueNullable = new Lumina.Excel.Sheets.Omen { Path = "test_omen_" + id } }
                 };
             }
 

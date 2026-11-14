@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 构建插件，并用真实 DLL 验证本地创建清理、实体 ID 分配、插件卸载、模拟小队与技能演出。
 .DESCRIPTION
@@ -8,12 +8,16 @@
 可选的 MSBuild.exe 路径；省略时通过 Visual Studio 的 vswhere 自动定位。
 .PARAMETER Configuration
 插件构建配置，默认 Release。
+.PARAMETER GamePath
+客户端根目录、game 或 sqpack 目录；只读加载游戏表，不连接游戏进程。
 #>
 [CmdletBinding()]
 param(
     [string]$MSBuildPath,
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    [Parameter(Mandatory = $true)]
+    [string]$GamePath
 )
 
 Set-StrictMode -Version Latest
@@ -22,7 +26,8 @@ $ErrorActionPreference = 'Stop'
 try {
     $repositoryPath = Split-Path -Parent $PSScriptRoot
     $projectPath = Join-Path $repositoryPath 'Simulant\Simulant.csproj'
-    $outputPath = Join-Path $repositoryPath ('Simulant\bin\' + $Configuration)
+    $buildOutputPath = Join-Path $repositoryPath ('Simulant\bin\' + $Configuration)
+    $outputPath = Join-Path $repositoryPath ('Simulant\obj\native-tests\' + [Guid]::NewGuid().ToString('N'))
 
     if ([string]::IsNullOrWhiteSpace($MSBuildPath)) {
         $vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
@@ -50,20 +55,29 @@ try {
     }
 
     Write-Host ('构建插件：' + $Configuration)
-    & $resolvedMSBuildPath $projectPath /restore /nologo /verbosity:minimal "/p:Configuration=$Configuration" /p:Platform=AnyCPU
+    & $resolvedMSBuildPath $projectPath /restore /nologo /verbosity:minimal "/p:Configuration=$Configuration" /p:Platform=AnyCPU /p:UseSharedCompilation=false
     if ($LASTEXITCODE -ne 0) { throw ('插件构建失败，退出码：' + $LASTEXITCODE) }
 
-    $pluginPath = Join-Path $outputPath 'Simulant.dll'
-    if (-not (Test-Path -LiteralPath $pluginPath -PathType Leaf)) {
-        throw ('构建未生成预期插件：' + $pluginPath)
+    $builtPluginPath = Join-Path $buildOutputPath 'Simulant.dll'
+    if (-not (Test-Path -LiteralPath $builtPluginPath -PathType Leaf)) {
+        throw ('构建未生成预期插件：' + $builtPluginPath)
     }
+    # 隔离目录只放插件本体及 ACT 已有的宿主组件，防止构建目录中的依赖掩盖单 DLL 加载失败。
+    New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
+    Copy-Item -LiteralPath $builtPluginPath -Destination $outputPath
+    Get-ChildItem -LiteralPath $buildOutputPath -File | Where-Object {
+        $_.Name -eq 'Advanced Combat Tracker.dll' -or $_.Name -like 'FFXIV_ACT_Plugin*.dll' -or $_.Name -like 'Machina*.dll'
+    } | Copy-Item -Destination $outputPath
+    $pluginPath = Join-Path $outputPath 'Simulant.dll'
     $localTestsPath = Join-Path $PSScriptRoot 'Native\LocalCreationTests.cs'
     $idTestsPath = Join-Path $PSScriptRoot 'Native\EntityIdAllocationTests.cs'
     $unloadTestsPath = Join-Path $PSScriptRoot 'Native\PluginUnloadTests.cs'
     $partyTestsPath = Join-Path $PSScriptRoot 'Native\PartyServiceTests.cs'
     $nativeCallsTestsPath = Join-Path $PSScriptRoot 'Native\NativeCallsTests.cs'
     $nameTestsPath = Join-Path $PSScriptRoot 'Native\NameTests.cs'
+    $dataTestsPath = Join-Path $PSScriptRoot 'Native\GameDataTests.cs'
     $entries = @(
+        @{ Name = 'GameDataTests'; Label = '客户端强类型数据读取'; Sources = @($dataTestsPath) },
         @{ Name = 'LocalCreationTests'; Label = '本地创建与失败清理'; Sources = @($localTestsPath) },
         @{ Name = 'EntityIdAllocationTests'; Label = '实体 ID 分配'; Sources = @($localTestsPath, $idTestsPath) },
         @{ Name = 'PluginUnloadTests'; Label = '退出模拟并卸载插件'; Sources = @($localTestsPath, $unloadTestsPath) },
@@ -88,10 +102,10 @@ try {
         if ($LASTEXITCODE -ne 0) { throw ($entry.Label + '编译失败，退出码：' + $LASTEXITCODE) }
 
         Write-Host ('运行故障注入入口：' + $entry.Label)
-        & $executablePath
+        & $executablePath $GamePath
         if ($LASTEXITCODE -ne 0) { throw ($entry.Label + '验证失败，退出码：' + $LASTEXITCODE) }
     }
-    Write-Host '六组真实 DLL 故障注入验证全部通过。'
+    Write-Host '客户端数据及六组真实 DLL 故障注入验证全部通过。'
     exit 0
 }
 catch {

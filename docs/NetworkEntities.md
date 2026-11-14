@@ -6,7 +6,7 @@
 
 从“菜单 → 调试功能 → 添加实体”进入，普通点击时 NPC 默认使用网络生成，场景物件继续使用 EObj 包。完成初始化并开启防火墙后，右键点击该菜单项可以选择网络 NPC、网络玩家；“本地生成（备用）”保留旧入口。
 
-- “生成网络 NPC…”：输入基础编号、名字编号和等级；后两项可省略，分别默认为 0 和 1。此入口需要完成 CSV 加载。
+- “生成网络 NPC…”：输入基础编号、名字编号和等级；后两项可省略，分别默认为 0 和 1。此入口需要完成 客户端游戏数据加载。
 - “生成网络玩家…”：选择职业、等级、名字和“优先使用职业预设装备”开关。名字留空时使用“模拟 + 职业名”；表单会提示当前职业使用预设还是复制自身装备。
 - “清理调试与手动生成实体”：停止当前调试测试，并回收手动生成的实体。
 
@@ -58,7 +58,7 @@ EntityManager.SpawnNetworkPlayer(Job.PLD, player => { });
 
 `UseJobEquipment` 默认 true，武器应用装等 795 的“幻境××·秘影”系列，头、身、手、腿、脚仍使用 99 级、装等 690 的职业蓝装，覆盖包括学者、暗黑骑士、蝰蛇剑士和绘灵法师在内的 21 个普通战斗职业。主副武器和五件护甲一起替换并清除染色，保留来源玩家的饰品、脸型、发型、种族和眼镜。这里只应用装备外观，不修改真实装备、背包或属性，也不按模拟角色等级限制显示。青魔没有这套幻境武器；青魔、基础职业及生产采集职业继续复制来源装备。设置 `UseJobEquipment = false` 可对任何职业使用复制外观。
 
-数据来自本机 `E:\FF14\SaintCoinach.Cmd\2026.07.16.0001.0000\rawexd\Item.csv`，并用 `ClassJobCategory.csv` 和 `EquipSlotCategory.csv` 核对职业与部位。武器物品 51000–51021 对应 21 件主手与骑士盾牌，名称与职业对应关系参照[幻境武器的最终形态](https://ff14.huijiwiki.com/wiki/任务:幻境武器的最终形态)核对；主副手模型逐件读取，主手及盾牌均使用变体 2，箭袋、枪盒、刀鞘等附属模型保留各自的变体，占星卡牌为 220。护甲仍从物品 42569–42695 中按 `Level{Equip}=99`、`Level{Item}=690`、`Rarity=3` 筛选，每套五件护甲均为同一模型编号、变体 1。固定数据保存在 [JobEquipment.cs](../Simulant/Core/Entity/JobEquipment.cs)，运行时不读取这些本机 CSV 或查询网络。
+装备固定值取自 2026.07.16.0001.0000 客户端的 Item 表，并用 ClassJobCategory 和 EquipSlotCategory 核对职业与部位。武器物品 51000–51021 对应 21 件主手与骑士盾牌，名称与职业对应关系参照[幻境武器的最终形态](https://ff14.huijiwiki.com/wiki/任务:幻境武器的最终形态)核对；主副手模型逐件读取，主手及盾牌均使用变体 2，箭袋、枪盒、刀鞘等附属模型保留各自的变体，占星卡牌为 220。护甲仍从物品 42569–42695 中按 `Level{Equip}=99`、`Level{Item}=690`、`Rarity=3` 筛选，每套五件护甲均为同一模型编号、变体 1。固定数据保存在 [JobEquipment.cs](../Simulant/Core/Entity/JobEquipment.cs)，运行时直接使用固定值。
 
 原生装备每项占八字节，而包内装备模型每项只有四字节，第二染色单独存放；读取时一次抓取 DrawData 快照再拆分，避免逐槽跨进程读。玩家包使用 Pc / SubKind 4 / DisplayFlags 0x40020，生成器在就绪后补发 ZoneIn 入场控制再初始化可选中。整个初始化仍在回收记录保护下，失败时可以取消或删除。
 
@@ -79,7 +79,7 @@ EntityManager.SpawnNetworkPlayer(Job.PLD, player => { });
 | --- | --- |
 | 自身实体 ID / SpawnIndex | 生成器分配；自身 ID 作为处理函数参数传入，SpawnIndex 写入包。两者不能混用 |
 | BaseId / NameId / Level | 调用方明确提供；等级默认 1，必须大于 0 |
-| ModelChara / Battalion / Name | 从本项目 CSV 的 BNpcBase、BNpcName 读取，也可显式覆盖 |
+| ModelChara / Battalion / Name | 从当前客户端的 BNpcBase、BNpcName 强类型行读取，也可显式覆盖 |
 | ObjectKind / SubKind / Mode | BattleNpc / 5（战斗对象）/ Normal；`Common.ObjectType` 保持 0，不把 SubKind 写到那里 |
 | HP / MP | 默认当前值与最大值均为 10000，可覆盖；HP 必须为正且不超过最大值。这些是模拟默认值，不是协议固定值 |
 | CharacterDataFlags / DisplayFlags / LinkRange | 普通可见战斗实体采用 3 / 0x4000B / 0x14，可覆盖 |

@@ -191,6 +191,8 @@ namespace Simulant.Tests.Native
 
     public sealed class ActionEffectPlugin
     {
+        public string State => "Ready";
+        public readonly object CallScheduler = new object();
         private readonly object PluginUi = new object();
         public static readonly IntPtr Function = new IntPtr(0x202);
         public readonly ActionEffectMemory Memory;

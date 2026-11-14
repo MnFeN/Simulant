@@ -79,3 +79,11 @@ Work in progress. Collaboration is welcome.
 ## Development
 
 - [Mechanic timeline development (Chinese)](docs/Timeline.md): node definitions, timeline composition, cancellation, and entity lifetime.
+
+## License
+
+Simulant's original code is licensed under GPLv3 (`GPL-3.0-only`). You may freely use and modify this project.
+
+When redistributing the project, you must also comply with GPLv3 and provide the complete corresponding source code for that version. If you have made changes, you must indicate them.
+
+See [COPYING.md](COPYING.md) for third-party content information and [LICENSE](LICENSE) for the full terms.

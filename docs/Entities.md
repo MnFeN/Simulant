@@ -8,7 +8,7 @@
 | Entity | `EntityBase`、`Character`、`EventObject` | 实体身份和有效性、坐标转换、属性、立即执行的游戏操作。 |
 | Simulation | `SimActor` | 角色在本次模拟中的读条和移动。通过会话共享的控制器安排持续行为。 |
 
-`Character` 不持有宿主、CSV、调度器或预兆绘制逻辑。`SimActor.Entity` 暴露底层角色，以便使用不需要重复转发的即时操作，例如 `actor.Entity.PlayBlendTimeline(id)`。没有通用工厂、组件容器或额外实体继承树。
+`Character` 不持有宿主、游戏数据服务、调度器或预兆绘制逻辑。`SimActor.Entity` 暴露底层角色，以便使用不需要重复转发的即时操作，例如 `actor.Entity.PlayBlendTimeline(id)`。没有通用工厂、组件容器或额外实体继承树。
 
 ## 创建与借用
 

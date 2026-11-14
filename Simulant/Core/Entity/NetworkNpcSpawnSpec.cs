@@ -1,11 +1,11 @@
 using Simulant.Game;
-using Simulant.Game.ExtractedCsv;
-using Simulant.Game.ExtractedCsv.Rows;
+using Simulant.Game.Data;
+using Lumina.Excel;
+using Lumina.Excel.Sheets;
 using Simulant.Game.FFCS.Client.Game.Character;
 using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Game.FFCS.Client.Game.Object;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 
 namespace Simulant.Core.Entity
@@ -78,10 +78,10 @@ namespace Simulant.Core.Entity
             if (customize != null && customize.Length != 26)
                 throw new ArgumentException("人形自定义数据必须恰好包含 26 字节。", nameof(Customize));
 
-            BNpcBase baseRow = null;
+            BNpcBase baseRow = default(BNpcBase);
             if (!ModelCharaId.HasValue || !Battalion.HasValue)
                 baseRow = ReadRow<BNpcBase>(BNpcBaseId, "战斗 NPC 基础");
-            var name = Name ?? (BNpcNameId == 0 ? string.Empty : ReadRow<BNpcName>(BNpcNameId, "战斗 NPC 名字").Name);
+            var name = Name ?? (BNpcNameId == 0 ? string.Empty : ReadRow<BNpcName>(BNpcNameId, "战斗 NPC 名字").Singular.ExtractText());
             var nameBytes = PacketCodec.EncodeActorName(name);
             var packet = new SpawnNpcPacket
             {
@@ -103,8 +103,8 @@ namespace Simulant.Core.Entity
                     HealthPoints = health,
                     MaxResourcePoints = MaxResourcePoints,
                     ResourcePoints = resource,
-                    ModelChara = ModelCharaId ?? baseRow.ModelCharaId,
-                    Battalion = Battalion ?? baseRow.Battalion,
+                    ModelChara = ModelCharaId ?? checked((ushort)baseRow.ModelChara.RowId),
+                    Battalion = Battalion ?? checked((byte)baseRow.Battalion.RowId),
                     Position = new Vector3(Pos.X, Pos.Z, Pos.Y),
                     Rotation = PacketCodec.EncodeUShortHeading(Heading),
                     SpawnIndex = spawnIndex,
@@ -127,16 +127,9 @@ namespace Simulant.Core.Entity
             return packet;
         }
 
-        private static T ReadRow<T>(uint id, string description) where T : TypedCsvRow
+        private static T ReadRow<T>(uint id, string description) where T : struct, IExcelRow<T>
         {
-            try
-            {
-                if (CsvManager.Instance.Get<T>().TryGetValue((int)id, out var row)) return row;
-            }
-            catch (KeyNotFoundException error)
-            {
-                throw new InvalidOperationException($"尚未加载{description}数据表。", error);
-            }
+            if (GameDataService.Instance.GetSheet<T>().TryGetRow(id, out var row)) return row;
             throw new InvalidOperationException($"未找到{description}数据行 #{id}。");
         }
 

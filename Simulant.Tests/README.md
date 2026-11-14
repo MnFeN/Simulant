@@ -1,6 +1,6 @@
 # 时间轴与实体回归测试
 
-独立 .NET Framework 4.8 / C# 7.3 控制台程序，直接链接时间轴核心、`SimSession`、`EntityRegistry`、`EntityIdentity`、`SimActor`、`SimMovementController`、`SimCastController` 和 `SimOmenRenderer` 的真实源文件，不引用主插件、ACT、游戏进程或 NuGet 包。会话测试用最小替身隔离宿主和逻辑；实体测试以可控对象表观察、内存中的角色替身、CSV 数据和外部 PictoACT 回调替身隔离游戏环境。需要 Windows、.NET Framework 4.8 开发包及 Visual Studio MSBuild。
+独立 .NET Framework 4.8 / C# 7.3 控制台程序，直接链接时间轴核心、`SimSession`、`EntityRegistry`、`EntityIdentity`、`SimActor`、`SimMovementController`、`SimCastController` 和 `SimOmenRenderer` 的真实源文件，不引用主插件、ACT、游戏进程或 NuGet 包。会话测试用最小替身隔离宿主和逻辑；实体测试以可控对象表观察、内存中的角色替身、游戏数据行和外部 PictoACT 回调替身隔离游戏环境。需要 Windows、.NET Framework 4.8 开发包及 Visual Studio MSBuild。
 
 在仓库根目录的 PowerShell 中执行：
 
@@ -53,10 +53,10 @@ P5 分散布局测试链接预设的实际位置算法，验证整组队友都�
 在仓库根目录执行：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ./Simulant.Tests/Run-NativeTests.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ./Simulant.Tests/Run-NativeTests.ps1 -GamePath 'C:\游戏目录\game'
 ```
 
-脚本构建插件，再编译并分别运行四组 x64 测试，共 70 项；失败时返回非零退出码。
+脚本构建插件，再编译并分别运行客户端数据读取与原生边界测试；失败时返回非零退出码。每次在独立目录中只放插件本体和 ACT 已有的宿主组件，不复制 Lumina 等运行依赖。先按 ACT 的顺序从字节加载 DLL、扫描全部类型并创建插件入口，不能提前运行模块初始化来绕过加载问题。地图和资源数据从指定客户端只读加载。数据读取使用真实 Lumina 强类型行，覆盖中文名称、关联引用、缺失行、布局校验拒绝、缓存及释放后重新打开，并检查插件不再嵌入游戏表资源。这里不依赖已启动的游戏或 ACT。
 
 - 创建失败组覆盖 23 项：初始化或读取失败、首次回滚失败、重复清理、实例归属变化、已知冲突禁止重新认领，以及世界重置不访问旧地址。
 - ID 分配组覆盖 17 项：从客户端同前缀的最大残留编号续增、玩家和非玩家区间隔离、回收后不倒退、区间用尽拒绝分配，以及隐藏 EObj、待完成网络请求、失败创建、扫描失败无原生副作用、可选角色表和重复指针读取去重。

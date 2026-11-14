@@ -1,0 +1,14 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- ACT 会先扫描所有类型再创建插件；依赖必须在扫描时可用，不能等模块初始化后再解压加载。 -->
+  <Target Name="MergePluginDependencies" AfterTargets="Build" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="ResolveReferences"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(IsCrossTargetingBuild)' != 'true'">
+    <ItemGroup>
+      <!-- 始终使用编译中间产物，避免增量构建时再次合并已合并的 DLL。 -->
+      <PluginMergeInput Include="$(IntermediateOutputPath)$(TargetFileName)" />
+      <PluginMergeInput Include="@(ReferenceCopyLocalPaths)"
+          Condition="'%(Extension)' == '.dll' and ('%(Filename)' == 'Lumina.ACT.Core' or '%(Filename)' == 'BCnEncoder' or '%(Filename)' == 'CommunityToolkit.HighPerformance' or '%(Filename)' == 'Microsoft.Bcl.HashCode' or '%(Filename)' == 'Microsoft.Bcl.Numerics' or '%(Filename)' == 'System.Buffers' or '%(Filename)' == 'System.Memory' or '%(Filename)' == 'System.Runtime.CompilerServices.Unsafe' or '%(Filename)' == 'System.Threading.Tasks.Extensions')" />
+    </ItemGroup>
+    <ILRepack InputAssemblies="@(PluginMergeInput)" OutputFile="$(TargetPath)" TargetKind="Dll"
+              Internalize="false" DebugInfo="true" LibraryPath="$(TargetDir)" />
+  </Target>
+</Project>

@@ -1,12 +1,12 @@
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game.Character;
 using System;
 using System.Numerics;
 using System.Threading;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Tests
 {
@@ -87,9 +87,9 @@ namespace Simulant.Tests
 
         public static void ImmediateArrivalInterruptsAutomaticCasting()
         {
-            var actions = CsvManager.Instance.Get<ActionRow>();
-            actions.TryGetValue(25859, out var original);
-            actions[25859] = new ActionRow { Index = 25859, CastTime = 5, Range = 25 };
+            var actions = GameDataService.Instance.GetSheet<ActionRow>();
+            var hadOriginal = actions.TryGetValue(25859, out var original);
+            actions[25859] = new ActionRow { RowId = 25859, Cast100ms = 50, Range = 25 };
             try
             {
                 Exception failure = null;
@@ -128,7 +128,7 @@ namespace Simulant.Tests
             }
             finally
             {
-                if (original == null) actions.Remove(25859);
+                if (!hadOriginal) actions.Remove(25859);
                 else actions[25859] = original;
             }
         }

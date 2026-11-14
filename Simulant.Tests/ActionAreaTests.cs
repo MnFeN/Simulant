@@ -1,9 +1,9 @@
-using Simulant.Game.ExtractedCsv;
-using Simulant.Game.ExtractedCsv.Rows;
+using Simulant.Game.Data;
+using Lumina.Excel.Sheets;
 using Simulant.Simulation.Geometry;
 using System;
 using System.Numerics;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Tests
 {
@@ -104,7 +104,7 @@ namespace Simulant.Tests
         {
             foreach (var shape in new byte[] { 2, 3, 4, 5, 12, 13 })
             {
-                WithAction(new ActionRow { ShapeType = shape, ScaleY = 10, ScaleX = 2 }, actionId =>
+                WithAction(new ActionRow { CastType = shape, EffectRange = 10, XAxisModifier = 4 }, actionId =>
                 {
                     var area = ActionArea.FromAction(actionId, 2, coneAngleDegrees: 90);
                     var addsHitbox = shape == 3 || shape == 4 || shape == 5;
@@ -120,7 +120,7 @@ namespace Simulant.Tests
                     }
                 });
             }
-            WithAction(new ActionRow { ShapeType = 10, ScaleY = 10 }, actionId =>
+            WithAction(new ActionRow { CastType = 10, EffectRange = 10 }, actionId =>
             {
                 var area = ActionArea.FromAction(actionId, 2, innerRadius: 3);
                 Assert(area.Contains(new Vector2(0, 10), Vector2.Zero, 0), "圆环外半径应使用 EffectRange。");
@@ -130,7 +130,7 @@ namespace Simulant.Tests
 
         public static void ActionRowsResolveStandardOmenDimensions()
         {
-            WithAction(new ActionRow { ShapeType = 13, ScaleY = 10, OmenId = 1, Omen = new Omen { Name = "vfx/omen/eff/gl_fan090_1bf.avfx" } }, actionId =>
+            WithAction(new ActionRow { CastType = 13, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = "vfx/omen/eff/gl_fan090_1bf.avfx" } } }, actionId =>
             {
                 var area = ActionArea.FromAction(actionId);
                 Assert(area.Contains(new Vector2(5, 5), Vector2.Zero, 0), "fan090 表示完整张角 90 度。");
@@ -138,14 +138,14 @@ namespace Simulant.Tests
             });
             foreach (var name in new[] { "gl_sircle_1005bf", "er_sicle_1005f", "circle_1005_test", "circle1005_test" })
             {
-                WithAction(new ActionRow { ShapeType = 10, ScaleY = 20, OmenId = 1, Omen = new Omen { Name = name } }, actionId =>
+                WithAction(new ActionRow { CastType = 10, EffectRange = 20, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = name } } }, actionId =>
                 {
                     var area = ActionArea.FromAction(actionId);
                     Assert(!area.Contains(new Vector2(0, 9.999f), Vector2.Zero, 0), "圆环预兆中的内外半径比例必须按 EffectRange 缩放。");
                     Assert(area.Contains(new Vector2(0, 10), Vector2.Zero, 0), "缩放后的圆环内边界应命中。");
                 });
             }
-            WithAction(new ActionRow { ShapeType = 10, ScaleY = 40, OmenId = 1, Omen = new Omen { Name = "gl_sircle_1907af" } }, actionId =>
+            WithAction(new ActionRow { CastType = 10, EffectRange = 40, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = "gl_sircle_1907af" } } }, actionId =>
             {
                 var area = ActionArea.FromAction(actionId);
                 Assert(!area.Contains(new Vector2(0, 14.7f), Vector2.Zero, 0), "圆环比例计算不能将内半径截断为整数。");
@@ -157,7 +157,7 @@ namespace Simulant.Tests
         {
             foreach (var name in new[] { "", "custom_omen", "m0532om_fan01x", "gl_fan000_test", "gl_fan361_test", "gl_fan0900_test", "gl_fan090_fan120_test" })
             {
-                WithAction(new ActionRow { ShapeType = 13, ScaleY = 10, OmenId = 1, Omen = new Omen { Name = name } }, actionId =>
+                WithAction(new ActionRow { CastType = 13, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = name } } }, actionId =>
                 {
                     var error = Expect<InvalidOperationException>(() => ActionArea.FromAction(actionId), "未知或歧义扇形名称不能回退到猜测张角。");
                     Assert(error.Message.Contains("coneAngleDegrees"), "缺失扇形数据时应提示具体的补充参数。");
@@ -165,33 +165,33 @@ namespace Simulant.Tests
             }
             foreach (var name in new[] { "", "custom_omen", "m0532om_don03x", "gl_sircle_1034bf", "gl_sircle_0000bf", "gl_sircle_1000bf", "gl_sircle_10050bf", "gl_sircle_1005_sircle_2010bf" })
             {
-                WithAction(new ActionRow { ShapeType = 10, ScaleY = 10, OmenId = 1, Omen = new Omen { Name = name } }, actionId =>
+                WithAction(new ActionRow { CastType = 10, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = name } } }, actionId =>
                 {
                     var error = Expect<InvalidOperationException>(() => ActionArea.FromAction(actionId), "未知或歧义圆环名称不能回退为圆形。");
                     Assert(error.Message.Contains("innerRadius"), "缺失圆环数据时应提示具体的补充参数。");
                 });
             }
-            WithAction(new ActionRow { ShapeType = 13, ScaleY = 10, OmenId = 0, Omen = new Omen { Name = "gl_fan090_1bf" } }, actionId =>
+            WithAction(new ActionRow { CastType = 13, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 0, ValueNullable = new Omen { Path = "gl_fan090_1bf" } } }, actionId =>
                 Expect<InvalidOperationException>(() => ActionArea.FromAction(actionId), "没有预兆编号时不得使用无效的预兆元数据。"));
         }
 
         public static void ActionRowsValidateOverridesAndUnsupportedTypes()
         {
-            WithAction(new ActionRow { ShapeType = 13, ScaleY = 10, OmenId = 1, Omen = new Omen { Name = "gl_fan090_1bf" } }, actionId =>
+            WithAction(new ActionRow { CastType = 13, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = "gl_fan090_1bf" } } }, actionId =>
             {
                 var area = ActionArea.FromAction(actionId, coneAngleDegrees: 45);
                 Assert(area.Contains(new Vector2(3, 9), Vector2.Zero, 0), "显式扇形角度范围以内应命中。");
                 Assert(!area.Contains(new Vector2(4, 9), Vector2.Zero, 0), "显式扇形角度应优先于预兆名称。");
                 Expect<ArgumentOutOfRangeException>(() => ActionArea.FromAction(actionId, coneAngleDegrees: float.NaN), "显式角度也必须验证有限值。");
             });
-            WithAction(new ActionRow { ShapeType = 10, ScaleY = 10, OmenId = 1, Omen = new Omen { Name = "gl_sircle_1005bf" } }, actionId =>
+            WithAction(new ActionRow { CastType = 10, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = "gl_sircle_1005bf" } } }, actionId =>
             {
                 Assert(ActionArea.FromAction(actionId, innerRadius: 2).Contains(new Vector2(0, 3), Vector2.Zero, 0), "显式圆环内半径应优先于预兆名称。");
                 Expect<ArgumentOutOfRangeException>(() => ActionArea.FromAction(actionId, innerRadius: 11), "显式内半径不能超过外半径。");
             });
-            WithAction(new ActionRow { ShapeType = 13, ScaleY = 10 }, actionId =>
+            WithAction(new ActionRow { CastType = 13, EffectRange = 10 }, actionId =>
                 Assert(ActionArea.FromAction(actionId, coneAngleDegrees: 180).Contains(new Vector2(0, 5), Vector2.Zero, 0), "没有预兆的技能可以显式补充张角。"));
-            WithAction(new ActionRow { ShapeType = 8, ScaleY = 10 }, actionId =>
+            WithAction(new ActionRow { CastType = 8, EffectRange = 10 }, actionId =>
             {
                 var error = Expect<NotSupportedException>(() => ActionArea.FromAction(actionId), "不支持的 CastType 不能自动回退为圆形。");
                 Assert(error.Message.Contains("CastType=8"), "不支持的类型应在错误中保留类型编号。");
@@ -204,7 +204,7 @@ namespace Simulant.Tests
         private static void WithAction(ActionRow row, System.Action<uint> action)
         {
             const int actionId = 2000000001;
-            var table = CsvManager.Instance.Get<ActionRow>();
+            var table = GameDataService.Instance.GetSheet<ActionRow>();
             var hadPrevious = table.TryGetValue(actionId, out var previous);
             table[actionId] = row;
             try { action(actionId); }

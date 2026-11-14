@@ -16,7 +16,7 @@ namespace Simulant.UI
         private readonly PluginHost _host;
         private readonly Configuration _draft;
         private readonly List<SimOptionBase> _partyOptions;
-        private readonly List<SimOptionBase> _updateOptions;
+        private readonly List<SimOptionBase> _miscOptions;
 
         internal ConfigurationForm(PluginHost host, Font font)
         {
@@ -41,16 +41,19 @@ namespace Simulant.UI
             new OptionEditor(table, toolTip).Build(_partyOptions);
             tabs.TabPages.Add(partyTab);
 
-            var updateTab = new TabPage("更新") { AutoScroll = true, Padding = new Padding(5) };
-            var updateTable = new TableLayoutPanel();
-            _updateOptions = new List<SimOptionBase>
+            var miscTab = new TabPage("杂项") { AutoScroll = true, Padding = new Padding(5) };
+            var miscTable = new TableLayoutPanel();
+            _miscOptions = new List<SimOptionBase>
             {
+                new FilePathOption(nameof(Configuration.FfxivPath), "FFXIV 安装路径", _draft.FfxivPath,
+                    "FFXIV 客户端|ffxiv_dx11.exe",
+                    "用于读取游戏资源文件，如果安装了多个游戏版本，请选择正确的版本。\n若未设置，则会自动检测当前启动的 ffxiv_dx11.exe。\n若有不同客户端多开需求，必须指定路径。"),
                 new CheckBoxOption(nameof(Configuration.AutoInstallUpdates), "自动安装更新", _draft.AutoInstallUpdates,
                     "开启插件时异步检查更新；发现新版本后自动下载安装，重启 ACT 后生效。")
             };
-            updateTab.Controls.Add(updateTable);
-            new OptionEditor(updateTable, toolTip).Build(_updateOptions);
-            tabs.TabPages.Add(updateTab);
+            miscTab.Controls.Add(miscTable);
+            new OptionEditor(miscTable, toolTip).Build(_miscOptions);
+            tabs.TabPages.Add(miscTab);
 
             var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true,
                 FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(8) };
@@ -82,7 +85,7 @@ namespace Simulant.UI
             try
             {
                 foreach (var option in _partyOptions) option.ApplyTo(_draft.SimulatedParty);
-                foreach (var option in _updateOptions) option.ApplyTo(_draft);
+                foreach (var option in _miscOptions) option.ApplyTo(_draft);
                 _host.SaveConfiguration(_draft);
                 DialogResult = DialogResult.OK;
             }

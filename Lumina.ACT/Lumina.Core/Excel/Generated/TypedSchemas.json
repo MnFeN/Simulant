@@ -1,0 +1,8388 @@
+[
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZArrangement",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZBoss",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZContent",
+    "ColumnHash": "B05FF0C9",
+    "HasSubrows": false,
+    "Columns": 19
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZContentBriefingBNpc",
+    "ColumnHash": "FC0810D7",
+    "HasSubrows": false,
+    "Columns": 25
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZContentBriefingObject",
+    "ColumnHash": "5EDC18EA",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZReport",
+    "ColumnHash": "1A97B0AF",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZReportReward",
+    "ColumnHash": "F9A9DE3D",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZScore",
+    "ColumnHash": "EFEE2933",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AOZWeeklyReward",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Achievement",
+    "ColumnHash": "E17AB03B",
+    "HasSubrows": false,
+    "Columns": 26
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AchievementCategory",
+    "ColumnHash": "B98D9BAF",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AchievementHideCondition",
+    "ColumnHash": "824C4CCF",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AchievementKind",
+    "ColumnHash": "9FF65AD6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AchievementTarget",
+    "ColumnHash": "5BFA8A4E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Action",
+    "ColumnHash": "C5217018",
+    "HasSubrows": false,
+    "Columns": 71
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionCastTimeline",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionCastVFX",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionComboRoute",
+    "ColumnHash": "E732FD5B",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionComboRouteTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionCostType",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionIndirection",
+    "ColumnHash": "C8901190",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionInit",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionParam",
+    "ColumnHash": "8795CD75",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionProcStatus",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionSetting",
+    "ColumnHash": "B42D3EDF",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionTimeline",
+    "ColumnHash": "D803699F",
+    "HasSubrows": false,
+    "Columns": 22
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionTimelineMove",
+    "ColumnHash": "94CEE17E",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionTimelineReplace",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActionTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActivityFeedButtons",
+    "ColumnHash": "20072D40",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActivityFeedCaptions",
+    "ColumnHash": "776EE24C",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActivityFeedGroupCaptions",
+    "ColumnHash": "776EE24C",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ActivityFeedImages",
+    "ColumnHash": "530C5199",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Addon",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AddonHudSize",
+    "ColumnHash": "20BF3D37",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AddonLayout",
+    "ColumnHash": "7DD35E3A",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AddonParam",
+    "ColumnHash": "8E477C70",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AddonTalkParam",
+    "ColumnHash": "F1EEDAF1",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AddonTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AdvancedVibration",
+    "ColumnHash": "FE115737",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Adventure",
+    "ColumnHash": "C57BF748",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AdventureExPhase",
+    "ColumnHash": "2EBEEA9F",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AetherCurrent",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AetherCurrentCompFlgSet",
+    "ColumnHash": "39815AF8",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AetherialWheel",
+    "ColumnHash": "FEE5ACB6",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Aetheryte",
+    "ColumnHash": "B41A2B3C",
+    "HasSubrows": false,
+    "Columns": 25
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AetheryteSystemDefine",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AetheryteTransient",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AirshipExplorationLevel",
+    "ColumnHash": "382ABF74",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AirshipExplorationLog",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AirshipExplorationParamType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AirshipExplorationPart",
+    "ColumnHash": "C971F464",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AirshipExplorationPoint",
+    "ColumnHash": "307F38A2",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AirshipSkyIsland",
+    "ColumnHash": "BF6083AC",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AkatsukiNote",
+    "ColumnHash": "B8742590",
+    "HasSubrows": true,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AkatsukiNoteString",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeapon5",
+    "ColumnHash": "E777B7A6",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeapon5Param",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeapon5PatternGroup",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeapon5SpiritTalk",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeapon5SpiritTalkParam",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeapon5SpiritTalkType",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeapon5TradeItem",
+    "ColumnHash": "40F1E693",
+    "HasSubrows": false,
+    "Columns": 28
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeaponFUITalk",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeaponFUITalkParam",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeaponIcon",
+    "ColumnHash": "63C20DB3",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimaWeaponItem",
+    "ColumnHash": "E0A5CDD0",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AnimationLOD",
+    "ColumnHash": "261CFAD0",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AozAction",
+    "ColumnHash": "5A516458",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AozActionTransient",
+    "ColumnHash": "4921BB28",
+    "HasSubrows": false,
+    "Columns": 20
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AquariumFish",
+    "ColumnHash": "9B5E32BA",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AquariumWater",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ArchiveItem",
+    "ColumnHash": "31B3477E",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ArrayActionCheck",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ArrayEventHandler",
+    "ColumnHash": "B404681E",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "AttackType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Attract",
+    "ColumnHash": "DB0DDEE7",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Attributive",
+    "ColumnHash": "ECF11B18",
+    "HasSubrows": false,
+    "Columns": 41
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BGM",
+    "ColumnHash": "C9FC6953",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BGMFade",
+    "ColumnHash": "F09994A9",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BGMFadeType",
+    "ColumnHash": "E018B5FA",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BGMScene",
+    "ColumnHash": "2711A5EA",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BGMSituation",
+    "ColumnHash": "64A88F98",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BGMSwitch",
+    "ColumnHash": "0989D4F2",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BGMSystemDefine",
+    "ColumnHash": "D16A1B6C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BNpcAnnounceIcon",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BNpcBase",
+    "ColumnHash": "AD223303",
+    "HasSubrows": false,
+    "Columns": 27
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BNpcBasePopVfx",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BNpcCustomize",
+    "ColumnHash": "18F060D4",
+    "HasSubrows": false,
+    "Columns": 26
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BNpcName",
+    "ColumnHash": "77A72DA0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BNpcParts",
+    "ColumnHash": "BB3721B5",
+    "HasSubrows": false,
+    "Columns": 67
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BNpcResist",
+    "ColumnHash": "FB3C87A2",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BNpcState",
+    "ColumnHash": "439DE63E",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BacklightColor",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Ballista",
+    "ColumnHash": "CAC0C160",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Balloon",
+    "ColumnHash": "9D1B5F4B",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BankaCraftWorks",
+    "ColumnHash": "92B51979",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BankaCraftWorksSupply",
+    "ColumnHash": "444A6117",
+    "HasSubrows": false,
+    "Columns": 40
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerBg",
+    "ColumnHash": "EAB3567D",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerCondition",
+    "ColumnHash": "FB032B77",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerDecoration",
+    "ColumnHash": "EAB3567D",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerDesignPreset",
+    "ColumnHash": "FCCD960D",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerFacial",
+    "ColumnHash": "5C0F5111",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerFrame",
+    "ColumnHash": "EAB3567D",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerObtainHintType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerPreset",
+    "ColumnHash": "EECA93F7",
+    "HasSubrows": false,
+    "Columns": 26
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BannerTimeline",
+    "ColumnHash": "CADF9952",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BaseParam",
+    "ColumnHash": "1BF83F1F",
+    "HasSubrows": false,
+    "Columns": 41
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Battalion",
+    "ColumnHash": "A485BF48",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BattleLeve",
+    "ColumnHash": "1CE99CEA",
+    "HasSubrows": false,
+    "Columns": 183
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BattleLeveRule",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BeastRankBonus",
+    "ColumnHash": "4D6CBDC3",
+    "HasSubrows": false,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BeastReputationRank",
+    "ColumnHash": "446D8BAD",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BeastTribe",
+    "ColumnHash": "C9FBF3F1",
+    "HasSubrows": false,
+    "Columns": 20
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Behavior",
+    "ColumnHash": "858A7450",
+    "HasSubrows": true,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BehaviorMove",
+    "ColumnHash": "0C362F6E",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BehaviorPath",
+    "ColumnHash": "96572D0D",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BenchmarkCutSceneTable",
+    "ColumnHash": "87BFF331",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BenchmarkOverrideEquipment",
+    "ColumnHash": "D0ED99DE",
+    "HasSubrows": false,
+    "Columns": 30
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BgcArmyAction",
+    "ColumnHash": "62947E52",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BgcArmyActionTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Booster",
+    "ColumnHash": "0B312F48",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Buddy",
+    "ColumnHash": "D2892CC5",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BuddyAction",
+    "ColumnHash": "9A695BEC",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BuddyEquip",
+    "ColumnHash": "B429792A",
+    "HasSubrows": false,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BuddyItem",
+    "ColumnHash": "FA9FC03D",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BuddyRank",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "BuddySkill",
+    "ColumnHash": "E3220DDC",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CSBonusContent",
+    "ColumnHash": "F8D2BE91",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CSBonusContentIdentifier",
+    "ColumnHash": "8B9172EA",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CSBonusContentType",
+    "ColumnHash": "903A2E39",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CSBonusMission",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CSBonusMissionType",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CSBonusSeason",
+    "ColumnHash": "FA932392",
+    "HasSubrows": false,
+    "Columns": 18
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CSBonusTextData",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Cabinet",
+    "ColumnHash": "86748239",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CabinetCategory",
+    "ColumnHash": "0D4B5075",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CabinetSubCategory",
+    "ColumnHash": "3D65A9F1",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Calendar",
+    "ColumnHash": "005CFABB",
+    "HasSubrows": false,
+    "Columns": 64
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Carry",
+    "ColumnHash": "31E1F9E6",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Channeling",
+    "ColumnHash": "6DFE9F55",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaCardBase",
+    "ColumnHash": "C9FE5B18",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaCardDecoration",
+    "ColumnHash": "8C5423FE",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaCardDesignCategory",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaCardDesignPreset",
+    "ColumnHash": "2C94B01F",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaCardDesignType",
+    "ColumnHash": "CD656C92",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaCardHeader",
+    "ColumnHash": "560F99B3",
+    "HasSubrows": false,
+    "Columns": 13
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaCardPlayStyle",
+    "ColumnHash": "30EBF383",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaMakeClassEquip",
+    "ColumnHash": "41DAFACB",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaMakeCustomize",
+    "ColumnHash": "C30E9B73",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaMakeName",
+    "ColumnHash": "6FBE744D",
+    "HasSubrows": false,
+    "Columns": 50
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CharaMakeType",
+    "ColumnHash": "50CDBEEF",
+    "HasSubrows": false,
+    "Columns": 3536
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChatBubbleSampeTextList",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChatBubbleType",
+    "ColumnHash": "1026CFCF",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRace",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceAbility",
+    "ColumnHash": "C68F9E95",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceAbilityType",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceCalculateParam",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceChallenge",
+    "ColumnHash": "EA97D93A",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceItem",
+    "ColumnHash": "7A3E01E7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceRank",
+    "ColumnHash": "F840EABF",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceRanking",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceStatus",
+    "ColumnHash": "F8AB135E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceTerritory",
+    "ColumnHash": "39E8D543",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceTutorial",
+    "ColumnHash": "EF6C7B71",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboRaceWeather",
+    "ColumnHash": "FAEDAD07",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboTaxi",
+    "ColumnHash": "6A82513F",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ChocoboTaxiStand",
+    "ColumnHash": "233D23D9",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CircleActivity",
+    "ColumnHash": "1A6AE0B3",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ClassJob",
+    "ColumnHash": "A540F082",
+    "HasSubrows": false,
+    "Columns": 51
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ClassJobActionUI",
+    "ColumnHash": "9C44E91D",
+    "HasSubrows": true,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ClassJobActionUICategory",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ClassJobCategory",
+    "ColumnHash": "6733E334",
+    "HasSubrows": false,
+    "Columns": 47
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ClassJobResident",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CollectablesRefine",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CollectablesShop",
+    "ColumnHash": "6A066E9A",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CollectablesShopItem",
+    "ColumnHash": "5D438D38",
+    "HasSubrows": true,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CollectablesShopItemGroup",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CollectablesShopRefine",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CollectablesShopRewardItem",
+    "ColumnHash": "F7E08B71",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CollectablesShopRewardScrip",
+    "ColumnHash": "0C33CE97",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CollisionIdPallet",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ColorFilter",
+    "ColumnHash": "7F9DB367",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Colosseum",
+    "ColumnHash": "CFC59262",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ColosseumMatchRank",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Companion",
+    "ColumnHash": "EAEEBEF0",
+    "HasSubrows": false,
+    "Columns": 40
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanionMove",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanionTransient",
+    "ColumnHash": "EA0B06CF",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyAction",
+    "ColumnHash": "DE0DD9CF",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyCraftDraft",
+    "ColumnHash": "DF938294",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyCraftDraftCategory",
+    "ColumnHash": "F6570594",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyCraftManufactoryState",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyCraftPart",
+    "ColumnHash": "E9FFD316",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyCraftProcess",
+    "ColumnHash": "3135B48E",
+    "HasSubrows": false,
+    "Columns": 36
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyCraftSequence",
+    "ColumnHash": "6D444CC1",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyCraftSupplyItem",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyCraftType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyLeve",
+    "ColumnHash": "688CF3DA",
+    "HasSubrows": false,
+    "Columns": 178
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompanyLeveRule",
+    "ColumnHash": "CC3AD729",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompleteJournal",
+    "ColumnHash": "8741E36A",
+    "HasSubrows": false,
+    "Columns": 30
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CompleteJournalCategory",
+    "ColumnHash": "976040DD",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Completion",
+    "ColumnHash": "2E6C55A3",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Condition",
+    "ColumnHash": "F234A002",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ConfigKey",
+    "ColumnHash": "927EBFB7",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentAttributeRect",
+    "ColumnHash": "01299C43",
+    "HasSubrows": false,
+    "Columns": 128
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentCloseCycle",
+    "ColumnHash": "D3032CDB",
+    "HasSubrows": false,
+    "Columns": 13
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentDirectorBattleTalk",
+    "ColumnHash": "DFA0BEC7",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentDirectorManagedSG",
+    "ColumnHash": "ED97494A",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentEffectiveTime",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentEntry",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentEventItem",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentExAction",
+    "ColumnHash": "8690A89E",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentFinderCondition",
+    "ColumnHash": "AA5F7849",
+    "HasSubrows": false,
+    "Columns": 99
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentFinderConditionRegion",
+    "ColumnHash": "FC4FEBCD",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentFinderConditionTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentGauge",
+    "ColumnHash": "55E3560D",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentGaugeColor",
+    "ColumnHash": "96A22AEA",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentMemberType",
+    "ColumnHash": "44EA3AEE",
+    "HasSubrows": false,
+    "Columns": 21
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentNpc",
+    "ColumnHash": "792ADF2D",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentNpcTalk",
+    "ColumnHash": "CFA3D5CD",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentRandomSelect",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentRewardCondition",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentRoulette",
+    "ColumnHash": "45E13CE2",
+    "HasSubrows": false,
+    "Columns": 49
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentRouletteOpenRule",
+    "ColumnHash": "985449CE",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentRouletteRoleBonus",
+    "ColumnHash": "8C1EAB22",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentTalk",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentTalkParam",
+    "ColumnHash": "D4CEFACF",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentTodo",
+    "ColumnHash": "5B3B0B21",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentTourismConstruct",
+    "ColumnHash": "5E72A716",
+    "HasSubrows": true,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentType",
+    "ColumnHash": "B19E831D",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentUICategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentsNote",
+    "ColumnHash": "748963D8",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentsNoteCategory",
+    "ColumnHash": "F8C2977F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentsNoteLevel",
+    "ColumnHash": "DD3FF48D",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentsNoteRewardEurekaEXP",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentsTutorial",
+    "ColumnHash": "076BCD7D",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ContentsTutorialPage",
+    "ColumnHash": "0C8DB36C",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CraftAction",
+    "ColumnHash": "6057073B",
+    "HasSubrows": false,
+    "Columns": 20
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CraftActionIndirection",
+    "ColumnHash": "F7903C75",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CraftLeve",
+    "ColumnHash": "51A3ACC3",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CraftLeveTalk",
+    "ColumnHash": "000C7D93",
+    "HasSubrows": false,
+    "Columns": 42
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CraftType",
+    "ColumnHash": "B92C9B70",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Credit",
+    "ColumnHash": "1FE6EC22",
+    "HasSubrows": true,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CreditBackImage",
+    "ColumnHash": "06ECCBE2",
+    "HasSubrows": true,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CreditCast",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CreditDataSet",
+    "ColumnHash": "CF2A6A87",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CreditFont",
+    "ColumnHash": "F8DFDE72",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CreditList",
+    "ColumnHash": "089033FA",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CreditListText",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CreditVersion",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CurrencyScripConvert",
+    "ColumnHash": "267ABA3D",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CustomTalk",
+    "ColumnHash": "D20FEE6C",
+    "HasSubrows": false,
+    "Columns": 79
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CustomTalkDefineClient",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CustomTalkNestHandlers",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CustomTalkResident",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CustomTalkSimpleNest",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CutActionTimeline",
+    "ColumnHash": "A8B8495C",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CutSceneIncompQuest",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CutScreenImage",
+    "ColumnHash": "96914CFE",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Cutscene",
+    "ColumnHash": "AE8B8521",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CutsceneActorSize",
+    "ColumnHash": "343F5FC6",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CutsceneEventMotion",
+    "ColumnHash": "025ADB1E",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CutsceneMotion",
+    "ColumnHash": "3D86CE33",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CutsceneName",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CutsceneWorkIndex",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CuttingGrass",
+    "ColumnHash": "534143BC",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "CycleTime",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DailySupplyItem",
+    "ColumnHash": "5E7B2507",
+    "HasSubrows": false,
+    "Columns": 24
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DawnContent",
+    "ColumnHash": "7CBA2808",
+    "HasSubrows": false,
+    "Columns": 20
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DawnContentParticipable",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DawnGrowMember",
+    "ColumnHash": "83D96633",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DawnMember",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DawnMemberUIParam",
+    "ColumnHash": "7B44BC07",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DawnQuestMember",
+    "ColumnHash": "9A909078",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeon",
+    "ColumnHash": "ED6590EF",
+    "HasSubrows": false,
+    "Columns": 37
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeon4GimmickEffect",
+    "ColumnHash": "382ABF74",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeon4GimmickEffectTransient",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonBan",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonDanger",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonDemiclone",
+    "ColumnHash": "C638F2BF",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonEquipment",
+    "ColumnHash": "C638F2BF",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonFloorEffectUI",
+    "ColumnHash": "11A44A12",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonGrowData",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonHardModeItem",
+    "ColumnHash": "EACBFC68",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonItem",
+    "ColumnHash": "878768C6",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonLayer",
+    "ColumnHash": "763FDDE0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonMagicStone",
+    "ColumnHash": "C638F2BF",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonMap5X",
+    "ColumnHash": "64A88F98",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonResident",
+    "ColumnHash": "24ADD044",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonRoom",
+    "ColumnHash": "6BE0E840",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeepDungeonStatus",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DefaultTalk",
+    "ColumnHash": "E6DEC88D",
+    "HasSubrows": false,
+    "Columns": 23
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DefaultTalkLipSyncType",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DeliveryQuest",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Description",
+    "ColumnHash": "17DC52A3",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DescriptionPage",
+    "ColumnHash": "DA11A692",
+    "HasSubrows": true,
+    "Columns": 26
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DescriptionSection",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DescriptionStandAlone",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DescriptionStandAloneTransient",
+    "ColumnHash": "11A44A12",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DescriptionString",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DirectorSystemDefine",
+    "ColumnHash": "993D983D",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DirectorType",
+    "ColumnHash": "CF4EFFDB",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DisposalShop",
+    "ColumnHash": "62FE4965",
+    "HasSubrows": false,
+    "Columns": 19
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DisposalShopFilterType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DisposalShopItem",
+    "ColumnHash": "1990ED53",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DomaStoryProgress",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DpsChallenge",
+    "ColumnHash": "2FDAC054",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DpsChallengeOfficer",
+    "ColumnHash": "786CF56A",
+    "HasSubrows": false,
+    "Columns": 27
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DpsChallengeTransient",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DynamicEvent",
+    "ColumnHash": "E78FD2E5",
+    "HasSubrows": false,
+    "Columns": 19
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DynamicEventEnemyType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DynamicEventManager",
+    "ColumnHash": "13763D66",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DynamicEventScreenImage",
+    "ColumnHash": "96A22AEA",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DynamicEventSet",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DynamicEventSingleBattle",
+    "ColumnHash": "E760C985",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DynamicEventType",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "DynamicEventUIType",
+    "ColumnHash": "B5F86EFE",
+    "HasSubrows": false,
+    "Columns": 19
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ENpcBase",
+    "ColumnHash": "5BA9E1A6",
+    "HasSubrows": false,
+    "Columns": 110
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ENpcDressUp",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ENpcDressUpDress",
+    "ColumnHash": "B07C9CAA",
+    "HasSubrows": true,
+    "Columns": 73
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ENpcResident",
+    "ColumnHash": "F74FA88C",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EObj",
+    "ColumnHash": "30114471",
+    "HasSubrows": false,
+    "Columns": 21
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EObjName",
+    "ColumnHash": "77A72DA0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmjAddon",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmjCharaViewCamera",
+    "ColumnHash": "3BC4120F",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmjCostume",
+    "ColumnHash": "1F808F3F",
+    "HasSubrows": true,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmjCostumeData",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmjDani",
+    "ColumnHash": "F3FB0152",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmjVoiceNpc",
+    "ColumnHash": "AA50BE21",
+    "HasSubrows": false,
+    "Columns": 30
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Emote",
+    "ColumnHash": "AFF5D14E",
+    "HasSubrows": false,
+    "Columns": 25
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmoteCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmoteMode",
+    "ColumnHash": "087A32E7",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EmoteTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EquipRaceCategory",
+    "ColumnHash": "F914B198",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EquipSlotCategory",
+    "ColumnHash": "F4AB6454",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Error",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Eureka",
+    "ColumnHash": "8F1DF131",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaAetherItem",
+    "ColumnHash": "45C06AE0",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaAethernet",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaDungeonPortal",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaGrowData",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaLogosMixerProbability",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaMagiaAction",
+    "ColumnHash": "5A516458",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaMagiciteItem",
+    "ColumnHash": "BC638DF5",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaMagiciteItemType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaSphereElementAdjust",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EurekaStoryProgress",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventAction",
+    "ColumnHash": "1C60D673",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventCustomIconType",
+    "ColumnHash": "9A111885",
+    "HasSubrows": false,
+    "Columns": 51
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventExtraConditionSet",
+    "ColumnHash": "5BFA8A4E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventGimmickPathMove",
+    "ColumnHash": "2550D0A0",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventIconPriority",
+    "ColumnHash": "3BCF5BD0",
+    "HasSubrows": false,
+    "Columns": 29
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventIconPriorityPair",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventIconType",
+    "ColumnHash": "6CE9409C",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventImage",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventItem",
+    "ColumnHash": "2A1D4FB2",
+    "HasSubrows": false,
+    "Columns": 18
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventItemCastTimeline",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventItemCategory",
+    "ColumnHash": "BF993F69",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventItemHelp",
+    "ColumnHash": "8E477C70",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventItemTimeline",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventMountGimmickPathMove",
+    "ColumnHash": "3896B423",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventPathMove",
+    "ColumnHash": "B5E8D87A",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventSetDefine",
+    "ColumnHash": "5BFA8A4E",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventSituationIconTooltip",
+    "ColumnHash": "8E477C70",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventSystemDefine",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventTutorial",
+    "ColumnHash": "C46AB06D",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventTutorialPage",
+    "ColumnHash": "11A44A12",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "EventVfx",
+    "ColumnHash": "024C23C9",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ExHotbarCrossbarIndexType",
+    "ColumnHash": "56EBD62B",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ExVersion",
+    "ColumnHash": "DB31122B",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ExportedGatheringPoint",
+    "ColumnHash": "DA46099C",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ExportedSG",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ExtendedQuestCounter",
+    "ColumnHash": "33CF82E3",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ExtraCommand",
+    "ColumnHash": "173A0318",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCActivity",
+    "ColumnHash": "E45DC889",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCActivityCategory",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCAuthority",
+    "ColumnHash": "1EE79C01",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCAuthorityCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCChestName",
+    "ColumnHash": "9FF65AD6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCCrestSymbol",
+    "ColumnHash": "43BDD5B1",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCDefine",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCHierarchy",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCProfile",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCRank",
+    "ColumnHash": "0105B558",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCReputation",
+    "ColumnHash": "3D6BE37E",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FCRights",
+    "ColumnHash": "CE73D687",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FGSAddon",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FGSStageUI",
+    "ColumnHash": "58FB0CC3",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FashionCheckThemeCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FashionCheckWeeklyTheme",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Fate",
+    "ColumnHash": "FA504DE6",
+    "HasSubrows": false,
+    "Columns": 113
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FateEvent",
+    "ColumnHash": "0F779649",
+    "HasSubrows": false,
+    "Columns": 64
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FateMode",
+    "ColumnHash": "6BE0E840",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FateProgressUI",
+    "ColumnHash": "BCCD5130",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FateRuleEx",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FateShop",
+    "ColumnHash": "58D1A3E4",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FateTokenType",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FccShop",
+    "ColumnHash": "CCD13846",
+    "HasSubrows": false,
+    "Columns": 31
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Festival",
+    "ColumnHash": "326ECF1B",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FieldMarker",
+    "ColumnHash": "23003392",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FishParameter",
+    "ColumnHash": "7C44029D",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FishParameterReverse",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FishingBaitParameter",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FishingNoteInfo",
+    "ColumnHash": "BE43CCF1",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FishingRecordType",
+    "ColumnHash": "2C75BA5D",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FishingRecordTypeTransient",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FishingSpot",
+    "ColumnHash": "9E0D2A6C",
+    "HasSubrows": false,
+    "Columns": 25
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FittingShop",
+    "ColumnHash": "434F7F71",
+    "HasSubrows": false,
+    "Columns": 32
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FittingShopCategory",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FittingShopCategoryItem",
+    "ColumnHash": "DADB0558",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FittingShopItemSet",
+    "ColumnHash": "5EC09E88",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FollowMount",
+    "ColumnHash": "28ED8852",
+    "HasSubrows": false,
+    "Columns": 18
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Frontline",
+    "ColumnHash": "D98C012D",
+    "HasSubrows": false,
+    "Columns": 23
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Frontline01",
+    "ColumnHash": "0E049710",
+    "HasSubrows": false,
+    "Columns": 36
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Frontline02",
+    "ColumnHash": "4D1B9359",
+    "HasSubrows": false,
+    "Columns": 30
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Frontline03",
+    "ColumnHash": "605090E3",
+    "HasSubrows": false,
+    "Columns": 21
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FurnitureCatalogCategory",
+    "ColumnHash": "C8B7AB9B",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "FurnitureCatalogItemList",
+    "ColumnHash": "24E9963A",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCRankGridaniaFemaleText",
+    "ColumnHash": "D573CBA6",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCRankGridaniaMaleText",
+    "ColumnHash": "D573CBA6",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCRankLimsaFemaleText",
+    "ColumnHash": "D573CBA6",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCRankLimsaMaleText",
+    "ColumnHash": "D573CBA6",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCRankUldahFemaleText",
+    "ColumnHash": "D573CBA6",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCRankUldahMaleText",
+    "ColumnHash": "D573CBA6",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCScripShopCategory",
+    "ColumnHash": "9B330D8A",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCScripShopItem",
+    "ColumnHash": "6C3DAE69",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCShop",
+    "ColumnHash": "DD3FF48D",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCShopItemCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCSupplyDefine",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCSupplyDuty",
+    "ColumnHash": "B3265A92",
+    "HasSubrows": false,
+    "Columns": 66
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GCSupplyDutyReward",
+    "ColumnHash": "6BE0E840",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFATE",
+    "ColumnHash": "440A2C22",
+    "HasSubrows": false,
+    "Columns": 87
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateClimbing",
+    "ColumnHash": "AAFAB8D8",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateClimbing2",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateClimbing2Content",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateClimbing2TotemType",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateDance",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateHiddenObject",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateRideShooting",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateRoulette",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateStelth",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GFateType",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GameConditionValueArray",
+    "ColumnHash": "182F49E3",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GameRewardObtainType",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GardeningSeed",
+    "ColumnHash": "A8A6CB9C",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GathererCrafterLvAdjustTable",
+    "ColumnHash": "64A88F98",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GathererCrafterTool",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GathererReductionReward",
+    "ColumnHash": "351CF6E2",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringCondition",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringExp",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringItem",
+    "ColumnHash": "0B4DBEDE",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringItemLevelConvertTable",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringItemPoint",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringLeve",
+    "ColumnHash": "FA74E4D0",
+    "HasSubrows": false,
+    "Columns": 19
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringLeveBNpcEntry",
+    "ColumnHash": "730863BD",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringLeveRoute",
+    "ColumnHash": "F20EC1E1",
+    "HasSubrows": false,
+    "Columns": 24
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringLeveRule",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringNotebookItem",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringNotebookList",
+    "ColumnHash": "1DA7BB26",
+    "HasSubrows": false,
+    "Columns": 101
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringPoint",
+    "ColumnHash": "3AAC3DD3",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringPointBase",
+    "ColumnHash": "B34093C0",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringPointBonus",
+    "ColumnHash": "CD832C29",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringPointBonusType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringPointName",
+    "ColumnHash": "77A72DA0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringPointTransient",
+    "ColumnHash": "7164626B",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringRarePopTimeTable",
+    "ColumnHash": "865DE322",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringSubCategory",
+    "ColumnHash": "6DAC8145",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GatheringType",
+    "ColumnHash": "182C5EEA",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyCandidateCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyCapture",
+    "ColumnHash": "95BA3E0B",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyCaptureTactics",
+    "ColumnHash": "62BCFBAD",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyEquipPreset",
+    "ColumnHash": "5A4DE23A",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyExpedition",
+    "ColumnHash": "852CC288",
+    "HasSubrows": false,
+    "Columns": 64
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyExpeditionMemberBonus",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyExpeditionTrait",
+    "ColumnHash": "22890955",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyExpeditionTraitCond",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyExpeditionType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyMember",
+    "ColumnHash": "D73EAB80",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyMemberGrow",
+    "ColumnHash": "AF66261C",
+    "HasSubrows": false,
+    "Columns": 246
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyMemberGrowExp",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyProgress",
+    "ColumnHash": "D9D08A48",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GcArmyTraining",
+    "ColumnHash": "274780BB",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GeneralAction",
+    "ColumnHash": "2D414D58",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GilShop",
+    "ColumnHash": "F50B55E5",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GilShopInfo",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GilShopItem",
+    "ColumnHash": "B375F1D2",
+    "HasSubrows": true,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GimmickAccessor",
+    "ColumnHash": "E3C066E6",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GimmickBill",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GimmickJump",
+    "ColumnHash": "6F038739",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GimmickRect",
+    "ColumnHash": "9BE6D434",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GimmickTalk",
+    "ColumnHash": "7A8258F0",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GimmickYesNo",
+    "ColumnHash": "7F711762",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Glasses",
+    "ColumnHash": "2FAAC2C1",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GlassesStyle",
+    "ColumnHash": "C138BB6E",
+    "HasSubrows": false,
+    "Columns": 24
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GoldSaucerArcadeMachine",
+    "ColumnHash": "ACB73D9E",
+    "HasSubrows": false,
+    "Columns": 43
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GoldSaucerContent",
+    "ColumnHash": "AB081B6B",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GoldSaucerTalk",
+    "ColumnHash": "49CF08F4",
+    "HasSubrows": false,
+    "Columns": 28
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GoldSaucerTextData",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GrandCompany",
+    "ColumnHash": "472D6D8C",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GrandCompanyRank",
+    "ColumnHash": "939F7424",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GroupPoseCharaStatus",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GroupPoseCharacterShowPreset",
+    "ColumnHash": "E9F11AA8",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GroupPoseFrame",
+    "ColumnHash": "F171642A",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GroupPoseStamp",
+    "ColumnHash": "65A8A2DF",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GroupPoseStampCategory",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GroupPoseStampFontColor",
+    "ColumnHash": "56729509",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuardianDeity",
+    "ColumnHash": "79BAD589",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Guide",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuidePage",
+    "ColumnHash": "7FCD4E75",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuidePageString",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuideTitle",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuildOrder",
+    "ColumnHash": "BDF9FA30",
+    "HasSubrows": false,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuildOrderGuide",
+    "ColumnHash": "A76E50E1",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuildOrderOfficer",
+    "ColumnHash": "A76E50E1",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuildleveAssignment",
+    "ColumnHash": "129D93FA",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuildleveAssignmentCategory",
+    "ColumnHash": "EB15B554",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "GuildleveAssignmentTalk",
+    "ColumnHash": "ED64467F",
+    "HasSubrows": false,
+    "Columns": 38
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDAnnounce",
+    "ColumnHash": "1D91A784",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDCrafterSupply",
+    "ColumnHash": "A04B4CC9",
+    "HasSubrows": false,
+    "Columns": 322
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDCrafterSupplyReward",
+    "ColumnHash": "829E9D8E",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDCrafterSupplyTerm",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDDevLayerControl",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDDevLevelUI",
+    "ColumnHash": "D73EAB80",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDDevLevelWebText",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDDevLively",
+    "ColumnHash": "E18CBE18",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDDevProgress",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDGathereInspectTerm",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDGathererInspection",
+    "ColumnHash": "AD239733",
+    "HasSubrows": false,
+    "Columns": 553
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDGathererInspectionReward",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDInfoBoardArticle",
+    "ColumnHash": "76CB5660",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDInfoBoardArticleTransient",
+    "ColumnHash": "11A44A12",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDInfoBoardArticleType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDInfoBoardBackNumber",
+    "ColumnHash": "B92C9B70",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDLevelChangeDeception",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDSharedGroup",
+    "ColumnHash": "5A516458",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HWDSharedGroupControlParam",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HairMakeType",
+    "ColumnHash": "C9235FDA",
+    "HasSubrows": false,
+    "Columns": 1166
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HalloweenNpcSelect",
+    "ColumnHash": "0CAF95DF",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HouseRetainerPose",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingAethernet",
+    "ColumnHash": "751BAA92",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingAppeal",
+    "ColumnHash": "B89097B5",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingEmploymentNpcList",
+    "ColumnHash": "6195119B",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingEmploymentNpcRace",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingExterior",
+    "ColumnHash": "B56595E0",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingFurniture",
+    "ColumnHash": "CCFBE5FF",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingIndoorTerritory",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingInterior",
+    "ColumnHash": "AF5D7836",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingLandSet",
+    "ColumnHash": "C557F79E",
+    "HasSubrows": false,
+    "Columns": 302
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingMapMarkerInfo",
+    "ColumnHash": "13236296",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingMateAuthority",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingMerchantPose",
+    "ColumnHash": "3D65A9F1",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingPileLimit",
+    "ColumnHash": "418885B6",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingPlacement",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingPreset",
+    "ColumnHash": "9184AF18",
+    "HasSubrows": false,
+    "Columns": 24
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingRenovation",
+    "ColumnHash": "EE791F98",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingTrainingDoll",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingUnitedExterior",
+    "ColumnHash": "88A791A7",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingUnplacement",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HousingYardObject",
+    "ColumnHash": "A0ACF7CA",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HowTo",
+    "ColumnHash": "E4488448",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HowToCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HowToPage",
+    "ColumnHash": "006E1EAC",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Hud",
+    "ColumnHash": "7F711762",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HudTransient",
+    "ColumnHash": "83076F24",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HugeCraftworksNpc",
+    "ColumnHash": "C1D2986A",
+    "HasSubrows": false,
+    "Columns": 93
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "HugeCraftworksRank",
+    "ColumnHash": "F7AF7AC5",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IKDContentBonus",
+    "ColumnHash": "B7D9B7A3",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IKDFishParam",
+    "ColumnHash": "1B55DA98",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IKDPlayerMissionCondition",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IKDRoute",
+    "ColumnHash": "195EC33C",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IKDRouteTable",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IKDSpot",
+    "ColumnHash": "96A22AEA",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IKDTimeDefine",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IconLanguage",
+    "ColumnHash": "CA511F36",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InclusionShop",
+    "ColumnHash": "415E17E0",
+    "HasSubrows": false,
+    "Columns": 33
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InclusionShopCategory",
+    "ColumnHash": "3B24D05F",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InclusionShopSeries",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InclusionShopWelcom",
+    "ColumnHash": "FD08B3C9",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InclusionShopWelcomText",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "IndividualWeather",
+    "ColumnHash": "4532AFE5",
+    "HasSubrows": false,
+    "Columns": 28
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InstanceContent",
+    "ColumnHash": "CF914C2D",
+    "HasSubrows": false,
+    "Columns": 72
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InstanceContentBuff",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InstanceContentGuide",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InstanceContentQICData",
+    "ColumnHash": "CFC59262",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InstanceContentRewardItem",
+    "ColumnHash": "79C1D547",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InstanceContentTextData",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "InstanceContentType",
+    "ColumnHash": "F9304387",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Item",
+    "ColumnHash": "E9A33C9D",
+    "HasSubrows": false,
+    "Columns": 91
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemAction",
+    "ColumnHash": "B1F26AF0",
+    "HasSubrows": false,
+    "Columns": 23
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemActionTelepo",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemBarterCheck",
+    "ColumnHash": "8920DBD8",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemBarterWarning",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemConvertTalk",
+    "ColumnHash": "E1C2E11A",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemFood",
+    "ColumnHash": "E09A474D",
+    "HasSubrows": false,
+    "Columns": 19
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemLevel",
+    "ColumnHash": "E216399F",
+    "HasSubrows": false,
+    "Columns": 74
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemOnceHqMasterpiece",
+    "ColumnHash": "792ADF2D",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemRepairPrice",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemRepairResource",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemRetainerLevelUp",
+    "ColumnHash": "5EDC18EA",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemSearchCategory",
+    "ColumnHash": "95DF38B2",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemSeries",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemSortCategory",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemSpecialBonus",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemStainCondition",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ItemUICategory",
+    "ColumnHash": "DC1F7844",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "JigsawScore",
+    "ColumnHash": "00A94FEA",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "JigsawTimeBonus",
+    "ColumnHash": "2193EBFF",
+    "HasSubrows": false,
+    "Columns": 22
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Jingle",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "JobHudManual",
+    "ColumnHash": "A5AA10B4",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "JobHudManualPriority",
+    "ColumnHash": "A1142CE7",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "JournalCategory",
+    "ColumnHash": "D0118314",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "JournalGenre",
+    "ColumnHash": "2C6B75BB",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "JournalSection",
+    "ColumnHash": "9530A4F2",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "KTGBNpc",
+    "ColumnHash": "03771235",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "KTGContent",
+    "ColumnHash": "05BCD0DE",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "KTGParam",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "KTGTypeWordProgram",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "KTGTypeWordTextData",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "KineDriverOffGroup",
+    "ColumnHash": "53C2E05E",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Knockback",
+    "ColumnHash": "6876BEAF",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LFGExtensionContent",
+    "ColumnHash": "B1437BDF",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LegacyQuest",
+    "ColumnHash": "E0C8DFE4",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Leve",
+    "ColumnHash": "DAB38BF5",
+    "HasSubrows": false,
+    "Columns": 31
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LeveAssignmentType",
+    "ColumnHash": "0C8DB36C",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LeveClient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LeveRewardItem",
+    "ColumnHash": "00035BBE",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LeveRewardItemGroup",
+    "ColumnHash": "F065E622",
+    "HasSubrows": false,
+    "Columns": 27
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LeveString",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LeveSystemDefine",
+    "ColumnHash": "993D983D",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LeveVfx",
+    "ColumnHash": "993D983D",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Level",
+    "ColumnHash": "D3D8D868",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LinkRace",
+    "ColumnHash": "3836C798",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LiveMinigames",
+    "ColumnHash": "A72EA254",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LiveMinigamesDynamicDefine",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LiveMinigamesObjectEvent",
+    "ColumnHash": "1844FAC3",
+    "HasSubrows": true,
+    "Columns": 53
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LiveMinigamesTerritoryType",
+    "ColumnHash": "EA44BD36",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LivelyActorGroup",
+    "ColumnHash": "C8EC8DC5",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LoadingImage",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LoadingTips",
+    "ColumnHash": "23B7F68C",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LoadingTipsSub",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Lobby",
+    "ColumnHash": "54075F2E",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Lockon",
+    "ColumnHash": "8E477C70",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LogFilter",
+    "ColumnHash": "6EF5BA16",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LogKind",
+    "ColumnHash": "160D7D57",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LogMessage",
+    "ColumnHash": "8A9FE863",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LootModeType",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "LotteryExchangeShop",
+    "ColumnHash": "FD7B4CE5",
+    "HasSubrows": false,
+    "Columns": 134
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIAnimals",
+    "ColumnHash": "EAE74967",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIBuilding",
+    "ColumnHash": "6D809733",
+    "HasSubrows": true,
+    "Columns": 32
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIBuildingPlace",
+    "ColumnHash": "369FB53B",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJICraftworksObject",
+    "ColumnHash": "CA934BCC",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJICraftworksObjectTheme",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJICraftworksPopularity",
+    "ColumnHash": "92A82168",
+    "HasSubrows": false,
+    "Columns": 91
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJICraftworksPopularityType",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJICraftworksRankRatio",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJICraftworksSupplyDefine",
+    "ColumnHash": "1299950E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJICraftworksTension",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJICropSeed",
+    "ColumnHash": "CD7B9AE9",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIDisposalShopItem",
+    "ColumnHash": "ECE42E62",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIDisposalShopUICategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIFarmPastureRank",
+    "ColumnHash": "7157B32E",
+    "HasSubrows": false,
+    "Columns": 48
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIFunction",
+    "ColumnHash": "B815FB69",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIGardenscaping",
+    "ColumnHash": "3554FFD5",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIGathering",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIGatheringItem",
+    "ColumnHash": "0DD2AE8D",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIGatheringObject",
+    "ColumnHash": "A0CA50AF",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIGatheringTool",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIHudMode",
+    "ColumnHash": "B786CA47",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIItemCategory",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIItemPouch",
+    "ColumnHash": "471E775E",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIKeyItem",
+    "ColumnHash": "FC266FEC",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJILandmark",
+    "ColumnHash": "7B947615",
+    "HasSubrows": false,
+    "Columns": 33
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJILandmarkPlace",
+    "ColumnHash": "6C5E3FC8",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJILivelyActor",
+    "ColumnHash": "C8EC8DC5",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIMinionPopAreas",
+    "ColumnHash": "3591BDD9",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIName",
+    "ColumnHash": "77A72DA0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJINekomimiRequest",
+    "ColumnHash": "5CC70A8F",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIProgress",
+    "ColumnHash": "E3DEA9D5",
+    "HasSubrows": false,
+    "Columns": 23
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIRank",
+    "ColumnHash": "929748F4",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIRecipe",
+    "ColumnHash": "CFEFFBAD",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIRecipeMaterial",
+    "ColumnHash": "FAEDAD07",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIStockyardManagementArea",
+    "ColumnHash": "43BDD5B1",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIStockyardManagementTable",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIText",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIVillageAppearanceSG",
+    "ColumnHash": "F8CAA5CF",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIVillageAppearanceUI",
+    "ColumnHash": "248F1D6A",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MJIVillageDevelopment",
+    "ColumnHash": "038243CA",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDBNpcData",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDChain",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDData",
+    "ColumnHash": "0598096D",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDGrowData",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDGrowDataSJob",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDLore",
+    "ColumnHash": "3D2F1C04",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDRelicGrowth2Category",
+    "ColumnHash": "9FF65AD6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDRelicGrowth2ContentList",
+    "ColumnHash": "198356E8",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDRelicGrowth2Monster",
+    "ColumnHash": "C2FD317C",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDSupportJob",
+    "ColumnHash": "CD5478A4",
+    "HasSubrows": false,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MKDTrait",
+    "ColumnHash": "C4352CCF",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MYCTemporaryItem",
+    "ColumnHash": "9176820B",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MYCTemporaryItemUICategory",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MYCWarResultNotebook",
+    "ColumnHash": "02F3734A",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MacroIcon",
+    "ColumnHash": "F8AB135E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MacroIconRedirectOld",
+    "ColumnHash": "5C9AA6B3",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MainCommand",
+    "ColumnHash": "C6604A03",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MainCommandCategory",
+    "ColumnHash": "0C8DB36C",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MandervilleWeaponEnhance",
+    "ColumnHash": "9EC26187",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Maneuvers",
+    "ColumnHash": "05BCD0DE",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ManeuversArmor",
+    "ColumnHash": "C8B98ED4",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Map",
+    "ColumnHash": "1290E448",
+    "HasSubrows": false,
+    "Columns": 21
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MapCondition",
+    "ColumnHash": "2064EA88",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MapExclusive",
+    "ColumnHash": "D73EAB80",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MapMarker",
+    "ColumnHash": "39FE5D0C",
+    "HasSubrows": true,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MapMarkerRegion",
+    "ColumnHash": "E2747195",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MapReplace",
+    "ColumnHash": "E5068742",
+    "HasSubrows": true,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MapSymbol",
+    "ColumnHash": "E7E370E4",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MapTransientPvPMap",
+    "ColumnHash": "5EDC18EA",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MapType",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Marker",
+    "ColumnHash": "30EBF383",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MassivePcContent",
+    "ColumnHash": "CEE1BBA3",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MassivePcContentBattleTalk",
+    "ColumnHash": "6E7CBA44",
+    "HasSubrows": true,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MassivePcContentTextData",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MassivePcContentTodo",
+    "ColumnHash": "DE7A6C37",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MateAuthorityCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Materia",
+    "ColumnHash": "690CE1C4",
+    "HasSubrows": false,
+    "Columns": 33
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MateriaGrade",
+    "ColumnHash": "C9EF8FAD",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MateriaJoinRate",
+    "ColumnHash": "AB31B42E",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MateriaJoinRateGatherCraft",
+    "ColumnHash": "AB31B42E",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MateriaParam",
+    "ColumnHash": "F5BCBFDB",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "McGuffin",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "McGuffinUIData",
+    "ColumnHash": "7E82AF84",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameRA",
+    "ColumnHash": "59D9CACE",
+    "HasSubrows": false,
+    "Columns": 22
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameRANotes",
+    "ColumnHash": "EED86D68",
+    "HasSubrows": true,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameTurnBreakAction",
+    "ColumnHash": "59F9F073",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameTurnBreakConst",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameTurnBreakEnemy",
+    "ColumnHash": "8267F7FA",
+    "HasSubrows": false,
+    "Columns": 35
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameTurnBreakPop",
+    "ColumnHash": "00A94FEA",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameTurnBreakPopOffset",
+    "ColumnHash": "522ED050",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameTurnBreakStage",
+    "ColumnHash": "C9EF8FAD",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MiniGameTurnBreakStatus",
+    "ColumnHash": "057E61F4",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MinionRace",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MinionRules",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MinionSkillType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MinionStage",
+    "ColumnHash": "F88A13DF",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MirageStoreSetItem",
+    "ColumnHash": "5196D053",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MirageStoreSetItemLookup",
+    "ColumnHash": "6BE0E840",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MobHuntOrder",
+    "ColumnHash": "A9AA9AB5",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MobHuntOrderType",
+    "ColumnHash": "795A75A0",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MobHuntReward",
+    "ColumnHash": "4ACE707C",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MobHuntRewardCap",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MobHuntTarget",
+    "ColumnHash": "83A7F541",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ModelAttribute",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ModelChara",
+    "ColumnHash": "C5BB1BC4",
+    "HasSubrows": false,
+    "Columns": 23
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ModelScale",
+    "ColumnHash": "D16A1B6C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ModelSkeleton",
+    "ColumnHash": "94CC54F1",
+    "HasSubrows": false,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ModelState",
+    "ColumnHash": "D73EAB80",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MonsterNote",
+    "ColumnHash": "50B4CD8F",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MonsterNoteTarget",
+    "ColumnHash": "4157404F",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MotionTimeline",
+    "ColumnHash": "12260494",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MotionTimelineAdvanceBlend",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MotionTimelineBlendTable",
+    "ColumnHash": "69213275",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Mount",
+    "ColumnHash": "5B89058F",
+    "HasSubrows": false,
+    "Columns": 54
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MountAction",
+    "ColumnHash": "58822DA3",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MountCustomize",
+    "ColumnHash": "525DEF92",
+    "HasSubrows": false,
+    "Columns": 43
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MountFlyingCondition",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MountSpeed",
+    "ColumnHash": "91AB8236",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MountTransient",
+    "ColumnHash": "7F711762",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MoveControl",
+    "ColumnHash": "4369F348",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MoveTimeline",
+    "ColumnHash": "F057DA9C",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MoveVfx",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MovieStaffList",
+    "ColumnHash": "C3212D0E",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MovieSubtitle",
+    "ColumnHash": "07F99AD3",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MovieSubtitle500",
+    "ColumnHash": "07F99AD3",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MovieSubtitleVoyage",
+    "ColumnHash": "07F99AD3",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MultipleHelp",
+    "ColumnHash": "49C8F3D3",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MultipleHelpPage",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "MultipleHelpString",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "NotebookDivision",
+    "ColumnHash": "FC3A5559",
+    "HasSubrows": false,
+    "Columns": 18
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "NotebookDivisionCategory",
+    "ColumnHash": "9FF65AD6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "NotebookList",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "NotoriousMonster",
+    "ColumnHash": "307C9206",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "NotoriousMonsterTerritory",
+    "ColumnHash": "F057DA9C",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "NpcEquip",
+    "ColumnHash": "7EAEB95C",
+    "HasSubrows": false,
+    "Columns": 40
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "NpcYell",
+    "ColumnHash": "10700CB2",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Omen",
+    "ColumnHash": "D79B6C3F",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Omikuji",
+    "ColumnHash": "11155D32",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OmikujiGuidance",
+    "ColumnHash": "ED24A5DF",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OnlineStatus",
+    "ColumnHash": "BCFFD5D8",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OpenContent",
+    "ColumnHash": "170B114D",
+    "HasSubrows": false,
+    "Columns": 32
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OpenContentCandidateName",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OpenLuaUI",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Opening",
+    "ColumnHash": "FE684A57",
+    "HasSubrows": false,
+    "Columns": 82
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OpeningSystemDefine",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Orchestrion",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OrchestrionCategory",
+    "ColumnHash": "005990E4",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OrchestrionPath",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OrchestrionUiparam",
+    "ColumnHash": "D73EAB80",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Ornament",
+    "ColumnHash": "3D312C8F",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OrnamentAction",
+    "ColumnHash": "58822DA3",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OrnamentCustomize",
+    "ColumnHash": "9F62C1B0",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OrnamentCustomizeGroup",
+    "ColumnHash": "8029343C",
+    "HasSubrows": false,
+    "Columns": 22
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "OrnamentTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ParamGrow",
+    "ColumnHash": "64A92445",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PartyContent",
+    "ColumnHash": "0FE3AE35",
+    "HasSubrows": false,
+    "Columns": 36
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PartyContentCutscene",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PartyContentTextData",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PartyContentTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PatchMark",
+    "ColumnHash": "4B87E076",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Perform",
+    "ColumnHash": "7BF81FA9",
+    "HasSubrows": false,
+    "Columns": 13
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PerformGroup",
+    "ColumnHash": "5BE005AD",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PerformGuideScore",
+    "ColumnHash": "D85E39C0",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PerformTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Permission",
+    "ColumnHash": "A2E64547",
+    "HasSubrows": false,
+    "Columns": 112
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Pet",
+    "ColumnHash": "8758FC64",
+    "HasSubrows": false,
+    "Columns": 20
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PetAction",
+    "ColumnHash": "5E492849",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PetMirage",
+    "ColumnHash": "C3AF1CC0",
+    "HasSubrows": false,
+    "Columns": 63
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PhantomWeaponExTodo",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PhantomWeaponExTodoDetailTxt",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PhantomWeaponExTodoDetails",
+    "ColumnHash": "C21C2311",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PhysicsGroup",
+    "ColumnHash": "FA594271",
+    "HasSubrows": false,
+    "Columns": 19
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PhysicsOffGroup",
+    "ColumnHash": "DB6EE4CD",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PhysicsParameter",
+    "ColumnHash": "E018B5FA",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PhysicsWind",
+    "ColumnHash": "3BC4120F",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Picture",
+    "ColumnHash": "FAEDAD07",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PlaceName",
+    "ColumnHash": "16A1FD3C",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PlaceNameReplace",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PlantPotFlowerSeed",
+    "ColumnHash": "84D0CEEF",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Platform",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PlayerSearchLocation",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PlayerSearchSubLocation",
+    "ColumnHash": "16A4252D",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PointMenu",
+    "ColumnHash": "AAFAB8D8",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PointMenuChoice",
+    "ColumnHash": "CC7F3288",
+    "HasSubrows": true,
+    "Columns": 13
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PointMenuString",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PreHandler",
+    "ColumnHash": "B3B4AB94",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PreHandlerMovement",
+    "ColumnHash": "D73EAB80",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PresetCamera",
+    "ColumnHash": "38CDBC61",
+    "HasSubrows": false,
+    "Columns": 19
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PresetCameraAdjust",
+    "ColumnHash": "98F7487E",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PreviewableItems",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PublicContent",
+    "ColumnHash": "33F0D49F",
+    "HasSubrows": false,
+    "Columns": 18
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PublicContentCutscene",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PublicContentTextData",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PublicContentType",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPAction",
+    "ColumnHash": "3818CA1D",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPActionSort",
+    "ColumnHash": "C3AF756B",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPBaseParamValue",
+    "ColumnHash": "96A22AEA",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPInitialSelectActionTrait",
+    "ColumnHash": "6BE0E840",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPRank",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPRankTransient",
+    "ColumnHash": "E93B7196",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPSelectAction",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPSelectTrait",
+    "ColumnHash": "BDDF8130",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPSelectTraitTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPSeries",
+    "ColumnHash": "45504238",
+    "HasSubrows": false,
+    "Columns": 161
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPSeriesLevel",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "PvPTrait",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QTE",
+    "ColumnHash": "61035F90",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Quest",
+    "ColumnHash": "0AB3FE19",
+    "HasSubrows": false,
+    "Columns": 1653
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestAcceptAdditionCondition",
+    "ColumnHash": "AA35FEA3",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestAdditionalToolIcon",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestAroundPlayerHide",
+    "ColumnHash": "6195119B",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestAroundPlayerHideExt",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestBattle",
+    "ColumnHash": "D455DDB1",
+    "HasSubrows": false,
+    "Columns": 444
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestBattleResident",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestBattleSystemDefine",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestChapter",
+    "ColumnHash": "5EDC18EA",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestClassJobReward",
+    "ColumnHash": "9BFE038A",
+    "HasSubrows": true,
+    "Columns": 33
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestClassJobSupply",
+    "ColumnHash": "DE5221B6",
+    "HasSubrows": true,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestCustomTodo",
+    "ColumnHash": "24953396",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestDefineClient",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestDerivedClass",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestEffect",
+    "ColumnHash": "899C55AD",
+    "HasSubrows": false,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestEffectDefine",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestEffectType",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestEquipModel",
+    "ColumnHash": "3167959F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestEventAreaEntranceInfo",
+    "ColumnHash": "AEABAFD3",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestExtendedTodoBnpc",
+    "ColumnHash": "929748F4",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestHideReward",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestLinkMarker",
+    "ColumnHash": "EA112EF0",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestLinkMarkerIcon",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestLinkMarkerSet",
+    "ColumnHash": "202B96B0",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRecomplete",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedo",
+    "ColumnHash": "9E53F329",
+    "HasSubrows": false,
+    "Columns": 68
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedoChapter",
+    "ColumnHash": "3AD91F71",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedoChapterUI",
+    "ColumnHash": "15FC8E10",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedoChapterUICategory",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedoChapterUITab",
+    "ColumnHash": "198356E8",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedoEvacuateWarp",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedoIncompChapter",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedoInvalidTerritory",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRedoValidCustomTalk",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRepeatFlag",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestRewardOther",
+    "ColumnHash": "AAFAB8D8",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestSceneAbortCondition",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestSceneAbortConditionFlag",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestSceneAbortConditionType",
+    "ColumnHash": "317FCF4F",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestSelectTitle",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestSetDefine",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestStatusParam",
+    "ColumnHash": "D812E07F",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestSubCommand",
+    "ColumnHash": "1AA0F3DA",
+    "HasSubrows": true,
+    "Columns": 24
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuestSystemDefine",
+    "ColumnHash": "993D983D",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuickChat",
+    "ColumnHash": "66D693C5",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "QuickChatTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RPParameter",
+    "ColumnHash": "251A33CC",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Race",
+    "ColumnHash": "3403807A",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RacingChocoboGrade",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RacingChocoboItem",
+    "ColumnHash": "E79DD9D4",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RacingChocoboName",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RacingChocoboNameCategory",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RacingChocoboNameInfo",
+    "ColumnHash": "C0F1F5A8",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RacingChocoboParam",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RaidFinderParam",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ReactionEventObject",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ReactionEventObjectInfo",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RecastNavimesh",
+    "ColumnHash": "98C040DF",
+    "HasSubrows": false,
+    "Columns": 35
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Recipe",
+    "ColumnHash": "BEAE287B",
+    "HasSubrows": false,
+    "Columns": 47
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RecipeLevelTable",
+    "ColumnHash": "463C491F",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RecipeLookup",
+    "ColumnHash": "A708A4A0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RecipeNotebookList",
+    "ColumnHash": "A067051F",
+    "HasSubrows": false,
+    "Columns": 161
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RecipeSubCategory",
+    "ColumnHash": "5EB59CCB",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RecommendContents",
+    "ColumnHash": "E79DD9D4",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Relic",
+    "ColumnHash": "8080EF57",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Relic3",
+    "ColumnHash": "EB3C566A",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Relic3Materia",
+    "ColumnHash": "5C71F84E",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Relic3Rate",
+    "ColumnHash": "C5B95F3A",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Relic3RatePattern",
+    "ColumnHash": "9B330D8A",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Relic6Magicite",
+    "ColumnHash": "CE73D687",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RelicItem",
+    "ColumnHash": "C8FC45D9",
+    "HasSubrows": false,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RelicMateria",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RelicNote",
+    "ColumnHash": "B557320E",
+    "HasSubrows": false,
+    "Columns": 34
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RelicNoteCategory",
+    "ColumnHash": "F8C2977F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ReplaceAction",
+    "ColumnHash": "FDFDD803",
+    "HasSubrows": true,
+    "Columns": 15
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Resident",
+    "ColumnHash": "9AF0B586",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ResidentMotionType",
+    "ColumnHash": "AC18B425",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ResistanceWeaponAdjust",
+    "ColumnHash": "8FC095F4",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RetainerFortuneRewardRange",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RetainerTask",
+    "ColumnHash": "99415E4E",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RetainerTaskLvRange",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RetainerTaskNormal",
+    "ColumnHash": "644A4310",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RetainerTaskParameter",
+    "ColumnHash": "4723E1B0",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RetainerTaskParameterLvDiff",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RetainerTaskRandom",
+    "ColumnHash": "9AB94C53",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RideShooting",
+    "ColumnHash": "DD593ECD",
+    "HasSubrows": false,
+    "Columns": 118
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RideShootingScheduler",
+    "ColumnHash": "52D51FD2",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RideShootingTarget",
+    "ColumnHash": "53C78910",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RideShootingTargetScheduler",
+    "ColumnHash": "0D677650",
+    "HasSubrows": true,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RideShootingTargetType",
+    "ColumnHash": "213F343D",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "RideShootingTextData",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Role",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SE",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SEBattle",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SatisfactionArbitration",
+    "ColumnHash": "3F77B2E9",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SatisfactionBonusGuarantee",
+    "ColumnHash": "69213275",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SatisfactionNpc",
+    "ColumnHash": "5527B648",
+    "HasSubrows": false,
+    "Columns": 93
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SatisfactionSupply",
+    "ColumnHash": "8C188EB2",
+    "HasSubrows": true,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SatisfactionSupplyReward",
+    "ColumnHash": "C81395F9",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SatisfactionSupplyRewardExp",
+    "ColumnHash": "FD08B3C9",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ScenarioTree",
+    "ColumnHash": "CA183BE8",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ScenarioTreeTips",
+    "ColumnHash": "71371B8C",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ScenarioTreeTipsClassQuest",
+    "ColumnHash": "AE1D30A7",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ScenarioType",
+    "ColumnHash": "9E3430E1",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ScreenImage",
+    "ColumnHash": "215F3ACF",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SecretRecipeBook",
+    "ColumnHash": "0C8DB36C",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SecretRecipeBookGroup",
+    "ColumnHash": "A708A4A0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SequentialEvent",
+    "ColumnHash": "B14C0C35",
+    "HasSubrows": false,
+    "Columns": 323
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SequentialEventMultipleRange",
+    "ColumnHash": "4BE042FE",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SharlayanCraftWorks",
+    "ColumnHash": "92B51979",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SharlayanCraftWorksSupply",
+    "ColumnHash": "903B128E",
+    "HasSubrows": false,
+    "Columns": 44
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ShellFixedFromCommand",
+    "ColumnHash": "34F26A9D",
+    "HasSubrows": false,
+    "Columns": 38
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Skirmish",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SkyIsland",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SkyIsland2",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SkyIsland2Mission",
+    "ColumnHash": "EC50A29C",
+    "HasSubrows": false,
+    "Columns": 26
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SkyIsland2MissionDetail",
+    "ColumnHash": "62246EDB",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SkyIsland2MissionType",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SkyIsland2RangeType",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SkyIslandMapMarker",
+    "ColumnHash": "A4E38464",
+    "HasSubrows": false,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SkyIslandSubject",
+    "ColumnHash": "7686E7EC",
+    "HasSubrows": false,
+    "Columns": 18
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Snipe",
+    "ColumnHash": "88D50061",
+    "HasSubrows": false,
+    "Columns": 107
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SnipeCollision",
+    "ColumnHash": "C04FEF85",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SnipeElementId",
+    "ColumnHash": "DD3FF48D",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SnipeHitEvent",
+    "ColumnHash": "A3F4CD01",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SnipePerformanceCamera",
+    "ColumnHash": "47FF2047",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SnipeTalk",
+    "ColumnHash": "CEA69CAC",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SnipeTalkName",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpearfishingComboTarget",
+    "ColumnHash": "7F711762",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpearfishingEcology",
+    "ColumnHash": "776EE24C",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpearfishingItem",
+    "ColumnHash": "644E0D6C",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpearfishingItemReverse",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpearfishingNotebook",
+    "ColumnHash": "0F196A4A",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpearfishingRecordPage",
+    "ColumnHash": "E72DA550",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpearfishingSilhouette",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpecialShop",
+    "ColumnHash": "10271268",
+    "HasSubrows": false,
+    "Columns": 2052
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SpecialShopItemCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Spectator",
+    "ColumnHash": "BB5E90D9",
+    "HasSubrows": false,
+    "Columns": 41
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Stain",
+    "ColumnHash": "346C5926",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "StanceChange",
+    "ColumnHash": "F31CAD82",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Status",
+    "ColumnHash": "D66A51D6",
+    "HasSubrows": false,
+    "Columns": 37
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "StatusHitEffect",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "StatusLoopVFX",
+    "ColumnHash": "D5619C7C",
+    "HasSubrows": false,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Story",
+    "ColumnHash": "CAEEE7AB",
+    "HasSubrows": false,
+    "Columns": 1863
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "StorySystemDefine",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SubmarineExploration",
+    "ColumnHash": "FF922BB4",
+    "HasSubrows": false,
+    "Columns": 13
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SubmarineExplorationLog",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SubmarineMap",
+    "ColumnHash": "98FFF20A",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SubmarinePart",
+    "ColumnHash": "C971F464",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SubmarineRank",
+    "ColumnHash": "697B9C75",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SubmarineSpecCategory",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SwitchTalk",
+    "ColumnHash": "4BE042FE",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SwitchTalkVariation",
+    "ColumnHash": "031E9614",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "SystemGraphicPreset",
+    "ColumnHash": "A904455E",
+    "HasSubrows": true,
+    "Columns": 40
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TelepoRelay",
+    "ColumnHash": "90ABB4F4",
+    "HasSubrows": false,
+    "Columns": 28
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TerritoryAethernet",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TerritoryAetheryteList",
+    "ColumnHash": "DF2C4833",
+    "HasSubrows": true,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TerritoryCandidates",
+    "ColumnHash": "FC266FEC",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TerritoryChatRule",
+    "ColumnHash": "D460BE93",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TerritoryIntendedUse",
+    "ColumnHash": "5345F16D",
+    "HasSubrows": false,
+    "Columns": 43
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TerritoryType",
+    "ColumnHash": "FACF0E83",
+    "HasSubrows": false,
+    "Columns": 46
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TerritoryTypeTelepo",
+    "ColumnHash": "33FF1CEE",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TerritoryTypeTransient",
+    "ColumnHash": "D9B2883F",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TextCommand",
+    "ColumnHash": "5D4B4E4B",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TextCommandParam",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TiltParam",
+    "ColumnHash": "5E0EC373",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TinyCustomTalk",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Title",
+    "ColumnHash": "83E3F9BA",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TofuBg",
+    "ColumnHash": "E1A3CCB8",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TofuEditParam",
+    "ColumnHash": "4E317FBC",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TofuObject",
+    "ColumnHash": "C04A3F52",
+    "HasSubrows": false,
+    "Columns": 22
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TofuObjectCategory",
+    "ColumnHash": "CE3428A1",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TofuPreset",
+    "ColumnHash": "089DEC9B",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TofuPresetCategory",
+    "ColumnHash": "DF6E3ACC",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TofuPresetObject",
+    "ColumnHash": "AB68C6F4",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TomestoneConvert",
+    "ColumnHash": "A1A07272",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Tomestones",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TomestonesItem",
+    "ColumnHash": "C8901190",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TopicSelect",
+    "ColumnHash": "C312C89F",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Town",
+    "ColumnHash": "993D983D",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TradeScreenImage",
+    "ColumnHash": "A0995E80",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Trait",
+    "ColumnHash": "E8360975",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TraitRecast",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TraitTransient",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Transformation",
+    "ColumnHash": "A1AB3FAB",
+    "HasSubrows": false,
+    "Columns": 40
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Treasure",
+    "ColumnHash": "BC8C78DB",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TreasureHuntRank",
+    "ColumnHash": "3997D502",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TreasureHuntTexture",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TreasureModel",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TreasureSpot",
+    "ColumnHash": "4A63EB8E",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Tribe",
+    "ColumnHash": "E74759FB",
+    "HasSubrows": false,
+    "Columns": 10
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TriggerEffect",
+    "ColumnHash": "EB15B554",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriad",
+    "ColumnHash": "646DDE20",
+    "HasSubrows": false,
+    "Columns": 30
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadCard",
+    "ColumnHash": "45C06AE0",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadCardObtain",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadCardRarity",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadCardResident",
+    "ColumnHash": "996E0A5E",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadCardType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadCompetition",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadDefine",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadResident",
+    "ColumnHash": "D870E208",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadRule",
+    "ColumnHash": "83E50DB1",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TripleTriadTournament",
+    "ColumnHash": "5CC70A8F",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Tutorial",
+    "ColumnHash": "4A3FEF40",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TutorialDPS",
+    "ColumnHash": "5BFA8A4E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TutorialGimmick",
+    "ColumnHash": "5BFA8A4E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TutorialHealer",
+    "ColumnHash": "5BFA8A4E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "TutorialTank",
+    "ColumnHash": "5BFA8A4E",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "UDS_Event",
+    "ColumnHash": "DFABF9E4",
+    "HasSubrows": false,
+    "Columns": 34
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "UDS_Object",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "UDS_Property",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "UDS_Stats",
+    "ColumnHash": "9DB0E48F",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "UIColor",
+    "ColumnHash": "182F49E3",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "UIColorPickerTable",
+    "ColumnHash": "251A33CC",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "UIConst",
+    "ColumnHash": "DA365C51",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "UILevelLookup",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VFX",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VVDData",
+    "ColumnHash": "441A6F36",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VVDNotebookContents",
+    "ColumnHash": "62514E7B",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VVDNotebookSeries",
+    "ColumnHash": "98D63A7B",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VVDRouteData",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VVDVariantAction",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VVDVoteRoute",
+    "ColumnHash": "63C20DB3",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VVDVoteRouteLabel",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ValentionSweetsMaterial",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ValentionSweetsRecipe",
+    "ColumnHash": "09FDFF4A",
+    "HasSubrows": false,
+    "Columns": 17
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Vase",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "VaseFlower",
+    "ColumnHash": "8C05AF34",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSAchievement",
+    "ColumnHash": "57D9D556",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSAchievementDailyDefine",
+    "ColumnHash": "C8A27C49",
+    "HasSubrows": false,
+    "Columns": 13
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSAchievementRewardItem",
+    "ColumnHash": "1B55DA98",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSAethernet",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSAetheryte",
+    "ColumnHash": "5A516458",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSAetheryteList",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSAetheryteObjectGroup",
+    "ColumnHash": "70A6085C",
+    "HasSubrows": true,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSCosmoToolClass",
+    "ColumnHash": "A887D3D5",
+    "HasSubrows": false,
+    "Columns": 83
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSCosmoToolCommonLevel",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSCosmoToolDataAmount",
+    "ColumnHash": "EA51ED30",
+    "HasSubrows": false,
+    "Columns": 280
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSCosmoToolName",
+    "ColumnHash": "77A72DA0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSCosmoToolPassiveBuff",
+    "ColumnHash": "FD08B3C9",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSCosmoToolUIRandomMsg",
+    "ColumnHash": "08E02C48",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSDevGrade",
+    "ColumnHash": "A1C00869",
+    "HasSubrows": false,
+    "Columns": 27
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSDevGradeBGSet",
+    "ColumnHash": "A951A9AB",
+    "HasSubrows": true,
+    "Columns": 41
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSEmergencyInfo",
+    "ColumnHash": "C04FEF85",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSEmergencyInfoText",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSEmergencyMission",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSEmergencyMissionGroup",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSEmergencyProblem",
+    "ColumnHash": "2EBEEA9F",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSFateControl",
+    "ColumnHash": "49C8F3D3",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSFortunePatternUIColorSet",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSFortunePatternUIPlace",
+    "ColumnHash": "302198C8",
+    "HasSubrows": false,
+    "Columns": 40
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSFortunePrizeGrade",
+    "ColumnHash": "5CC70A8F",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSFortuneSPPatternUIPlace",
+    "ColumnHash": "302198C8",
+    "HasSubrows": false,
+    "Columns": 40
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSFunction",
+    "ColumnHash": "ACF54E03",
+    "HasSubrows": false,
+    "Columns": 20
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSItemInfo",
+    "ColumnHash": "4C9BC8FF",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSItemSubCategory",
+    "ColumnHash": "9B7B2664",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMechaEventData",
+    "ColumnHash": "C8A13AE8",
+    "HasSubrows": false,
+    "Columns": 53
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMechaEventObject",
+    "ColumnHash": "4B652895",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMechaEventObjectGroup",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMechaEventRewardUI",
+    "ColumnHash": "53DFB18A",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMechaFieldSearcher",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMechaLivelyActorGroup",
+    "ColumnHash": "F85DC334",
+    "HasSubrows": true,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMechaTank",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionInfo",
+    "ColumnHash": "3772605C",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionLotteryCond",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionLotterySpecialCond",
+    "ColumnHash": "43BDD5B1",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionMapMarker",
+    "ColumnHash": "7196D620",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionPromotionCondition",
+    "ColumnHash": "DE74B4C4",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionRecipe",
+    "ColumnHash": "B1D6DE9B",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionReward",
+    "ColumnHash": "433851D5",
+    "HasSubrows": false,
+    "Columns": 18
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionSupplyItem",
+    "ColumnHash": "865DE322",
+    "HasSubrows": false,
+    "Columns": 6
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionText",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionToDo",
+    "ColumnHash": "58DA12D6",
+    "HasSubrows": false,
+    "Columns": 22
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionToDoEvalutionItem",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionToDoEvalutionRefin",
+    "ColumnHash": "DC23EFE7",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionToDoRecover",
+    "ColumnHash": "D9D08A48",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionToDoSuccessType",
+    "ColumnHash": "CD4CB81C",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSMissionUnit",
+    "ColumnHash": "5698AE07",
+    "HasSubrows": false,
+    "Columns": 24
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSNextPlanetGuidance",
+    "ColumnHash": "AAFAB8D8",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSParam",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSPioneeringTrail",
+    "ColumnHash": "1C29E5EA",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSPioneeringTrailString",
+    "ColumnHash": "7F711762",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSPlanetSelect",
+    "ColumnHash": "8D217A3E",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSPraiseHologram",
+    "ColumnHash": "3772605C",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSPraiseUI",
+    "ColumnHash": "0C8DB36C",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSScoreList",
+    "ColumnHash": "98EC27DC",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSSharedGroup",
+    "ColumnHash": "808DF67E",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSTerritoryInfo",
+    "ColumnHash": "D96307A2",
+    "HasSubrows": false,
+    "Columns": 13
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSText",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSTreasure",
+    "ColumnHash": "BC638DF5",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSTreasureInfo",
+    "ColumnHash": "5D58CC84",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSWarp",
+    "ColumnHash": "9526FE84",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WKSZoneFloorCollision",
+    "ColumnHash": "DBF43666",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Warp",
+    "ColumnHash": "1A234B7B",
+    "HasSubrows": false,
+    "Columns": 12
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WarpCondition",
+    "ColumnHash": "C096F9D0",
+    "HasSubrows": false,
+    "Columns": 8
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WarpLogic",
+    "ColumnHash": "78E83215",
+    "HasSubrows": false,
+    "Columns": 26
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeaponTimeline",
+    "ColumnHash": "7BA5390A",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "Weather",
+    "ColumnHash": "02CF2541",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeatherCategory",
+    "ColumnHash": "63C20DB3",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeatherGroup",
+    "ColumnHash": "FAEDAD07",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeatherRate",
+    "ColumnHash": "474ABCE2",
+    "HasSubrows": false,
+    "Columns": 16
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeatherReportReplace",
+    "ColumnHash": "2020ACF6",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WebGuidance",
+    "ColumnHash": "A6CFE561",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WebURL",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeddingBGM",
+    "ColumnHash": "3D65A9F1",
+    "HasSubrows": false,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeddingFlowerColor",
+    "ColumnHash": "FD08B3C9",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeddingPlan",
+    "ColumnHash": "6CEAFE59",
+    "HasSubrows": false,
+    "Columns": 20
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeeklyBingoMultipleOrder",
+    "ColumnHash": "6EDC83E5",
+    "HasSubrows": false,
+    "Columns": 20
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeeklyBingoOrderData",
+    "ColumnHash": "13BF765E",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeeklyBingoRewardData",
+    "ColumnHash": "02B099A0",
+    "HasSubrows": false,
+    "Columns": 13
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeeklyBingoText",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeeklyLotBonus",
+    "ColumnHash": "69BA3687",
+    "HasSubrows": false,
+    "Columns": 96
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WeeklyLotBonusThreshold",
+    "ColumnHash": "0C33CE97",
+    "HasSubrows": false,
+    "Columns": 7
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "World",
+    "ColumnHash": "F59CC6AF",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WorldDCGroupType",
+    "ColumnHash": "F3EDFAD8",
+    "HasSubrows": false,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WorldPhysicalDC",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "WorldRegionGroup",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMActionEffectType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMActionTarget",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMBattleDetail",
+    "ColumnHash": "E4EFCB60",
+    "HasSubrows": true,
+    "Columns": 11
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMBattleDetailAction",
+    "ColumnHash": "94A5D5D9",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMContent",
+    "ColumnHash": "D19CFF9A",
+    "HasSubrows": false,
+    "Columns": 37
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMContentBattle",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMContentCamp",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMContentRandomStageEvent",
+    "ColumnHash": "D870E208",
+    "HasSubrows": true,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMContentStageEvent",
+    "ColumnHash": "88647D22",
+    "HasSubrows": true,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMContentStageEventMap",
+    "ColumnHash": "5BE005AD",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMElement",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMEntrance",
+    "ColumnHash": "13763D66",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMItem",
+    "ColumnHash": "C37E7382",
+    "HasSubrows": false,
+    "Columns": 14
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMItemType",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMPet",
+    "ColumnHash": "0BCA1C16",
+    "HasSubrows": false,
+    "Columns": 22
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMPetParamGrow",
+    "ColumnHash": "64A88F98",
+    "HasSubrows": true,
+    "Columns": 5
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMRandomStageEvent",
+    "ColumnHash": "DFB6DEF3",
+    "HasSubrows": true,
+    "Columns": 2
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMScoreBonus",
+    "ColumnHash": "ED24A5DF",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMScoreRank",
+    "ColumnHash": "DEBB20E3",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XBMStageEventType",
+    "ColumnHash": "DCFD9EBA",
+    "HasSubrows": false,
+    "Columns": 1
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "XPVPGroupActivity",
+    "ColumnHash": "FE4DA36C",
+    "HasSubrows": false,
+    "Columns": 4
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "YKW",
+    "ColumnHash": "12E24636",
+    "HasSubrows": false,
+    "Columns": 9
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "YardCatalogCategory",
+    "ColumnHash": "C8B7AB9B",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "YardCatalogItemList",
+    "ColumnHash": "24E9963A",
+    "HasSubrows": false,
+    "Columns": 3
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ZoneSharedGroup",
+    "ColumnHash": "FA71CA60",
+    "HasSubrows": true,
+    "Columns": 29
+  },
+  {
+    "Namespace": "Lumina.Excel.Sheets",
+    "Name": "ZoneTimeline",
+    "ColumnHash": "5E66023C",
+    "HasSubrows": true,
+    "Columns": 4
+  }
+]

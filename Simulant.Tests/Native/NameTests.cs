@@ -181,6 +181,8 @@ namespace Simulant.Tests.Native
 
     public sealed class NamePlugin
     {
+        public string State => "Ready";
+        public readonly object CallScheduler = new object();
         private readonly object PluginUi = new object();
         public static readonly IntPtr SetFunction = new IntPtr(0x302), GetFunction = new IntPtr(0x303);
         public readonly NameMemory Memory;

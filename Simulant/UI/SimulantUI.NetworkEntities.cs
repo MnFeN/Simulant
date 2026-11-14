@@ -30,7 +30,7 @@ namespace Simulant.UI
             menu.Opening += (_, __) =>
             {
                 var ready = _host.PluginReady && !_host.IsInitializing && _host.FirewallEnabled && !_switchingTerritory;
-                npc.Enabled = ready && _host.CsvReady && !_host.CsvLoading;
+                npc.Enabled = ready && _host.GameDataReady && !_host.GameDataLoading;
                 player.Enabled = ready;
                 local.Enabled = _host.PluginReady && !_host.IsInitializing && !_host.Disposed && !_switchingTerritory;
             };

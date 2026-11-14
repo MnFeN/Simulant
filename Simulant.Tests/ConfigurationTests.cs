@@ -2,11 +2,48 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using Simulant.Game.Data;
 
 namespace Simulant.Tests
 {
     internal static class ConfigurationTests
     {
+        public static void GamePathDefaultsToEmptyAndPersistsWithoutAliasingTheDraft()
+        {
+            WithPath(path =>
+            {
+                Assert(Configuration.Load(path).FfxivPath == string.Empty, "未配置时应自动检测客户端。");
+                new Configuration().Save(path);
+                File.WriteAllText(path, "<Simulant />");
+                var configuration = Configuration.Load(path);
+                Assert(configuration.FfxivPath == string.Empty, "旧配置缺少路径时应保持空白。");
+                var draft = configuration.Copy();
+                draft.FfxivPath = @" C:\游戏\game\ffxiv_dx11.exe ";
+                draft.Save(path);
+                Assert(configuration.FfxivPath == string.Empty, "编辑副本不能提前改变当前路径。");
+                Assert(Configuration.Load(path).FfxivPath == @"C:\游戏\game\ffxiv_dx11.exe", "中文路径应保存并去除两端空白。");
+            });
+        }
+
+        public static void GamePathUsesConfigurationAndRejectsDifferentClientInstallations()
+        {
+            WithPath(path =>
+            {
+                var directory = Path.GetDirectoryName(path);
+                Directory.CreateDirectory(directory);
+                var executable = Path.Combine(directory, "ffxiv_dx11.exe");
+                File.WriteAllText(executable, string.Empty);
+                Assert(FfxivInstallation.Resolve(executable, () => { throw new Exception("已配置时不能枚举进程。"); }) == executable,
+                    "已配置时即使游戏未运行也应使用指定路径。");
+                Assert(FfxivInstallation.Resolve("", () => new string[0]) == null, "没有进程时应返回未找到。");
+                Assert(FfxivInstallation.Resolve("", () => new[] { executable, executable.ToUpperInvariant() }) == executable,
+                    "相同安装目录多开应视为一个客户端。");
+                Reject(() => FfxivInstallation.Resolve("", () => new[] { executable, Path.Combine(directory, "另一个客户端", "ffxiv_dx11.exe") }));
+                File.Delete(executable);
+                Reject(() => FfxivInstallation.Resolve(executable, () => { throw new Exception("无效配置不能退回自动检测。"); }));
+            });
+        }
+
         public static void AutomaticUpdatesDefaultToEnabledAndPersist()
         {
             WithPath(path =>

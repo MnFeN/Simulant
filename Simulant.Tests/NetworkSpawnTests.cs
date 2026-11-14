@@ -1,6 +1,6 @@
 using Simulant.Core.Entity;
-using Simulant.Game.ExtractedCsv;
-using Simulant.Game.ExtractedCsv.Rows;
+using Simulant.Game.Data;
+using Lumina.Excel.Sheets;
 using Simulant.Game.FFCS.Client.Game.Character;
 using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Game.FFCS.Client.Game.Object;
@@ -29,12 +29,12 @@ namespace Simulant.Tests
                 "删除包必须以网络槽位编号开头。");
         }
 
-        public static void NetworkSpawnDefaultsUseCsvAndActCoordinates()
+        public static void NetworkSpawnDefaultsUseGameDataAndActCoordinates()
         {
-            CsvManager.Instance.Get<BNpcBase>().Clear();
-            CsvManager.Instance.Get<BNpcName>().Clear();
-            CsvManager.Instance.Get<BNpcBase>()[42] = new BNpcBase { ModelCharaId = 321, Battalion = 4 };
-            CsvManager.Instance.Get<BNpcName>()[84] = new BNpcName { Name = "测试魔物" };
+            GameDataService.Instance.GetSheet<BNpcBase>().Clear();
+            GameDataService.Instance.GetSheet<BNpcName>().Clear();
+            GameDataService.Instance.GetSheet<BNpcBase>()[42] = new BNpcBase { ModelChara = 321, Battalion = 4 };
+            GameDataService.Instance.GetSheet<BNpcName>()[84] = new BNpcName { Singular = "测试魔物" };
             var spec = new NetworkNpcSpawnSpec
             {
                 BNpcBaseId = 42, BNpcNameId = 84, Level = 90, Pos = new Vector3(1, 2, 3)
@@ -42,7 +42,7 @@ namespace Simulant.Tests
             var packet = spec.ToPacket(7);
             var common = packet.Common;
             Assert(common.BaseId == 42 && common.NameId == 84 && common.ModelChara == 321 && common.Battalion == 4,
-                "未指定外观和阵营时必须使用当前 CSV 数据。");
+                "未指定外观和阵营时必须使用当前 客户端表 数据。");
             Assert(ReadName(packet) == "测试魔物" && common.Position == new Vector3(1, 3, 2) && common.Rotation == 32768,
                 "名字、ACT 坐标轴转换或朝向编码不正确。");
             Assert(common.ObjectKind == ObjectKind.BattleNpc && common.SubKind == 5 &&
@@ -63,10 +63,10 @@ namespace Simulant.Tests
                 "解析默认值不得改写调用者的可复用参数。");
         }
 
-        public static void NetworkSpawnOverridesDoNotRequireCsvRows()
+        public static void NetworkSpawnOverridesDoNotRequireGameDataRows()
         {
-            CsvManager.Instance.Get<BNpcBase>().Clear();
-            CsvManager.Instance.Get<BNpcName>().Clear();
+            GameDataService.Instance.GetSheet<BNpcBase>().Clear();
+            GameDataService.Instance.GetSheet<BNpcName>().Clear();
             var spec = CreateSpec();
             spec.MaxHealthPoints = 765;
             spec.HealthPoints = 432;
@@ -87,7 +87,7 @@ namespace Simulant.Tests
             spec.TetherId = 9;
             var packet = spec.ToPacket(3);
             Assert(packet.Common.ModelChara == 321 && packet.Common.Battalion == 4 && ReadName(packet) == "测试单位",
-                "显式外观、阵营和名字应允许不依赖 CSV 行构包。");
+                "显式外观、阵营和名字应允许不依赖 客户端表 行构包。");
             Assert(packet.Common.MaxHealthPoints == 765 && packet.Common.HealthPoints == 432 &&
                 packet.Common.MaxResourcePoints == 222 && packet.Common.ResourcePoints == 111,
                 "生命值或资源值覆盖没有生效。");
@@ -153,7 +153,7 @@ namespace Simulant.Tests
             Throws<ArgumentException>(() => spec.ToPacket(1));
         }
 
-        public static void NetworkSpawnRejectsInvalidValuesBeforeUsingCsv()
+        public static void NetworkSpawnRejectsInvalidValuesBeforeUsingGameData()
         {
             var spec = CreateSpec();
             foreach (var value in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
@@ -195,14 +195,14 @@ namespace Simulant.Tests
 
         public static void NetworkSpawnReportsMissingRowsAndAllowsUnnamedActors()
         {
-            CsvManager.Instance.Get<BNpcBase>().Clear();
-            CsvManager.Instance.Get<BNpcName>().Clear();
+            GameDataService.Instance.GetSheet<BNpcBase>().Clear();
+            GameDataService.Instance.GetSheet<BNpcName>().Clear();
             var spec = CreateSpec();
             spec.ModelCharaId = null;
             Throws<InvalidOperationException>(() => spec.ToPacket(1));
-            CsvManager.Instance.Get<BNpcBase>()[42] = new BNpcBase { ModelCharaId = 456, Battalion = 6 };
+            GameDataService.Instance.GetSheet<BNpcBase>()[42] = new BNpcBase { ModelChara = 456, Battalion = 6 };
             Assert(spec.ToPacket(1).Common.ModelChara == 456 && spec.ToPacket(1).Common.Battalion == 4,
-                "只覆盖阵营时，模型仍应来自 CSV，阵营不能被表值覆盖。");
+                "只覆盖阵营时，模型仍应来自 客户端表，阵营不能被表值覆盖。");
             spec.Name = null;
             Throws<InvalidOperationException>(() => spec.ToPacket(1));
             spec.BNpcNameId = 0;

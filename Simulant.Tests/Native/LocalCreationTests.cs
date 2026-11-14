@@ -357,6 +357,8 @@
 
     public sealed class FakeLocalPlugin
     {
+        public string State => "Ready";
+        public readonly object CallScheduler = new object();
         private object PluginUi;
         public static readonly IntPtr CreateFunction = new IntPtr(0x101);
         public static readonly IntPtr GetFunction = new IntPtr(0x102);

@@ -3,7 +3,7 @@ using Simulant.ACT;
 using Simulant.Core.Entity;
 using Simulant.Core.Zone;
 using Simulant.Game;
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using Simulant.UI;
@@ -40,8 +40,12 @@ namespace Simulant.Core
         internal PluginUpdater Updater { get; }
         internal string ConfigurationPath { get; } = Path.Combine(Application.StartupPath, "Config", "Simulant.config.xml");
 
-        internal bool CsvReady { get; private set; }
-        internal bool CsvLoading { get; private set; }
+        internal bool GameDataReady { get; private set; }
+        internal bool GameDataLoading { get; private set; }
+        private GameDataService _gameData;
+        private Task _gameDataLoadTask = Task.CompletedTask;
+        private int _gameDataGeneration;
+        private int _gameDataLoadGeneration;
         internal bool PluginReady { get; private set; }
         internal bool IsInitializing { get; private set; }
         internal bool FirewallEnabled => FirewallService != null && FirewallService.IsEnabled;
@@ -234,50 +238,113 @@ namespace Simulant.Core
 
             _statusLabel.Text = "仿生石已启动。";
 
-            _ = LoadCsvAsync();
+            _ = LoadGameDataAsync();
             _ = Updater.CheckAsync();
         }
 
-        internal async Task LoadCsvAsync()
+        internal async Task LoadGameDataAsync()
         {
-            if (CsvReady || CsvLoading)
-                return;
+            while (true)
+            {
+                Task task;
+                int generation;
+                lock (_initLock)
+                {
+                    if (Disposed) return;
+                    if (!GameDataLoading)
+                    {
+                        GameDataLoading = true;
+                        GameDataReady = false;
+                        _gameDataLoadGeneration = _gameDataGeneration;
+                        _gameDataLoadTask = LoadGameDataCoreAsync(Configuration.FfxivPath, _gameDataLoadGeneration);
+                    }
+                    task = _gameDataLoadTask;
+                    generation = _gameDataLoadGeneration;
+                }
+                await task;
+                lock (_initLock)
+                    if (Disposed || generation == _gameDataGeneration) return;
+                // 读取期间用户修改了路径，完成旧任务后按最新配置重试。
+            }
+        }
 
-            CsvLoading = true;
-            _ui?.UpdateControlStates();
-
+        private async Task LoadGameDataCoreAsync(string configuredPath, int generation)
+        {
+            // 先让调用方登记任务，避免同步失败时留下错误的加载状态。
+            await Task.Yield();
+            GameDataService candidate = null;
             try
             {
-                LogRuntime("正在加载 CSV 数据……");
-
-                await Task.Run(() =>
+                _ui?.UpdateControlStates();
+                var path = await Task.Run(() => FfxivInstallation.Resolve(configuredPath));
+                lock (_initLock)
                 {
-                    CsvManager.Instance.LoadAllTables();
-                });
-
-                CsvReady = true;
-                LogRuntime("CSV 数据加载完成。");
+                    if (Disposed || generation != _gameDataGeneration) return;
+                    if (path == null)
+                    {
+                        LogWarning("尚未设置过 ffxiv_dx11.exe 文件路径，请开启游戏后重新初始化，或在配置菜单中手动设置。");
+                        return;
+                    }
+                    if (string.IsNullOrWhiteSpace(configuredPath))
+                    {
+                        var snapshot = Configuration.Copy();
+                        snapshot.FfxivPath = path;
+                        snapshot.Save(ConfigurationPath);
+                        Configuration = snapshot;
+                        LogRuntime("已自动检测游戏路径：" + path);
+                    }
+                }
+                var sqpack = GameDataService.ResolveSqPackPath(path);
+                if (_gameData != null && string.Equals(_gameData.SqPackPath, sqpack, StringComparison.OrdinalIgnoreCase))
+                {
+                    lock (_initLock)
+                    {
+                        if (Disposed || generation != _gameDataGeneration) return;
+                        GameDataReady = true;
+                    }
+                    if (!string.IsNullOrWhiteSpace(configuredPath)) LogRuntime("已从配置读取游戏路径：" + path);
+                    return;
+                }
+                LogRuntime("正在读取游戏客户端数据……");
+                candidate = await Task.Run(() => new GameDataService(path));
+                lock (_initLock)
+                {
+                    if (Disposed || generation != _gameDataGeneration) return;
+                    candidate.Activate();
+                    _gameData = candidate;
+                    candidate = null;
+                    GameDataReady = true;
+                }
+                if (!string.IsNullOrWhiteSpace(configuredPath)) LogRuntime("已从配置读取游戏路径：" + path);
+                LogRuntime("游戏数据加载完成（Lumina.ACT，当前客户端）。");
                 LogRuntime("如需启用模拟，请先在左侧初始化插件，然后启用防火墙。");
             }
             catch (Exception ex)
             {
-                CsvReady = false;
-                LogError("CSV 数据加载失败：" + ex);
+                if (!Disposed && generation == _gameDataGeneration)
+                    LogError("游戏数据加载失败：" + ex.Message);
             }
             finally
             {
-                CsvLoading = false;
-                _ui?.UpdateControlStates();
+                candidate?.Dispose();
+                lock (_initLock)
+                    GameDataLoading = false;
+                if (!Disposed) _ui?.UpdateControlStates();
             }
         }
 
         internal void SaveConfiguration(Configuration configuration)
         {
             if (Disposed) throw new InvalidOperationException("插件已卸载，不能保存配置。");
-            var snapshot = configuration.Copy();
-            snapshot.Save(ConfigurationPath);
-            Configuration = snapshot;
-            LogRuntime("全局配置已保存，将用于下一次模拟。");
+            lock (_initLock)
+            {
+                var snapshot = configuration.Copy();
+                snapshot.Save(ConfigurationPath);
+                if (!string.Equals(Configuration.FfxivPath, snapshot.FfxivPath, StringComparison.OrdinalIgnoreCase))
+                    _gameDataGeneration++;
+                Configuration = snapshot;
+            }
+            LogRuntime("全局配置已保存；游戏路径在下次初始化时读取，模拟队员设置从下一次模拟开始生效。");
         }
 
         internal async Task InitAsync()
@@ -312,6 +379,9 @@ namespace Simulant.Core
             {
                 ZoneService.CancelPendingPhase();
                 PrepareEntityWorldChange();
+                await LoadGameDataAsync();
+                if (!GameDataReady) return;
+
                 LogRuntime("正在绑定鲶鱼精邮差……");
                 await Task.Run(() => NamazuInterop.Init());
 
@@ -375,6 +445,7 @@ namespace Simulant.Core
                     {
                         Disposed = true;
                         PluginReady = false;
+                        _gameDataGeneration++;
                         initializationPending = IsInitializing;
                     }
                     if (_ui != null && !_ui.IsDisposed) _ui.Enabled = false;
@@ -438,6 +509,9 @@ namespace Simulant.Core
                     }
                     ThrowIfFailed();
 
+                    _gameData?.Dispose();
+                    _gameData = null;
+                    GameDataReady = false;
                     _ui?.Dispose();
                     if (!_statusLabel.IsDisposed) _statusLabel.Text = "插件已卸载";
                     _disposeCompleted = true;
@@ -537,7 +611,10 @@ namespace Simulant.Core
                 if (firewallCleanupError != null)
                     LogError("切换进程时恢复旧防火墙失败，记录已保留，请重试关闭：" + firewallCleanupError);
             }
-            finally { _ui?.OnEntityWorldChanged(); }
+            finally
+            {
+                _ui?.OnEntityWorldChanged();
+            }
         }
 
         private void OnFFXIVZoneChanged(uint zoneId, string zoneName)

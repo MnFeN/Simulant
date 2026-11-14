@@ -1,10 +1,10 @@
 using Simulant.Game;
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Simulation.Runtime
 {
@@ -171,15 +171,15 @@ namespace Simulant.Simulation.Runtime
             var step = actions.Loop[state.ActionIndex % actions.Loop.Length];
             var id = actions.Caster && moving ? actions.MovingAction :
                 actions.Melee && distance > 3 ? actions.DistantAction : step.Id;
-            if (id == 0 || !CsvManager.Instance.Get<ActionRow>().TryGetValue((int)id, out var action)) return;
+            if (id == 0 || !GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(id, out var action)) return;
             var range = action.Range >= 0 ? action.Range : actions.Melee ? 3 : 25;
             if (distance > range) return;
-            var castTime = id == step.Id && step.Instant ? 0 : action.CastTime;
+            var castTime = id == step.Id && step.Instant ? 0 : (action.Cast100ms / 10f);
             if (castTime > 0 && (moving || !CanWait(state, now, castTime + 0.3)))
             {
                 if (!actions.Caster) return;
                 id = actions.MovingAction;
-                if (!CsvManager.Instance.Get<ActionRow>().TryGetValue((int)id, out action) || action.CastTime != 0) return;
+                if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(id, out action) || (action.Cast100ms / 10f) != 0) return;
                 castTime = 0;
             }
             if (castTime > 0)

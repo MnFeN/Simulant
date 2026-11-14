@@ -24,6 +24,7 @@
     <Compile Include="CosmoArrowTests.cs" />
     <Compile Include="..\Simulant\Content\U6b\Presets\宇宙天箭.Plan.cs"><Link>Content\宇宙天箭.Plan.cs</Link></Compile>
     <Compile Include="ConfigurationTests.cs" />
+    <Compile Include="..\Simulant\Game\Data\FfxivInstallation.cs"><Link>Game\FfxivInstallation.cs</Link></Compile>
     <Compile Include="PluginUpdaterTests.cs" />
     <Compile Include="..\Simulant\Core\PluginUpdater.cs"><Link>Core\PluginUpdater.cs</Link></Compile>
     <Compile Include="..\Simulant\Configuration.cs"><Link>Configuration.cs</Link></Compile>
@@ -44,6 +45,7 @@
     <Compile Include="SessionStatusTests.cs" />
     <Compile Include="PartyNameTests.cs" />
     <Compile Include="EntityTestDoubles.cs" />
+    <Compile Include="GameDataTestDoubles.cs" />
     <Compile Include="NetworkSpawnTests.cs" />
     <Compile Include="NetworkManagerTests.cs" />
     <Compile Include="NetworkPlayerSpawnTests.cs" />

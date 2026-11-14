@@ -1,6 +1,6 @@
 using Simulant.Content.U7b.Presets;
 using Simulant.Core.Entity;
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Tests
 {
@@ -225,7 +225,7 @@ namespace Simulant.Tests
 
             internal ForsakenActionRows()
             {
-                // 对应项目现有 Action.csv 的 CastType/EffectRange；这些点名技能没有标准预兆名。
+                // 对应客户端 Action 表的 CastType/EffectRange；这些点名技能没有标准预兆名。
                 Add(0xBABE, 2, 4);
                 Add(0xBAC0, 2, 5);
                 Add(0xBAC1, 2, 5);
@@ -235,14 +235,14 @@ namespace Simulant.Tests
 
             private void Add(int action, byte shape, float range)
             {
-                var rows = CsvManager.Instance.Get<ActionRow>();
+                var rows = GameDataService.Instance.GetSheet<ActionRow>();
                 if (rows.TryGetValue(action, out var previous)) _previous.Add(action, previous);
-                rows[action] = new ActionRow { ShapeType = shape, ScaleY = range };
+                rows[action] = new ActionRow { CastType = shape, EffectRange = range };
             }
 
             public void Dispose()
             {
-                var rows = CsvManager.Instance.Get<ActionRow>();
+                var rows = GameDataService.Instance.GetSheet<ActionRow>();
                 foreach (var action in new[] { 0xBABE, 0xBAC0, 0xBAC1, 0xBAC2, 0xBAD6 })
                 {
                     if (_previous.TryGetValue(action, out var previous)) rows[action] = previous;

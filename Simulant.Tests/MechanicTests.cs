@@ -1,5 +1,5 @@
 using Simulant.Core.Entity;
-using Simulant.Game.ExtractedCsv;
+using Simulant.Game.Data;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Runtime;
@@ -9,12 +9,35 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using ActionRow = Simulant.Game.ExtractedCsv.Rows.Action;
+using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Tests
 {
     internal static class MechanicTests
     {
+        public static void CorrectSelfBaitWithExtraHitSuggestsPositionWithoutAssigningBlame()
+        {
+            var error = MechanicError.Bait("第 8 轮 D3 的扇形点名", new[] { 0 }, new[] { 0, 2 },
+                expectedTarget: 0, actualTarget: 0, source: 6, reason: "允许最多 1 人，实际 2 人。");
+            var roles = new[] { "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4" };
+            var text = error.Format(0, slot => roles[slot]);
+            Assert(text.Contains("· 应有 1 人：[MT]") && text.Contains("· 实际 2 人：[MT] H1") &&
+                text.Contains("· 多余：H1") && text.EndsWith("· 推测：可能是自身站歪了"),
+                "自身正确引导却波及队友时，应提示可能是自身站歪了，不能输出未知。");
+            Assert(error.Offenders.Count == 0, "文字推测不能自动把引导者或被波及者加入画叉名单。");
+            Assert(error.Format(1, slot => roles[slot]).EndsWith("· 推测：未知"), "无关队员不能被推测为引导失误。");
+            Assert(error.Format(2, slot => roles[slot]).EndsWith("· 推测：自身不应参与"), "多余的受击队员仍按错误参与提示。");
+            error.WithAttribution(new[] { 2 });
+            Assert(error.Format(0, slot => roles[slot]).EndsWith("· 推测：未知"), "机制已明确其他责任人时，不能再推测自身引导失误。");
+        }
+
+        public static void WrongBaitTargetKeepsMissingAndUnwantedBaitHints()
+        {
+            var error = MechanicError.Bait("扇形点名", new[] { 0 }, new[] { 2 }, expectedTarget: 0, actualTarget: 2);
+            Assert(error.Format(0, slot => slot.ToString()).EndsWith("· 推测：自身未去引导"), "错失引导不能被归为方向错误。");
+            Assert(error.Format(2, slot => slot.ToString()).EndsWith("· 推测：自身不应引导"), "抢到引导仍应提示自身不应引导。");
+        }
+
         public static void SnapshotReadsOnceAndKeepsOriginalSlots()
         {
             using (var scene = new Scene())
@@ -233,9 +256,9 @@ namespace Simulant.Tests
         public static void MechanicFailureInterruptsGroupAndPreservesActorsAndCasting()
         {
             const int actionId = 41001;
-            var rows = CsvManager.Instance.Get<ActionRow>();
+            var rows = GameDataService.Instance.GetSheet<ActionRow>();
             var hadPrevious = rows.TryGetValue(actionId, out var previous);
-            rows[actionId] = new ActionRow { Index = actionId, CastTime = 60, AnimationEndId = -1 };
+            rows[actionId] = new ActionRow { RowId = (uint)actionId, Cast100ms = 600, AnimationEnd = -1 };
             try
             {
                 using (var scene = new Scene())

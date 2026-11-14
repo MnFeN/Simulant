@@ -94,3 +94,11 @@ Work in progress.
   [更纱黑体](https://github.com/be5invis/Sarasa-Gothic/releases)
 
   在 Single Family TTF Package 中下载 Mono 的压缩包并安装字体。
+
+## 开源许可
+
+Simulant 的原创代码使用 GPLv3（`GPL-3.0-only`）开源协议。使用者可自由使用、修改此项目。
+
+再次分发时，需同样遵从 GPLv3 开源协议，提供对应版本的完整源码；如有修改，需注明修改。
+
+第三方内容说明见 [COPYING.md](COPYING.md)，完整条款见 [LICENSE](LICENSE)。

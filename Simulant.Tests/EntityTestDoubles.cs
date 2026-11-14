@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
 
-// 仅替换原生适配器、CSV 数据行和外部 PictoACT 回调；测试
+// 仅替换原生适配器、游戏数据行和外部 PictoACT 回调；测试
 // 链接实际的注册表、模拟角色、读条、预兆和移动控制器，以及调度器。
 namespace Simulant.Core.Entity
 {
@@ -300,52 +300,6 @@ namespace Simulant.Core.Party
             OnRefreshEnmity?.Invoke();
         }
     }
-}
-
-namespace Simulant.Game.ExtractedCsv
-{
-    public abstract class TypedCsvRow { }
-
-    public sealed class CsvManager
-    {
-        public static CsvManager Instance { get; } = new CsvManager();
-        private readonly Dictionary<Type, object> _tables = new Dictionary<Type, object>();
-        public Dictionary<int, T> Get<T>()
-        {
-            if (!_tables.TryGetValue(typeof(T), out var table))
-                _tables.Add(typeof(T), table = new Dictionary<int, T>());
-            return (Dictionary<int, T>)table;
-        }
-    }
-}
-
-namespace Simulant.Game.ExtractedCsv.Rows
-{
-    public sealed class BNpcBase : Simulant.Game.ExtractedCsv.TypedCsvRow
-    {
-        public ushort ModelCharaId { get; set; }
-        public byte Battalion { get; set; }
-    }
-
-    public sealed class BNpcName : Simulant.Game.ExtractedCsv.TypedCsvRow
-    {
-        public string Name { get; set; }
-    }
-
-    public sealed class Action
-    {
-        public int Index { get; set; }
-        public float CastTime { get; set; }
-        public sbyte Range { get; set; }
-        public ushort OmenId { get; set; }
-        public short AnimationEndId { get; set; }
-        public byte ShapeType { get; set; }
-        public float ScaleX { get; set; }
-        public float ScaleY { get; set; }
-        public Omen Omen { get; set; }
-    }
-
-    public sealed class Omen { public string Name { get; set; } }
 }
 
 namespace Simulant.ACT

@@ -6,8 +6,8 @@ namespace Simulant.Core.Entity
     /// <summary>应用幻境·秘影武器与 99 级职业蓝装的五件护甲；没有对应预设时保留复制的外观。</summary>
     internal static class JobEquipment
     {
-        // 来源：SaintCoinach 2026.07.16.0001.0000 导出的 Item.csv；按 ClassJobCategory 和 EquipSlotCategory 核对职业与部位。
-        // 武器为幻境·秘影系列，物品 51000–51021、装等 795；护甲沿用物品 42569–42695 中装备等级 99、装等 690、稀有度 3 的套装。
+        // 来源：2026.07.16.0001.0000 客户端的 Item 表；按 ClassJobCategory 和 EquipSlotCategory 核对职业与部位。
+        // 武器为幻境·秘影系列，物品 51000–51021、装等 795；护甲沿用物品 42569–42695 中等级 99 的职业校服蓝装。
         // 共 21 个普通战斗职业、105 件护甲、21 件主手和骑士盾牌；没有饰品，青魔及基础职业没有此套装。
         // 主手物品的 ModelSub 同时包含拳套、箭袋、枪盒、卡牌、刀鞘、双刀和画板等副手模型，不能统一清空。
         private static readonly (Job Job, ushort ArmorId, ulong Mainhand, ulong Offhand)[] Sets =

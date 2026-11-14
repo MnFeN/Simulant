@@ -1,6 +1,6 @@
 ﻿using Simulant.Core.Environment;
-using Simulant.Game.ExtractedCsv;
-using Simulant.Game.ExtractedCsv.Rows;
+using Simulant.Game.Data;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +9,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using static Simulant.Game.ExtractedCsv.Rows.TerritoryType;
 
 namespace Simulant.UI
 {
@@ -108,22 +107,22 @@ namespace Simulant.UI
 
         private void LoadTerritoryData()
         {
-            var territoryData = CsvManager.Instance.Get<TerritoryType>();
+            var territoryData = GameDataService.Instance.GetSheet<TerritoryType>();
             var presetTerritoryIds = GetPresetTerritoryIds();
 
             // 预留一些空间，游戏更新时不更新数据也能进入地图
-            var size = territoryData.Select(t => (int)t.Key).Max() + 100;
+            var size = territoryData.Select(t => (int)t.RowId).Max() + 100;
 
             _allTerritories = Enumerable.Range(0, size)
-                .Select(i => territoryData.TryGetValue(i, out var t) ? t : null)
+                .Select(i => territoryData.GetRowOrDefault((uint)i))
                 .Select((territory, i) => new TerritoryViewItem
                 {
                     Id = i,
                     IdString = i.ToString(),
-                    PlaceName = territory?.PlaceName?.Name ?? string.Empty,
-                    InstanceName = territory?.ContentFinderCondition?.Name ?? string.Empty,
-                    RegionName = territory?.RegionPlaceName?.Name ?? string.Empty,
-                    TypeName = ((TerritoryIntendedUseEnum?)territory?.TerritoryIntendedUse)?.ToString() ?? string.Empty,
+                    PlaceName = territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty,
+                    InstanceName = territory?.ContentFinderCondition.ValueNullable?.Name.ExtractText() ?? string.Empty,
+                    RegionName = territory?.PlaceNameRegion.ValueNullable?.Name.ExtractText() ?? string.Empty,
+                    TypeName = ((TerritoryIntendedUseEnum?)territory?.TerritoryIntendedUse.RowId)?.ToString() ?? string.Empty,
                     HasPreset = presetTerritoryIds.Contains(i),
                 })
                 .ToList();

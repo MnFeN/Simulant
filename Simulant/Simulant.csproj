@@ -34,12 +34,12 @@
 		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
 
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-		<PublishDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '..', 'publish'))</PublishDir>
+		<PublishDir>..\publish\</PublishDir>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
 		<DebugSymbols>true</DebugSymbols>
-		<DebugType>full</DebugType>
+		<DebugType>portable</DebugType>
 		<Optimize>false</Optimize>
 		<OutputPath>bin\Debug\</OutputPath>
 		<DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -48,7 +48,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
-		<DebugType>pdbonly</DebugType>
+		<DebugType>portable</DebugType>
 		<Optimize>true</Optimize>
 		<OutputPath>bin\Release\</OutputPath>
 		<DefineConstants>TRACE</DefineConstants>
@@ -113,6 +113,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Lumina.ACT\Lumina.Core\Lumina.Core.csproj" />
+		<PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48" PrivateAssets="all" />
 		<PackageReference Include="System.Buffers" Version="4.6.1" />
 		<PackageReference Include="System.Memory" Version="4.6.3" />
 		<PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
@@ -179,14 +181,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Remove="Game\ExtractedCsv\RawExd\**\*.csv" />
-		<EmbeddedResource Include="Game\ExtractedCsv\RawExd\**\*.csv" />
+		<EmbeddedResource Include="..\Lumina.ACT\LICENSE.Lumina.txt" LogicalName="Simulant.Licenses.Lumina.txt" />
+		<EmbeddedResource Include="..\LICENSE" LogicalName="Simulant.Licenses.GPL-3.0.txt" />
+		<EmbeddedResource Include="..\COPYING.md" LogicalName="Simulant.Licenses.Copying.md" />
+		<EmbeddedResource Include="..\Lumina.ACT\THIRD_PARTY_NOTICES.md" LogicalName="Simulant.Licenses.ThirdParty.md" />
+		<EmbeddedResource Include="..\Lumina.ACT\Licenses\*" LogicalName="Simulant.Licenses.%(Filename)%(Extension)" />
 	</ItemGroup>
 
 	<!-- 发布只保留插件本体；依赖、调试符号和配置文件仍可正常生成到构建目录。 -->
 	<Target Name="PublishOnlyPluginAssembly" AfterTargets="ComputeFilesToPublish">
 		<ItemGroup>
-			<ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.RelativePath)' != '$(TargetFileName)'" />
+			<!-- SDK 默认可能发布 obj 中未合并的程序集；必须指定构建目录中已合并的成品。 -->
+			<ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" />
+			<ResolvedFileToPublish Include="$(TargetPath)" RelativePath="$(TargetFileName)" CopyToPublishDirectory="Always" />
 		</ItemGroup>
 	</Target>
 

@@ -4,8 +4,8 @@ using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
 using Simulant.Game;
-using Simulant.Game.ExtractedCsv;
-using Simulant.Game.ExtractedCsv.Rows;
+using Simulant.Game.Data;
+using Lumina.Excel.Sheets;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Simulation;
 using Simulant.Utils;
@@ -131,7 +131,7 @@ namespace Simulant.UI
                 return;
             }
 
-            var csvReady = _host.CsvReady && !_host.CsvLoading;
+            var gameDataReady = _host.GameDataReady && !_host.GameDataLoading;
             var pluginReady = _host.PluginReady && !_host.IsInitializing;
             var firewallReady = pluginReady && _host.FirewallEnabled;
             var firewallPending = _host.FirewallService?.HasPendingCleanup == true;
@@ -139,12 +139,12 @@ namespace Simulant.UI
             // 初始化按钮：初始化中禁用，初始化完成后仍可再次点击
             btnInitPlugin.Enabled = !_host.IsInitializing && !_switchingTerritory && !firewallPending;
 
-            // CSV 加载完：允许选地图、输入区域 ID、选择阶段
-            btnSelectTerritory.Enabled = csvReady && !_switchingTerritory;
-            lblTerritoryId.Enabled = csvReady;
-            numTerritoryId.Enabled = csvReady && !_switchingTerritory;
-            lblTerritory.Enabled = csvReady;
-            cbxPhase.Enabled = csvReady && !_switchingTerritory;
+            // 游戏数据加载完：允许选地图、输入区域 ID、选择阶段
+            btnSelectTerritory.Enabled = gameDataReady && !_switchingTerritory;
+            lblTerritoryId.Enabled = gameDataReady;
+            numTerritoryId.Enabled = gameDataReady && !_switchingTerritory;
+            lblTerritory.Enabled = gameDataReady;
+            cbxPhase.Enabled = gameDataReady && !_switchingTerritory;
 
             // 插件初始化完成：允许防火墙和调试
             chkToggleFirewall.Enabled = !_host.IsInitializing && (pluginReady || firewallPending);
@@ -279,12 +279,12 @@ namespace Simulant.UI
             var territoryName = "无";
             var instanceName = "无";
 
-            if (territoryId > 0 && CsvManager.Instance.Get<TerritoryType>().TryGetValue(_selectedTerritoryId, out var territory))
+            if (territoryId > 0 && GameDataService.Instance.GetSheet<TerritoryType>().TryGetRow((uint)_selectedTerritoryId, out var territory))
             {
-                territoryName = territory.PlaceName.Name;
-                if (!string.IsNullOrWhiteSpace(territory?.ContentFinderCondition.Name))
+                territoryName = territory.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
+                if (!string.IsNullOrWhiteSpace(territory.ContentFinderCondition.ValueNullable?.Name.ExtractText()))
                 {
-                    instanceName = territory.ContentFinderCondition.Name;
+                    instanceName = territory.ContentFinderCondition.Value.Name.ExtractText();
                 }
             }
             lblTerritory.Text = $"选中区域：{territoryName}\n选中副本：{instanceName}";

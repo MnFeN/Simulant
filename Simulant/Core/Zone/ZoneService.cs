@@ -1,7 +1,7 @@
 ﻿using Simulant.Core.Environment;
 using Simulant.Game;
-using Simulant.Game.ExtractedCsv;
-using Simulant.Game.ExtractedCsv.Rows;
+using Simulant.Game.Data;
+using Lumina.Excel.Sheets;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Game.FFCS.Client.Game.Event;
 using Simulant.Game.FFCS.Client.Game.Object;
@@ -87,7 +87,7 @@ namespace Simulant.Core.Zone
                     RecordInitialState(gameMain, worldVersion);
                 }
 
-                _ = CsvManager.Instance.Get<TerritoryType>().TryGetValue(territoryId, out TerritoryType territory);
+                var territory = GameDataService.Instance.GetSheet<TerritoryType>().GetRowOrDefault((uint)territoryId);
 
                 lock (_stateGate)
                 {
@@ -102,8 +102,8 @@ namespace Simulant.Core.Zone
                     _isInSimulatedTerritory = true;
                 }
 
-                var finalTerritoryId = territory != null ? (int)territory.Index : territoryId;
-                var placeName = territory != null ? territory.PlaceName.Name : "未知区域";
+                var finalTerritoryId = territory.HasValue ? (int)territory.Value.RowId : territoryId;
+                var placeName = territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? "未知区域";
                 _host.LogSim($"已进入区域：{placeName} ({finalTerritoryId})");
 
                 return true;
@@ -164,7 +164,7 @@ namespace Simulant.Core.Zone
 
                 var territoryId = (int)initialTerritoryId.Value;
 
-                _ = CsvManager.Instance.Get<TerritoryType>().TryGetValue(territoryId, out TerritoryType territory);
+                var territory = GameDataService.Instance.GetSheet<TerritoryType>().GetRowOrDefault((uint)territoryId);
 
                 lock (_stateGate)
                 {
@@ -185,8 +185,8 @@ namespace Simulant.Core.Zone
                     _initialPosition = null;
                 }
 
-                var finalTerritoryId = territory != null ? (int)territory.Index : territoryId;
-                var placeName = territory != null ? territory.PlaceName.Name : "未知区域";
+                var finalTerritoryId = territory.HasValue ? (int)territory.Value.RowId : territoryId;
+                var placeName = territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? "未知区域";
                 _host.LogSim($"已返回真实区域：{placeName} ({finalTerritoryId})");
 
                 return true;
@@ -279,7 +279,7 @@ namespace Simulant.Core.Zone
             return _phaseApplication.ApplyAsync(Prepare, Apply, waitForZoneInit);
         }
 
-        private void LoadTerritoryInternal(int territoryId, TerritoryType territory, int worldVersion, int storyProgress = 0)
+        private void LoadTerritoryInternal(int territoryId, TerritoryType? territory, int worldVersion, int storyProgress = 0)
         {
             EnsureWorld(worldVersion);
             _host.PrepareEntityWorldChange((uint)territoryId);
@@ -361,9 +361,9 @@ namespace Simulant.Core.Zone
             EventFramework.Instance.FinalizeInstanceContent(0x80030000u + contentId);
         }
 
-        private static ushort ResolveInstanceContentId(TerritoryType territory)
+        private static ushort ResolveInstanceContentId(TerritoryType? territory)
         {
-            return (ushort)(territory?.ContentFinderCondition?.ContentId ?? 0);
+            return (ushort)(territory?.ContentFinderCondition.ValueNullable?.Content.RowId ?? 0);
         }
     }
 }

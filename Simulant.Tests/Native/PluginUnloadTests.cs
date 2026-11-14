@@ -5,7 +5,7 @@ namespace Simulant.Tests.Native
     using Simulant.Core;
     using Simulant.Core.Entity;
     using Simulant.Core.Environment;
-    using Simulant.Game.ExtractedCsv;
+    using Simulant.Game.Data;
     using Simulant.Game.FFCS.Client.Game;
     using Simulant.Game.FFCS.Client.Game.Event;
     using Simulant.Game.FFCS.Client.Game.Object;
@@ -28,14 +28,16 @@ namespace Simulant.Tests.Native
     {
         private static readonly BindingFlags Members = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         private static int _passed;
+        private static string _gamePath;
         internal static Scene Current;
 
         [STAThread]
-        private static int Main()
+        private static int Main(string[] args)
         {
             try
             {
-                CsvManager.Instance.LoadAllTables();
+                if (args.Length != 1) throw new ArgumentException("卸载验证需要客户端目录，以只读方式加载地图表。");
+                _gamePath = args[0];
                 VerifySuccess(false);
                 VerifySuccess(true);
                 foreach (var failure in new[] { "回收实体", "加载地图", "设置区域", "恢复位置", "恢复音乐", "恢复收包", "释放代码洞" })
@@ -156,8 +158,12 @@ namespace Simulant.Tests.Native
                 ClientObjectManager.DeleteObjectByIndexFuncPtr = UnloadPlugin.DeleteFunction;
                 BGMSystem.InstancePtr = UnloadMemory.BgmPointer;
 
-                // 绕过连接 ACT、异步读 CSV 的构造阶段，全部待验证方法仍直接来自正式 DLL。
+                // 绕过连接 ACT、异步读取游戏数据的构造阶段，全部待验证方法仍直接来自正式 DLL。
                 Host = (PluginHost)FormatterServices.GetUninitializedObject(typeof(PluginHost));
+                Set(Host, "<Configuration>k__BackingField", new Configuration());
+                var data = new GameDataService(_gamePath);
+                typeof(GameDataService).GetMethod("Activate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(data, null);
+                Set(Host, "_gameData", data);
                 foreach (var gate in new[] { "_initLock", "_subscriptionGate", "_disposeGate", "_debugGate" }) Set(Host, gate, new object());
                 Set(Host, "_statusLabel", new Label());
                 Set(Host, "PluginLog", Create("Simulant.Core.PluginLog"));
@@ -231,6 +237,8 @@ namespace Simulant.Tests.Native
                 Assert(Memory.Read<uint>(UnloadMemory.Game + 0x4108) == 177 &&
                     Memory.Read<Vector3>(UnloadMemory.Player + 0xB0) == new Vector3(1, 3, 2), "必须恢复原地图及原始玩家位置。");
                 Assert((bool)Get(Host, "_disposeCompleted"), "全部恢复完成后才可标记卸载成功。");
+                Assert(Get(Host, "_gameData") == null, "完整卸载必须释放客户端数据。");
+                Throws<InvalidOperationException>(() => { var unused = GameDataService.Instance; });
                 Prepared.Dispose();
             }
         }
@@ -312,6 +320,8 @@ namespace Simulant.Tests.Native
 
     public sealed class UnloadPlugin
     {
+        public string State => "Ready";
+        public readonly object CallScheduler = new object();
         private readonly object PluginUi = new object();
         public static readonly IntPtr LoadFunction = new IntPtr(0x101), TerritoryFunction = new IntPtr(0x102),
             SetupFunction = new IntPtr(0x103), FinalizeFunction = new IntPtr(0x104), DeleteFunction = new IntPtr(0x105),

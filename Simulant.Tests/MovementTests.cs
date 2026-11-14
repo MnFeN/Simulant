@@ -539,11 +539,11 @@ namespace Simulant.Tests
             var entity = world.CreateCharacter(0);
             var expected = new InvalidOperationException("读条清理失败");
             Simulant.ACT.TriggernometryInterop.Reset();
-            Simulant.Game.ExtractedCsv.CsvManager.Instance.Get<Simulant.Game.ExtractedCsv.Rows.Action>()[1] =
-                new Simulant.Game.ExtractedCsv.Rows.Action
+            Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>()[1] =
+                new Lumina.Excel.Sheets.Action
                 {
-                    Index = 1, CastTime = 1, OmenId = 1, ShapeType = 2, ScaleY = 5,
-                    Omen = new Simulant.Game.ExtractedCsv.Rows.Omen { Name = "test_omen" }
+                    RowId = 1, Cast100ms = 10, CastType = 2, EffectRange = 5,
+                    Omen = new Lumina.Excel.RowRef<Lumina.Excel.Sheets.Omen> { RowId = 1, ValueNullable = new Lumina.Excel.Sheets.Omen { Path = "test_omen" } }
                 };
             using (var scheduler = new SimScheduler())
             using (var casts = new SimCastController(scheduler))
