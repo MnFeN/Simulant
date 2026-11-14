@@ -145,6 +145,18 @@
 		<Compile Update="UI\TerritoryForm.cs">
 			<SubType>Form</SubType>
 		</Compile>
+		<Compile Update="UI\ActionListForm.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="UI\ExdBrowserForm.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="UI\ExdBrowserForm.Designer.cs">
+			<DependentUpon>ExdBrowserForm.cs</DependentUpon>
+		</Compile>
+		<Compile Update="UI\ActionListForm.Designer.cs">
+			<DependentUpon>ActionListForm.cs</DependentUpon>
+		</Compile>
 		<Compile Update="UI\TerritoryForm.Designer.cs">
 			<DependentUpon>TerritoryForm.cs</DependentUpon>
 		</Compile>
@@ -178,14 +190,17 @@
 		<EmbeddedResource Update="UI\TerritoryForm.resx">
 			<DependentUpon>TerritoryForm.cs</DependentUpon>
 		</EmbeddedResource>
+		<EmbeddedResource Update="UI\ActionListForm.resx">
+			<DependentUpon>ActionListForm.cs</DependentUpon>
+		</EmbeddedResource>
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="..\Lumina.ACT\LICENSE.Lumina.txt" LogicalName="Simulant.Licenses.Lumina.txt" />
-		<EmbeddedResource Include="..\LICENSE" LogicalName="Simulant.Licenses.GPL-3.0.txt" />
-		<EmbeddedResource Include="..\COPYING.md" LogicalName="Simulant.Licenses.Copying.md" />
-		<EmbeddedResource Include="..\Lumina.ACT\THIRD_PARTY_NOTICES.md" LogicalName="Simulant.Licenses.ThirdParty.md" />
-		<EmbeddedResource Include="..\Lumina.ACT\Licenses\*" LogicalName="Simulant.Licenses.%(Filename)%(Extension)" />
+		<EmbeddedResource Include="..\Lumina.ACT\LICENSE.Lumina.txt" Link="Resources\Licenses\LICENSE.Lumina.txt" LogicalName="Simulant.Licenses.Lumina.txt" />
+		<EmbeddedResource Include="..\LICENSE" Link="Resources\Licenses\LICENSE" LogicalName="Simulant.Licenses.GPL-3.0.txt" />
+		<EmbeddedResource Include="..\COPYING.md" Link="Resources\Licenses\COPYING.md" LogicalName="Simulant.Licenses.Copying.md" />
+		<EmbeddedResource Include="..\Lumina.ACT\THIRD_PARTY_NOTICES.md" Link="Resources\Licenses\THIRD_PARTY_NOTICES.md" LogicalName="Simulant.Licenses.ThirdParty.md" />
+		<EmbeddedResource Include="..\Lumina.ACT\Licenses\*" Link="Resources\Licenses\%(Filename)%(Extension)" LogicalName="Simulant.Licenses.%(Filename)%(Extension)" />
 	</ItemGroup>
 
 	<!-- 发布只保留插件本体；依赖、调试符号和配置文件仍可正常生成到构建目录。 -->

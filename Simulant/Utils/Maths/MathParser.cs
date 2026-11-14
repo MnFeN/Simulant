@@ -89,7 +89,7 @@ namespace Simulant.Utils.Maths
             LocalFunctions.Add("radtodeg", x => x[0] / Math.PI * 180.0);
             LocalFunctions.Add("degtorad", x => x[0] / 180.0 * Math.PI);
             LocalFunctions.Add("DirToRad", DirectionToRadFunction);
-            LocalFunctions.Add("dir2rad", DirectionToRadFunction); // 兼容旧名称
+            LocalFunctions.Add("dir2rad", DirectionToRadFunction); // old name
             LocalFunctions.Add("distance", DistanceFunction);
             LocalFunctions.Add("d", DistanceFunction);
             LocalFunctions.Add("manhattandistance", L1DistanceFunction);

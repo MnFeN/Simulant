@@ -24,6 +24,10 @@ namespace Simulant.UI
         private readonly PluginHost _host;
         private ToolStripMenuItem _addEntityMenuItem;
         private ToolStripMenuItem _debugMenuItem;
+        private ToolStripMenuItem _actionResourceMenuItem;
+        private ActionListForm _actionListForm;
+        private ToolStripMenuItem _exdResourceMenuItem;
+        private ExdBrowserForm _exdBrowserForm;
 
         internal SimulantUI(PluginHost host)
         {
@@ -35,6 +39,8 @@ namespace Simulant.UI
             presetControl.Bind(_host);
             UpdateTerritoryData(0);
             UpdateControlStates();
+            Disposed += (_, __) => _actionListForm?.Close();
+            Disposed += (_, __) => _exdBrowserForm?.Close();
         }
 
         private async void btnInitPlugin_Click(object sender, EventArgs e)
@@ -78,6 +84,28 @@ namespace Simulant.UI
                 ToolTipText = "单击测试网络 NPC；右键选择网络玩家、小队列表或本地三实体测试。运行时再次点击停止。"
             };
             debug.DropDownItems.AddRange(new ToolStripItem[] { _addEntityMenuItem, _debugMenuItem });
+            var resources = new ToolStripMenuItem("游戏资源");
+            _exdResourceMenuItem = new ToolStripMenuItem("通用 exd", null, (_, __) =>
+            {
+                if (_exdBrowserForm == null || _exdBrowserForm.IsDisposed)
+                {
+                    _exdBrowserForm = new ExdBrowserForm();
+                    _exdBrowserForm.Show(this);
+                }
+                else { _exdBrowserForm.Show(); _exdBrowserForm.Activate(); }
+            });
+            resources.DropDownItems.Add(_exdResourceMenuItem);
+            _actionResourceMenuItem = new ToolStripMenuItem("Action", null, (_, __) =>
+            {
+                if (_actionListForm == null || _actionListForm.IsDisposed)
+                {
+                    _actionListForm = new ActionListForm(_host);
+                    _actionListForm.Show(this);
+                }
+                else { _actionListForm.Show(); _actionListForm.Activate(); }
+            });
+            resources.DropDownItems.Add(_actionResourceMenuItem);
+            menu.Items.Add(resources);
             debug.DropDown.ShowItemToolTips = true;
             menu.Items.Add(debug);
             BindDebugMenuItem(menu, _addEntityMenuItem, ConfigureNetworkEntityMenu(), btnAddBNpc_Click);
@@ -152,6 +180,8 @@ namespace Simulant.UI
             SetFirewallToggleChecked(firewallPending);
             _debugMenuItem.Enabled = pluginReady;
             _addEntityMenuItem.Enabled = pluginReady || _host.HasPendingDebugEntityCleanup;
+            _actionResourceMenuItem.Enabled = gameDataReady;
+            _exdResourceMenuItem.Enabled = gameDataReady;
 
             // 防火墙开启：允许加载区域、退出模拟
             btnSimEnter.Enabled = firewallReady && !_switchingTerritory;

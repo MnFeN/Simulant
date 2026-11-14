@@ -78,6 +78,12 @@ try {
     $dataTestsPath = Join-Path $PSScriptRoot 'Native\GameDataTests.cs'
     $entries = @(
         @{ Name = 'GameDataTests'; Label = '客户端强类型数据读取'; Sources = @($dataTestsPath) },
+        @{ Name = 'ActionResourceTests'; Label = '技能检索、复制与窗体异步读取'; Sources = @(
+            (Join-Path $PSScriptRoot 'Native\ActionResourceTests.cs'),
+            (Join-Path $repositoryPath 'Simulant\Game\Data\ActionResource.cs')) },
+        @{ Name = 'ExdResourceTests'; Label = '通用游戏表、关联名称与异步预览'; Sources = @(
+            (Join-Path $PSScriptRoot 'Native\ExdResourceTests.cs'),
+            (Join-Path $repositoryPath 'Simulant\Game\Data\ExdResource.cs')) },
         @{ Name = 'LocalCreationTests'; Label = '本地创建与失败清理'; Sources = @($localTestsPath) },
         @{ Name = 'EntityIdAllocationTests'; Label = '实体 ID 分配'; Sources = @($localTestsPath, $idTestsPath) },
         @{ Name = 'PluginUnloadTests'; Label = '退出模拟并卸载插件'; Sources = @($localTestsPath, $unloadTestsPath) },
@@ -94,7 +100,7 @@ try {
             ('/out:' + $executablePath),
             ('/reference:' + $pluginPath),
             '/reference:System.Core.dll', '/reference:Microsoft.CSharp.dll', '/reference:System.Numerics.dll',
-            '/reference:System.Windows.Forms.dll', '/reference:System.Drawing.dll',
+            '/reference:System.Windows.Forms.dll', '/reference:System.Drawing.dll', '/reference:System.Xml.Linq.dll',
             ('/reference:' + (Join-Path $outputPath 'Advanced Combat Tracker.dll'))
         ) + $entry.Sources
         Write-Host ('编译故障注入入口：' + $entry.Label)
@@ -105,7 +111,7 @@ try {
         & $executablePath $GamePath
         if ($LASTEXITCODE -ne 0) { throw ($entry.Label + '验证失败，退出码：' + $LASTEXITCODE) }
     }
-    Write-Host '客户端数据及六组真实 DLL 故障注入验证全部通过。'
+    Write-Host '客户端数据、技能检索及六组真实 DLL 故障注入验证全部通过。'
     exit 0
 }
 catch {

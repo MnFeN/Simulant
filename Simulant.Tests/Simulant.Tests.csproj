@@ -21,6 +21,8 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Web.Extensions" />
     <Compile Include="Program.cs" />
+    <Compile Include="MathParserTests.cs" />
+    <Compile Include="..\Simulant\Utils\Maths\MathParser.cs"><Link>Utils\Maths\MathParser.cs</Link></Compile>
     <Compile Include="CosmoArrowTests.cs" />
     <Compile Include="..\Simulant\Content\U6b\Presets\宇宙天箭.Plan.cs"><Link>Content\宇宙天箭.Plan.cs</Link></Compile>
     <Compile Include="ConfigurationTests.cs" />
