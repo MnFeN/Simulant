@@ -23,6 +23,8 @@ namespace Simulant.Simulation.Runtime
             public uint SelectedTarget = 0xE0000000;
             public double NextAction, NextIdle, NextRefresh, NextFacing, SuspendedUntil;
             public MovePlan Move;
+            public bool Sprinting;
+            public SimScheduledAction SprintEffect;
         }
 
         private readonly object _gate = new object();
@@ -32,6 +34,7 @@ namespace Simulant.Simulation.Runtime
         private readonly SimCastController _casts;
         private readonly Random _random = new Random();
         private readonly Action _update;
+        private readonly Action<SimActor, bool> _sprintEffect;
         private SimScheduledAction _tick;
         private SimActor _target;
         private Vector2 _targetPosition;
@@ -41,8 +44,9 @@ namespace Simulant.Simulation.Runtime
         private const double SlideSeconds = 0.45;
         private const byte RunSpeed = 60;
 
-        internal SimActorBehaviorController(SimScheduler scheduler, SimMovementController movement, SimCastController casts)
-        { _scheduler = scheduler; _movement = movement; _casts = casts; _update = Tick; }
+        internal SimActorBehaviorController(SimScheduler scheduler, SimMovementController movement, SimCastController casts,
+            Action<SimActor, bool> sprintEffect = null)
+        { _scheduler = scheduler; _movement = movement; _casts = casts; _update = Tick; _sprintEffect = sprintEffect; }
 
         internal void Add(SimActor actor, SimActorBehaviorOptions options)
         {
@@ -89,14 +93,23 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        internal void Remove(SimActor actor) { lock (_gate) _states.Remove(actor); }
+        internal void Remove(SimActor actor)
+        {
+            lock (_gate)
+            {
+                if (!_states.TryGetValue(actor, out var state)) return;
+                state.SprintEffect?.Cancel();
+                _states.Remove(actor);
+            }
+            _sprintEffect?.Invoke(actor, false);
+        }
 
         /// <summary>显式低层移动接管路线；完成后再以新的站位为中心空闲活动。</summary>
         internal void ManualMove(SimActor actor)
         {
             lock (_gate)
                 if (_states.TryGetValue(actor, out var state))
-                { state.Move = null; state.ManualMovement = true; state.NextIdle = _scheduler.ElapsedSeconds + 5; QueueTick(); }
+                { SetSprintEffect(state, false); state.Move = null; state.ManualMovement = true; state.NextIdle = _scheduler.ElapsedSeconds + 5; QueueTick(); }
         }
 
         internal void ManualAction(SimActor actor)
@@ -114,6 +127,7 @@ namespace Simulant.Simulation.Runtime
                 if (!_states.TryGetValue(actor, out var state)) return;
                 CancelOwnCast(state);
                 _movement.Stop(actor);
+                SetSprintEffect(state, false);
                 state.Move = null;
                 state.ManualMovement = true;
                 state.SuspendedUntil = Math.Max(state.SuspendedUntil, _scheduler.ElapsedSeconds + seconds);
@@ -139,7 +153,7 @@ namespace Simulant.Simulation.Runtime
                     if (now < state.SuspendedUntil) continue;
                     if (!state.Initialized)
                     { state.Anchor = actor.Pos; state.Initialized = true; state.NextIdle = now + 3 + _random.NextDouble() * 3; }
-                    if (actor.Entity.HP == 0) { CancelOwnCast(state); _movement.Stop(actor); continue; }
+                    if (actor.Entity.HP == 0) { CancelOwnCast(state); _movement.Stop(actor); SetSprintEffect(state, false); continue; }
                     UpdateMovement(state, now);
                     RefreshCombat(state, now, inCombat, targetable);
                     if (!inCombat) { CancelOwnCast(state); continue; }
@@ -260,15 +274,19 @@ namespace Simulant.Simulation.Runtime
 
         public void Dispose()
         {
+            State[] states;
             lock (_gate)
             {
                 _disposed = true;
                 _tick?.Cancel();
                 _tick = null;
                 // 角色的读条和原生移动由原有控制器收尾，避免重复清理或打断失败现场的特效。
+                states = new List<State>(_states.Values).ToArray();
+                foreach (var state in states) state.SprintEffect?.Cancel();
                 _states.Clear();
                 _target = null;
             }
+            foreach (var state in states) _sprintEffect?.Invoke(state.Actor, false);
         }
     }
 }

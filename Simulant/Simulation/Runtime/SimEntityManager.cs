@@ -73,7 +73,7 @@ namespace Simulant.Simulation.Runtime
                     _networkGeneration++;
                     _casts = new SimCastController(value);
                     _movement = new SimMovementController(value);
-                    _behaviors = new SimActorBehaviorController(value, _movement, _casts);
+                    _behaviors = new SimActorBehaviorController(value, _movement, _casts, SetSprintEffect);
                     _acceptingEntities = true;
                 }
             }

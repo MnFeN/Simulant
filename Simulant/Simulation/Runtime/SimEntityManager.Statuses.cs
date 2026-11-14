@@ -19,6 +19,19 @@ namespace Simulant.Simulation.Runtime
 
         private readonly List<OwnedStatus> _statuses = new List<OwnedStatus>();
 
+        private void SetSprintEffect(SimActor actor, bool enabled)
+        {
+            const ushort sprint = 50;
+            lock (_gate)
+            {
+                if (enabled)
+                {
+                    if (_acceptingEntities && actor.IsActive) SetStatus(actor, sprint, 10, 0, actor);
+                }
+                else TryCleanup(() => RemoveStatus(actor, sprint));
+            }
+        }
+
         /// <summary>在空状态槽中施加本会话的点名；重复调用只更新自己持有的同种状态。</summary>
         public void SetStatus(SimActor actor, ushort statusId, float seconds, ushort param, SimActor source)
         {

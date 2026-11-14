@@ -4,6 +4,7 @@ using Simulant.Simulation.Timeline;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game.Character;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
 using ActionRow = Lumina.Excel.Sheets.Action;
@@ -12,6 +13,82 @@ namespace Simulant.Tests
 {
     internal static class BehaviorMovementTests
     {
+        public static void TightDeadlinesUseSprintButNeverExceedItsLimit()
+        {
+            Exception failure = null;
+            var sprintEffects = new HashSet<SimActor>();
+            var sprintCount = new Dictionary<SimActor, int>();
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; done.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts, (actor, enabled) =>
+            {
+                if (enabled)
+                {
+                    sprintEffects.Add(actor);
+                    sprintCount.TryGetValue(actor, out var count);
+                    sprintCount[actor] = count + 1;
+                }
+                else sprintEffects.Remove(actor);
+            }))
+            {
+                var normal = CreateActor(behavior, movement, casts);
+                var sprint = CreateActor(behavior, movement, casts);
+                var delayed = CreateActor(behavior, movement, casts);
+                var normalMax = 0;
+                var sprintMax = 0;
+                var delayedMax = 0;
+                normal.Entity.OnActorMove = (pos, _, speed) => { normalMax = Math.Max(normalMax, speed); normal.Entity.Pos3D = pos; };
+                sprint.Entity.OnActorMove = (pos, _, speed) => { sprintMax = Math.Max(sprintMax, speed); sprint.Entity.Pos3D = pos; };
+                delayed.Entity.OnActorMove = (pos, _, speed) =>
+                {
+                    delayedMax = Math.Max(delayedMax, speed);
+                    if (scheduler.ElapsedSeconds >= 0.4) delayed.Entity.Pos3D = pos;
+                };
+                normal.MoveForMechanic(new Vector2(8, 0), 3, 4, urgent: true);
+                sprint.MoveForMechanic(new Vector2(8, 0), 1.55, 4, urgent: true);
+                delayed.MoveForMechanic(new Vector2(8, 0), 1.95, 4, urgent: true);
+                var rejected = false;
+                try { normal.MoveForMechanic(new Vector2(100, 0), 1, 4, urgent: true); }
+                catch (InvalidOperationException) { rejected = true; }
+                Assert(rejected, "即使冲刺也无法到达的目标仍应报错，不能无限加速。");
+                scheduler.Schedule(1.55, () => Assert(Vector2.Distance(sprint.Pos, new Vector2(8, 0)) < 0.025,
+                    "正常速度来不及的移动应自动冲刺到位。"));
+                scheduler.Schedule(2.1, () =>
+                {
+                    Assert(sprintEffects.Count == 0 && !sprintCount.ContainsKey(normal) &&
+                        sprintCount[sprint] == 1 && sprintCount[delayed] == 1,
+                        "只有冲刺才添加演出状态，到达目的地后应移除。");
+                    Assert(normalMax == 60 && sprintMax == 78 && delayedMax == 78,
+                        "正常移动保持 6 米/秒，接令时或途中来不及时最多使用 7.8 米/秒。");
+                    Assert(Vector2.Distance(delayed.Pos, new Vector2(8, 0)) < 0.025, "途中延迟后应冲刺赶上目标。");
+                    sprint.MoveForMechanic(new Vector2(10, 0), 3.5, 4, urgent: true);
+                    sprintMax = 0;
+                });
+                scheduler.Schedule(3.6, () =>
+                {
+                    Assert(sprintMax == 60, "下一段时间充裕的移动应恢复正常跑速。");
+                    sprint.MoveForMechanic(new Vector2(18, 0), 5.15, 6, urgent: true);
+                });
+                scheduler.Schedule(3.9, () =>
+                {
+                    Assert(sprintEffects.Contains(sprint) && sprintCount[sprint] == 2,
+                        "下一次冲刺应重新添加状态，不受冷却限制。");
+                    sprint.SuspendBehavior(1);
+                });
+                scheduler.Schedule(4.1, () =>
+                {
+                    Assert(!sprintEffects.Contains(sprint), "移动被暂停时也必须移除冲刺状态。");
+                    done.Set();
+                });
+                scheduler.Start();
+                Assert(done.Wait(6000), "自动冲刺检查超时。");
+                scheduler.Cancel();
+                Assert(failure == null, "自动冲刺检查失败：" + failure);
+            }
+        }
+
         public static void NewMechanicMoveWaitsForKnockbackToFinish()
         {
             Exception failure = null;
