@@ -48,9 +48,10 @@ namespace Simulant.Core.Entity
         public uint TetherTargetId = NoTarget;
         public ushort TetherId;
 
+        /// <summary>显式武器模型；为 0 且使用表内默认装备时，继承装备表中的武器。</summary>
         public ulong MainhandWeaponModel;
         public ulong OffhandWeaponModel;
-        /// <summary>可选的人形外观；提供时必须恰好包含 10 个装备槽。</summary>
+        /// <summary>提供时必须恰好包含 10 个装备槽；使用表内模型且未提供时，读取 BNpcBase 关联的 NpcEquip。</summary>
         public uint[] Equipment;
         /// <summary>可选的人形自定义数据；提供时必须恰好包含 26 字节。</summary>
         public byte[] Customize;
@@ -118,6 +119,9 @@ namespace Simulant.Core.Entity
                     OffhandWeaponModel = OffhandWeaponModel
                 }
             };
+            // 人形、亚人模型的身体也可能属于装备部件；只传 ModelChara 会生成看不见的空模型。
+            if (!ModelCharaId.HasValue && equipment == null && baseRow.NpcEquip.RowId != 0)
+                ApplyNpcEquipment(ref packet.Common, ReadRow<NpcEquip>(baseRow.NpcEquip.RowId, "战斗 NPC 装备"));
             // 输入数组只复制到此次包的固定缓冲区，不保存引用，也不改写可复用的生成参数。
             for (var i = 0; i < nameBytes.Length; i++) packet.Common.Name[i] = nameBytes[i];
             if (equipment != null)
@@ -125,6 +129,34 @@ namespace Simulant.Core.Entity
             if (customize != null)
                 for (var i = 0; i < customize.Length; i++) packet.Common.Customize[i] = customize[i];
             return packet;
+        }
+
+        private static unsafe void ApplyNpcEquipment(ref CommonSpawnData common, NpcEquip row)
+        {
+            if (common.MainhandWeaponModel == 0)
+                common.MainhandWeaponModel = row.ModelMainHand | (ulong)row.DyeMainHand.RowId << 48 | (ulong)row.Dye2MainHand.RowId << 56;
+            if (common.OffhandWeaponModel == 0)
+                common.OffhandWeaponModel = row.ModelOffHand | (ulong)row.DyeOffHand.RowId << 48 | (ulong)row.Dye2OffHand.RowId << 56;
+            var slots = new (uint Model, uint Stain, uint Stain2)[]
+            {
+                (row.ModelHead, row.DyeHead.RowId, row.Dye2Head.RowId),
+                (row.ModelBody, row.DyeBody.RowId, row.Dye2Body.RowId),
+                (row.ModelHands, row.DyeHands.RowId, row.Dye2Hands.RowId),
+                (row.ModelLegs, row.DyeLegs.RowId, row.Dye2Legs.RowId),
+                (row.ModelFeet, row.DyeFeet.RowId, row.Dye2Feet.RowId),
+                (row.ModelEars, row.DyeEars.RowId, row.Dye2Ears.RowId),
+                (row.ModelNeck, row.DyeNeck.RowId, row.Dye2Neck.RowId),
+                (row.ModelWrists, row.DyeWrists.RowId, row.Dye2Wrists.RowId),
+                (row.ModelRightRing, row.DyeRightRing.RowId, row.Dye2RightRing.RowId),
+                (row.ModelLeftRing, row.DyeLeftRing.RowId, row.Dye2LeftRing.RowId)
+            };
+            fixed (uint* equipment = common.Equipment)
+            fixed (byte* stain2 = common.ModelStain2)
+                for (var i = 0; i < slots.Length; i++)
+                {
+                    equipment[i] = slots[i].Model | slots[i].Stain << 24;
+                    stain2[i] = checked((byte)slots[i].Stain2);
+                }
         }
 
         private static T ReadRow<T>(uint id, string description) where T : struct, IExcelRow<T>
