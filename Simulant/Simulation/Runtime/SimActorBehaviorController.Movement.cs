@@ -15,6 +15,91 @@ namespace Simulant.Simulation.Runtime
             public double Arrival, NotBefore, Latest, HoldUntil;
             public bool Immediate, StageFirst, Arrived, Running;
             public byte Speed = RunSpeed;
+            public Func<SimPosition> Follow;
+            public double SampleFirst, SampleSecond, NorthHeading;
+        }
+
+        internal void FollowForMechanic(SimActor actor, Func<SimPosition> destination, double until, double northHeading)
+        {
+            if (destination == null)
+                throw new ArgumentNullException(nameof(destination));
+
+            if (!Finite(until) || until <= _scheduler.ElapsedSeconds)
+                throw new ArgumentOutOfRangeException(nameof(until), "跟随结束时间必须为未来的有限时间。");
+
+            lock (_gate)
+            {
+                if (_disposed || !_states.TryGetValue(actor, out var state) || !actor.IsActive)
+                    throw new InvalidOperationException("只有本会话生成的有效网络假玩家可以接收机制跟随意图。");
+
+                var plan = new MovePlan
+                {
+                    Follow = destination,
+                    SampleFirst = _random.NextDouble(),
+                    SampleSecond = _random.NextDouble(),
+                    NorthHeading = northHeading,
+                    Latest = until,
+                    HoldUntil = until,
+                    Immediate = true
+                };
+                plan.Destination = SampleFollowTarget(plan);
+
+                if (_scheduler.ElapsedSeconds >= state.SuspendedUntil)
+                    _movement.Stop(actor);
+
+                SetSprintEffect(state, false);
+                CancelOwnCast(state);
+                state.Move = plan;
+                state.Anchor = plan.Destination;
+                state.Initialized = true;
+                state.ManualMovement = false;
+                QueueTick();
+            }
+        }
+
+        private static Vector2 SampleFollowTarget(MovePlan plan)
+        {
+            var target = plan.Follow().Sample(plan.SampleFirst, plan.SampleSecond, plan.NorthHeading);
+
+            if (Math.Abs(target.X) > 1000 || Math.Abs(target.Y) > 1000)
+                throw new ArgumentOutOfRangeException(nameof(target), "跟随目的地必须位于网络坐标范围内。");
+
+            return target;
+        }
+
+        private void UpdateFollowing(State state, MovePlan plan, double now)
+        {
+            if (now >= plan.HoldUntil)
+            {
+                _movement.Stop(state.Actor);
+                SetSprintEffect(state, false);
+                state.Move = null;
+                state.Anchor = state.Actor.Pos;
+                state.NextIdle = now + 3;
+                return;
+            }
+
+            plan.Destination = SampleFollowTarget(plan);
+            plan.Points.Clear();
+            plan.Points.Add(plan.Destination);
+            plan.Point = 0;
+            state.Anchor = plan.Destination;
+            var position = state.Actor.Pos;
+            plan.Arrived = Vector2.Distance(position, plan.Destination) <= SimMovementController.NetworkArrivalTolerance;
+
+            if (plan.Arrived)
+            {
+                _movement.Stop(state.Actor);
+                SetSprintEffect(state, false);
+                plan.Speed = RunSpeed;
+                return;
+            }
+
+            // 目标会随玩家改变，尽力追赶即可；是否赶上由机制按实际位置判断。
+            TrySprint(plan, position, now);
+            CancelOwnCast(state);
+            _movement.FollowNetworkTo(state.Actor, plan.Destination, plan.Speed);
+            SetSprintEffect(state, plan.Speed > RunSpeed);
         }
 
         /// <summary>绝对时间均以会话调度器为基准；保持时间覆盖最后一次相关机制判定。</summary>
@@ -97,9 +182,6 @@ namespace Simulant.Simulation.Runtime
 
                     TrySprint(plan, position, now);
 
-                    if (now + TravelTime(position, plan) > arriveBy)
-                        throw new InvalidOperationException($"假玩家 {actor.Job}（{actor.Id:X8}）的移动窗口不足，即使以 1.3 倍速冲刺也无法在截止前到达。起点（{position.X:0.00}, {position.Y:0.00}），终点（{destination.X:0.00}, {destination.Y:0.00}），剩余 {arriveBy - now:0.00} 秒，需要 {TravelTime(position, plan):0.00} 秒。");
-
                     // 延迟到达只推迟实体自己的出发安排，仍预留更新余量；关闭或紧急时尽早出发。
                     var earliest = now + TravelTime(position, plan);
                     plan.Arrival = Math.Max(earliest, plan.Arrival);
@@ -170,6 +252,12 @@ namespace Simulant.Simulation.Runtime
                 return;
             }
 
+            if (plan.Follow != null)
+            {
+                UpdateFollowing(state, plan, now);
+                return;
+            }
+
             if (plan.Arrived)
             {
                 if (now >= plan.HoldUntil)
@@ -197,9 +285,7 @@ namespace Simulant.Simulation.Runtime
                 }
             }
 
-            if (now > plan.Latest + 0.25)
-                throw new InvalidOperationException($"假玩家 {actor.Job}（{actor.Id:X8}）未按时到位，距目的地 {Vector2.Distance(position, plan.Destination):0.00} 米；已停止模拟，请检查移动窗口。");
-
+            // 到位时间只用于规划和冲刺，迟到也继续赶路；机制是否成功按判定时的实际位置决定。
             // 延迟或原生插值较慢时，先删去可选绕路，再按需要开启冲刺。
             if (plan.Points.Count - plan.Point > 1 && now + TravelTime(position, plan) > plan.Latest - 0.1)
             {

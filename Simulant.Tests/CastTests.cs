@@ -13,6 +13,29 @@ namespace Simulant.Tests
 {
     internal static class CastTests
     {
+        public static void CustomCastTimeControlsNativeCastCompletionAndOmen()
+        {
+            using (var scene = new CastTestScene())
+            {
+                scene.AddAction(1, 10, omen: true);
+                var fast = scene.Actor(0);
+                var normal = scene.Actor(1);
+                fast.Cast(1, omenDelay: 2, castTime: 1);
+                normal.Cast(1, omenDelay: null);
+                Assert(fast.Entity.CastDuration == 1 && normal.Entity.CastDuration == 10,
+                    "指定时长必须写入原生读条；未指定时仍沿用技能表。");
+                Assert(scene.Casts.Remaining(fast) == 1 && scene.Casts.Remaining(normal) == 10,
+                    "读条剩余时间必须使用实际咏唱时长。");
+                scene.RunPast(1.1);
+                Assert(fast.Entity.CastingActionId == 0 && fast.Entity.PlayedTimelines.Single() == 101,
+                    "缩短后的读条必须按新期限完成并播放技能。");
+                Assert(normal.Entity.CastingActionId == 1 && normal.Entity.PlayedTimelines.Count == 0,
+                    "同技能的普通读条不应被加速。");
+                Assert(TriggernometryInterop.Commands.Count == 0,
+                    "超过新咏唱期限的延迟预兆不应出现。");
+            }
+        }
+
         public static void ReplacingCastCancelsOldCompletionAndDelayedOmen()
         {
             using (var scene = new CastTestScene())
@@ -104,6 +127,27 @@ namespace Simulant.Tests
                 Assert(TriggernometryInterop.Commands.Count(command => !IsRemoval(command)) == 1 &&
                     TriggernometryInterop.Commands.Count(IsRemoval) == 1,
                     "重复停止只能移除一次旧读条的预兆。");
+            }
+        }
+
+        public static void ExplicitOmenTransformDoesNotReadPendingActorMove()
+        {
+            using (var scene = new CastTestScene())
+            {
+                scene.AddAction(1, 1, omen: true);
+                var actor = scene.Actor(0);
+                actor.Pos = new Vector2(100, 100);
+                actor.Heading = 0;
+                actor.Cast(1, omenPosition: new Vector3(87, 92, 3), omenHeading: 1.25f);
+                var command = TriggernometryInterop.Commands.Single();
+                Assert(command.Contains("O: 87, 92, 3\n") && command.Contains("θ: 1.25\n"),
+                    "实体仍在场中朝南时，光波预兆也必须使用调用者指定的落点与方向。");
+                actor.StopCasting();
+                actor.Pos = new Vector2(101, 102);
+                actor.Cast(1);
+                command = TriggernometryInterop.Commands.Last();
+                Assert(command.Contains("O: 101, 102, 0\n") && command.Contains("θ: 0\n"),
+                    "下一次未指定位置的读条必须恢复读取实体当前位置，不能继承旧预兆的覆盖值。");
             }
         }
 

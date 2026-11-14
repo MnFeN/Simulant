@@ -5,6 +5,7 @@ namespace Simulant.Tests.Native
     using Simulant.Game;
     using Simulant.Game.FFCS.Client.Game.Character;
     using Simulant.Game.FFCS.Client.Game.Object;
+    using Simulant.Game.FFCS.Client.Network;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -64,6 +65,37 @@ namespace Simulant.Tests.Native
                 Assert(scene.Plugin.Headers[1].GlobalSequence != header.GlobalSequence, "连续演出应使用不同结算序号。");
                 Throws<ArgumentException>(() => scene.Plugin.Call(ActionEffectPlugin.Function, 0x40FF2222u,
                     new IntPtr(0x330000), position, header, new byte[64], target));
+            }
+
+            using (var scene = new Scene())
+            {
+                var address = new IntPtr(0x300000);
+                var destination = new Vector3(PacketCodec.DecodeUShortCoord(0x8B76),
+                    PacketCodec.DecodeUShortCoord(0x8DCC), PacketCodec.DecodeUShortCoord(0x7FFF));
+
+                foreach (var kind in new[]
+                {
+                    ObjectKind.Pc, ObjectKind.BattleNpc
+                })
+                {
+                    var registry = new EntityRegistry(_ => new EntityObservation(address, 0x100372A9, kind), 1);
+                    var actor = (CoreCharacter)registry.Get(0);
+                    scene.Memory.Bytes.Put(address + 0x78, 0x100372A9u);
+                    actor.WarpWithAnimation(destination, PacketCodec.DecodeUShortHeading(0xA6ED), 8488);
+                    var args = scene.Plugin.ActorControls.Last();
+                    Assert((uint)args[0] == actor.Id && (ushort)args[1] == 0xF1 &&
+                        (uint)args[2] == 0x8B767FFF && (uint)args[3] == 0x8DCCA6ED && (uint)args[4] == 0x12128,
+                        "自身和网络角色必须发送与回放一致的回返坐标、面向、标志及动画编号。");
+                    Assert((uint)args[5] == 0 && scene.Memory.Bytes.Allocations.Count == 0 && scene.Memory.Bytes.WriteCount == 0,
+                        "传送由原生动画处理，不能提前写位置、发送即时瞬移或分配多余缓冲区。");
+                    Throws<ArgumentOutOfRangeException>(() => actor.WarpWithAnimation(new Vector3(float.NaN), 0, 8488));
+                    Throws<ArgumentOutOfRangeException>(() => actor.WarpWithAnimation(destination, float.NaN, 8488));
+                    Throws<ArgumentOutOfRangeException>(() => actor.WarpWithAnimation(destination, 0, 0));
+                    registry.Reset();
+                    Throws<InvalidOperationException>(() => actor.WarpWithAnimation(destination, 0, 8488));
+                }
+
+                Assert(scene.Plugin.ActorControls.Count == 2, "无效位置、动画或旧实体不得触发原生传送。");
             }
         }
 
@@ -182,22 +214,26 @@ namespace Simulant.Tests.Native
             internal readonly ActionEffectPlugin Plugin;
             private readonly NamazuPlugin _previousPlugin;
             private readonly IntPtr _previousFunction;
+            private readonly IntPtr _previousControlFunction;
 
             internal Scene()
             {
                 _previousPlugin = NamazuInterop.Plugin;
                 _previousFunction = ActionEffectHandler.ReceiveFuncPtr;
+                _previousControlFunction = PacketDispatcher.HandleActorControlFuncPtr;
                 Plugin = new ActionEffectPlugin(Memory);
                 typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
                 {
                     new NamazuPlugin(Plugin)
                 });
                 ActionEffectHandler.ReceiveFuncPtr = ActionEffectPlugin.Function;
+                PacketDispatcher.HandleActorControlFuncPtr = ActionEffectPlugin.ControlFunction;
             }
 
             public void Dispose()
             {
                 ActionEffectHandler.ReceiveFuncPtr = _previousFunction;
+                PacketDispatcher.HandleActorControlFuncPtr = _previousControlFunction;
                 typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
                 {
                     _previousPlugin
@@ -245,14 +281,25 @@ namespace Simulant.Tests.Native
         public readonly object CallScheduler = new object();
         private readonly object PluginUi = new object();
         public static readonly IntPtr Function = new IntPtr(0x202);
+        public static readonly IntPtr ControlFunction = new IntPtr(0x203);
         public readonly ActionEffectMemory Memory;
         public bool FailCall;
         public readonly List<ActionEffectHandler.Header> Headers = new List<ActionEffectHandler.Header>();
         public readonly List<Vector3> Positions = new List<Vector3>();
         public readonly List<ulong> Targets = new List<ulong>();
+        public readonly List<object[]> ActorControls = new List<object[]>();
         public ActionEffectPlugin(ActionEffectMemory memory)
         {
             Memory = memory;
+        }
+
+        public T Call<T>(IntPtr function, params object[] args)
+            where T : struct
+        {
+            NativeCallsTests.Assert(function == ControlFunction && args.Length == 12 &&
+                args.All(arg => arg is uint || arg is ushort), "传送控制只能传原生标量，不能传入坐标结构体。");
+            ActorControls.Add(args);
+            return (T)(object)IntPtr.Zero;
         }
 
         public void Call(IntPtr function, params object[] args)

@@ -16,6 +16,58 @@ namespace Simulant.Tests
     {
         private const int TimeoutMs = 5000;
 
+        public static void EchoActionsWorkOutsideSessionsAndSurviveSessionStop()
+        {
+            var host = new PluginHost
+            {
+                FirewallEnabled = true
+            };
+            var source = new Advanced_Combat_Tracker.FormActMain();
+            var player = host.EntitySpawner.World.CreateCharacter(0);
+            host.EntityProvider.Player = player;
+            host.Commands.Start(source);
+            using (var probe = new SessionProbe())
+            using (var applied = new ManualResetEventSlim())
+            using (var session = CreateSession(host, probe))
+            {
+                var callbackThread = 0;
+                player.Native.StatusManager.AfterSet = _ =>
+                {
+                    callbackThread = Thread.CurrentThread.ManagedThreadId;
+                    applied.Set();
+                };
+                try
+                {
+                    source.Emit(false, "[12:34:56.789] 00 00:0038::sim ac 亲疏自行");
+                    Wait(applied, "没有副本时执行防击退命令");
+                    Assert(callbackThread != Thread.CurrentThread.ManagedThreadId,
+                        "原生状态操作必须交给调度线程，不能阻塞日志线程。");
+                    session.Start();
+                    Wait(probe.Started, "启动副本");
+                    session.Stop();
+                    Assert(player.HasStatus(1209), "停止副本不能清除防火墙期间独立施加的技能状态。");
+
+                    applied.Reset();
+                    source.Emit(false, "[12:34:56.789] 00 00:0038::sim ac 冲刺");
+                    Wait(applied, "停止副本后使用冲刺");
+                    Assert(player.HasStatus(50) && player.Native.StatusManager.GetStatus(1).RemainingTime.Get() == 10 &&
+                        player.Native.StatusManager.GetStatus(1).Param.Get() == 30,
+                        "停止副本后仍应获得十秒冲刺，并携带实际加速 30% 的状态参数。");
+                    host.FirewallEnabled = false;
+                    host.PlayerActions.Reset();
+                    var calls = player.Native.StatusManager.SetCalls;
+                    source.Emit(false, "[12:34:56.789] 00 00:0038::sim ac 沉稳咏唱");
+                    Assert(player.Native.StatusManager.SetCalls == calls && !player.HasStatus(50) && !player.HasStatus(1209),
+                        "关闭防火墙后应清除模拟技能状态并忽略命令。");
+                }
+                finally
+                {
+                    host.Commands.Stop();
+                    host.PlayerActions.Reset();
+                }
+            }
+        }
+
         public static void SessionsUseIndependentSnapshotsOfGlobalBehavior()
         {
             var host = new PluginHost();
@@ -40,6 +92,41 @@ namespace Simulant.Tests
                 first.Stop();
                 first.Start();
                 Assert(firstProbe.Logic.EntityManager.PlayerBehavior.IdleRadius == 2.1, "再次开始模拟应读取新保存的设置。");
+            }
+        }
+
+        public static void ReportedMechanicFailureDoesNotSendAnotherMessage()
+        {
+            using (var probe = new SessionProbe())
+            {
+                var host = new PluginHost();
+                probe.StartAction = () =>
+                {
+                    var manager = probe.Logic.EntityManager;
+                    manager.Party.Add(manager.Attach(host.EntitySpawner.World.CreateCharacter(0)));
+                    manager.Party.Add(manager.Attach(host.EntitySpawner.World.CreateCharacter(2)));
+                    manager.RunMechanic(new AreaMechanic
+                    {
+                        Name = "龙头接触爆炸",
+                        Area = Simulant.Simulation.Geometry.ActionArea.Circle(12),
+                        RequiredPlayers = 1,
+                        Failed = result =>
+                        {
+                            TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n已经输出完整错误");
+                            result.FailureReported = true;
+                        }
+                    });
+                };
+                using (var session = CreateSession(host, probe))
+                {
+                    session.Start();
+                    Assert(SpinWait.SpinUntil(() => !session.IsRunning && session.HasPendingCleanup, TimeoutMs),
+                        "已报告的机制错误仍应立即中断流程并保留现场。");
+                    session.Stop();
+                    Assert(TriggernometryInterop.ChatCommands.Count == 1 &&
+                        TriggernometryInterop.ChatCommands[0].Contains("已经输出完整错误"),
+                        "详细报告已经发送后，不应再补发一条人数判定的简略错误。");
+                }
             }
         }
 
@@ -900,6 +987,25 @@ namespace Simulant.Core
     public sealed class PluginHost
     {
         internal Configuration Configuration { get; set; } = new Configuration();
+        internal SimCommandListener Commands { get; } = new SimCommandListener(_ => { });
+        internal SimActionService PlayerActions { get; }
+        internal bool FirewallEnabled { get; set; }
+        internal bool PluginReady { get; set; } = true;
+        internal bool Disposed { get; set; }
+        internal bool IsSwitchingTerritory { get; set; }
+        internal TestPlayerProvider EntityProvider { get; } = new TestPlayerProvider();
+
+        public PluginHost()
+        {
+            PlayerActions = new SimActionService(this);
+            Commands.Received += PlayerActions.Receive;
+        }
+
+        internal sealed class TestPlayerProvider
+        {
+            internal Entity.Character Player;
+            internal Entity.Character GetMyself() => Player;
+        }
 
         internal readonly Entity.EntitySpawner EntitySpawner = new Entity.EntitySpawner();
         internal readonly ConcurrentQueue<string> Errors = new ConcurrentQueue<string>();

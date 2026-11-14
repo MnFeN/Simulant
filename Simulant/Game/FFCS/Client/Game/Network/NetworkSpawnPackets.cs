@@ -1,13 +1,18 @@
+using System;
 using System.Runtime.InteropServices;
 
 namespace Simulant.Game.FFCS.Client.Game.Network
 {
     public unsafe partial struct CommonSpawnData
     {
+        public const int StatusCapacity = 30;
+
         [FieldOffset(0x10)]
         public ulong MainhandWeaponModel;
         [FieldOffset(0x18)]
         public ulong OffhandWeaponModel;
+        [FieldOffset(0x88)]
+        public fixed byte Statuses[StatusCapacity * 0xC];
         [FieldOffset(0x1FC)]
         public fixed uint Equipment[10];
         [FieldOffset(0x224)]
@@ -18,6 +23,15 @@ namespace Simulant.Game.FFCS.Client.Game.Network
         public fixed byte Name[32];
         [FieldOffset(0x252)]
         public fixed byte Customize[26];
+
+        public void SetStatus(int index, StatusEffect status)
+        {
+            if ((uint)index >= StatusCapacity)
+                throw new ArgumentOutOfRangeException(nameof(index), "生成包的状态索引必须为 0-29。");
+
+            fixed (byte* statuses = Statuses)
+                ((StatusEffect*)statuses)[index] = status;
+        }
     }
 
     /// <summary>当前客户端角色删除分支使用的网络槽位编号。</summary>

@@ -102,3 +102,11 @@ CSV 使用带 BOM 的 UTF-8，文本列保留引号；对象 ID 是该记录的�
 5. 把已确认事件转换为项目现有时间轴节点，而非按录像原始 ID 盲目回灌所有包；仍需实机对照客户端本地动画和场景脚本的结果。
 
 回归测试位于 `Simulant.Tests/ReplayTests.cs`，使用合成数据覆盖完整容器、错误边界、短读、未收尾元数据、原始顺序、流生命周期与识别歧义，不提交真实回放数据。
+
+## 咏唱包的预兆延迟
+
+FFCS 的 [ActorCastPacket 定义](https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/Game/Network/ActorCastPacket.cs) 明确将负载偏移 `0x03` 定义为 `byte OmenDelay`，除以 `10.0f` 得到延后显示预兆的秒数。`0x08` 则是独立的 `float CastTime`。不要沿用部分其他库对 `0x03` 的旧名称 `BaseCastTime100ms`，也不能只从技能表的 `Cast100ms` 推断延迟。
+
+宝宝椅绝欧 P6 场外步进地火监听的读条为 `0x7BAD`「波动炮」，当前客户端技能表咏唱为 12 秒，预兆为 Omen 145（`yazirushi1o0c`）。当前本地回放目录及子目录中未找到 ContentFinderCondition 908（欧米茄绝境验证战）的文件，因此暂不填入这一招的实际网络延迟值。
+
+已检查时间结晶回放：六个 `0x9D6B`「巨漩涡」咏唱包的 `OmenDelay` 都是 0，`CastTime` 都是 1.2 秒。本轮仅记录字段调查，保留现有沙漏表现；后续回放导入时应同时保存咏唱时间和预兆延迟，分别驱动读条与预兆显示。

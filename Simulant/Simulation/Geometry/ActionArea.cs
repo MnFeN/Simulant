@@ -117,6 +117,44 @@ namespace Simulant.Simulation.Geometry
                 && Math.Abs(right) <= _secondary + BoundaryTolerance;
         }
 
+        /// <summary>判断技能范围是否接触圆形碰撞体；玩家站位仍使用 Contains 的中心点判定。</summary>
+        public bool IntersectsCircle(Vector2 center, float radius, Vector2 origin, float heading = 0)
+        {
+            RequireNonNegative(radius, nameof(radius), "目标碰撞半径");
+
+            if (Contains(center, origin, heading))
+                return true;
+
+            var dx = (double)center.X - origin.X;
+            var dy = (double)center.Y - origin.Y;
+            var distance = Math.Sqrt(dx * dx + dy * dy);
+            var reach = radius + BoundaryTolerance;
+
+            if (_kind == AreaKind.Circle || _kind == AreaKind.Donut)
+                return distance <= _extent + reach && (_kind != AreaKind.Donut || distance + reach >= _secondary);
+
+            var forward = dx * Math.Sin(heading) + dy * Math.Cos(heading);
+            var right = dx * Math.Cos(heading) - dy * Math.Sin(heading);
+
+            if (_kind == AreaKind.Rectangle)
+            {
+                var beyondEnd = Math.Max(-forward, Math.Max(0, forward - _extent));
+                var beyondSide = Math.Max(0, Math.Abs(right) - _secondary);
+                return beyondEnd * beyondEnd + beyondSide * beyondSide <= reach * reach;
+            }
+
+            // 扇形边界由两条半径和外侧圆弧组成，取碰撞体中心到边界的最短距离。
+            if (forward >= distance * _halfAngleCosine && Math.Abs(distance - _extent) <= reach)
+                return true;
+
+            var edgeForward = _halfAngleCosine;
+            var edgeRight = Math.Sqrt(Math.Max(0, 1 - edgeForward * edgeForward));
+            var along = Math.Max(0, Math.Min(_extent, forward * edgeForward + Math.Abs(right) * edgeRight));
+            var awayForward = forward - along * edgeForward;
+            var awayRight = Math.Abs(right) - along * edgeRight;
+            return awayForward * awayForward + awayRight * awayRight <= reach * reach;
+        }
+
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         private static void RequirePositive(float value, string parameter, string description)

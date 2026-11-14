@@ -61,6 +61,8 @@ EntityManager.SetPartyEnmity(boss, 100, 80, 20, 15, 40, 35, 30, 25);
 
 该调用不计算技能伤害或自动生成仇恨；数值为 0-100，目标必须是本地模拟生成的有效战斗 NPC。发送前按仇恨降序排列，通过原生 UpdateHate 收包入口更新。会话共用一个每 250 ms 的检查节点，仅在选中相应 Boss 且目标切换或仇恨数据变化时发送，不按角色分配计时器。它不替用户选择目标，也不自动改变 Boss 的攻击目标。
 
+当前国服客户端的 UpdateHate 收包函数只更新成员 ID、百分比和人数，不写 `HateTargetId`（`Hate + 0x104`）。读回校验不能要求该目标 ID 与发包参数一致；发送前单独确认选中目标即可。显示数据暂时未同步时留待下一次补发，不抛异常中断模拟。只需假队员攻击、Boss 固定点名的预设直接用 `SetCombatTarget` 和技能目标，无须建立仇恨列表。
+
 自身原先未入战时，通过 `ActorControl SetBattle (0x04, 1)` 临时入战，停止时恢复；原先已入战则保持原状态。此流程参考 [Sapphire Player.cpp](https://github.com/SapphireServer/Sapphire/blob/aab9cb2347eb0ec42e85ee3e117a0c177b9b3070/src/world/Actor/Player.cpp)，当前目标仇恨包和函数入口使用 [国服 KodakkuAssist 的定义](https://github.com/moewcorp/KodakkuAssist/blob/e5bd79f841fe483e14a3dd22a04f845eab239026/KodakkuAssist/Module/GameEvent/Types/EnmityUpdate.cs)。原生血条与仇恨显示的修复效果仍需国服 7.57 实测，入口见 [实体实机测试](EntityTests.md)。
 
 首次显示前保存原小队名单与仇恨；恢复通过同一个原生收包入口完成，再补回全部 60 个状态及其计数标志、成员姓名、坐标、护盾和标志。快照不复制原生对象指针。只允许一个会话借用原生小队，暂不覆盖团队名单。
@@ -114,6 +116,10 @@ boss.StopCasting();
 
 ## 移动
 
+`MoveForMechanic` 的目标时间只用于安排出发、删去绕路和按需冲刺。接令时来不及、途中迟到或尚未精确走到随机终点，都不会单独判为机制失败或中断模拟；队员继续在 1.3 倍速上限内赶路，直到到达、收到新指令或停止。分摊、踩塔等由机制根据判定时的实际位置确定参与情况。
+
+网络假队员需要持续对准玩家时，使用 `actor.FollowForMechanic(() => 动态站位范围, 结束时间)`。结束时间为会话绝对秒数；实体按共享行为更新读取最新范围，保持一次选定的随机偏移，并通过 ActorMove 连续修正路线。跟随立即开始，必要时使用最多 1.3 倍速冲刺；动态目标来不及追上由机制判定，不按固定移动窗口抛错。新移动指令、停止或击退会取消跟随，不会在强制移动结束后自动恢复旧目标。
+
 模拟实体的非初始化移动和转向优先使用 ActorMove，由客户端处理模型插值和动画；普通走位使用 `MoveNetworkTo`，原地转向使用 `FaceNetwork`：
 
 ```csharp
@@ -152,6 +158,22 @@ boss.MoveTo(new Vector2(100, 90), speed: 6, animationId: 13,
 `onArrived` 在调度线程上执行一次，此时已经停止移动并清理所属动画，可以直接施法、开始下一段移动或删除角色。停止、改目标、删除和会话结束都会取消尚未领取的旧回调；已经领取的回调允许执行完毕，从调度线程外停止会话会等待它退出再回收实体。回调必须是短同步操作。回调中的实际延迟使用 `Scheduler.ScheduleAfter`，避免慢帧时把下一阶段当成已经过去。
 
 当前实现不含寻路、碰撞、重力、路径曲线或自动选择跑步动画。后续路径或追踪行为可扩展移动控制器，保持现有 `MoveTo` 调用方式。
+
+## 状态造成的移动限制
+
+通过 `EntityManager.SetStatus` 施加的状态会读取 `Status.LockMovement`，眩晕等状态无需在副本时间轴中额外锁定位置。生效时取消普通移动，期间拒绝新的普通移动指令；假队员保留机制走位意图，解除后继续规划。击退与 `WarpWithAnimation` 不属于自主移动，仍可执行。
+
+本机使用 [FFXIVClientStructs 的 Conditions 定义](https://github.com/aers/FFXIVClientStructs/blob/main/FFXIVClientStructs/FFXIV/Client/Game/Conditions.cs)及客户端原生设置函数，更新 `SufferingStatusAffliction`（28）。这与状态图标独立：正常收包按服务器条件位图更新该标志，`StatusManager.SetStatus` 本身不会更新它。国服当前客户端已核对步行输入入口检查权限 98、99、96，状态标志 28 在 `Permission` 表中禁止 98、99；没有拦截按键或反复写回玩家坐标。
+
+本会话的限制状态合并生效；刷新状态延长期限，移除、被替换或达到期限后解除。只在存在限制时共用一个 50 ms 调度节点，不创建额外线程或每状态定时器。正常停止和错误中断先恢复原有的本机限制，再清理其他资源；错误中断仍保留实体与状态图标。换图或身份失效后丢弃旧记录，不将旧条件写到新玩家。副本直接调用原生状态函数或直接发送 `ActorMove` 不经过这套会话管理。
+
+## 模拟防击退技能
+
+`EntityManager.UseKnockbackImmunity(actor)` 按职业为假队员使用沉稳咏唱或亲疏自行，也可通过第二个参数指定。技能只产生本地演出及六秒状态，不向服务器请求施法，不计算冷却。按状态表的 `LockActions` 判断能否使用：眩晕禁止，止步仍可使用。
+
+防火墙期间由宿主独立监听默语命令，`/e sim ac 沉稳咏唱`、`/e sim ac 亲疏自行` 和 `/e sim ac 冲刺` 始终作用于本机玩家，冲刺持续十秒。冲刺状态 50 的 `Param` 必须为 30，表示加速 30%；填 0 只会显示图标而不提高本机移速。该参数已从国服回放的完整状态包核对，也与 [AnoMech 的冲刺处理](https://github.com/anomek/AnoMech/blob/1646a7068c2071a3d1fd9e3c84550dfd3f1b6ade/AnoMech/Core/UserActions/SprintHandler.cs)一致，由客户端原生状态逻辑改变移速。没有运行副本或副本已经停止时仍可使用；状态操作交给独立调度器，不阻塞日志线程。换图、关闭防火墙、切换进程或卸载时清理自己施加的状态。副本直接检测角色实际的防击退状态，不依赖施加者属于哪个会话。
+
+`SimActor.Knockback` 默认检查这两种模拟状态；不受免疫影响的击退可传 `ignoreImmunity: true`。回返传送不属于击退，仍正常执行。状态到期、移除或槽位被替换后立即失去免疫，重复使用则刷新期限，不会被旧的到期节点提前清除。
 
 ## 身份与失效
 

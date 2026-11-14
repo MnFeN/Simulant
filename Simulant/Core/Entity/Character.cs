@@ -234,6 +234,41 @@ namespace Simulant.Core.Entity
             return true;
         }
 
+        /// <summary>通过原生瞬移处理同步角色、显示对象与移动状态；位置使用 ACT 坐标。</summary>
+        public void ActorSetPos(Vector3 pos, float heading)
+        {
+            if (float.IsNaN(pos.X) || float.IsInfinity(pos.X) ||
+                float.IsNaN(pos.Y) || float.IsInfinity(pos.Y) ||
+                float.IsNaN(pos.Z) || float.IsInfinity(pos.Z))
+                throw new ArgumentOutOfRangeException(nameof(pos), "瞬移坐标必须为有限数。");
+
+            PacketDispatcher.HandleActorSetPosPacket(Native.EntityId, new ActorSetPosPacket
+            {
+                Rotation = PacketCodec.EncodeUShortHeading(heading),
+                Position = new Vector3(pos.X, pos.Z, pos.Y)
+            });
+        }
+
+        /// <summary>播放固定位置的 VFX 表特效，由资源自身控制持续时间；位置使用 ACT 坐标。</summary>
+        public void PlayPositionVfx(uint vfxId, Vector3 pos)
+            => PacketDispatcher.HandleActorControl(Native.EntityId, ActorControlCategory.PositionVFX,
+                vfxId, PacketCodec.EncodeUShortCoord(pos.X), PacketCodec.EncodeUShortCoord(pos.Z),
+                PacketCodec.EncodeUShortCoord(pos.Y), 0, 0xE0000000, 0, 0, 0xE0000000, 0);
+
+        /// <summary>通过原生强制移动播放传送动画，由动作时间轴控制消失、移动和显现；位置使用 ACT 坐标。</summary>
+        public void WarpWithAnimation(Vector3 pos, float heading, ushort timelineId)
+        {
+            if (timelineId == 0)
+                throw new ArgumentOutOfRangeException(nameof(timelineId), "传送动画的时间轴编号不能为零。");
+
+            // 国服回放及客户端 0xF1 分支：a1 高 X、低高度，a2 高水平 Y、低面向。
+            // a3 高位标志沿用回返的 1；a4 仅用于服务器移动确认，本地模拟使用 0。
+            ActorControl(ActorControlCategory.WarpWithAnimation,
+                (uint)PacketCodec.EncodeUShortCoord(pos.X) << 16 | PacketCodec.EncodeUShortCoord(pos.Z),
+                (uint)PacketCodec.EncodeUShortCoord(pos.Y) << 16 | PacketCodec.EncodeUShortHeading(heading),
+                0x10000u | timelineId);
+        }
+
         public void ActorMove(Vector3 pos, float heading, byte speedParam = 20)
             => ActorMove(pos, heading, speedParam, ActorMoveFlags.None);
 

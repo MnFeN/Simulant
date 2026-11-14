@@ -74,25 +74,39 @@ namespace Simulant.Core.Firewall
 
         public void Disable()
         {
-            lock (_gate)
+            try
             {
-                var errors = DisableCore();
+                lock (_gate)
+                {
+                    var errors = DisableCore();
 
-                if (errors != null)
-                    throw new AggregateException("关闭防火墙失败，未完成的清理记录已保留。", errors);
+                    if (errors != null)
+                        throw new AggregateException("关闭防火墙失败，未完成的清理记录已保留。", errors);
+                }
+            }
+            finally
+            {
+                LogSafely(() => _host.PlayerActions?.Reset());
             }
         }
 
         /// <summary>处理进程切换：恢复仍可访问的旧进程，只丢弃已关闭或句柄已变化的旧归属。</summary>
         public void ResetProcess()
         {
-            lock (_gate)
+            try
             {
-                _processResetPending = true;
-                var errors = DisableCore();
+                lock (_gate)
+                {
+                    _processResetPending = true;
+                    var errors = DisableCore();
 
-                if (errors != null)
-                    throw new AggregateException("切换进程时未能完整恢复旧防火墙，清理记录已保留。", errors);
+                    if (errors != null)
+                        throw new AggregateException("切换进程时未能完整恢复旧防火墙，清理记录已保留。", errors);
+                }
+            }
+            finally
+            {
+                LogSafely(() => _host.PlayerActions?.Reset());
             }
         }
 

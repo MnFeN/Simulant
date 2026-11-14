@@ -64,6 +64,8 @@ namespace Simulant.Core
         internal Party.SimPartyService PartyService;
         internal EntityRegistry EntityRegistry;
         internal Test DebugTest { get; }
+        internal SimCommandListener Commands { get; }
+        internal SimActionService PlayerActions { get; }
 
         private readonly object _debugGate = new object();
         private SimScheduler _debugScheduler;
@@ -253,6 +255,7 @@ namespace Simulant.Core
 
             Cleanup(() => _ui?.StopCurrentSession());
             Cleanup(StopDebugEntities);
+            Cleanup(() => PlayerActions?.Reset());
             Cleanup(() => PartyService?.RestoreAll());
             Cleanup(() => EntitySpawner?.Clear());
             EntitySpawner?.ResetWorld();
@@ -305,6 +308,9 @@ namespace Simulant.Core
                 () => FirewallEnabled && PluginReady && !IsInitializing && !Disposed);
             PartyService = new Party.SimPartyService(this);
             DebugTest = new Test(this);
+            Commands = new SimCommandListener(LogError);
+            PlayerActions = new SimActionService(this);
+            Commands.Received += PlayerActions.Receive;
 
             Attach();
 
@@ -486,6 +492,9 @@ namespace Simulant.Core
 
             try
             {
+                lock (_subscriptionGate)
+                    Commands.Stop();
+
                 ZoneService.CancelPendingPhase();
                 PrepareEntityWorldChange();
                 await LoadGameDataAsync();
@@ -520,14 +529,21 @@ namespace Simulant.Core
                         throw new InvalidOperationException("初始化期间游戏进程发生变化，请重新初始化插件。");
 
                     EntitySpawner.ResumeWorld();
+                    lock (_subscriptionGate)
+                        Commands.Start(ActGlobals.oFormActMain);
+
                     PluginReady = true;
                 }
 
+                LogRuntime("已订阅 ACT 解析日志，监听 sim 默语命令。");
                 LogRuntime("插件初始化完成。");
             }
             catch (Exception ex)
             {
                 PluginReady = false;
+                lock (_subscriptionGate)
+                    Commands.Stop();
+
                 LogError("初始化插件失败：" + ex);
             }
             finally
@@ -601,6 +617,12 @@ namespace Simulant.Core
                             throw new AggregateException("插件卸载未完成，清理记录已保留；请再次卸载或重新启用插件以重试。", failures);
                     }
 
+                    TryCleanup("卸载时取消命令日志订阅失败", () =>
+                    {
+                        lock (_subscriptionGate)
+                            Commands?.Stop();
+                    });
+
                     // 资源清理失败可留待重试，但不能阻止返回真实环境并恢复通信。
                     TryCleanup("卸载时取消阶段等待失败", () => ZoneService?.CancelPendingPhase());
 
@@ -609,6 +631,7 @@ namespace Simulant.Core
 
                     TryCleanup("卸载时停止模拟失败", () => _ui?.StopCurrentSession());
                     TryCleanup("卸载时停止调试失败", StopDebugEntities);
+                    TryCleanup("卸载时清理模拟技能失败", () => PlayerActions?.Reset());
                     TryCleanup("卸载时恢复小队失败", () => PartyService?.RestoreAll());
                     TryCleanup("卸载时释放实体资源失败", () => EntitySpawner?.Dispose());
 
@@ -796,6 +819,7 @@ namespace Simulant.Core
                 PartyService?.InvalidateWorld();
                 // 外部换图发生后只能失效旧引用，不能再尝试释放上一场景的内存。
                 EntitySpawner?.ResetWorld();
+                PlayerActions?.Reset();
             }
 
             _ui?.OnEntityWorldChanged();

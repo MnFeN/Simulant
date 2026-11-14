@@ -13,6 +13,87 @@ namespace Simulant.Tests
 {
     internal static class BehaviorMovementTests
     {
+        public static void DynamicFollowingKeepsItsOffsetAndEndsWithoutOverridingNewMovement()
+        {
+            Exception failure = null;
+
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var follower = CreateActor(behavior, movement, casts);
+                var replaced = CreateActor(behavior, movement, casts);
+                var target = Vector2.Zero;
+                var offset = Vector2.Zero;
+                var stopped = Vector2.Zero;
+                var maxSpeed = 0;
+                var samples = 0;
+                var samplesAtEnd = 0;
+                var replacementSamples = 0;
+                var samplesAtReplacement = 0;
+                follower.Entity.OnActorMove = (pos, _, speed) =>
+                {
+                    maxSpeed = Math.Max(maxSpeed, speed);
+                    follower.Entity.Pos3D = pos;
+                };
+                follower.FollowForMechanic(() =>
+                {
+                    samples++;
+                    return SimPosition.Ellipse(target, 0.2f);
+                }, 3.4);
+                replaced.FollowForMechanic(() =>
+                {
+                    replacementSamples++;
+                    return target;
+                }, 10);
+
+                scheduler.Schedule(0.5, () => offset = follower.Pos);
+
+                for (var step = 1; step <= 12; step++)
+                {
+                    var index = step;
+                    scheduler.Schedule(0.5 + step * 0.1, () => target = new Vector2(index * 0.3f, 0));
+                }
+
+                scheduler.Schedule(1.8, () => Assert(follower.Pos.X > 1.5f,
+                    "持续改变目标时也应持续前进，不能不断重发首包导致停在原地。"));
+                scheduler.Schedule(2.6, () =>
+                {
+                    Assert(Vector2.Distance(follower.Pos - target, offset) <= 0.026,
+                        "动态范围中的随机偏移只能选一次，不能每次更新重新抽取。");
+                    Assert(!follower.IsMoving, "目标停下并追上后应停止移动。");
+                    replaced.MoveForMechanic(new Vector2(0, 3), 4.4, 6, urgent: true);
+                    samplesAtReplacement = replacementSamples;
+                    target = new Vector2(100, 0);
+                });
+                scheduler.Schedule(3.6, () =>
+                {
+                    Assert(!follower.IsMoving && maxSpeed == 78,
+                        "临时移远的目标即使来不及追上也只按上限冲刺，到期停止，不抛出到位超时。");
+                    stopped = follower.Pos;
+                    samplesAtEnd = samples;
+                    target = new Vector2(-100, 0);
+                });
+                scheduler.Schedule(4.6, () =>
+                {
+                    Assert(follower.Pos == stopped && samples == samplesAtEnd,
+                        "结束后不能再采样或追赶动态目标。");
+                    Assert(Vector2.Distance(replaced.Pos, new Vector2(0, 3)) <= 0.025 && replacementSamples == samplesAtReplacement,
+                        "新移动命令应完全替换跟随，旧目标不能重新接管。");
+                    done.Set();
+                });
+
+                scheduler.Start();
+                Assert(done.Wait(6500) && failure == null, "动态跟随检查失败：" + failure);
+            }
+        }
+
         public static void TightDeadlinesUseSprintButNeverExceedItsLimit()
         {
             Exception failure = null;
@@ -69,18 +150,6 @@ namespace Simulant.Tests
                 normal.MoveForMechanic(new Vector2(8, 0), 3, 4, urgent: true);
                 sprint.MoveForMechanic(new Vector2(8, 0), 1.55, 4, urgent: true);
                 delayed.MoveForMechanic(new Vector2(8, 0), 1.95, 4, urgent: true);
-                var rejected = false;
-
-                try
-                {
-                    normal.MoveForMechanic(new Vector2(100, 0), 1, 4, urgent: true);
-                }
-                catch (InvalidOperationException)
-                {
-                    rejected = true;
-                }
-
-                Assert(rejected, "即使冲刺也无法到达的目标仍应报错，不能无限加速。");
                 scheduler.Schedule(1.55, () => Assert(Vector2.Distance(sprint.Pos, new Vector2(8, 0)) < 0.025,
                     "正常速度来不及的移动应自动冲刺到位。"));
 
@@ -119,6 +188,55 @@ namespace Simulant.Tests
                 Assert(done.Wait(6000), "自动冲刺检查超时。");
                 scheduler.Cancel();
                 Assert(failure == null, "自动冲刺检查失败：" + failure);
+            }
+        }
+
+        public static void MissedDeadlinesKeepMovingAndLeaveJudgementToMechanics()
+        {
+            Exception failure = null;
+
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var late = CreateActor(behavior, movement, casts);
+                var near = CreateActor(behavior, movement, casts);
+                var maxSpeed = 0;
+                var nearTarget = new Vector2(4, 0);
+                var stack = ActionArea.Circle(1);
+                late.Entity.OnActorMove = (pos, _, speed) =>
+                {
+                    maxSpeed = Math.Max(maxSpeed, speed);
+                    late.Entity.Pos3D = pos;
+                };
+                // 客户端已接近终点，但沿途发包与实际到达确认尚未完成。
+                near.Entity.OnActorMove = (pos, _, __) => near.Entity.Pos3D = new Vector3(3.99f, 0, pos.Z);
+
+                late.MoveForMechanic(new Vector2(20, 0), 0.2, 4, urgent: true);
+                near.MoveForMechanic(nearTarget, 0.05, 4, urgent: true);
+                scheduler.Schedule(0.45, () =>
+                {
+                    Assert(near.Pos != nearTarget && stack.Contains(near.Pos, nearTarget, 0),
+                        "没有精确走到终点但已在分摊内时，仍应按实际位置参与判定。");
+                    Assert(late.Pos.X > 0 && late.Pos.X < 20 && late.IsMoving,
+                        "明显赶不上截止时间的队员也应继续赶路，不能中断模拟或瞬移到位。");
+                });
+                scheduler.Schedule(3.2, () =>
+                {
+                    Assert(maxSpeed == 78 && Vector2.Distance(late.Pos, new Vector2(20, 0)) <= 0.025,
+                        "迟到后继续以不超过 1.3 倍的速度移动，最终应能到达目标。");
+                    Assert(!near.IsMoving, "厘米级到位偏差应能正常结束移动。");
+                    done.Set();
+                });
+
+                scheduler.Start();
+                Assert(done.Wait(5000) && failure == null, "移动截止时间不能代替机制判定：" + failure);
             }
         }
 

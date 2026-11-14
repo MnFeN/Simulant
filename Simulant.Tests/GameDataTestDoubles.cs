@@ -60,6 +60,11 @@ namespace Lumina.Excel
 
 namespace Lumina.Excel.Sheets
 {
+    public struct Status : IExcelRow<Status>
+    {
+        public bool LockMovement, LockActions;
+    }
+
     public struct ModelChara : IExcelRow<ModelChara>
     {
     }
@@ -77,6 +82,24 @@ namespace Lumina.Excel.Sheets
         public RowRef<ModelChara> ModelChara;
         public RowRef<Battalion> Battalion;
         public RowRef<NpcEquip> NpcEquip;
+        public RowRef<BNpcCustomize> BNpcCustomize;
+    }
+
+    public struct Race : IExcelRow<Race>
+    {
+    }
+
+    public struct Tribe : IExcelRow<Tribe>
+    {
+    }
+
+    public struct BNpcCustomize : IExcelRow<BNpcCustomize>
+    {
+        public RowRef<Race> Race;
+        public RowRef<Tribe> Tribe;
+        public byte Gender, BodyType, Height, Face, HairStyle, HairHighlight, SkinColor, EyeHeterochromia;
+        public byte HairColor, HairHighlightColor, FacialFeature, FacialFeatureColor, Eyebrows, EyeColor;
+        public byte EyeShape, Nose, Jaw, Mouth, LipColor, BustOrTone1, ExtraFeature1, ExtraFeature2OrBust, FacePaint, FacePaintColor;
     }
 
     public struct Stain : IExcelRow<Stain>

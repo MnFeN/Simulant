@@ -59,6 +59,29 @@ namespace Simulant.Tests
             }
         }
 
+        public static void MovementLockStopsRunningButAllowsForcedKnockback()
+        {
+            using (var scheduler = new SimScheduler())
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                movement.MoveNetworkTo(actor, new Vector2(10, 10));
+                actor.MovementLocked = true;
+                movement.StopVoluntary(actor);
+                Assert(!actor.IsMoving, "眩晕生效必须取消正在进行的普通移动。");
+                movement.MoveNetworkTo(actor, new Vector2(20, 20));
+                movement.MoveTo(actor, new Vector2(20, 20));
+                Assert(!actor.IsMoving, "眩晕期间新发的网络或本地走路命令均不得生效。");
+                actor.Knockback(0, 10, 1);
+                movement.StopVoluntary(actor);
+                Assert(actor.IsMoving, "眩晕期间仍应允许强制击退，状态轮询不能取消击退轨迹。");
+                movement.Stop(actor);
+                actor.MovementLocked = false;
+                movement.MoveNetworkTo(actor, new Vector2(20, 20));
+                Assert(actor.IsMoving, "眩晕解除后必须重新允许普通移动。");
+            }
+        }
+
         public static void CancelledKnockbackDoesNotContinueMoving()
         {
             Exception failure = null;

@@ -14,6 +14,7 @@ namespace Simulant.Simulation.Runtime
         private readonly SimMovementController _movement;
         private int _detached;
         internal SimActorBehaviorController BehaviorController { get; set; }
+        internal bool MovementLocked { get; set; }
 
         internal SimActor(Character entity, SimCastController casts, SimMovementController movement)
         {
@@ -26,6 +27,7 @@ namespace Simulant.Simulation.Runtime
         public bool IsActive => Volatile.Read(ref _detached) == 0 && Entity.IsAlive;
         /// <summary>是否有本会话管理的本地或网络移动；不反映直接调用 Entity.ActorMove 后的状态。</summary>
         public bool IsMoving => _movement.IsMoving(this);
+        public bool IsKnockbackImmune => IsActive && (Entity.HasStatus(160) || Entity.HasStatus(1209));
         public uint Id => Entity.Id;
         public IntPtr Address => Entity.Address;
 
@@ -91,10 +93,14 @@ namespace Simulant.Simulation.Runtime
         }
 
         /// <summary>读条并播放技能；指定目标时沿用原生带目标演出，不产生实际伤害。</summary>
-        public void Cast(uint actionId, float? omenDelay = 0, SimActor target = null)
+        /// <param name="omenPosition">可选的预兆落点（ACT 坐标），用于同帧移动包尚未更新实体的情况。</param>
+        /// <param name="omenHeading">可选的预兆朝向；未指定时在显示预兆时读取实体朝向。</param>
+        /// <param name="castTime">可选的咏唱秒数，未指定时使用技能表时长。</param>
+        public void Cast(uint actionId, float? omenDelay = 0, SimActor target = null,
+            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null)
         {
             BehaviorController?.ManualAction(this);
-            _casts.Cast(this, actionId, omenDelay, target);
+            _casts.Cast(this, actionId, omenDelay, target, omenPosition, omenHeading, castTime);
         }
 
         public void Execute(uint actionId)
@@ -118,6 +124,7 @@ namespace Simulant.Simulation.Runtime
         /// 可用 holdUntil 指定机制结束前保持站位，省略时保持至目标时间。
         /// northHeading 是本机制相对北的场地朝向；接收指令时固定下来，不随其他机制改变。
         /// 紧急移动立即直达，不绕路、贪刀或等待读条；Vector2 可直接作为零容差点位传入。
+        /// 目标时间仅用于规划和冲刺，赶不上时继续移动；机制是否成功由实际参与情况判定。
         /// </summary>
         public void MoveForMechanic(SimPosition destination, double arriveBy, double? holdUntil = null,
             bool urgent = false, double northHeading = Math.PI)
@@ -128,6 +135,21 @@ namespace Simulant.Simulation.Runtime
                 throw new InvalidOperationException("机制走位只支持本会话生成的网络假玩家。");
 
             BehaviorController.MoveForMechanic(this, destination, arriveBy, holdUntil ?? arriveBy, urgent, northHeading);
+        }
+
+        /// <summary>
+        /// 持续追随动态站位范围，until 为会话绝对秒数；范围内的随机偏移只选一次。
+        /// 立即移动，来不及时最多使用 1.3 倍速；不因目标临时改变而抛出到位超时，交由机制判定。
+        /// 新移动指令、强制移动或停止会取消跟随。
+        /// </summary>
+        public void FollowForMechanic(Func<SimPosition> destination, double until, double northHeading = Math.PI)
+        {
+            EnsureActive();
+
+            if (BehaviorController == null)
+                throw new InvalidOperationException("机制跟随只支持本会话生成的网络假玩家。");
+
+            BehaviorController.FollowForMechanic(this, destination, until, northHeading);
         }
 
         /// <summary>取消本会话的读条及其预兆，保留角色、移动及实体上不同技能编号的外部读条。</summary>
@@ -146,10 +168,13 @@ namespace Simulant.Simulation.Runtime
             _movement.Stop(this);
         }
 
-        /// <summary>施加击退并暂停自动行为；自身用原生击退，网络角色用带击退标志的移动包同步轨迹。</summary>
-        public void Knockback(float heading, float distance, float duration)
+        /// <summary>施加击退并暂停自动行为；默认受防击退状态影响。自身用原生击退，假玩家同步击退轨迹。</summary>
+        public void Knockback(float heading, float distance, float duration, bool ignoreImmunity = false)
         {
             EnsureActive();
+            if (!ignoreImmunity && IsKnockbackImmune)
+                return;
+
             _movement.Knockback(this, heading, distance, duration);
         }
 

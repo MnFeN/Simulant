@@ -9,6 +9,33 @@ namespace Simulant.Tests
 {
     internal static class ActionAreaTests
     {
+        public static void CollisionCirclesTouchEdgesWithoutChangingPlayerPointChecks()
+        {
+            var origin = new Vector2(100, 100);
+            var circle = ActionArea.Circle(5);
+            var edge = origin + new Vector2(8.5f, 0);
+            Assert(!circle.Contains(edge, origin, 0) && circle.IntersectsCircle(edge, 3.5f, origin),
+                "水晶中心在技能外，但碰撞边缘相接时也必须命中；玩家中心点判定保持不变。");
+            Assert(!circle.IntersectsCircle(edge + new Vector2(0.01f, 0), 3.5f, origin), "碰撞体完全分离时不能命中。");
+
+            var donut = ActionArea.Donut(3, 12);
+            Assert(!donut.IntersectsCircle(origin, 2.9f, origin), "完整位于圆环内安全区的碰撞体不应命中。");
+            Assert(donut.IntersectsCircle(origin, 3.5f, origin), "中心在内圈而边缘碰到圆环仍应命中。");
+            Assert(donut.IntersectsCircle(origin, 20, origin), "包住整个圆环的碰撞体也与技能相交。");
+            Assert(donut.IntersectsCircle(origin + new Vector2(15.5f, 0), 3.5f, origin), "圆环外缘也应计入碰撞半径。");
+
+            var rectangle = ActionArea.Rectangle(10, 4);
+            Assert(rectangle.IntersectsCircle(origin + new Vector2(3, 11), 1.5f, origin), "矩形角附近按实际圆弧距离判定。");
+            Assert(!rectangle.IntersectsCircle(origin + new Vector2(3, 11), 1.4f, origin), "不能把矩形简单扩宽后误算角外位置。");
+            Assert(rectangle.IntersectsCircle(origin + new Vector2(11, -3), 1.5f, origin, (float)Math.PI / 2), "碰撞判定应服从技能朝向。");
+
+            var cone = ActionArea.Cone(10, 90);
+            Assert(cone.IntersectsCircle(origin + new Vector2(5, 4), 0.71f, origin), "扇形侧边应与碰撞圆相交。");
+            Assert(!cone.IntersectsCircle(origin + new Vector2(5, 4), 0.7f, origin), "扇形侧边外不能误判。");
+            Assert(cone.IntersectsCircle(origin + new Vector2(0, 11), 1, origin), "扇形圆弧也应与碰撞圆相交。");
+            Expect<ArgumentOutOfRangeException>(() => circle.IntersectsCircle(origin, -1, origin), "负碰撞半径必须拒绝。");
+        }
+
         public static void CirclesAndDonutsUseClosedBoundaries()
         {
             var circle = ActionArea.Circle(5);

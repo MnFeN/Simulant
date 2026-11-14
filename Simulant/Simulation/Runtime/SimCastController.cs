@@ -2,6 +2,7 @@ using Simulant.Game.Data;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Simulation.Runtime
@@ -18,6 +19,8 @@ namespace Simulant.Simulation.Runtime
             public SimScheduledAction Completion;
             public SimScheduledAction PendingOmen;
             public SimActor Target;
+            public Vector3? OmenPosition;
+            public float? OmenHeading;
         }
 
         private readonly object _gate = new object();
@@ -35,13 +38,17 @@ namespace Simulant.Simulation.Runtime
             _log = log;
         }
 
-        public void Cast(SimActor actor, uint actionId, float? omenDelay = 0, SimActor target = null)
+        public void Cast(SimActor actor, uint actionId, float? omenDelay = 0, SimActor target = null,
+            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
 
             if (omenDelay.HasValue && (float.IsNaN(omenDelay.Value) || float.IsInfinity(omenDelay.Value)))
                 throw new ArgumentOutOfRangeException(nameof(omenDelay));
+
+            if (castTime.HasValue)
+                SimTimeline.ValidateSeconds(castTime.Value, nameof(castTime));
 
             lock (_gate)
             {
@@ -51,7 +58,7 @@ namespace Simulant.Simulation.Runtime
                 if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action))
                     return;
 
-                var castTime = action.Cast100ms / 10f;
+                var duration = castTime ?? action.Cast100ms / 10f;
                 CancelCore(actor);
 
                 // 移除预兆会调用外部代码；它可能已清理角色或开始更新的读条。
@@ -61,20 +68,22 @@ namespace Simulant.Simulation.Runtime
                 var state = new CastState
                 {
                     ActionId = actionId,
-                    EndsAt = _scheduler.ElapsedSeconds + castTime,
+                    EndsAt = _scheduler.ElapsedSeconds + duration,
                     OmenTag = _tagPrefix + (++_castSequence),
-                    Target = target
+                    Target = target,
+                    OmenPosition = omenPosition,
+                    OmenHeading = omenHeading
                 };
                 _casts.Add(actor, state);
 
                 try
                 {
-                    actor.Entity.SetCastInfo(actionId, castTime);
+                    actor.Entity.SetCastInfo(actionId, duration);
 
                     if (target != null)
                         actor.Entity.SetCastTarget(target.Entity);
 
-                    state.Completion = _scheduler.ScheduleAfter(castTime,
+                    state.Completion = _scheduler.ScheduleAfter(duration,
                         () => Complete(actor, state, action), "技能 " + actionId + " 读条完成");
 
                     if (action.Omen.RowId > 0 && omenDelay.HasValue)
@@ -83,12 +92,12 @@ namespace Simulant.Simulation.Runtime
 
                         if (delay == 0)
                             ShowOmen(actor, state, action);
-                        else if (delay < castTime - 0.3)
+                        else if (delay < duration - 0.3)
                             state.PendingOmen = _scheduler.ScheduleAfter(delay,
                                 () => ShowOmen(actor, state, action), "技能 " + actionId + " 预兆");
                     }
 
-                    _log?.Invoke($"开始读条：技能 {actionId}（{castTime:0.0} 秒）");
+                    _log?.Invoke($"开始读条：技能 {actionId}（{duration:0.0} 秒）");
                 }
                 catch
                 {
@@ -162,7 +171,8 @@ namespace Simulant.Simulation.Runtime
 
                 // 外部回调接收预兆后即使抛出异常，取消时仍会移除对应的唯一标签。
                 state.OmenVisible = true;
-                state.OmenVisible = _omens.Show(actor, action, state.EndsAt - _scheduler.ElapsedSeconds - 0.3, state.OmenTag);
+                state.OmenVisible = _omens.Show(actor, action, state.EndsAt - _scheduler.ElapsedSeconds - 0.3,
+                    state.OmenTag, state.OmenPosition, state.OmenHeading);
             }
         }
 

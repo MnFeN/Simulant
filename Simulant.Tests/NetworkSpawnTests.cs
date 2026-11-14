@@ -146,6 +146,81 @@ namespace Simulant.Tests
             data.GetSheet<NpcEquip>().Remove(2106);
         }
 
+        public static unsafe void NetworkNpcCustomizeUsesTableAndPreservesExplicitOverrides()
+        {
+            var data = GameDataService.Instance;
+            data.GetSheet<BNpcBase>()[17844] = new BNpcBase
+            {
+                ModelChara = 2720,
+                BNpcCustomize = 875
+            };
+            data.GetSheet<BNpcCustomize>()[875] = new BNpcCustomize
+            {
+                Race = 1, Gender = 1, BodyType = 1, Height = 255, Tribe = 1,
+                Face = 217, HairStyle = 212, HairHighlight = 1, SkinColor = 152,
+                EyeHeterochromia = 152, HairColor = 75, EyeColor = 152
+            };
+            var spec = new NetworkNpcSpawnSpec
+            {
+                BNpcBaseId = 17844, Name = "琳", ModelState = 5
+            };
+            var packet = spec.ToPacket(1);
+            var expected = new byte[]
+            {
+                1, 1, 1, 255, 1, 217, 212, 1, 152, 152, 75, 0, 0, 0, 0, 152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            };
+
+            for (var i = 0; i < expected.Length; i++)
+                Assert(packet.Common.Customize[i] == expected[i], "琳的人形外观必须与回放的 26 字节一致。");
+
+            Assert(spec.Customize == null && packet.Common.ModelState == 5,
+                "默认外观不得改写输入参数，初始姿势必须传入生成包。");
+            spec.Customize = new byte[26];
+            packet = spec.ToPacket(2);
+            Assert(packet.Common.Customize[5] == 0, "显式空外观不能被 NPC 默认值覆盖。");
+            spec.Customize = null;
+            spec.ModelCharaId = 480;
+            packet = spec.ToPacket(3);
+            Assert(packet.Common.Customize[5] == 0, "自选模型不能继承原 NPC 的人形外观。");
+            data.GetSheet<BNpcBase>().Remove(17844);
+            data.GetSheet<BNpcCustomize>().Remove(875);
+        }
+
+        public static unsafe void NetworkNpcInitialStatusesPreserveReplayLevitation()
+        {
+            var spec = CreateSpec();
+            spec.InitialStatuses = new[]
+            {
+                new CommonSpawnData.StatusEffect
+                {
+                    StatusId = 1390, Param = 200, SourceObjectId = 0xE0000000
+                }
+            };
+            var packet = spec.ToPacket(1);
+            var bytes = (byte*)&packet;
+            // 回放的生成包在 0x98 开始保存 12 字节状态：1390、200、永久、无来源。
+            var expected = new byte[]
+            {
+                0x6E, 0x05, 0xC8, 0, 0, 0, 0, 0, 0, 0, 0, 0xE0
+            };
+
+            for (var i = 0; i < expected.Length; i++)
+                Assert(bytes[0x98 + i] == expected[i], "幻影的永久浮空状态必须与回放生成包一致。");
+
+            spec.InitialStatuses[0].Param = 1;
+            Assert(packet.Common.Statuses[2] == 200, "修改输入状态不得影响已构造的生成包。");
+            packet.Common.SetStatus(29, new CommonSpawnData.StatusEffect
+            {
+                SourceObjectId = 0x12345678
+            });
+            Assert(*(uint*)(bytes + 0x1FC) == 0x12345678 && packet.Common.Position == new Vector3(spec.Pos.X, spec.Pos.Z, spec.Pos.Y),
+                "第 30 个状态应结束于坐标之前，不能覆盖生成坐标。");
+            var invalid = packet;
+            Throws<ArgumentOutOfRangeException>(() => invalid.Common.SetStatus(30, default(CommonSpawnData.StatusEffect)));
+            spec.InitialStatuses = new CommonSpawnData.StatusEffect[31];
+            Throws<ArgumentException>(() => spec.ToPacket(1));
+        }
+
         public static void NetworkSpawnOverridesDoNotRequireGameDataRows()
         {
             GameDataService.Instance.GetSheet<BNpcBase>().Clear();

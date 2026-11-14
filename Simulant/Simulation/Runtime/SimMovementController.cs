@@ -27,6 +27,7 @@ namespace Simulant.Simulation.Runtime
             public bool NetworkStarted;
             public Vector2 NetworkOrigin;
             public Vector2 NetworkLastSent;
+            public double NetworkLastSentAt;
             public double NetworkDuration;
             public bool NetworkDestinationSent;
             public double NextPollAt;
@@ -95,6 +96,9 @@ namespace Simulant.Simulation.Runtime
                 if (_disposed)
                     throw new ObjectDisposedException(nameof(SimMovementController));
 
+                if (actor.MovementLocked)
+                    return;
+
                 StopCore(actor);
 
                 if (!actor.IsActive)
@@ -130,6 +134,9 @@ namespace Simulant.Simulation.Runtime
         public void MoveNetworkTo(SimActor actor, Vector2 target, byte speedParam = 30, Action onArrived = null)
             => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, onArrived);
 
+        internal void FollowNetworkTo(SimActor actor, Vector2 target, byte speedParam)
+            => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, null, retarget: true);
+
         internal void Knockback(SimActor actor, float heading, float distance, float duration)
         {
             if (actor == null)
@@ -160,7 +167,7 @@ namespace Simulant.Simulation.Runtime
         }
 
         private void StartNetworkMovement(SimActor actor, Vector2 target, float speed, byte speedParam,
-            bool knockback, Action onArrived)
+            bool knockback, Action onArrived, bool retarget = false)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -186,6 +193,36 @@ namespace Simulant.Simulation.Runtime
 
                 if (!actor.IsActive)
                     throw new InvalidOperationException("不能移动已经失效或解除关联的角色。");
+
+                if (actor.MovementLocked && !knockback)
+                    return;
+
+                var index = Find(actor);
+
+                if (retarget && index >= 0)
+                {
+                    var current = _moving[index];
+
+                    if (current.Network && !current.Knockback && !current.Stopping && !current.Arrived && current.OnArrived == null)
+                    {
+                        if (current.Target == target && current.SpeedParam == speedParam)
+                            return;
+
+                        if (current.NetworkStarted)
+                        {
+                            // 沿最后已发位置继续，保留尚未发出的行走时间；不能每次更新目标都停下重启首包。
+                            current.NetworkOrigin = current.NetworkLastSent;
+                            current.UpdatedAt = current.NetworkDestinationSent ? _scheduler.ElapsedSeconds : current.NetworkLastSentAt;
+                            current.NetworkDuration = Vector2.Distance(current.NetworkOrigin, target) / speed;
+                            current.NetworkDestinationSent = false;
+                        }
+
+                        current.Target = target;
+                        current.Speed = speed;
+                        current.SpeedParam = speedParam;
+                        return;
+                    }
+                }
 
                 StopCore(actor);
                 var movement = new Movement
@@ -250,6 +287,17 @@ namespace Simulant.Simulation.Runtime
                 {
                     CancelIdleTick();
                 }
+            }
+        }
+
+        internal void StopVoluntary(SimActor actor)
+        {
+            lock (_gate)
+            {
+                var index = Find(actor);
+
+                if (index >= 0 && !_moving[index].Knockback)
+                    Stop(actor);
             }
         }
 
@@ -402,6 +450,7 @@ namespace Simulant.Simulation.Runtime
                 // 先记录已尝试发送，确保原生调用部分成功后抛错仍能被清理。
                 movement.NetworkStarted = true;
                 movement.UpdatedAt = now;
+                movement.NetworkLastSentAt = now;
                 movement.NetworkOrigin = movement.NetworkLastSent = new Vector2(current.X, current.Y);
                 movement.NetworkDuration = Math.Sqrt(dx * dx + dy * dy) / movement.Speed;
                 entity.ActorMove(current,
@@ -445,6 +494,7 @@ namespace Simulant.Simulation.Runtime
                         movement.Knockback ? movement.FixedHeading : (float)Math.Atan2(direction.X, direction.Y), movement.SpeedParam,
                         movement.Knockback ? ActorMoveFlags.Knockback : ActorMoveFlags.None);
                     movement.NetworkLastSent = next;
+                    movement.NetworkLastSentAt = now;
                     movement.NetworkDestinationSent = final;
                 }
             }

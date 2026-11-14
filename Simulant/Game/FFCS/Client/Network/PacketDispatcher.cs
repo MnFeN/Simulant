@@ -178,6 +178,34 @@ namespace Simulant.Game.FFCS.Client.Network
             }
         }
 
+        // AnoMech 1646a706；已在国服客户端核对入口，瞬移同时清除旧移动并更新本机角色状态。
+        [SigPattern("4C 8B C2 8B D1 48 8D 0D ?? ?? ?? ?? E9 ?? ?? ?? ?? CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC 48 89 5C 24 08 57 48 83 EC 20 4C 63 05")]
+        public static IntPtr HandleActorSetPosPacketFuncPtr { get; set; }
+
+        public static unsafe void HandleActorSetPosPacket(uint objectId, ActorSetPosPacket packet)
+        {
+            if (HandleActorSetPosPacketFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("网络角色瞬移函数尚未定位。");
+
+            var packetPtr = IntPtr.Zero;
+
+            try
+            {
+                packetPtr = Memory.AllocateMemory(sizeof(ActorSetPosPacket));
+
+                if (packetPtr == IntPtr.Zero)
+                    throw new InvalidOperationException("分配角色瞬移包内存失败。");
+
+                Memory.Write(packetPtr, packet);
+                HandleActorSetPosPacketFuncPtr.Call(objectId, packetPtr);
+            }
+            finally
+            {
+                if (packetPtr != IntPtr.Zero)
+                    Memory.FreeMemory(packetPtr);
+            }
+        }
+
         // 收包函数 ActorControl 等分支调用的函数
         // ActorControl 中 a5 后传参均固定为 0 (targetId 为 0xE0000000)
         // original "40 55 53 57 41 54 41 56 48 8D AC 24 ? ? ? ? B8 ? ? ? ?"

@@ -201,6 +201,14 @@ namespace Simulant.Simulation.Runtime
                     if (!actor.IsActive)
                         continue;
 
+                    if (actor.MovementLocked)
+                    {
+                        if (state.Move != null)
+                            state.Move.Running = false;
+
+                        continue;
+                    }
+
                     if (now < state.SuspendedUntil)
                         continue;
 

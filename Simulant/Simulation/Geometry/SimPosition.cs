@@ -144,6 +144,15 @@ namespace Simulant.Simulation.Geometry
             if (random == null)
                 throw new ArgumentNullException(nameof(random));
 
+            if (_extent == 0 && _secondary == 0)
+                return Sample(0, 0, northHeading);
+
+            return Sample(random.NextDouble(), random.NextDouble(), northHeading);
+        }
+
+        /// <summary>复用一次选定的两个取样比例，让动态范围中的相对落点保持稳定。</summary>
+        internal Vector2 Sample(double first, double second, double northHeading)
+        {
             var heading = WorldHeading(northHeading);
 
             if (_extent == 0 && _secondary == 0)
@@ -154,18 +163,18 @@ namespace Simulant.Simulation.Geometry
             switch (_shape)
             {
                 case Shape.Rectangle:
-                    forward = (random.NextDouble() * 2 - 1) * _extent;
-                    lateral = (random.NextDouble() * 2 - 1) * _secondary;
+                    forward = (first * 2 - 1) * _extent;
+                    lateral = (second * 2 - 1) * _secondary;
                     break;
                 case Shape.AnnularSector:
-                    var radius = _secondary + random.NextDouble() * ((double)_extent - _secondary);
-                    var offset = (random.NextDouble() * 2 - 1) * _halfAngle;
+                    var radius = _secondary + first * ((double)_extent - _secondary);
+                    var offset = (second * 2 - 1) * _halfAngle;
                     forward = radius * Math.Cos(offset);
                     lateral = radius * Math.Sin(offset);
                     break;
                 default:
-                    var scale = random.NextDouble();
-                    var angle = random.NextDouble() * 2 * Math.PI;
+                    var scale = first;
+                    var angle = second * 2 * Math.PI;
                     forward = _extent * scale * Math.Cos(angle);
                     lateral = _secondary * scale * Math.Sin(angle);
                     break;

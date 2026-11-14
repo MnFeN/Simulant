@@ -9,6 +9,76 @@ namespace Simulant.Tests
 {
     internal static class SessionStatusTests
     {
+        public static void LocalActionsRespectStunFromOtherManagersAndStatusRemoval()
+        {
+            Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>()[4163] =
+                new Lumina.Excel.Sheets.Status
+                {
+                    LockMovement = true,
+                    LockActions = true
+                };
+            Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>()[13] =
+                new Lumina.Excel.Sheets.Status
+                {
+                    LockMovement = true
+                };
+            using (var scene = new Scene())
+            {
+                scene.Manager.Party.Add(scene.Source);
+                scene.Manager.Party.Add(scene.Player);
+                scene.Manager.UseLocalAction(scene.Player, 7548);
+                Assert(scene.Player.IsKnockbackImmune && !scene.Source.IsKnockbackImmune,
+                    "本机技能只影响指定玩家，不影响其他角色。");
+                Assert(scene.Statuses.GetStatus(0).StatusId.Get() == 1209 && scene.Statuses.GetStatus(0).RemainingTime.Get() == 6,
+                    "亲疏自行应施加六秒对应状态。");
+                scene.Player.Knockback(0, 20, 0.8f);
+                Assert(scene.Player.Entity.NativeKnockbackCalls == 0, "有防击退状态时不应调用本机击退。");
+                scene.Player.Knockback(0, 20, 0.8f, ignoreImmunity: true);
+                Assert(scene.Player.Entity.NativeKnockbackCalls == 1, "不可免疫的击退应仍能执行。");
+                scene.Manager.RemoveStatus(scene.Player, 1209);
+                scene.Player.Knockback(0, 20, 0.8f);
+                Assert(scene.Player.Entity.NativeKnockbackCalls == 2, "状态移除后恢复击退。");
+
+                var external = scene.Statuses.GetStatus(0);
+                external.StatusId.Value = 4163;
+                external.RemainingTime.Value = 9;
+                scene.Manager.UseLocalAction(scene.Player, 7559);
+                Assert(!scene.Player.IsKnockbackImmune, "被回返眩晕后不能通过默语补开防击退。");
+                external.StatusId.Value = 0;
+                scene.Manager.UseLocalAction(scene.Player, 7559);
+                Assert(scene.Player.IsKnockbackImmune && scene.Statuses.GetStatus(0).StatusId.Get() == 160,
+                    "解除眩晕后沉稳咏唱命令应正常生效。");
+                scene.Manager.RemoveStatus(scene.Player, 160);
+                scene.Manager.SetStatus(scene.Player, 13, 9, 0, scene.Source);
+                scene.Manager.UseLocalAction(scene.Player, 7548);
+                Assert(scene.Player.IsKnockbackImmune, "止步只禁止移动，不能阻止使用防击退技能。");
+                scene.Manager.Clear();
+                Assert(scene.Statuses.GetStatus(0).StatusId.Get() == 0, "停止时必须清理命令产生的状态。");
+            }
+        }
+
+        public static void KnockbackImmunityReadsActualStatusesAcrossManagers()
+        {
+            using (var scene = new Scene())
+            {
+                var fake = scene.Manager.Attach(scene.Spawner.World.CreateCharacter(2));
+                fake.Job = Simulant.Game.FFCS.Client.Game.Character.Job.SCH;
+                scene.Manager.UseKnockbackImmunity(fake);
+                Assert(fake.Entity.Native.StatusManager.GetStatus(0).StatusId.Get() == 160,
+                    "读条职业的假队员应使用沉稳咏唱。");
+                fake.Knockback(0, 20, 0.8f);
+                Assert(fake.Entity.NetworkMoves.Count == 0, "假队员有防击退时也不能发送击退移动包。");
+
+                scene.Statuses.GetStatus(0).StatusId.Value = 1209;
+                scene.Statuses.GetStatus(0).RemainingTime.Value = 6;
+                Assert(scene.Player.IsKnockbackImmune, "副本必须识别其他管理器施加的防击退状态。");
+                scene.Statuses.GetStatus(0).StatusId.Value = 0;
+                scene.Manager.RemoveStatus(fake, 160);
+                Assert(!scene.Player.IsKnockbackImmune && !fake.IsKnockbackImmune,
+                    "实际状态移除后应恢复击退。");
+            }
+        }
+
         public static void SessionStatusesPreserveOriginalAndRefreshOwnedSlot()
         {
             using (var scene = new Scene())
@@ -218,10 +288,108 @@ namespace Simulant.Tests
             }
         }
 
+        public static void MovementLocksFollowStatusOverlapAndPreserveExistingRestriction()
+        {
+            Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>()[9000] =
+                new Lumina.Excel.Sheets.Status
+                {
+                    LockMovement = true
+                };
+            Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>()[9001] =
+                new Lumina.Excel.Sheets.Status
+                {
+                    LockMovement = true
+                };
+            var condition = Conditions.Instance();
+            condition.SetMovementLocked(false);
+
+            using (var scene = new Scene())
+            {
+                scene.Manager.SetStatus(scene.Player, 9000, 10, 0, scene.Source);
+                scene.Manager.SetStatus(scene.Player, 9001, 20, 0, scene.Source);
+                Assert(scene.Player.MovementLocked && condition.SufferingStatusAffliction.Get(),
+                    "禁止移动状态必须同时限制本机输入与模拟移动。");
+                Assert(scene._scheduler.PendingCount == 1, "多个状态只共用一个到期检查节点。");
+                scene.Manager.RemoveStatus(scene.Player, 9000);
+                Assert(condition.SufferingStatusAffliction.Get(), "移除一个状态不能解除另一个仍生效的限制。");
+                scene.Manager.RemoveStatus(scene.Player, 9001);
+                Assert(!scene.Player.MovementLocked && !condition.SufferingStatusAffliction.Get(),
+                    "最后一个禁止移动状态移除后必须立即恢复移动。");
+            }
+
+            condition.SetMovementLocked(true);
+
+            using (var scene = new Scene())
+            {
+                scene.Manager.SetStatus(scene.Player, 9000, 10, 0, scene.Source);
+                scene.Manager.Clear();
+                Assert(condition.SufferingStatusAffliction.Get(), "停止时不能清除模拟开始前已有的原生限制。");
+            }
+
+            condition.SetMovementLocked(false);
+        }
+
+        public static void MovementLockRefreshExpiresWithoutWaitingForStatusRemoval()
+        {
+            Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>()[9000] =
+                new Lumina.Excel.Sheets.Status
+                {
+                    LockMovement = true
+                };
+            Conditions.Instance().SetMovementLocked(false);
+
+            using (var scene = new Scene())
+            using (var done = new System.Threading.ManualResetEventSlim())
+            {
+                scene.Manager.SetStatus(scene.Player, 9000, 0.12f, 0, scene.Source);
+                scene._scheduler.Schedule(0.06, () => scene.Manager.SetStatus(scene.Player, 9000, 0.4f, 0, scene.Source));
+                var heldAfterRefresh = false;
+                scene._scheduler.Schedule(0.25, () => heldAfterRefresh = scene.Player.MovementLocked);
+                scene._scheduler.Schedule(0.65, done.Set);
+                scene._scheduler.Start();
+                Assert(done.Wait(2500), "状态刷新及到期检查超时。");
+                scene._scheduler.Dispose();
+                Assert(heldAfterRefresh && !scene.Player.MovementLocked && !Conditions.Instance().SufferingStatusAffliction.Get(),
+                    "刷新应延长限制，达到新期限后即便状态槽未清空也必须解除。");
+            }
+        }
+
+        public static void MovementLocksReleaseOnInterruptAndWorldChange()
+        {
+            Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>()[9000] =
+                new Lumina.Excel.Sheets.Status
+                {
+                    LockMovement = true
+                };
+            Conditions.Instance().SetMovementLocked(false);
+
+            using (var scene = new Scene())
+            {
+                scene.Manager.SetStatus(scene.Player, 9000, 10, 0, scene.Source);
+                scene.Manager.Interrupt();
+                Assert(!Conditions.Instance().SufferingStatusAffliction.Get() && !scene.Player.MovementLocked &&
+                    scene.Statuses.GetStatus(0).StatusId.Get() == 9000 && scene.Source.IsActive,
+                    "错误中断必须解除移动限制，同时保留状态图标、角色与已展示的现场。");
+            }
+
+            using (var scene = new Scene())
+            {
+                scene.Manager.SetStatus(scene.Player, 9000, 10, 0, scene.Source);
+                scene.Spawner.World.Registry.Reset();
+                // 新身份上的限制不能被旧会话恢复；模拟客户端重置后由新场景设为 true。
+                Conditions.Instance().SetMovementLocked(true);
+                scene.Manager.Clear();
+                Assert(Conditions.Instance().SufferingStatusAffliction.Get() && !scene.Manager.HasPendingCleanup,
+                    "世界变化应丢弃旧限制责任，不操作新身份或阻塞环境恢复。");
+            }
+
+            Conditions.Instance().SetMovementLocked(false);
+        }
+
         private sealed class Scene : IDisposable
         {
             internal readonly EntitySpawner Spawner = new EntitySpawner();
-            private readonly SimScheduler _scheduler = new SimScheduler();
+            internal readonly SimScheduler _scheduler = new SimScheduler();
             internal readonly SimEntityManager Manager;
             internal readonly SimActor Player, Source;
             internal readonly StatusManager Statuses;

@@ -3,6 +3,7 @@ using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
 using Simulant.Game;
+using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Simulation;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
@@ -26,9 +27,11 @@ namespace Simulant.Content.U7a.Presets
         public override int Level => 100;
         public override Type SimLogicType => typeof(CrystallizeTimeLogic);
         public override WaymarkLayout Waymarks => U7a.Waymarks;
-        public override string Description => "早撞龙头解法；红色同类按所选优先级，高左低右。\n" +
-            "蓝色按美服分配：蓝土、蓝水、蓝冰、蓝暗分别标记 1、2、3、4，吃通用标点 B、3、4、D 方向的白圈；场地标点不随白圈移动。\n" +
-            "回返面向两次光波起点之间的角，MT H1 D1 D3 在左，ST H2 D2 D4 在右，坦克在前。落地后左右四人死亡轮回，再八人集合无尽顿悟。";
+        public override string Description => 
+            "红色同点名按优先级，高左低右；\n" +
+            "蓝色固定土水冰暗分别标记 1、2、3、4，面朝南侧从左至后吃白圈。\n\n" +
+            "/e sim ac 沉稳咏唱／亲疏自行 可模拟防击退；\n" +
+            "/e sim ac 冲刺 可模拟冲刺。";
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
             new ComboBoxOption<int>(nameof(CrystallizeTimeLogic.PlayerSlot), "自身职能", 1,
@@ -36,31 +39,50 @@ namespace Simulant.Content.U7a.Presets
             {
                 [1] = "MT", [2] = "ST", [3] = "H1", [4] = "H2", [5] = "D1", [6] = "D2", [7] = "D3", [8] = "D4"
             }),
-            new ComboBoxOption<CrystalDebuff>(nameof(CrystallizeTimeLogic.InitialDebuff), "初始点名", CrystalDebuff.Random,
-                new Map<CrystalDebuff>
+            new ComboBoxOption<CrystalSolution>(nameof(CrystallizeTimeLogic.Solution), "解法", CrystalSolution.YAntiKnockback,
+                new Map<CrystalSolution>
             {
-                [CrystalDebuff.Random] = "全随机", [CrystalDebuff.RandomRed] = "随机红色", [CrystalDebuff.RandomBlue] = "随机蓝色",
-                    [CrystalDebuff.RedWind] = "红风", [CrystalDebuff.RedIce] = "红冰", [CrystalDebuff.BlueWater] = "蓝水", [CrystalDebuff.BlueEarth] = "蓝土",
-                    [CrystalDebuff.BlueDark] = "蓝暗", [CrystalDebuff.BlueIce] = "蓝冰"
+                [CrystalSolution.Knockback] = "正攻击退", [CrystalSolution.YAntiKnockback] = "Y 字防击退逃课"
             }),
-            new ComboBoxOption<string>(nameof(CrystallizeTimeLogic.RedPriority), "二运红组优先级", CrystallizeTimePlan.DefaultRedPriority,
+            new ComboBoxOption<CrystalDebuff>(nameof(CrystallizeTimeLogic.InitialDebuff), "初始点名", CrystalDebuff.Random,
+                new Map<CrystalDebuff> {
+                    [CrystalDebuff.Random] = "全随机", 
+                    [CrystalDebuff.RandomRed] = "随机红龙", 
+                    [CrystalDebuff.RandomBlue] = "随机蓝龙",
+                    [CrystalDebuff.RedWind] = "红龙 + 黑暗暴风（风）", 
+                    [CrystalDebuff.RedIce] = "红龙 + 黑暗冰封（冰）", 
+                    [CrystalDebuff.BlueWater] = "蓝龙 + 黑暗狂水（水）", 
+                    [CrystalDebuff.BlueEarth] = "蓝龙 + 黑暗神圣（土）",
+                    [CrystalDebuff.BlueDark] = "蓝龙 + 暗炎喷发（暗）", 
+                    [CrystalDebuff.BlueIce] = "蓝龙 + 黑暗冰封（冰）"
+                }),
+            new ComboBoxOption<string>(nameof(CrystallizeTimeLogic.RedPriority), "红组优先级", CrystallizeTimePlan.DefaultRedPriority,
                 new Map<string>
-            {
-                ["12345678"] = "MT-D4", ["34125678"] = "H1 H2 MT ST D1-4（国服）",
-                    ["43215678"] = "H2 H1 ST MT D1-4（美服）", ["23184567"] = "H1 MT ST D1-4 H2（日服）"
-            },
+                {
+                    ["12345678"] = "MT-D4", 
+                    ["34125678"] = "H1 H2 MT ST D1-4（国服）",
+                    ["43215678"] = "H2 H1 ST MT D1-4（美服）", 
+                    ["23184567"] = "H1 MT ST D1-4 H2（日服）"
+                },
                 "红冰、红风各自比较优先级，高优先级去左，低优先级去右。"),
             new ComboBoxOption<CrystalWave>(nameof(CrystallizeTimeLogic.Wave), "光波起始方向", CrystalWave.Random,
                 new Map<CrystalWave>
-            {
-                [CrystalWave.Random] = "随机", [CrystalWave.LeftUp] = "左 - 上", [CrystalWave.LeftDown] = "左 - 下",
-                    [CrystalWave.RightUp] = "右 - 上", [CrystalWave.RightDown] = "右 - 下"
-            }),
-            new ComboBoxOption<CrystalPurple>(nameof(CrystallizeTimeLogic.Purple), "紫线方向", CrystalPurple.MainDiagonal,
+                {
+                    [CrystalWave.Random] = "随机", 
+                    [CrystalWave.LeftUp] = "左 - 上", 
+                    [CrystalWave.LeftDown] = "左 - 下",
+                    [CrystalWave.RightUp] = "右 - 上", 
+                    [CrystalWave.RightDown] = "右 - 下"
+                }),
+            new ComboBoxOption<CrystalPurple>(nameof(CrystallizeTimeLogic.Purple), "紫线方向", CrystalPurple.Random,
                 new Map<CrystalPurple>
-            {
-                [CrystalPurple.MainDiagonal] = "主斜向（左上、右下）", [CrystalPurple.OtherDiagonal] = "副斜向（右上、左下）"
-            })
+                {
+                    [CrystalPurple.Random] = "随机", 
+                    [CrystalPurple.MainDiagonal] = "主斜向（＼）", 
+                    [CrystalPurple.AntiDiagonal] = "副斜向（／）"
+                }),
+            new CheckBoxOption(nameof(CrystallizeTimeLogic.FastOpening), "开场读条加速", false,
+                "开场两个咏唱缩短为 1 秒，后续机制同步提前。")
         };
     }
 
@@ -68,6 +90,9 @@ namespace Simulant.Content.U7a.Presets
     {
         [SimOption]
         internal int PlayerSlot { get; set; }
+
+        [SimOption]
+        internal CrystalSolution Solution { get; set; }
 
         [SimOption]
         internal CrystalDebuff InitialDebuff { get; set; }
@@ -80,6 +105,10 @@ namespace Simulant.Content.U7a.Presets
 
         [SimOption]
         internal CrystalPurple Purple { get; set; }
+
+        [SimOption]
+        internal bool FastOpening { get; set; }
+
         private int Self => PlayerSlot - 1;
 
         private readonly Random _random = new Random();
@@ -87,13 +116,15 @@ namespace Simulant.Content.U7a.Presets
         private SimActor _shiva, _gaia, _crystal, _wyrm;
         private readonly SimActor[] _sand = new SimActor[6], _heads = new SimActor[2], _helpers = new SimActor[19];
         private readonly EventObject[] _puddles = new EventObject[4];
-        private readonly Vector2[] _puddlePositions = new Vector2[4], _rewind = new Vector2[8];
+        private readonly Vector2[] _puddlePositions = new Vector2[4];
+        private readonly Vector3[] _rewind = new Vector3[8];
         private readonly bool[] _cleansed = new bool[8], _taken = new bool[4];
         private readonly int[] _headHits = new int[2];
         private readonly HashSet<uint> _mapChanges = new HashSet<uint>();
         private readonly HashSet<int> _marked = new HashSet<int>();
         private int[] _firstFront;
         private bool _markersOwned;
+        private bool _crystalBroken;
         private int _mistakes;
         private double _origin;
         private double Now => Scheduler.ElapsedSeconds - _origin;
@@ -105,7 +136,7 @@ namespace Simulant.Content.U7a.Presets
 
         protected override void BuildTimeline(SimTimeline timeline)
         {
-            _plan = new CrystallizeTimePlan(Self, InitialDebuff, Wave, Purple, _random, RedPriority);
+            _plan = new CrystallizeTimePlan(Self, InitialDebuff, Wave, Purple, _random, RedPriority, Solution);
             timeline.At(0, () => GeneratePartyMembers(PlayerSlot, PrepareActors), "准备时间结晶小队");
         }
 
@@ -115,10 +146,9 @@ namespace Simulant.Content.U7a.Presets
             {
                 Party[slot].Pos = CrystallizeTimePlan.Circle(Center, 5).Sample(_random);
                 Party[slot].Heading = (float)Math.PI;
-                Move(slot, Party[slot].Pos, 1, 120, true, relativeToNow: true);
             }
 
-            var pending = 4 + _sand.Length + _helpers.Length;
+            var pending = 6 + _sand.Length + _helpers.Length;
 
             void Ready()
             {
@@ -153,11 +183,7 @@ namespace Simulant.Content.U7a.Presets
             Spawn(17833, 12809, Center + new Vector2(0, 5), actor => _shiva = actor, layout: 0xA55C01, heading: 0);
             Spawn(17835, 9832, Center, actor => _gaia = actor, layout: 0xA55C02);
 
-            Spawn(17841, 13559, CrystallizeTimePlan.Crystal, actor =>
-            {
-                _crystal = actor;
-                actor.Entity.SetTargetable(false);
-            }, layout: 0xA55C07);
+            PrepareCrystal(Ready);
 
             Spawn(17834, 9324, Center + new Vector2(0, 5), actor =>
             {
@@ -183,10 +209,74 @@ namespace Simulant.Content.U7a.Presets
             }
         }
 
+        private void PrepareCrystal(Action ready)
+        {
+            // 水晶、琳和盖娅是三个独立实体；幻影先播放回放中的动作，再切换冻结姿势。
+            var crystal = CrystallizeTimePlan.Crystal;
+            var specs = new[]
+            {
+                new NetworkNpcSpawnSpec
+                {
+                    BNpcBaseId = 17841, BNpcNameId = 13559, LayoutId = 0xA55C07,
+                    Pos = new Vector3(crystal, 0), Heading = 0,
+                    MaxHealthPoints = 201481, HealthPoints = 169245, DisplayFlags = 0x40003
+                },
+                new NetworkNpcSpawnSpec
+                {
+                    BNpcBaseId = 17844, BNpcNameId = 9829, LayoutId = 0xA5AF23,
+                    Pos = new Vector3(crystal + new Vector2(0.7124f, 0), 0), Heading = -0.837806f,
+                    MaxHealthPoints = 188300, ModelState = 7, Targetable = false
+                },
+                new NetworkNpcSpawnSpec
+                {
+                    BNpcBaseId = 17845, BNpcNameId = 9830, LayoutId = 0xA5AF24,
+                    Pos = new Vector3(crystal - new Vector2(0.7124f, 0), 0), Heading = 1.221691f,
+                    MaxHealthPoints = 188300, ModelState = 121, Targetable = false
+                }
+            };
+
+            foreach (var spec in specs)
+            {
+                spec.Level = 100;
+                spec.CharacterDataFlags = 1;
+
+                // 回放中的实体高度约为 0，视觉抬升由永久「浮空」状态控制
+                if (spec.BNpcBaseId != 17841)
+                    spec.InitialStatuses = new[]
+                    {
+                        new CommonSpawnData.StatusEffect
+                        {
+                            StatusId = 1390, Param = 200, SourceObjectId = 0xE0000000
+                        }
+                    };
+
+                EntityManager.SpawnNetworkBNpc(spec, actor =>
+                {
+                    if (spec.BNpcBaseId == 17841)
+                    {
+                        _crystal = actor;
+                        ready();
+                        return;
+                    }
+
+                    // 不继承前一阶段的显示标志；保留不可选中，但让人物正常绘制。
+                    var ryne = spec.BNpcBaseId == 17844;
+                    actor.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, ryne ? 11415u : 3207u);
+                    Scheduler.ScheduleAfter(1.084, () =>
+                    {
+                        actor.Entity.ActorControl(ActorControlCategory.SetModelState, ryne ? 5u : 31u);
+                        ready();
+                    }, "冻结水晶内的幻影");
+                });
+            }
+        }
+
         private void BeginEncounter()
         {
-            _origin = Scheduler.ElapsedSeconds;
-            EntityManager.SetPartyEnmity(_shiva, 100, 90, 30, 30, 50, 50, 50, 50);
+            var start = Scheduler.ElapsedSeconds;
+            // 保留回放的相对时间，统一提前节点、走位期限与龙头轨迹。
+            _origin = start - (FastOpening ? 9 : 0);
+            EntityManager.SetCombatTarget(_shiva);
             // 回放双读条时：南侧希瓦朝南，中央暗之巫女朝北；目标不再驱动模型转向。
             _shiva.Entity.SetNetworkTarget(_shiva.Entity);
             _gaia.Entity.SetNetworkTarget(_gaia.Entity);
@@ -194,7 +284,10 @@ namespace Simulant.Content.U7a.Presets
             _gaia.FaceNetwork((float)Math.PI);
             Map(0x2E, 2);
             _host.LogSim($"[时间结晶] 你的职能为 {CrystallizeTimePlan.Roles[Self]}，点名为 {CrystallizeTimePlan.Label(_plan.Debuffs[Self])}。");
-            Play(BuildMechanicTimeline());
+            foreach (var node in BuildMechanicTimeline().Snapshot())
+                Scheduler.Schedule(Math.Max(start, _origin + node.Seconds), node.Action, node.Name);
+
+            CheckArena();
         }
 
         private void SpawnHeads()
@@ -310,7 +403,7 @@ namespace Simulant.Content.U7a.Presets
             _mapChanges.Clear();
         }
 
-        private void Report(MechanicError error)
+        private void Report(MechanicError error, MechanicResult result = null)
         {
             _mistakes++;
 
@@ -324,6 +417,8 @@ namespace Simulant.Content.U7a.Presets
             try
             {
                 TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + message);
+                if (result != null)
+                    result.FailureReported = true;
             }
             catch (Exception ex)
             {

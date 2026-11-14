@@ -1,4 +1,5 @@
 using Simulant.Core.Entity;
+using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Game.FFCS.Client.Game.Object;
 using System;
@@ -15,6 +16,9 @@ namespace Simulant.Simulation.Runtime
             internal Character Source;
             internal int Slot;
             internal ushort StatusId;
+            internal SimActor Participant;
+            internal bool LockMovement;
+            internal double ExpiresAt;
         }
 
         private readonly List<OwnedStatus> _statuses = new List<OwnedStatus>();
@@ -99,11 +103,16 @@ namespace Simulant.Simulation.Runtime
                         Actor = actor.Entity,
                         Source = source.Entity,
                         Slot = slot,
-                        StatusId = statusId
+                        StatusId = statusId,
+                        Participant = actor
                     };
                     // 原生调用可能部分成功后抛错；写入之前即登记恢复责任。
                     _statuses.Add(owned);
                 }
+
+                var found = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>().TryGetRow(statusId, out var row);
+                owned.LockMovement = found && row.LockMovement;
+                owned.ExpiresAt = _scheduler.ElapsedSeconds + seconds;
 
                 // 返回值只表示编号或来源有变化；同一状态刷新时间和参数会正常返回 false。
                 var identityChanged = statuses.SetStatus(owned.Slot, statusId, seconds, param,
@@ -122,6 +131,8 @@ namespace Simulant.Simulation.Runtime
                         $"期望编号 0x{statusId:X4}、参数 {param}、来源 0x{source.Id:X16}、时间 {seconds:F3} 秒；" +
                         $"实际编号 0x{actualId:X4}、参数 {actualParam}、来源 0x{actualSource:X16}、剩余 {actual.RemainingTime.Get():F3} 秒；" +
                         $"原生编号或来源变化标志：{(identityChanged ? "是" : "否")}。");
+
+                RefreshMovementLocks();
             }
         }
 
@@ -132,8 +143,12 @@ namespace Simulant.Simulation.Runtime
                 throw new ArgumentNullException(nameof(actor));
 
             lock (_gate)
+            {
                 foreach (var owned in _statuses.Where(s => s.Actor.Identity == actor.Entity.Identity && s.StatusId == statusId).ToArray())
                     RemoveOwnedStatus(owned);
+
+                RefreshMovementLocks();
+            }
         }
 
         private void EnsureStatusActor(SimActor actor)
@@ -201,6 +216,8 @@ namespace Simulant.Simulation.Runtime
                         errors.Add(error);
                     }
                 }
+
+                RefreshMovementLocks();
 
                 if (errors != null)
                     throw new AggregateException("部分模拟点名清理失败，已保留实体与清理责任。", errors);

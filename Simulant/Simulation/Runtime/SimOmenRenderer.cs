@@ -1,5 +1,6 @@
 using Simulant.ACT;
 using System.Globalization;
+using System.Numerics;
 using System.Text;
 using ActionRow = Lumina.Excel.Sheets.Action;
 
@@ -8,7 +9,8 @@ namespace Simulant.Simulation.Runtime
     /// <summary>只负责绘制和移除预兆；延迟绘制由读条控制器安排。</summary>
     internal sealed class SimOmenRenderer
     {
-        public bool Show(SimActor actor, ActionRow action, double sustain, string tag)
+        public bool Show(SimActor actor, ActionRow action, double sustain, string tag,
+            Vector3? position = null, float? rotation = null)
         {
             if (!actor.IsActive || action.Omen.RowId == 0 || sustain <= 0)
                 return false;
@@ -40,9 +42,9 @@ namespace Simulant.Simulation.Runtime
                     return false;
             }
 
-            // 在预兆出现时读取位置和朝向，包含延迟期间移动产生的变化。
-            var center = actor.Entity.Pos3D;
-            var heading = actor.Entity.Heading;
+            // 未指定时在绘制时读取；同帧发出的移动包尚未消费时，可传入已知的技能落点。
+            var center = position ?? actor.Entity.Pos3D;
+            var heading = rotation ?? actor.Entity.Heading;
             var command = new StringBuilder();
             command.AppendLine("Tag: " + tag);
             command.AppendLine("Omen: " + action.Omen.Value.Path.ExtractText());

@@ -13,6 +13,8 @@ namespace Simulant.Simulation.Mechanics
         public bool Success { get; }
         public MechanicFailureSeverity FailureSeverity { get; }
         public string Reason { get; }
+        /// <summary>详细错误已送达玩家时设为 true，避免中断流程再发送简略提示。</summary>
+        public bool FailureReported { get; set; }
         public Vector2 Center { get; }
         public float Heading { get; }
         public IReadOnlyList<MechanicResult> Children { get; }

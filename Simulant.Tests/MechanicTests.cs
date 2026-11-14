@@ -136,6 +136,36 @@ namespace Simulant.Tests
             }
         }
 
+        public static void ParticipantFailureDoesNotSkipCrystalCheckOrItsVisual()
+        {
+            using (var scene = new Scene())
+            {
+                scene.Player.Pos = Vector2.Zero;
+                scene.Other.Pos = Vector2.UnitX;
+                var checkedCrystal = false;
+                var showedCrystal = false;
+                var mechanic = new AreaMechanic
+                {
+                    Area = ActionArea.Circle(5),
+                    RequiredPlayers = 1,
+                    Check = members =>
+                    {
+                        checkedCrystal = true;
+                        return "点名范围击碎了北侧水晶。";
+                    },
+                    Visual = result => showedCrystal = checkedCrystal,
+                    Failed = result => Assert(showedCrystal && result.Reason.Contains("实际 2 人") && result.Reason.Contains("水晶"),
+                        "人数失败不能跳过水晶判定，两项原因必须保留，并先展示当前特效。")
+                };
+                scene.Manager.RunMechanic(mechanic);
+                scene.Scheduler.Start();
+                Await(scene.ErrorReported);
+                scene.Scheduler.Dispose();
+                Assert(checkedCrystal && showedCrystal && scene.Errors.Count == 1 && scene.Errors[0] is SimMechanicFailedException,
+                    "额外规则和演出必须实际执行，完成后再报告机制失败。");
+            }
+        }
+
         public static void MechanicGroupEvaluatesEverythingBeforeAnyCallback()
         {
             using (var scene = new Scene())

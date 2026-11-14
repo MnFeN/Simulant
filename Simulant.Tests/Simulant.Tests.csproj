@@ -21,6 +21,11 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Web.Extensions" />
     <Compile Include="Program.cs" />
+    <Compile Include="CommandListenerTests.cs" />
+    <Compile Include="CommandListenerTestDoubles.cs" />
+    <Compile Include="..\Simulant\ACT\SimCommandListener.cs">
+      <Link>ACT\SimCommandListener.cs</Link>
+    </Compile>
     <Compile Include="MathParserTests.cs" />
     <Compile Include="..\Simulant\Utils\Maths\MathParser.cs">
       <Link>Utils\Maths\MathParser.cs</Link>
@@ -45,6 +50,9 @@
       <Link>Configuration.cs</Link>
     </Compile>
     <Compile Include="SessionTests.cs" />
+    <Compile Include="..\Simulant\Core\SimActionService.cs">
+      <Link>Core\SimActionService.cs</Link>
+    </Compile>
     <Compile Include="WaymarkTests.cs" />
     <Compile Include="..\Simulant\Core\Environment\WaymarkLayout.cs">
       <Link>Environment\WaymarkLayout.cs</Link>
@@ -73,6 +81,12 @@
     <Compile Include="CastTests.cs" />
     <Compile Include="ManagerTests.cs" />
     <Compile Include="SessionStatusTests.cs" />
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Actions.cs">
+      <Link>Runtime\SimEntityManager.Actions.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.MovementLocks.cs">
+      <Link>Runtime\SimEntityManager.MovementLocks.cs</Link>
+    </Compile>
     <Compile Include="PartyNameTests.cs" />
     <Compile Include="EntityTestDoubles.cs" />
     <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\ActorMovePacket.cs">

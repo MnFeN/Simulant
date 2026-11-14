@@ -156,6 +156,8 @@ namespace Simulant.Game
         RemoveName = 0x00A8,
         /// <summary>画面淡出。</summary>
         ScreenFadeOut = 0x00AA,
+        /// <summary>固定位置特效；a1：VFX 行号，a2/a3/a4：压缩的游戏 X/Y/Z 坐标。时间结晶回返记录使用 1013。</summary>
+        PositionVFX = 0x00B7,
         /// <summary>目标特效。</summary>
         TargetVFX = 0x00B8,
         /// <summary>入场表现；Sapphire 名称为 Appear。</summary>
@@ -182,6 +184,8 @@ namespace Simulant.Game
         KnockBack = 0x00E1,
         /// <summary>强制移动。</summary>
         ForcedMovement = 0x00E2,
+        /// <summary>带动画的传送；a1 高 X、低高度，a2 高 Z、低面向，均为压缩坐标；a3 低位为 ActionTimeline、高位为标志，a4 为移动确认序号。按国服时间结晶回放与客户端分支核对。</summary>
+        WarpWithAnimation = 0x00F1,
         // 用户附注：0xEC 疑似设置移动相关标志的低两位，0x107 疑似写入全局布尔标志；语义未确认，暂不命名。
         /// <summary>搭档解锁。</summary>
         CompanionUnlock = 0x00FD,

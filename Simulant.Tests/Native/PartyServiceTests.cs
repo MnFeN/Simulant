@@ -477,10 +477,10 @@ namespace Simulant.Tests.Native
                     10, 100, 50
                 });
                 Assert(scene.Memory.Read<int>(Scene.HateAddress + 0x100) == 3 &&
-                    scene.Memory.Read<uint>(Scene.HateAddress + 0x104) == Scene.EnemyId &&
+                    scene.Memory.Read<uint>(Scene.HateAddress + 0x104) == BitConverter.ToUInt32(scene.OriginalHate, 0x104) &&
                     scene.Memory.Read<uint>(Scene.HateAddress) == scene.Actors[1].Id &&
                     scene.Memory.Read<int>(Scene.HateAddress + 4) == 100,
-                    "合法仇恨应通过原生收包按降序写入成员 ID、百分比、目标和人数。");
+                    "合法仇恨应按降序更新成员和人数；原生函数不写目标 ID，也不能因此误报失败。");
                 var packet = scene.Plugin.HatePackets.Single();
                 Assert(scene.Plugin.HateTargets.Single() == Scene.EnemyId && packet.MemberCount == 3 &&
                     packet.GetMember(0).EntityId == scene.Actors[1].Id && packet.GetMember(1).EntityId == scene.Actors[2].Id &&
@@ -665,12 +665,16 @@ namespace Simulant.Tests.Native
             {
                 scene.Show();
                 scene.Plugin.BeforeHateReturn = () => scene.Memory.PutBytes(Scene.HateAddress, new byte[Hate.Size]);
-                Throws<InvalidOperationException>(() => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId,
-                    scene.Actors, new[]
+                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
                 {
                     100, 50, 10
-                }));
-                Assert(scene.Owned, "仍选中 Boss 但原生读回不符时，应继续报错并保留恢复责任。");
+                });
+                Assert(scene.Owned && scene.Plugin.HatePackets.Count == 1,
+                    "仍选中 Boss 时，显示数据未同步也不应中断模拟。");
+                scene.Invoke("RefreshEnmity", scene.Owner);
+                scene.Invoke("RefreshEnmity", scene.Owner);
+                Assert(scene.Plugin.HatePackets.Count == 2 && scene.Memory.Read<int>(Scene.HateAddress + 0x100) == 3,
+                    "读回暂时不符后应补发一次，同步完成后不再重复发送。");
                 scene.Invoke("RestoreAll");
                 scene.AssertRestored();
             }
@@ -1154,7 +1158,6 @@ namespace Simulant.Tests.Native
                 HatePackets.Add(packet);
                 HateTargets.Add((uint)args[0]);
                 var hate = UIState.InstancePtr + 8;
-                Memory.PutBytes(hate, new byte[Hate.Size]);
 
                 for (var i = 0; i < packet.MemberCount; i++)
                 {
@@ -1164,7 +1167,6 @@ namespace Simulant.Tests.Native
                 }
 
                 Memory.Put(hate + 0x100, (int)packet.MemberCount);
-                Memory.Put(hate + 0x104, (uint)args[0]);
                 var beforeReturn = BeforeHateReturn;
                 BeforeHateReturn = null;
                 beforeReturn?.Invoke();

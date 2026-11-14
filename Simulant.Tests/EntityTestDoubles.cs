@@ -124,6 +124,14 @@ namespace Simulant.Core.Entity
         }
 
         public Simulant.Game.FFCS.Client.Game.Character.Job Job { get; set; }
+        public bool HasStatus(uint statusId)
+        {
+            for (var slot = 0; slot < 60; slot++)
+                if (Native.StatusManager.GetStatus(slot).StatusId.Get() == statusId)
+                    return true;
+            return false;
+        }
+
         public uint HP { get; set; } = 10000;
         public bool IsTargetable { get; set; } = true;
         public bool IsWeaponDrawn { get; set; }
@@ -214,6 +222,8 @@ namespace Simulant.Core.Entity
             }
         }
 
+        internal float CastDuration;
+
         public void SetCastInfo(uint actionId, float castTime)
         {
             if (!IsAlive)
@@ -221,6 +231,7 @@ namespace Simulant.Core.Entity
 
             CastingActionId = actionId;
             CastStarts.Add(actionId);
+            CastDuration = castTime;
         }
 
         public bool FinalizeCast(uint expectedActionId)
@@ -312,6 +323,15 @@ namespace Simulant.Game.FFCS.Client.Game
         public readonly StatusTestField<ushort> Param = new StatusTestField<ushort>();
         public readonly StatusTestField<float> RemainingTime = new StatusTestField<float>();
         public readonly StatusTestField<Object.GameObjectId> SourceObject = new StatusTestField<Object.GameObjectId>();
+    }
+
+    public sealed class Conditions
+    {
+        public static IntPtr InstancePtr = new IntPtr(1), SetFuncPtr = new IntPtr(2);
+        private static readonly Conditions Current = new Conditions();
+        public readonly StatusTestField<bool> SufferingStatusAffliction = new StatusTestField<bool>();
+        public static Conditions Instance() => Current;
+        public void SetMovementLocked(bool locked) => SufferingStatusAffliction.Value = locked;
     }
 
     public sealed class StatusManager

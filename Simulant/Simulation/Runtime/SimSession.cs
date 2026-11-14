@@ -96,13 +96,17 @@ namespace Simulant.Simulation.Runtime
         private void HandleFailure(Exception error, string node)
         {
             Interlocked.Exchange(ref _failureRetained, 1);
+            var alreadyReported = error is SimMechanicFailedException failure && failure.AlreadyReported;
             var reason = error is SimMechanicFailedException ? error.Message :
                 $"节点「{node ?? "未命名"}」执行失败：{error.Message}";
 
             try
             {
                 if (error is SimMechanicFailedException)
-                    _host.LogWarning(reason);
+                {
+                    if (!alreadyReported)
+                        _host.LogWarning(reason);
+                }
                 else
                     _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{error}");
             }
@@ -112,7 +116,8 @@ namespace Simulant.Simulation.Runtime
                 {
                     try
                     {
-                        TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + reason);
+                        if (!alreadyReported)
+                            TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + reason);
                     }
                     catch (Exception chatError)
                     {

@@ -16,8 +16,9 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(0, () =>
             {
                 Map(0x28, 0x20);
-                _gaia.Cast(0x9D6A);
-                _shiva.Cast(0x9D30);
+                float? castTime = FastOpening ? 1f : (float?)null;
+                _gaia.Cast(0x9D6A, castTime: castTime);
+                _shiva.Cast(0x9D30, castTime: castTime);
             }, "暗之巫女与希瓦的时间结晶双读条");
 
             timeline.At(10.8, Assign, "施加随机点名与蓝色头标");
@@ -135,35 +136,27 @@ namespace Simulant.Content.U7a.Presets
                     Move(_plan.Red(CrystalDebuff.RedWind, side), _plan.Wind(side), 23, urgent: true);
             }, "红风穿入击退位置");
 
-            timeline.At(22.888, ResolveWater, "黑暗大水四人分摊");
+            timeline.At(22.888, ResolveWater, "黑暗狂水四人分摊");
 
-            timeline.At(22.98, () =>
+            timeline.At(23.15, () =>
             {
-                var wind = Party[_plan.Red(CrystalDebuff.RedWind, -_plan.NorthSlowSide)].Pos;
+                var wind = Party[_plan.Red(CrystalDebuff.RedWind, -_plan.NorthSlowSide)];
 
-                foreach (var slot in _plan.WaterGroup.Where(i => !_plan.IsRed(i)))
-                    Move(slot, CrystallizeTimePlan.WindRider(wind), 24.4, urgent: true);
-            }, "蓝色三人对准红风击退");
+                foreach (var slot in _plan.WaterGroup.Where(i => !_plan.IsRed(i) && i != Self))
+                    Party[slot].FollowForMechanic(() => _plan.WindRider(wind.Pos), _origin + 24.837);
+            }, "蓝色三人持续对准红风击退");
 
             timeline.At(24.837, ResolveIceWindDark, "冰、风、暗同时结算");
 
             timeline.At(24.94, () =>
             {
-                foreach (var side in new[]
-                {
-                    -1,
-                    1
-                }
-
-                )
-                    Move(_plan.Red(CrystalDebuff.RedIce, side), _plan.RedAfterIce(side), 27.85, urgent: true);
-            }, "红冰分摊或躲避第二轮沙漏");
+                // 在击退期间提交目标，实体从完整落点规划，结束后自行开始跑步。
+                foreach (var slot in _plan.BlueOrder)
+                    Move(slot, _plan.Stack, 27.6, urgent: true);
+            }, "击退后五人分摊");
 
             timeline.At(25.8, () =>
             {
-                foreach (var slot in _plan.BlueOrder)
-                    Move(slot, _plan.Stack, 27.6, urgent: true);
-
                 foreach (var side in new[]
                 {
                     -1,
@@ -172,7 +165,7 @@ namespace Simulant.Content.U7a.Presets
 
                 )
                     Move(_plan.Red(CrystalDebuff.RedWind, side), side == _plan.NorthSlowSide ? CrystallizeTimePlan.Sector(19, 20 * side, 0.2f, 0.5) : _plan.RedHead(side), 27.2, urgent: true);
-            }, "击退后五人分摊与红风等候撞头");
+            }, "红风等候撞头");
 
             timeline.At(27.5, () => Move(_plan.Red(CrystalDebuff.RedWind, _plan.NorthSlowSide), _plan.RedHead(_plan.NorthSlowSide), 29.5, urgent: true), "第二轮沙漏后红风撞头");
             timeline.At(27.7, () => CheckCleansed(Enumerable.Range(0, 8).Where(i => _plan.Debuffs[i] == CrystalDebuff.RedIce), "红冰龙头"), "红冰清除检查");
@@ -180,7 +173,7 @@ namespace Simulant.Content.U7a.Presets
 
             timeline.At(27.98, () =>
             {
-                foreach (var slot in Enumerable.Range(0, 8).Where(i => _plan.Debuffs[i] != CrystalDebuff.RedWind))
+                foreach (var slot in _plan.BlueOrder)
                     Move(slot, _plan.NorthRest, 32.1, urgent: true);
             }, "躲避最后一组沙漏与龙头爆炸");
 
@@ -195,7 +188,7 @@ namespace Simulant.Content.U7a.Presets
                 Helper(18, Center).Execute(40281);
             }, "寂灭");
 
-            timeline.At(43.759, SaveRewind, "记录回返位置");
+            timeline.At(CrystallizeTimePlan.RewindTime, SaveRewind, "记录回返位置");
 
             timeline.At(44.16, () =>
             {
@@ -204,7 +197,7 @@ namespace Simulant.Content.U7a.Presets
                 _gaia.Cast(40288);
             }, "碎灵一击读条");
 
-            timeline.At(44, () => MoveAll(_plan.Spread, 47.05, urgent: true), "回返记录后分散");
+            timeline.At(CrystallizeTimePlan.RewindTime, () => MoveAll(_plan.Spread, CrystallizeTimePlan.SpreadArrival, urgent: true), "回返记录后分散");
 
             timeline.At(46.609, () =>
             {
@@ -213,13 +206,27 @@ namespace Simulant.Content.U7a.Presets
                 _shiva.Cast(40229);
             }, "第一次圣翼读条");
 
-            timeline.At(47.375, ResolveSpiritTaker, "碎灵一击随机跳跃");
-            timeline.At(50.759, Return, "回返与眩晕");
+            timeline.At(47.375, ResolveSpiritTaker, "碎灵一击选人与跳跃判定");
+            if (_plan.IsY)
+            {
+                for (var slot = 0; slot < 8; slot++)
+                {
+                    if (slot == Self)
+                        continue;
+
+                    var member = slot;
+                    timeline.At(CrystallizeTimePlan.ReturnDebuffEnd - 1 - _random.NextDouble() * 2,
+                        () => EntityManager.UseKnockbackImmunity(Party[member]), "假队员使用防击退");
+                }
+            }
+
+            timeline.At(CrystallizeTimePlan.ReturnDebuffEnd, PrepareReturn, "回返结束与眩晕");
+            timeline.At(51.774, Return, "回返传送动画");
             timeline.At(52.758, () => WingCast(0), "第一次圣翼击退预备");
-            timeline.At(53.241, () => ResolveWing(0), "第一次圣翼击退");
+            timeline.At(53.241, () => BeginWing(0), "第一次圣翼演出与判定锁定");
             timeline.At(55.343, () => _shiva.Cast(40230), "第二次圣翼读条");
             timeline.At(57.264, () => WingCast(1), "第二次圣翼击退预备");
-            timeline.At(57.697, () => ResolveWing(1), "第二次圣翼击退");
+            timeline.At(57.697, () => BeginWing(1), "第二次圣翼演出与判定锁定");
 
             timeline.At(60.2, () =>
             {
@@ -253,20 +260,22 @@ namespace Simulant.Content.U7a.Presets
                 _gaia.Cast(40302, target: ST);
             }, "死亡轮回双读条");
 
+            // 结尾只演出：死亡轮回分别点 MT、ST，无尽顿悟固定点 MT。
             for (var hit = 0; hit < 4; hit++)
-            {
-                var index = hit;
-                timeline.At(68.018 + hit * 1.1, () => ResolveAkhMorn(index), $"死亡轮回第 {hit + 1} 次分摊");
-            }
+                timeline.At(68.018 + hit * 1.1, () =>
+                {
+                    Effect(0, 40248, 0);
+                    Effect(1, 40303, 1);
+                }, $"死亡轮回第 {hit + 1} 次演出");
 
             timeline.At(71.418, () =>
             {
-                _shiva.Cast(40249);
-                _gaia.Cast(40304);
+                _shiva.Cast(40249, target: MT);
+                _gaia.Cast(40304, target: MT);
                 MoveAll(_ => CrystallizeTimePlan.MornAfah, 77.8, 79);
             }, "无尽顿悟双读条与八人集合");
 
-            timeline.At(78.318, ResolveMornAfah, "无尽顿悟八人分摊");
+            timeline.At(78.318, () => Effect(0, 40250, 0), "无尽顿悟演出");
 
             timeline.At(81, () =>
             {
@@ -297,10 +306,11 @@ namespace Simulant.Content.U7a.Presets
                         {
                             _shiva.EnableDraw();
                             _shiva.Entity.ActorMove(new Vector3(pos, 0), heading, 0);
-                            _shiva.Cast(40251);
+                            _shiva.Cast(40251, omenPosition: new Vector3(pos, 0), omenHeading: heading);
                         }
 
-                        Helper(8 + w * 4 + s, pos, heading).Cast(s == 0 ? 40252u : 40253u);
+                        Helper(8 + w * 4 + s, pos, heading).Cast(s == 0 ? 40252u : 40253u,
+                            omenPosition: new Vector3(pos, 0), omenHeading: heading);
                     }, "光波预兆与读条");
 
                     timeline.At(hit, () => ResolveWave(w, s), $"第 {w + 1} 组光波第 {s + 1} 次");
@@ -335,13 +345,15 @@ namespace Simulant.Content.U7a.Presets
 
             for (var slot = 0; slot < 8; slot++)
             {
-                _rewind[slot] = Party[slot].Pos;
+                _rewind[slot] = Party[slot].Entity.Pos3D;
+                // 回放使用 ActorControlSelf 0xB7 播放位置特效，没有生成或删除 EObj。
+                Party[Self].Entity.PlayPositionVfx(1013, _rewind[slot]);
                 ClearStatus(slot, 4208);
                 Status(slot, 2452, 7);
             }
         }
 
-        private void Return()
+        private void PrepareReturn()
         {
             for (var slot = 0; slot < 8; slot++)
             {
@@ -349,13 +361,14 @@ namespace Simulant.Content.U7a.Presets
                 actor.SuspendBehavior(9.3);
                 ClearStatus(slot, 2452);
                 Status(slot, 4163, 9);
-
-                // 回返为瞬移；自身不接受 ActorMove，直接同步原生对象及显示对象的位置。
-                if (slot == Self)
-                    actor.Pos = _rewind[slot];
-                else
-                    actor.Entity.ActorMove(new Vector3(_rewind[slot], 0), actor.Heading, 0);
             }
+        }
+
+        private void Return()
+        {
+            // 回放在眩晕后 1.015 秒发送 0xF1，8488 为 return_warp；客户端在动画中完成位移。
+            for (var slot = 0; slot < 8; slot++)
+                Party[slot].Entity.WarpWithAnimation(_rewind[slot], Party[slot].Heading, 8488);
         }
     }
 }

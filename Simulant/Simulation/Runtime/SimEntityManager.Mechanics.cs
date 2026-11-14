@@ -54,6 +54,7 @@ namespace Simulant.Simulation.Runtime
             }
 
             List<Exception> errors = null;
+            TryCleanup(ClearMovementLocks);
             _behaviors?.Dispose();
 
             foreach (var mechanic in mechanics)

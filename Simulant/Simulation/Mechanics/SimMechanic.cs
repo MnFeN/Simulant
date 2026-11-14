@@ -202,7 +202,7 @@ namespace Simulant.Simulation.Mechanics
                     Failed?.Invoke(result);
 
                     if (result.FailureSeverity == MechanicFailureSeverity.Fatal)
-                        throw new SimMechanicFailedException(Name, result.Reason);
+                        throw new SimMechanicFailedException(Name, result.Reason, result.FailureReported);
                 }
 
                 if (!_stopping && Context.IsWorldValid)

@@ -52,8 +52,11 @@ namespace Simulant.Simulation.Mechanics
             else if (maximum.HasValue && participants.Count > maximum.Value)
                 reason = $"允许最多 {maximum.Value} 人，实际 {participants.Count} 人。";
 
-            if (reason == null)
-                reason = Check?.Invoke(participants);
+            // 人数错误与额外规则可以同时发生，例如分散重叠时也击中了场地机关。
+            var ruleFailure = Check?.Invoke(participants);
+
+            if (!string.IsNullOrEmpty(ruleFailure))
+                reason = reason == null ? ruleFailure : reason + " " + ruleFailure;
 
             return new MechanicResult(snapshot, participants, reason == null, reason, center, heading,
                 failureSeverity: FailureSeverity);

@@ -11,22 +11,81 @@ namespace Simulant.Content.U7a.Presets
 {
     internal sealed partial class CrystallizeTimeLogic
     {
-        private AreaMechanic Targeted(string name, uint action, int target, int[] expected, int helper, ActionArea? area = null)
+        private AreaMechanic Targeted(string name, uint action, int target, int[] expected, int helper,
+            ActionArea? area = null, Action<MechanicResult> visual = null)
         {
             var shape = area ?? ActionArea.FromAction(action);
-            var center = Vector2.Zero;
-            return new AreaMechanic
+            return ProtectCrystal(new AreaMechanic
             {
                 Name = name,
                 Area = shape,
                 RequiredPlayers = expected.Length,
-                CenterAtResolve = snapshot => center = snapshot.Get(target).Position,
-                Visual = result => Effect(helper, action, target),
+                CenterAtResolve = snapshot => snapshot.Get(target).Position,
+                Visual = visual ?? (result => Effect(helper, action, target)),
                 Failed = result => Report(result.DescribeFailure(name, expected, target)
-                    .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null)),
-                Check = members => shape.Contains(CrystallizeTimePlan.Crystal, center, 0) ? "技能击中了北侧水晶。" :
-                    members.Select(m => m.Slot).OrderBy(i => i).SequenceEqual(expected.OrderBy(i => i)) ? null : "参与者不符合当前点名分工。"
+                    .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null), result),
+                Check = members => members.Select(m => m.Slot).OrderBy(i => i).SequenceEqual(expected.OrderBy(i => i))
+                    ? null : "参与者不符合当前点名分工。"
+            }, target);
+        }
+
+        private AreaMechanic ProtectCrystal(AreaMechanic mechanic, int target)
+        {
+            var centerAtResolve = mechanic.CenterAtResolve;
+            var check = mechanic.Check;
+            var visual = mechanic.Visual;
+            var failed = mechanic.Failed;
+            var hit = false;
+            mechanic.CenterAtResolve = snapshot =>
+            {
+                var center = centerAtResolve?.Invoke(snapshot) ?? mechanic.Center;
+                hit = !_crystalBroken && mechanic.Area.IntersectsCircle(_crystal.Pos, _crystal.Entity.HitboxRadius, center, mechanic.Heading);
+
+                if (hit)
+                    mechanic.FailureSeverity = MechanicFailureSeverity.Fatal;
+
+                return center;
             };
+            mechanic.Check = members =>
+            {
+                var reason = check?.Invoke(members);
+                return hit ? (reason == null ? "" : reason + " ") + "点名范围击碎了北侧水晶。" : reason;
+            };
+            mechanic.Visual = result =>
+            {
+                visual?.Invoke(result);
+
+                if (hit)
+                    BreakCrystal();
+            };
+            mechanic.Failed = result =>
+            {
+                if (hit)
+                    Report(MechanicError.Rule(mechanic.Name, new[]
+                    {
+                        target
+                    }, result.Reason).WithAttribution(target == Self ? new[]
+                    {
+                        Self
+                    } : Array.Empty<int>(), "自身点名范围击中了北侧水晶"), result);
+                else
+                    failed?.Invoke(result);
+            };
+            return mechanic;
+        }
+
+        private void BreakCrystal()
+        {
+            if (_crystalBroken)
+                return;
+
+            _crystalBroken = true;
+            _crystal.StopCasting();
+            _crystal.Entity.SetNetworkVitals(0);
+            // 回放 4786.223 秒水晶破碎：死亡动画、状态 2，同时 MapEffect 0x2E 切换到 0x10。
+            _crystal.Entity.ActorControl(Simulant.Game.ActorControlCategory.DeathAnimation);
+            _crystal.Entity.ActorControl(Simulant.Game.ActorControlCategory.SetStatus, 2);
+            Map(0x2E, 0x10);
         }
 
         private int[] Responsible(MechanicResult result, int[] expected, int target)
@@ -53,7 +112,7 @@ namespace Simulant.Content.U7a.Presets
                 MaxPlayers = 0,
                 FailureSeverity = MechanicFailureSeverity.Warning,
                 Failed = result => Report(MechanicError.Fixed(name, Array.Empty<int>(), result.Participants.Select(m => m.Slot))
-                        .WithAttribution(result.Participants.Select(m => m.Slot), "自身进入伤害范围"))
+                        .WithAttribution(result.Participants.Select(m => m.Slot), "自身进入伤害范围"), result)
             };
 
         private void ResolveSand(int wave)
@@ -71,7 +130,7 @@ namespace Simulant.Content.U7a.Presets
         {
             var slot = _plan.Slot(CrystalDebuff.BlueWater);
             ClearStatus(slot, 2461);
-            EntityManager.RunMechanic(Targeted("黑暗大水四人分摊", 40271, slot, _plan.WaterGroup, 0));
+            EntityManager.RunMechanic(Targeted("黑暗狂水四人分摊", 40271, slot, _plan.WaterGroup, 0));
         }
 
         private void ResolveEarth()
@@ -83,6 +142,9 @@ namespace Simulant.Content.U7a.Presets
 
         private void ResolveIceWindDark()
         {
+            foreach (var slot in _plan.WaterGroup.Where(i => !_plan.IsRed(i) && i != Self))
+                Party[slot].StopMoving();
+
             var mechanics = new List<SimMechanic>();
 
             for (var slot = 0; slot < 8; slot++)
@@ -96,7 +158,7 @@ namespace Simulant.Content.U7a.Presets
                 ClearStatus(slot, CrystallizeTimePlan.Status(debuff));
 
                 if (debuff == CrystalDebuff.BlueDark)
-                    mechanics.Add(Targeted("黑暗爆炎分散", 40274, slot, new[]
+                    mechanics.Add(Targeted("暗炎喷发分散", 40274, slot, new[]
                     {
                     slot
                     }, slot));
@@ -106,11 +168,12 @@ namespace Simulant.Content.U7a.Presets
                     {
                         slot
                     };
-                    var mechanic = Targeted("黑暗大风击退", 40280, slot, expected, slot, ActionArea.Circle(15));
+                    var mechanic = Targeted("黑暗暴风击退", 40280, slot, expected, slot, ActionArea.Circle(15));
+                    var visual = mechanic.Visual;
 
                     mechanic.Visual = result =>
                     {
-                        Effect(target, 40280, target);
+                        visual(result);
 
                         foreach (var member in result.Participants.Where(m => m.Slot != target))
                         {
@@ -131,9 +194,8 @@ namespace Simulant.Content.U7a.Presets
                 {
                     // 该动作没有预兆行；内圈按上游机制定义取 3 米，外圈仍读取技能表。
                     var mechanic = Avoid(CrystallizeTimePlan.Roles[slot] + " 的黑暗冰封", ActionArea.FromAction(40279, innerRadius: 3), Party[slot].Pos);
-                    mechanic.Check = members => ActionArea.FromAction(40279, innerRadius: 3).Contains(CrystallizeTimePlan.Crystal, Party[target].Pos, 0) ? "黑暗冰封击中了北侧水晶。" : null;
                     mechanic.Visual = result => Effect(target, 40279, target);
-                    mechanics.Add(mechanic);
+                    mechanics.Add(ProtectCrystal(mechanic, slot));
                 }
             }
 
@@ -141,7 +203,6 @@ namespace Simulant.Content.U7a.Presets
             {
                 Name = "冰风暗同时结算"
             });
-            Scheduler.ScheduleAfter(0.9, CheckArena, "黑暗大风击退落点");
         }
 
         private void WatchHeads()
@@ -164,7 +225,7 @@ namespace Simulant.Content.U7a.Presets
                     .OrderBy(slot => Vector2.DistanceSquared(Party[slot].Pos, position)).ToArray();
 
                 if (touched.Length != 0)
-                    TouchHead(index, touched[0]);
+                    TouchHead(index, touched[0], position);
             }
 
             for (var index = 0; index < 4; index++)
@@ -182,32 +243,47 @@ namespace Simulant.Content.U7a.Presets
             Scheduler.ScheduleAfter(0.1, WatchHeads, "龙头与白圈接触检查");
         }
 
-        private void TouchHead(int head, int slot)
+        private void TouchHead(int head, int slot, Vector2 center)
         {
             var side = head == 0 ? -1 : 1;
             var expected = _plan.Red(_headHits[head] == 0 ? CrystalDebuff.RedIce : CrystalDebuff.RedWind, side);
-            var center = Party[slot].Pos;
             var area = ActionArea.FromAction(40241);
+            var name = $"{CrystallizeTimePlan.Roles[slot]} 的第 {_headHits[head] + 1} 次龙头接触爆炸";
 
-            EntityManager.RunMechanic(new AreaMechanic
+            EntityManager.RunMechanic(ProtectCrystal(new AreaMechanic
             {
-                Name = "龙头接触爆炸",
+                Name = name,
                 Area = area,
                 Center = center,
-                Exclude = Party[slot],
-                MaxPlayers = 0,
-                Check = members => slot != expected ? "该龙头应由 " + CrystallizeTimePlan.Roles[expected] + " 接触。" :
-                    area.Contains(CrystallizeTimePlan.Crystal, center, 0) ? "龙头爆炸击中了北侧水晶。" : null,
-                Visual = result => Helper(16 + head, center).Execute(40241),
-                Failed = result => Report(MechanicError.Rule(CrystallizeTimePlan.Roles[slot] + " 的龙头接触", new[]
+                RequiredPlayers = 1,
+                Check = members => slot != expected ? "该龙头应由 " + CrystallizeTimePlan.Roles[expected] + " 接触。" : null,
+                Visual = result =>
                 {
-                    slot
-                }.Concat(result.Participants.Select(m => m.Slot)), result.Reason)
-                    .WithAttribution(slot == Self ? new[]
+                    var helper = _helpers[16 + head];
+                    // 辅助施法者立即定位到本次碰撞处；ActorMove 的插值尚未结束时不能播放原地特效。
+                    helper.Entity.ActorSetPos(new Vector3(center, 0), 0);
+                    helper.Execute(40241);
+                },
+                Failed = result =>
                 {
-                    slot
-                } : result.Participants.Where(m => m.Slot == Self).Select(m => m.Slot),
-                        slot == Self ? "自身接触了错误的龙头，或接触位置波及队友、水晶" : "自身进入了龙头爆炸范围")),
+                    var extra = result.Participants.Where(m => m.Slot != slot).Select(m => m.Slot).ToArray();
+                    var wrongTarget = slot != expected;
+                    var offenders = wrongTarget ? new[]
+                    {
+                        slot
+                    }.Concat(extra) : extra;
+                    var detail = wrongTarget ? "该次龙头应由 " + CrystallizeTimePlan.Roles[expected] + " 接触" :
+                        CrystallizeTimePlan.Roles[slot] + " 正确接触龙头";
+                    if (extra.Length != 0)
+                        detail += "；" + string.Join(" ", extra.Select(i => CrystallizeTimePlan.Roles[i])) + " 未避开本次爆炸";
+
+                    Report(result.DescribeFailure(name, new[]
+                    {
+                        expected
+                    }, slot)
+                        .WithDetail(detail)
+                        .WithAttribution(offenders, wrongTarget && slot == Self ? "自身接触了其他队员应处理的龙头" : "自身未避开龙头爆炸"), result);
+                },
                 Succeeded = result =>
                 {
                     _cleansed[slot] = true;
@@ -221,12 +297,16 @@ namespace Simulant.Content.U7a.Presets
                         Move(slot, _plan.SouthRest, 32.1, urgent: true);
                     }
                     else
-                    _heads[head].Entity.ActorControl(Simulant.Game.ActorControlCategory.SetModelScale, 4);
+                    {
+                        _heads[head].Entity.ActorControl(Simulant.Game.ActorControlCategory.SetModelScale, 4);
+                        foreach (var move in _plan.RedIceRoute(side, Now))
+                            Scheduler.Schedule(_origin + move.Start, () => Move(slot, move.Area, move.Arrival, urgent: true), "红冰撞头后撤离");
+                    }
 
                     var number = _plan.PuddleNumber(slot);
                     Scheduler.ScheduleAfter(1, () => SpawnPuddle(number, center), "龙头留下白圈");
                 }
-            });
+            }, slot));
         }
 
         private void SpawnPuddle(int number, Vector2 center)
@@ -292,83 +372,91 @@ namespace Simulant.Content.U7a.Presets
 
         private void CheckArena()
         {
-            var outside = Enumerable.Range(0, 8).Where(i => Vector2.Distance(Party[i].Pos, Center) > 20).ToArray();
+            var outside = Enumerable.Range(0, 8).Where(i => Vector2.DistanceSquared(Party[i].Pos, Center) > 400).ToArray();
+            if (outside.Length != 0)
+            {
+                Report(MechanicError.Rule("电网即死", outside, "超出场地 20 米半径，触碰电网。")
+                    .WithAttribution(outside, "自身走出场地，或击退前站位、防击退时机不正确"));
+                throw new SimMechanicFailedException("电网即死", "有人触碰场外电网。");
+            }
 
-            if (outside.Length == 0)
-                return;
-
-            Report(MechanicError.Rule("击退落点", outside, "落点超出场地。")
-                .WithAttribution(outside, "自身击退前的位置或方向不正确"));
-            throw new SimMechanicFailedException("击退落点", "有人落到场外。");
+            Scheduler.ScheduleAfter(0.1, CheckArena, "电网即死检查");
         }
 
         private void ResolveSpiritTaker()
         {
-            var target = _random.Next(8);
+            var area = ActionArea.FromAction(40289);
+            var target = CrystallizeTimePlan.SpiritTakerTarget(Party.Select(actor => actor.Pos).ToArray(), Self,
+                area, _crystal.Pos, _crystal.Entity.HitboxRadius, _random);
             var mechanic = Targeted("碎灵一击分散", 40289, target, new[]
             {
                 target
-            }, 0);
-            mechanic.Check = members => ActionArea.FromAction(40289).Contains(CrystallizeTimePlan.Crystal, Party[target].Pos, 0) ? "碎灵一击击中了北侧水晶。" : null;
-            mechanic.Visual = result => _gaia.Entity.ExecuteActionEffect(40289, Party[target].Entity);
+            }, 0, area, result =>
+            {
+                _gaia.Entity.ExecuteActionEffect(40289, Party[target].Entity);
+
+                // 主目标承受跳跃，范围内的其他人向外击退 40 米。
+                foreach (var member in result.Participants.Where(member => member.Slot != target))
+                {
+                    var direction = member.Position - result.Center;
+
+                    if (direction.LengthSquared() < 0.0001f)
+                        direction = member.Position - Center;
+
+                    if (direction.LengthSquared() < 0.0001f)
+                        direction = Vector2.UnitY;
+
+                    Party[member.Slot].Knockback(Heading(direction), 40, 0.8f);
+                }
+            });
             EntityManager.RunMechanic(mechanic);
         }
 
-        private void ResolveWing(int wave)
+        private void BeginWing(int wave)
         {
             var positions = Party.Select(actor => actor.Pos).ToArray();
             var order = CrystallizeTimePlan.FrontFour(positions, wave, wave == 0 ? _plan.FirstSide : _plan.SecondSide);
+            var immune = Party.Select(actor => actor.IsKnockbackImmune).ToArray();
+            _shiva.Execute(40332);
+
+            foreach (var actor in Party)
+                actor.SuspendBehavior(wave == 0 ? 6.9 : 2.4);
+
+            // 回放：ActionEffect 为 53.241 / 57.697 秒，击退移动从 54.625 / 59.065 秒开始。
+            // 先锁定此次技能的排队和免疫结果，等翅膀打下来再位移，期间状态到期不改变结果。
+            Scheduler.ScheduleAfter(wave == 0 ? 1.384 : 1.368, () => ResolveWing(wave, order, immune), "圣翼命中与击退");
+        }
+
+        private void ResolveWing(int wave, int[] order, bool[] immune)
+        {
             var front = order.Take(4).ToArray();
-            var wrongTank = order[0] >= 2;
-            var repeated = wave == 0 ? Array.Empty<int>() : front.Intersect(_firstFront).ToArray();
+            var tankCount = _plan.IsY && wave == 1 ? 2 : 1;
+            var wrongTank = !_plan.WingTanksCorrect(order, wave);
+            // Y 字的重复前排伤害按已有减伤处理，只检查第一次首位、第二次前两位的坦克。
+            var repeated = wave == 0 || _plan.IsY ? Array.Empty<int>() : front.Intersect(_firstFront).ToArray();
 
             if (wave == 0)
                 _firstFront = front;
 
-            Scheduler.ScheduleAfter(1.4, () =>
-            {
-                foreach (var slot in front)
-                    Status(slot, 2941, 6);
-            }, "圣翼前四人魔法易伤");
+            foreach (var slot in front)
+                Status(slot, 2941, 6);
 
-            foreach (var actor in Party)
-            {
-                actor.SuspendBehavior(wave == 0 ? 6.9 : 2.4);
-                actor.Knockback(Heading(_plan.WaveDirection(wave)), 20, 0.8f);
-            }
+            for (var slot = 0; slot < Party.Count; slot++)
+                if (!immune[slot])
+                    Party[slot].Knockback(Heading(_plan.WaveDirection(wave)), 20, 0.8f, ignoreImmunity: true);
 
             // 先提交全队击退动画，再报告排队错误。
             if (wrongTank || repeated.Length != 0)
             {
-                var offenders = repeated.Concat(wrongTank ? new[]
-                {
-                    order[0]
-                } : Array.Empty<int>()).Distinct().ToArray();
+                var offenders = repeated.Concat(wrongTank ? order.Take(tankCount).Where(slot => slot >= 2) : Array.Empty<int>()).ToList();
+                if (wrongTank && Self < 2 && !order.Take(tankCount).Contains(Self))
+                    offenders.Add(Self);
+
                 Report(MechanicError.Rule($"第 {wave + 1} 次圣翼排队", front,
-                    wrongTank ? "最前方必须是坦克。" : "两次击退的前四人应互补，重复进入前排会受到易伤伤害。")
-                    .WithAttribution(offenders, "自身排队位置不正确"));
+                    wrongTank ? (tankCount == 2 ? "最前两位必须都是坦克。" : "最前方必须是坦克。") : "两次击退的前四人应互补，重复进入前排会受到易伤伤害。")
+                    .WithAttribution(offenders.Distinct(), "自身排队位置不正确"));
                 throw new SimMechanicFailedException("圣翼排队", "坦克或前四人顺序错误。");
             }
-
-            Scheduler.ScheduleAfter(0.9, CheckArena, "圣翼击退落点检查");
         }
-
-        private void ResolveAkhMorn(int hit)
-        {
-            foreach (var slot in CrystallizeTimePlan.LeftParty)
-                Status(slot, 4164, 4);
-
-            foreach (var slot in CrystallizeTimePlan.RightParty)
-                Status(slot, 3323, 4);
-
-            EntityManager.RunMechanic(new MechanicGroup(
-                Targeted($"死亡轮回第 {hit + 1} 次左组分摊", 40248, 0, CrystallizeTimePlan.LeftParty, 0),
-                Targeted($"死亡轮回第 {hit + 1} 次右组分摊", 40303, 1, CrystallizeTimePlan.RightParty, 1))
-            {
-                Name = "死亡轮回左右分摊"
-            });
-        }
-
-        private void ResolveMornAfah() => EntityManager.RunMechanic(Targeted("无尽顿悟八人分摊", 40250, 0, Enumerable.Range(0, 8).ToArray(), 0));
     }
 }

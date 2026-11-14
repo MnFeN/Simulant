@@ -36,6 +36,7 @@ namespace Simulant.Core.Entity
         public uint LayoutId;
         public uint GimmickId;
         public byte ModelScaleId;
+        public byte ModelState;
         public uint DisplayFlags = 0x4000B;
         /// <summary>角色进入战斗列表后，通过 ActorControl 初始化可选中状态；可见不等于可选中。</summary>
         public bool Targetable = true;
@@ -53,8 +54,10 @@ namespace Simulant.Core.Entity
         public ulong OffhandWeaponModel;
         /// <summary>提供时必须恰好包含 10 个装备槽；使用表内模型且未提供时，读取 BNpcBase 关联的 NpcEquip。</summary>
         public uint[] Equipment;
-        /// <summary>可选的人形自定义数据；提供时必须恰好包含 26 字节。</summary>
+        /// <summary>提供时必须恰好包含 26 字节；使用表内模型且未提供时，读取 BNpcCustomize。</summary>
         public byte[] Customize;
+        /// <summary>随生成包初始化的状态，最多 30 条；永久状态的 RemainingTime 可以为 0。</summary>
+        public CommonSpawnData.StatusEffect[] InitialStatuses;
 
         internal unsafe SpawnNpcPacket ToPacket(byte spawnIndex)
         {
@@ -91,6 +94,9 @@ namespace Simulant.Core.Entity
 
             if (customize != null && customize.Length != 26)
                 throw new ArgumentException("人形自定义数据必须恰好包含 26 字节。", nameof(Customize));
+
+            if (InitialStatuses != null && InitialStatuses.Length > CommonSpawnData.StatusCapacity)
+                throw new ArgumentException("网络 NPC 的初始状态不能超过 30 条。", nameof(InitialStatuses));
 
             BNpcBase baseRow = default(BNpcBase);
 
@@ -130,6 +136,7 @@ namespace Simulant.Core.Entity
                     Level = Level,
                     DisplayFlags = DisplayFlags,
                     ModelScaleId = ModelScaleId,
+                    ModelState = ModelState,
                     MainhandWeaponModel = MainhandWeaponModel,
                     OffhandWeaponModel = OffhandWeaponModel
                 }
@@ -138,6 +145,20 @@ namespace Simulant.Core.Entity
             // 人形、亚人模型的身体也可能属于装备部件；只传 ModelChara 会生成看不见的空模型。
             if (!ModelCharaId.HasValue && equipment == null && baseRow.NpcEquip.RowId != 0)
                 ApplyNpcEquipment(ref packet.Common, ReadRow<NpcEquip>(baseRow.NpcEquip.RowId, "战斗 NPC 装备"));
+
+            if (!ModelCharaId.HasValue && customize == null && baseRow.BNpcCustomize.RowId != 0)
+            {
+                var row = ReadRow<BNpcCustomize>(baseRow.BNpcCustomize.RowId, "战斗 NPC 外观");
+                customize = new byte[]
+                {
+                    checked((byte)row.Race.RowId), row.Gender, row.BodyType, row.Height,
+                    checked((byte)row.Tribe.RowId), row.Face, row.HairStyle, row.HairHighlight,
+                    row.SkinColor, row.EyeHeterochromia, row.HairColor, row.HairHighlightColor,
+                    row.FacialFeature, row.FacialFeatureColor, row.Eyebrows, row.EyeColor,
+                    row.EyeShape, row.Nose, row.Jaw, row.Mouth, row.LipColor, row.BustOrTone1,
+                    row.ExtraFeature1, row.ExtraFeature2OrBust, row.FacePaint, row.FacePaintColor
+                };
+            }
 
             // 输入数组只复制到此次包的固定缓冲区，不保存引用，也不改写可复用的生成参数。
             for (var i = 0; i < nameBytes.Length; i++)
@@ -150,6 +171,10 @@ namespace Simulant.Core.Entity
             if (customize != null)
                 for (var i = 0; i < customize.Length; i++)
                     packet.Common.Customize[i] = customize[i];
+
+            if (InitialStatuses != null)
+                for (var i = 0; i < InitialStatuses.Length; i++)
+                    packet.Common.SetStatus(i, InitialStatuses[i]);
 
             return packet;
         }

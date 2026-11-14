@@ -391,18 +391,8 @@ namespace Simulant.Core.Party
                 PacketDispatcher.HandleUpdateHatePacket(_enmityTarget.Id, _enmityPacket);
                 EnsureContext();
 
-                if (!MatchesEnmity())
-                {
-                    _enmityDirty = true;
-
-                    // 用户可在收包期间切换目标；这时客户端清空 Hate 不代表函数或布局错误。
-                    if (GetSelectedTarget() != _enmityTarget.Address)
-                        return;
-
-                    throw new InvalidOperationException("客户端仇恨数据与更新包不符，请核对当前版本的函数和布局。");
-                }
-
-                _enmityDirty = false;
+                // 显示数据未同步时下次补发，不因小队栏显示中断机制。
+                _enmityDirty = !MatchesEnmity();
             }
         }
 
@@ -417,8 +407,8 @@ namespace Simulant.Core.Party
         {
             var data = ReadExact(_uiState + 8, Hate.Size);
 
-            if (BitConverter.ToUInt32(data, 0x104) != _enmityTarget.Id ||
-                BitConverter.ToInt32(data, 0x100) != _enmityPacket.MemberCount)
+            // 国服当前收包函数只写成员与人数，不更新 0x104 的目标 ID；选中目标已在发送前核对。
+            if (BitConverter.ToInt32(data, 0x100) != _enmityPacket.MemberCount)
                 return false;
 
             for (var i = 0; i < _enmityPacket.MemberCount; i++)

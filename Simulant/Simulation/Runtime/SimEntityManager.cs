@@ -36,7 +36,7 @@ namespace Simulant.Simulation.Runtime
             get
             {
                 lock (_gate)
-                    return _isClearing || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 || _names.Count != 0 ||
+                    return _isClearing || _movementLockPlayer != null || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 || _names.Count != 0 ||
                         _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true ||
                         _partyService?.IsOwnedBy(this) == true;
             }
@@ -67,7 +67,7 @@ namespace Simulant.Simulation.Runtime
                     if (_partyService?.IsOwnedBy(this) == true)
                         throw new InvalidOperationException("上次模拟的小队列表尚未恢复，请先重试清理。");
 
-                    if (_statuses.Count != 0)
+                    if (_statuses.Count != 0 || _movementLockPlayer != null)
                         throw new InvalidOperationException("上次模拟的点名状态尚未清理，请先重试停止。");
 
                     if (_names.Count != 0)
@@ -362,6 +362,7 @@ namespace Simulant.Simulation.Runtime
 
             try
             {
+                TryCleanup(ClearMovementLocks);
                 _behaviors?.Dispose();
 
                 foreach (var pending in networkSpawns)
