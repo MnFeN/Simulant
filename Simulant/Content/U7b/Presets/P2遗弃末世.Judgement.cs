@@ -54,6 +54,7 @@ namespace Simulant.Content.U7b.Presets
                 var fan = marker == ForsakenMarker.Fan;
                 var action = marker == ForsakenMarker.Stack ? 0xBAC0u : fan ? 0xBAC2u : 0xBAC1u;
                 var area = ActionArea.FromAction(action, coneAngleDegrees: fan ? 90f : (float?)null);
+                MechanicError directionError = null;
                 return new AreaMechanic
                 {
                     Name = $"第 {index + 1} 轮 {Roles[source]} 的{MarkerName(marker)}点名",
@@ -66,9 +67,9 @@ namespace Simulant.Content.U7b.Presets
                     Visual = result =>
                     {
                         Effect(source, result.Center, result.Heading, action);
-                        if (fan) CheckFanDirection(index, source, area, result);
+                        if (fan) directionError = CheckFanDirection(index, source, area, result);
                     },
-                    Failed = result => Fail(DescribeMarkerFailure(index, source, marker, area, result)),
+                    Failed = result => Fail(directionError ?? DescribeMarkerFailure(index, source, marker, area, result)),
                     Resolved = result =>
                     {
                         foreach (var player in result.Participants) hits[player.Slot]++;
@@ -83,7 +84,7 @@ namespace Simulant.Content.U7b.Presets
             });
         }
 
-        private void CheckFanDirection(int index, int source, ActionArea area, MechanicResult result)
+        private MechanicError CheckFanDirection(int index, int source, ActionArea area, MechanicResult result)
         {
             var positions = _plan.Rounds[index].Positions;
             var expectedTarget = Enumerable.Range(0, positions.Length).Where(slot => slot != source)
@@ -92,7 +93,7 @@ namespace Simulant.Content.U7b.Presets
             // 比较同一轮世界坐标中的方向，取跨越正负 π 后的最小夹角。
             var difference = (double)result.Heading - expectedHeading;
             var degrees = Math.Abs(Math.Atan2(Math.Sin(difference), Math.Cos(difference))) * 180 / Math.PI;
-            if (degrees <= 30) return;
+            if (degrees <= 30) return null;
 
             // 沿用伤害判定快照，不再次读取移动中的玩家，也不改变实际扇形或人数判定。
             var actualTarget = result.Snapshot.Nearest(result.Center, Party[source])
@@ -100,10 +101,13 @@ namespace Simulant.Content.U7b.Presets
             var error = DescribeMarkerFailure(index, source, ForsakenMarker.Fan, area, result)
                 .WithDetail($"扇形偏离解法方向 {degrees:0.0}°，超过 30°；" +
                     $"实际由 {Roles[actualTarget.Slot]} 引导，约定由 {Roles[expectedTarget]} 引导");
+            // 人数也失败时，交给 Failed 统一记录并发送中断提示，保留角度说明但不重复上报。
+            if (!result.Success) return error;
             var message = RecordMistake(error);
             _host.LogWarning(message);
             try { TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + message); }
             catch (Exception chatError) { _host.LogWarning("[遗弃末世] 扇形引导偏差的默语提示发送失败：" + chatError.Message); }
+            return error;
         }
 
         private void FinishSpells(int index, int[] hits)

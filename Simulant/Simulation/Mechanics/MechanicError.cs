@@ -111,6 +111,8 @@ namespace Simulant.Simulation.Mechanics
             }
             if (Missing.Contains(selfSlot.Value)) return "自身未参与";
             if (Extra.Contains(selfSlot.Value)) return "自身不应参与";
+            if (_isBait && ExpectedTarget == selfSlot && ActualTarget == selfSlot)
+                return "可能是自身站歪了";
             if (Source == selfSlot) return "自身被点名且站位错误";
             return "未知";
         }
