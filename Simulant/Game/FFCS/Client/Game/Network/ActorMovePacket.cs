@@ -6,6 +6,14 @@ using System.Runtime.InteropServices;
 
 namespace Simulant.Game.FFCS.Client.Game.Network
 {
+    /// <summary>移动包的状态标志；击退期间保留面向，不使用普通跑步动画。</summary>
+    [Flags]
+    public enum ActorMoveFlags : ushort
+    {
+        None = 0,
+        Knockback = 0x08
+    }
+
     // ACT 日志：270 10E:40004574:-1.2434:0000:003C:100.3891:99.2904:0.0457
     [StructLayout(LayoutKind.Explicit, Size = 0x10, Pack = 1)]
     public struct ActorMovePacket

@@ -1,4 +1,5 @@
 using Simulant.Simulation.Timeline;
+using Simulant.Game.FFCS.Client.Game.Network;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -30,10 +31,14 @@ namespace Simulant.Simulation.Runtime
             public bool NetworkDestinationSent;
             public double NextPollAt;
             public bool Stopping;
+            public bool Knockback;
+            public float FixedHeading;
         }
 
         private const double TickIntervalSeconds = 0.016;
         private const double NetworkPollIntervalSeconds = 0.1;
+        // 回放中其他玩家的击退移动包间隔中位数为 333 毫秒；自身逐帧记录不能用于远端发包节奏。
+        private const double KnockbackPacketIntervalSeconds = 1.0 / 3;
         // 坐标量化在水平面的误差小于 2.2 厘米；不得用十厘米的提前完成吞掉机制边界余量。
         internal const float NetworkArrivalTolerance = 0.025f;
         private readonly object _gate = new object();
@@ -106,6 +111,33 @@ namespace Simulant.Simulation.Runtime
         }
 
         public void MoveNetworkTo(SimActor actor, Vector2 target, byte speedParam = 30, Action onArrived = null)
+            => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, onArrived);
+
+        internal void Knockback(SimActor actor, float heading, float distance, float duration)
+        {
+            if (actor == null) throw new ArgumentNullException(nameof(actor));
+            if (float.IsNaN(heading) || float.IsInfinity(heading))
+                throw new ArgumentOutOfRangeException(nameof(heading), "击退方向必须为有限数。");
+            ValidateSpeed(distance);
+            ValidateSpeed(duration);
+            var speed = distance / duration;
+            ValidateSpeed(speed);
+            var slot = actor.Entity.Identity.Slot;
+            var network = slot >= 2 && slot < 200 && (slot & 1) == 0;
+            var target = actor.Pos + new Vector2((float)Math.Sin(heading), (float)Math.Cos(heading)) * distance;
+            ValidatePosition(target, nameof(target));
+            if (network && (Math.Abs(target.X) > 1000 || Math.Abs(target.Y) > 1000))
+                throw new ArgumentOutOfRangeException(nameof(distance), "击退落点超出了移动包的坐标范围。");
+            // 保留已有的更长眩晕；新走位可在暂停期间排队，但不能覆盖击退轨迹。
+            actor.SuspendBehavior(duration + 0.2);
+            if (network)
+                StartNetworkMovement(actor, target, speed, (byte)Math.Max(1, Math.Min(255, speed * 10)), true, null);
+            else
+                actor.Entity.Knockback(heading, distance, duration);
+        }
+
+        private void StartNetworkMovement(SimActor actor, Vector2 target, float speed, byte speedParam,
+            bool knockback, Action onArrived)
         {
             if (actor == null) throw new ArgumentNullException(nameof(actor));
             ValidatePosition(target, nameof(target));
@@ -127,8 +159,10 @@ namespace Simulant.Simulation.Runtime
                     Actor = actor,
                     Target = target,
                     Network = true,
-                    Speed = speedParam / 10f,
+                    Speed = speed,
                     SpeedParam = speedParam,
+                    Knockback = knockback,
+                    FixedHeading = knockback ? actor.Heading : 0,
                     OnArrived = onArrived
                 };
                 _moving.Add(movement);
@@ -148,6 +182,16 @@ namespace Simulant.Simulation.Runtime
             {
                 var index = Find(actor);
                 return !_disposed && actor.IsActive && index >= 0 && !_moving[index].Arrived;
+            }
+        }
+
+        internal Vector2 PositionAfterKnockback(SimActor actor)
+        {
+            lock (_gate)
+            {
+                var index = Find(actor);
+                return index >= 0 && _moving[index].Knockback && !_moving[index].Stopping
+                    ? _moving[index].Target : actor.Pos;
             }
         }
 
@@ -263,7 +307,12 @@ namespace Simulant.Simulation.Runtime
             var dy = (double)movement.Target.Y - current.Y;
             var withinTolerance = dx * dx + dy * dy <= NetworkArrivalTolerance * NetworkArrivalTolerance;
             // 原生位置可能已经追上前一个包；路程未按时间走完时，不能提前宣布到达。
-            if (withinTolerance && (!movement.NetworkStarted || movement.NetworkDestinationSent)) return true;
+            if (withinTolerance && (!movement.NetworkStarted || movement.NetworkDestinationSent))
+            {
+                if (movement.Knockback && movement.NetworkStarted)
+                    entity.ActorMove(current, movement.FixedHeading, 0);
+                return true;
+            }
             if (!movement.NetworkStarted)
             {
                 // 首包也在共享调度线程发送；此前取消无需发送停止包。
@@ -273,7 +322,8 @@ namespace Simulant.Simulation.Runtime
                 movement.NetworkOrigin = movement.NetworkLastSent = new Vector2(current.X, current.Y);
                 movement.NetworkDuration = Math.Sqrt(dx * dx + dy * dy) / movement.Speed;
                 entity.ActorMove(current,
-                    (float)Math.Atan2(dx, dy), movement.SpeedParam);
+                    movement.Knockback ? movement.FixedHeading : (float)Math.Atan2(dx, dy), movement.SpeedParam,
+                    movement.Knockback ? ActorMoveFlags.Knockback : ActorMoveFlags.None);
             }
             else if (now - movement.UpdatedAt >= _networkTimeoutSeconds)
             {
@@ -287,21 +337,29 @@ namespace Simulant.Simulation.Runtime
                 // ActorMove 报告的是服务器当前位置，不是导航终点；远端终点会让客户端追赶加速。
                 // 按真实经过时间发沿途位置，丢帧时跳过过时中间包，仍由客户端平滑移动模型。
                 // https://github.com/anomek/AnoMech/blob/1646a7068c2071a3d1fd9e3c84550dfd3f1b6ade/AnoMech/Core/Game/Motion/ModelSync.cs
-                var next = Advance(movement.NetworkOrigin, movement.Target, movement.Speed,
-                    Math.Max(0, now - movement.UpdatedAt), out var final);
+                var elapsed = Math.Max(0, now - movement.UpdatedAt);
+                var next = Advance(movement.NetworkOrigin, movement.Target, movement.Speed, elapsed, out var final);
+                if (movement.Knockback)
+                {
+                    // 击退先快后慢，保留原来的朝向；不把轨迹当作一次普通跑步。
+                    var fraction = Math.Min(1, elapsed / movement.NetworkDuration);
+                    next = Vector2.Lerp(movement.NetworkOrigin, movement.Target, (float)(fraction * (2 - fraction)));
+                }
                 if (next != movement.NetworkLastSent || final)
                 {
                     var direction = movement.Target - movement.NetworkOrigin;
                     entity.ActorMove(new Vector3(next.X, next.Y, current.Z),
-                        (float)Math.Atan2(direction.X, direction.Y), movement.SpeedParam);
+                        movement.Knockback ? movement.FixedHeading : (float)Math.Atan2(direction.X, direction.Y), movement.SpeedParam,
+                        movement.Knockback ? ActorMoveFlags.Knockback : ActorMoveFlags.None);
                     movement.NetworkLastSent = next;
                     movement.NetworkDestinationSent = final;
                 }
             }
             // 最后一个不足轮询间隔的分段按截止时间补发；终点包只发送一次，随后只等待实际到达。
+            var interval = movement.Knockback ? KnockbackPacketIntervalSeconds : NetworkPollIntervalSeconds;
             movement.NextPollAt = movement.NetworkDestinationSent
                 ? now + NetworkPollIntervalSeconds
-                : Math.Min(now + NetworkPollIntervalSeconds, movement.UpdatedAt + movement.NetworkDuration);
+                : Math.Min(now + interval, movement.UpdatedAt + movement.NetworkDuration);
             return false;
         }
 
