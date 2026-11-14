@@ -194,6 +194,15 @@ namespace Simulant.Core.Zone
                     return false;
                 }
 
+                // 已回到大厅时不再加载掉线前的地图，直接解除旧模拟区域的返回责任。
+                var player = _host.EntityProvider.GetMyself();
+
+                if (player == null || !player.IsAlive)
+                {
+                    InvalidateWorld();
+                    return true;
+                }
+
                 if (!initialTerritoryId.HasValue || initialTerritoryId.Value == 0)
                     throw new InvalidOperationException("尚未记录真实地图，无法退出。");
 
@@ -207,7 +216,7 @@ namespace Simulant.Core.Zone
                     _isInSimulatedTerritory = false;
                 }
 
-                LoadTerritoryInternal(territoryId, territory, worldVersion);
+                LoadTerritoryInternal(territoryId, territory, worldVersion, exitingSimulation: true);
 
                 RestoreInitialPosition(initialPosition, worldVersion);
 
@@ -380,7 +389,8 @@ namespace Simulant.Core.Zone
             return _phaseApplication.ApplyAsync(Prepare, Apply, Ready);
         }
 
-        private void LoadTerritoryInternal(int territoryId, TerritoryType? territory, int worldVersion, int storyProgress = 0)
+        private void LoadTerritoryInternal(int territoryId, TerritoryType? territory, int worldVersion, int storyProgress = 0,
+            bool exitingSimulation = false)
         {
             EnsureWorld(worldVersion);
             _entranceApplication.Cancel();
@@ -388,7 +398,7 @@ namespace Simulant.Core.Zone
             lock (_stateGate)
                 _entrancePosition = null;
 
-            _host.PrepareEntityWorldChange((uint)territoryId);
+            _host.PrepareEntityWorldChange((uint)territoryId, exitingSimulation);
             ushort? loadedInstanceContentId;
 
             lock (_stateGate)

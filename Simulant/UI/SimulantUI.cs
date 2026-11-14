@@ -265,13 +265,25 @@ namespace Simulant.UI
 
         private void TryDisableFirewall()
         {
+            void TryCleanup(string description, System.Action cleanup)
+            {
+                try
+                {
+                    cleanup();
+                }
+                catch (Exception ex)
+                {
+                    _host.LogWarning(description + "：" + ex.Message + "；继续退出模拟并关闭防火墙。");
+                }
+            }
+
             try
             {
-                _host.ZoneService.CancelPendingPhase();
-                StopCurrentSession();
-                _host.StopDebugEntities();
-                _host.PartyService?.RestoreAll();
-                _host.EntitySpawner.Clear();
+                TryCleanup("取消阶段等待失败", _host.ZoneService.CancelPendingPhase);
+                TryCleanup("停止模拟失败", StopCurrentSession);
+                TryCleanup("停止调试失败", _host.StopDebugEntities);
+                TryCleanup("恢复小队失败", () => _host.PartyService?.RestoreAll());
+                TryCleanup("回收模拟实体失败", _host.EntitySpawner.Clear);
 
                 if (_host.ZoneService.HasPendingReturn && !_host.ZoneService.ExitToInitialTerritory())
                     throw new InvalidOperationException("未能返回真实区域，防火墙保持开启；请处理错误后重试。");

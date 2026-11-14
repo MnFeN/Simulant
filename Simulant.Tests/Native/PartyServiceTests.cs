@@ -48,7 +48,7 @@ namespace Simulant.Tests.Native
                 Check("仇恨参数完整校验后才写入并可恢复", VerifyEnmityValidation);
                 Check("仇恨更新失败仍恢复入战前状态", VerifyEnmityFailure);
                 Check("原先已在战斗中的自己恢复后仍在战斗", VerifyExistingCombat);
-                Check("退战恢复部分失败保留所有权并可重试", VerifyCombatRestoreFailure);
+                Check("退战失败可重试，掉线或角色更换后放弃旧状态", VerifyCombatRestoreFailure);
                 Check("切换目标后仅按需补发仇恨并正确处理软目标", VerifyEnmityRefresh);
                 Check("仇恨收包期间切换目标不会误报失败", VerifyTargetChangeDuringEnmity);
                 Check("成员移除更新名单且最终恢复原小队", VerifyRemoveMember);
@@ -602,6 +602,33 @@ namespace Simulant.Tests.Native
                 scene.AssertRestored();
                 Assert(!scene.Owned && !scene.InCombat, "重试成功后才可解除小队恢复责任。");
             }
+
+            foreach (var replaced in new[]
+            {
+                false, true
+            })
+            {
+                using (var scene = new Scene())
+                {
+                    scene.Show();
+                    scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                    {
+                        100, 50, 10
+                    });
+                    var writes = scene.Memory.WriteCount;
+                    var packets = scene.Plugin.Packets.Count;
+                    var controls = scene.Plugin.ActorControls.Count;
+                    scene.Observations[0] = replaced
+                        ? new EntityObservation(new IntPtr(0x900000), Scene.SelfId, ObjectKind.Pc)
+                        : (EntityObservation?)null;
+
+                    scene.Invoke("RestoreAll");
+                    scene.Invoke("RestoreAll");
+                    Assert(!scene.Owned && scene.Memory.WriteCount == writes && scene.Plugin.Packets.Count == packets &&
+                        scene.Plugin.ActorControls.Count == controls,
+                        "掉线或原玩家身份变化后应放弃旧快照，不能写回小队或向旧角色发送退战控制。");
+                }
+            }
         }
 
         private static void VerifyTargetChangeDuringEnmity()
@@ -772,6 +799,7 @@ namespace Simulant.Tests.Native
             internal readonly object Service;
             internal readonly SimActor[] Actors;
             internal readonly SimActor Outsider;
+            internal readonly EntityObservation?[] Observations = new EntityObservation?[10];
             internal readonly byte[][] OriginalStatuses = new byte[2][];
             internal readonly byte[][] OriginalNames = new byte[2][];
             internal readonly IntPtr[] OriginalOwners = new IntPtr[2];
@@ -838,8 +866,6 @@ namespace Simulant.Tests.Native
                 OriginalHate = Enumerable.Range(0, Hate.Size).Select(i => (byte)(i % 251)).ToArray();
                 Memory.PutBytes(HateAddress, OriginalHate);
 
-                var observations = new EntityObservation?[10];
-
                 foreach (var slot in new ushort[]
                 {
                     0,
@@ -854,7 +880,7 @@ namespace Simulant.Tests.Native
                     var address = new IntPtr(0x300000 + slot * 0x10000);
                     var id = slot == 0 ? SelfId : slot == 6 ? EnemyId : 0x10FF0000u + slot;
                     var kind = slot == 6 ? ObjectKind.BattleNpc : ObjectKind.Pc;
-                    observations[slot] = new EntityObservation(address, id, kind);
+                    Observations[slot] = new EntityObservation(address, id, kind);
                     Plugin.Entities[id] = address;
                     Memory.Put(address, new IntPtr(0x500000));
                     Memory.Put(address + 0x78, id);
@@ -870,7 +896,7 @@ namespace Simulant.Tests.Native
                     Memory.Put(address + 0x1CB, (byte)100);
                 }
 
-                var registry = new EntityRegistry(slot => observations[slot], observations.Length);
+                var registry = new EntityRegistry(slot => Observations[slot], Observations.Length);
                 var provider = new EntityProvider(registry, () => SelfId);
                 _manager = new SimEntityManager(new EntitySpawner(registry, provider));
                 typeof(SimEntityManager).GetProperty("Scheduler", Members).SetValue(_manager, _scheduler, null);

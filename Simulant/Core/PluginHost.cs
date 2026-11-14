@@ -237,12 +237,24 @@ namespace Simulant.Core
             }
         }
 
-        internal void PrepareEntityWorldChange(uint? nextZoneId = null)
+        internal void PrepareEntityWorldChange(uint? nextZoneId = null, bool exitingSimulation = false)
         {
-            _ui?.StopCurrentSession();
-            StopDebugEntities();
-            PartyService?.RestoreAll();
-            EntitySpawner?.Clear();
+            void Cleanup(Action action)
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception error) when (exitingSimulation)
+                {
+                    LogWarning("退出模拟时清理失败：" + error.Message + "；继续返回真实区域。");
+                }
+            }
+
+            Cleanup(() => _ui?.StopCurrentSession());
+            Cleanup(StopDebugEntities);
+            Cleanup(() => PartyService?.RestoreAll());
+            Cleanup(() => EntitySpawner?.Clear());
             EntitySpawner?.ResetWorld();
             // 本地切图已经在这里清理；稍后到达的相同区域通知不应停止新会话。
             _entityZoneId = nextZoneId ?? XivPluginInterop.plugin?.DataRepository.GetCurrentTerritoryID();
@@ -589,7 +601,7 @@ namespace Simulant.Core
                             throw new AggregateException("插件卸载未完成，清理记录已保留；请再次卸载或重新启用插件以重试。", failures);
                     }
 
-                    // 保留真实地图记录，只有资源回收完成后才返回并恢复通信。
+                    // 资源清理失败可留待重试，但不能阻止返回真实环境并恢复通信。
                     TryCleanup("卸载时取消阶段等待失败", () => ZoneService?.CancelPendingPhase());
 
                     if (initializationPending)
@@ -598,17 +610,19 @@ namespace Simulant.Core
                     TryCleanup("卸载时停止模拟失败", () => _ui?.StopCurrentSession());
                     TryCleanup("卸载时停止调试失败", StopDebugEntities);
                     TryCleanup("卸载时恢复小队失败", () => PartyService?.RestoreAll());
-                    ThrowIfFailed();
                     TryCleanup("卸载时释放实体资源失败", () => EntitySpawner?.Dispose());
-                    ThrowIfFailed();
 
+                    var returned = false;
                     TryCleanup("卸载时返回真实区域失败", () =>
                     {
                         if (ZoneService?.HasPendingReturn == true && !ZoneService.ExitToInitialTerritory())
                             throw new InvalidOperationException("尚未返回真实区域，防火墙保持原状。");
+
+                        returned = true;
                     });
 
-                    ThrowIfFailed();
+                    if (!returned)
+                        ThrowIfFailed();
 
                     TryCleanup("卸载时关闭防火墙失败", () =>
                     {

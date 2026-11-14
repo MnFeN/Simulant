@@ -58,6 +58,10 @@ namespace Simulant.Tests.Native
                 )
                     VerifyRetry(failure);
 
+                foreach (var test in typeof(PluginUnloadTests).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                    .Where(method => method.ReturnType == typeof(void) && method.GetParameters().Length == 0))
+                    test.Invoke(null, null);
+
                 Console.WriteLine("真实插件卸载故障注入通过：" + _passed + " 项。");
                 return 0;
             }
@@ -112,13 +116,13 @@ namespace Simulant.Tests.Native
                 "恢复失败不能让模拟节点或阶段等待继续执行。");
             var hookFailure = failure == "恢复收包" || failure == "释放代码洞";
 
-            if (!hookFailure)
+            if (failure == "回收实体")
+                Assert(!scene.PendingReturn && !scene.FirewallPending,
+                    "实体回收失败可以保留重试，但不能阻止返回真实地图和恢复通信。");
+            else if (!hookFailure)
             {
                 Assert(scene.PendingReturn && !scene.Events.Contains("恢复收包") && !scene.Events.Contains("恢复发包"),
-                    "实体或地图恢复失败时不得提前恢复通信，必须保留真实地图记录。");
-
-                if (failure == "回收实体")
-                    Assert(!scene.Events.Contains("加载地图"), "实体未清理完成不能先切图。");
+                    "仍在游戏内且地图恢复失败时，必须保留真实地图记录。");
             }
             else
                 Assert(!scene.PendingReturn && scene.FirewallPending, "地图已恢复后，仅保留尚未完成的防火墙清理。");
@@ -126,13 +130,70 @@ namespace Simulant.Tests.Native
             var loads = scene.Events.Count(item => item == "加载地图");
             scene.Memory.Failure = null;
             scene.Main.DeInitPlugin();
-            scene.AssertCompleted();
+            scene.AssertCompleted(allowEntityResidual: failure == "回收实体");
             Assert(scene.Events.Count(item => item == "停止预设") == 1, "重试卸载不能重复执行预设 OnStop。");
 
-            if (hookFailure)
-                Assert(scene.Events.Count(item => item == "加载地图") == loads, "仅防火墙失败时不能重复切图。");
+            if (hookFailure || failure == "回收实体")
+                Assert(scene.Events.Count(item => item == "加载地图") == loads, "地图已返回后不能因其他清理失败而重复切图。");
 
             Passed(failure + "失败保留记录，下一次禁用可完成卸载");
+        }
+
+        public static void DisableFirewallWithCleanupFailures()
+        {
+            foreach (var failure in new[]
+            {
+                "回收实体", "清理标点"
+            })
+            {
+                var scene = new Scene(false);
+
+                if (failure == "回收实体")
+                    scene.Memory.Failure = failure;
+                else
+                    Set(scene.Session, "_waymarksPendingCleanup", true);
+
+                Invoke(scene.UI, "TryDisableFirewall");
+                Assert(!scene.PendingReturn && !scene.FirewallPending && scene.Events.Contains("恢复收包") &&
+                    scene.Events.Contains("恢复发包"), "实体或标点清理失败不能阻止关闭防火墙。");
+                Assert(!scene.Session.IsRunning && !scene.DebugScheduler.IsRunning && scene.Phase.IsCompleted,
+                    "恢复通信前必须停止模拟、调试与阶段等待。");
+
+                if (failure == "清理标点")
+                    Assert((bool)Get(scene.Session, "_waymarksPendingCleanup"), "此用例必须实际保留标点清理失败。");
+
+                scene.Memory.Failure = null;
+                Set(scene.Session, "_waymarksPendingCleanup", false);
+                scene.Main.DeInitPlugin();
+                scene.AssertCompleted(allowEntityResidual: failure == "回收实体");
+                Passed(failure + "失败仍可关闭防火墙并返回真实区域");
+            }
+        }
+
+        public static void ExitAfterDisconnect()
+        {
+            foreach (var unload in new[]
+            {
+                false, true
+            })
+            {
+                var scene = new Scene(false);
+                scene.PlayerPresent = false;
+
+                if (unload)
+                    scene.Main.DeInitPlugin();
+                else
+                    Invoke(scene.UI, "TryDisableFirewall");
+
+                Assert(!scene.PendingReturn && !scene.FirewallPending && scene.Events.Contains("恢复收包") &&
+                    scene.Events.Contains("恢复发包"), "掉线到大厅后必须解除网络拦截及旧地图返回责任。");
+                Assert(!scene.Events.Contains("加载地图") && !scene.Events.Contains("恢复位置"),
+                    "大厅中不能加载掉线前的地图或写回旧玩家位置。");
+
+                scene.Main.DeInitPlugin();
+                scene.AssertCompleted();
+                Passed(unload ? "掉线到大厅后可禁用插件" : "掉线到大厅后可关闭防火墙");
+            }
         }
 
         private static void Passed(string name)
@@ -192,6 +253,7 @@ namespace Simulant.Tests.Native
             private readonly object _zone;
             private readonly object _firewall;
             private bool _entityPresent;
+            internal bool PlayerPresent = true;
             internal bool PendingReturn => (bool)_zone.GetType().GetProperty("HasPendingReturn", Members).GetValue(_zone);
             internal bool FirewallPending => (bool)_firewall.GetType().GetProperty("HasPendingCleanup", Members).GetValue(_firewall);
 
@@ -241,7 +303,7 @@ namespace Simulant.Tests.Native
 
                 Set(Host, "_statusLabel", new Label());
                 Set(Host, "PluginLog", Create("Simulant.Core.PluginLog"));
-                var registry = new EntityRegistry(slot => slot == 0
+                var registry = new EntityRegistry(slot => slot == 0 && PlayerPresent
                     ? new EntityObservation(UnloadMemory.Player, 1, ObjectKind.Pc)
                     : slot == 1 && _entityPresent ? new EntityObservation(new IntPtr(0x50000), 2, ObjectKind.BattleNpc) : (EntityObservation?)null);
                 var spawner = new EntitySpawner(registry, new EntityProvider(registry, () => 1));
@@ -311,14 +373,18 @@ namespace Simulant.Tests.Native
                 Set(_firewall, field, state);
             }
 
-            internal void AssertCompleted()
+            internal void AssertCompleted(bool allowEntityResidual = false)
             {
                 Assert(Get(Main, "_host") == null && PluginHost.Instance == null && UI.IsDisposed, "完整恢复后才可释放宿主和界面。");
                 Assert(!Session.IsRunning && DebugScheduler.PendingCount == 0 && Phase.IsCompleted && !Phase.Result,
                     "完整卸载必须取消所有模拟调度和旧阶段等待。");
-                Assert(!PendingReturn && !FirewallPending && !_entityPresent, "卸载后不得残留地图、防火墙或实体回收责任。");
-                Assert(Memory.Read<uint>(UnloadMemory.Game + 0x4108) == 177 &&
-                    Memory.Read<Vector3>(UnloadMemory.Player + 0xB0) == new Vector3(1, 3, 2), "必须恢复原地图及原始玩家位置。");
+                Assert(!PendingReturn && !FirewallPending, "卸载后不得残留地图或防火墙恢复责任。");
+
+                if (!allowEntityResidual)
+                    Assert(!_entityPresent, "回收成功的实体不能残留。");
+                if (PlayerPresent)
+                    Assert(Memory.Read<uint>(UnloadMemory.Game + 0x4108) == 177 &&
+                        Memory.Read<Vector3>(UnloadMemory.Player + 0xB0) == new Vector3(1, 3, 2), "必须恢复原地图及原始玩家位置。");
                 Assert((bool)Get(Host, "_disposeCompleted"), "全部恢复完成后才可标记卸载成功。");
                 Assert(Get(Host, "_gameData") == null, "完整卸载必须释放客户端数据。");
 

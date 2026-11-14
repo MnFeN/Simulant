@@ -440,6 +440,13 @@ namespace Simulant.Core.Party
                 if (!IsOwnedBy(owner))
                     return;
 
+                // 掉线或原角色消失后，旧小队和战斗状态已没有可恢复的对象。
+                if (_host.EntityProvider.GetMyself() == null || (_combatPlayer != null && !_combatPlayer.IsAlive))
+                {
+                    Forget();
+                    return;
+                }
+
                 EnsureContext();
                 PacketDispatcher.HandleUpdatePartyPacket(_original);
                 EnsureContext();
@@ -466,13 +473,9 @@ namespace Simulant.Core.Party
 
                 WriteExact(_uiState + 8, _hate);
 
-                if (_restoreCombat)
+                if (_restoreCombat && _combatPlayer.IsAlive)
                 {
                     EnsureContext();
-
-                    if (!_combatPlayer.IsAlive)
-                        throw new InvalidOperationException("原玩家身份已经变化，不能恢复其战斗状态。");
-
                     _combatPlayer.ActorControl(ActorControlCategory.SetBattle, 0);
                 }
 
