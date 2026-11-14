@@ -5,7 +5,10 @@ using Lumina.Excel.Sheets;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Game.FFCS.Client.Game.Event;
 using Simulant.Game.FFCS.Client.Game.Object;
+using Simulant.Game.FFCS.Client.LayoutEngine;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +20,10 @@ namespace Simulant.Core.Zone
         private readonly PluginHost _host;
         private readonly object _stateGate = new object();
         private readonly PhaseApplication _phaseApplication = new PhaseApplication();
+        private readonly PhaseApplication _entranceApplication = new PhaseApplication();
+        private Task _openingEntrance = Task.CompletedTask;
+        private Vector3? _entrancePosition;
+        private uint _simulatedTerritoryId;
         private int _worldVersion;
         public ZoneService(PluginHost host)
         {
@@ -42,7 +49,11 @@ namespace Simulant.Core.Zone
             get { lock (_stateGate) return _initialTerritoryId.HasValue; }
         }
 
-        internal void CancelPendingPhase() => _phaseApplication.Cancel();
+        internal void CancelPendingPhase()
+        {
+            _phaseApplication.Cancel();
+            _entranceApplication.Cancel();
+        }
 
         // 外部换图/进程退出时只丢弃归属，不在新世界中清理旧副本实例。
         internal void InvalidateWorld()
@@ -51,9 +62,11 @@ namespace Simulant.Core.Zone
             {
                 _worldVersion++;
                 _isInSimulatedTerritory = false;
+                _simulatedTerritoryId = 0;
                 _initialTerritoryId = null;
                 _initialPosition = null;
                 _loadedInstanceContentId = null;
+                _entrancePosition = null;
             }
             CancelPendingPhase();
         }
@@ -100,9 +113,11 @@ namespace Simulant.Core.Zone
                 {
                     EnsureWorld(worldVersion);
                     _isInSimulatedTerritory = true;
+                    _simulatedTerritoryId = (uint)territoryId;
                 }
 
                 var finalTerritoryId = territory.HasValue ? (int)territory.Value.RowId : territoryId;
+                _openingEntrance = OpenEntranceAsync(territory, worldVersion);
                 var placeName = territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? "未知区域";
                 _host.LogSim($"已进入区域：{placeName} ({finalTerritoryId})");
 
@@ -119,14 +134,17 @@ namespace Simulant.Core.Zone
             }
         }
 
-        public async Task<bool> EnterPhase(PhaseData phaseData, bool waitForZoneInit)
+        public async Task<bool> EnterPhase(PhaseData phaseData)
         {
             try
             {
                 if (!IsInSimulatedTerritory)
                     throw new InvalidOperationException("当前不在模拟区域中，无法进入阶段。");
 
-                return await ApplyPhaseData(phaseData, waitForZoneInit);
+                var openingEntrance = _openingEntrance;
+                var applied = await ApplyPhaseData(phaseData);
+                await openingEntrance;
+                return applied;
             }
             catch (OperationCanceledException)
             {
@@ -236,15 +254,35 @@ namespace Simulant.Core.Zone
             _host.LogRuntime($"已恢复真实位置：{initialPosition.Value.X}, {initialPosition.Value.Y}, {initialPosition.Value.Z}");
         }
 
-        private Task<bool> ApplyPhaseData(PhaseData phaseData, bool waitForZoneInit)
+        private static bool IsMapReady(uint territoryId, out string state)
+        {
+            var game = GameMain.Instance.ThrowIfNull();
+            var world = LayoutWorld.Instance();
+            var layout = world.IsNull() ? default(LayoutManager) : world.ActiveLayout;
+            var loadState = game.TerritoryLoadState.Get();
+            var currentTerritory = game.CurrentTerritoryTypeId.Get();
+            var layoutTerritory = layout.IsNull() ? 0 : layout.TerritoryTypeId.Get();
+            var initState = layout.IsNull() ? -1 : layout.InitState.Get();
+            state = $"地图加载状态={loadState}，当前区域={currentTerritory}；"
+                + (layout.IsNull() ? "场地尚不存在" : $"场地区域={layoutTerritory}，初始化状态={initState}");
+            return territoryId != 0 && loadState == 2 && currentTerritory == territoryId
+                && layoutTerritory == territoryId && initState == 7;
+        }
+
+        private Task<bool> ApplyPhaseData(PhaseData phaseData)
         {
             int worldVersion;
+            uint territoryId;
+            Vector3? spawn;
             lock (_stateGate)
             {
                 if (!_isInSimulatedTerritory) throw new OperationCanceledException();
                 worldVersion = _worldVersion;
+                territoryId = _simulatedTerritoryId;
+                spawn = phaseData.Spawn ?? _entrancePosition;
             }
-            _host.LogSim($"进入阶段 {phaseData.Name}：天气 {phaseData.Weather}，BGM {phaseData.BGM}，坐标 {phaseData.Spawn?.ToString() ?? "null"}");
+            var clock = Stopwatch.StartNew();
+            _host.LogSim($"进入阶段 {phaseData.Name}：天气 {phaseData.Weather}，BGM {phaseData.BGM}，坐标 {spawn?.ToString() ?? "null"}");
 
             void CheckCurrent(CancellationToken token)
             {
@@ -255,13 +293,35 @@ namespace Simulant.Core.Zone
             void Prepare(CancellationToken token)
             {
                 CheckCurrent(token);
-                if (!phaseData.Spawn.HasValue) return;
+                if (!spawn.HasValue) return;
                 var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("无法获取玩家实体，不能设置出生点。");
                 CheckCurrent(token);
-                me.Pos3D = phaseData.Spawn.Value;
+                me.Pos3D = spawn.Value;
             }
 
-            void Apply(CancellationToken token) // 这些在区域没完全加载时设置无效
+            var needsDirector = false;
+            foreach (var flag in phaseData.MapEffectFlags) needsDirector |= flag.HasValue;
+            string lastState = null;
+            bool Ready(CancellationToken token)
+            {
+                CheckCurrent(token);
+                var ready = IsMapReady(territoryId, out var state);
+                if (needsDirector)
+                {
+                    var framework = EventFramework.Instance;
+                    var directorReady = !framework.IsNull() && !framework.ContentDirector.IsNull();
+                    ready &= directorReady;
+                    state += $"；场地效果控制器已创建={directorReady}";
+                }
+                if (state != lastState)
+                {
+                    lastState = state;
+                    _host.LogRuntime($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：{state}");
+                }
+                return ready;
+            }
+
+            void Apply(CancellationToken token)
             {
                 CheckCurrent(token);
                 _host.EnvironmentService.SetWeather(phaseData.Weather);
@@ -274,14 +334,17 @@ namespace Simulant.Core.Zone
                     if (flag.HasValue)
                         _host.EnvironmentService.PlayMapEffect(slot, flag.Value);
                 }
+                _host.LogRuntime($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：地图已就绪，已提交阶段「{phaseData.Name}」的天气、BGM 和场地效果。");
             }
 
-            return _phaseApplication.ApplyAsync(Prepare, Apply, waitForZoneInit);
+            return _phaseApplication.ApplyAsync(Prepare, Apply, Ready);
         }
 
         private void LoadTerritoryInternal(int territoryId, TerritoryType? territory, int worldVersion, int storyProgress = 0)
         {
             EnsureWorld(worldVersion);
+            _entranceApplication.Cancel();
+            lock (_stateGate) _entrancePosition = null;
             _host.PrepareEntityWorldChange((uint)territoryId);
             ushort? loadedInstanceContentId;
             lock (_stateGate)
@@ -326,6 +389,87 @@ namespace Simulant.Core.Zone
             EventFramework.Instance.ThrowIfNull().SetTerritoryTypeId((ushort)territoryId);
             EnsureWorld(worldVersion);
             _host.CompleteEntityWorldChange();
+        }
+
+        private async Task OpenEntranceAsync(TerritoryType? territory, int worldVersion)
+        {
+            if (!territory.HasValue || ResolveInstanceContentId(territory) == 0) return;
+            var clock = Stopwatch.StartNew();
+            try
+            {
+                var specs = EntranceBarrier.Load(GameDataService.Instance, territory.Value);
+                if (specs.Length == 0) return;
+                lock (_stateGate)
+                {
+                    EnsureWorld(worldVersion);
+                    // 与出生圈实体使用同一份位置，首次异步等待前即可设置玩家出生点。
+                    _entrancePosition = specs[0].Pos;
+                }
+                var entrances = new List<Entity.EventObject>();
+                var spawned = false;
+                var mapReady = false;
+                var groupsReady = false;
+                void LogTiming(string message)
+                    => _host.LogRuntime($"[出生圈计时] 区域 {territory.Value.RowId}，{clock.Elapsed.TotalSeconds:F3} 秒：{message}");
+
+                string lastState = null;
+                void Observe()
+                {
+                    mapReady = IsMapReady(territory.Value.RowId, out var mapState);
+                    groupsReady = spawned;
+                    var states = new List<string> { mapState };
+                    if (!spawned) states.Add("EObj 尚未生成");
+                    foreach (var entrance in entrances)
+                    {
+                        var native = entrance.Native.Ptr.As<GameObject>();
+                        var loaded = native.IsSharedGroupLoaded();
+                        groupsReady &= loaded;
+                        states.Add($"EObj {entrance.Id:X8}：场地组已加载={loaded}，事件状态={native.EventState.Get()}");
+                    }
+                    var state = string.Join("；", states);
+                    if (state == lastState) return;
+                    lastState = state;
+                    LogTiming(state);
+                }
+
+                // EObj 保留至离开地图；停止机制、切换阶段不重新关圈。
+                await _entranceApplication.ApplyAsync(async token =>
+                {
+                    Task WaitUntil(Func<bool> ready, string stage)
+                        => _entranceApplication.WaitUntilAsync(current =>
+                        {
+                            EnsureWorld(worldVersion);
+                            Observe();
+                            return ready();
+                        }, token, stage);
+
+                    LogTiming("从本地进图返回后计时；地图就绪后生成 EObj，场地组就绪后立即开圈。");
+                    await WaitUntil(() => mapReady, "地图就绪");
+                    foreach (var spec in specs)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        EnsureWorld(worldVersion);
+                        entrances.Add(_host.EntitySpawner.SpawnEObj(spec, true));
+                    }
+                    spawned = true;
+                    LogTiming($"已生成 {entrances.Count} 个出生圈 EObj。");
+
+                    await WaitUntil(() => mapReady && groupsReady, "出生圈场地组就绪");
+                    foreach (var entrance in entrances)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        EnsureWorld(worldVersion);
+                        entrance.ActorControl(ActorControlCategory.DirectorEObjMod, 7);
+                    }
+                    LogTiming("已发送开圈状态 7；请实机确认出生圈碰撞已消失。");
+                    _host.LogVerbose($"已解除出生圈：区域 {territory.Value.RowId}，共 {entrances.Count} 个。");
+                });
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception error)
+            {
+                _host.LogWarning("解除出生圈失败：" + error.Message);
+            }
         }
 
         // 需要扫描全部实体（含本地实体），似乎有实体模型的时候游戏有概率会炸

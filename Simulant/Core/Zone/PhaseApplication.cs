@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,8 +27,32 @@ namespace Simulant.Core.Zone
             }
         }
 
-        internal async Task<bool> ApplyAsync(Action<CancellationToken> prepare,
-            Action<CancellationToken> apply, bool waitForZoneInit)
+        internal Task<bool> ApplyAsync(Action<CancellationToken> prepare,
+            Action<CancellationToken> apply, Func<CancellationToken, bool> isReady)
+            => ApplyAsync(async token =>
+            {
+                prepare(token);
+                await WaitUntilAsync(isReady, token, "地图就绪");
+                token.ThrowIfCancellationRequested();
+                apply(token);
+            });
+
+        internal async Task WaitUntilAsync(Func<CancellationToken, bool> isReady,
+            CancellationToken token, string stage)
+        {
+            var clock = Stopwatch.StartNew();
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+                if (isReady(token)) return;
+                if (clock.Elapsed.TotalSeconds >= 30)
+                    throw new TimeoutException($"等待{stage}超过 30 秒。");
+                await _delay(50, token);
+            }
+        }
+
+        // 就绪条件决定执行时机的操作，也复用同一套替换与取消处理。
+        internal async Task<bool> ApplyAsync(Func<CancellationToken, Task> apply)
         {
             var source = new CancellationTokenSource();
             lock (_gate)
@@ -40,18 +65,7 @@ namespace Simulant.Core.Zone
             {
                 var token = source.Token;
                 token.ThrowIfCancellationRequested();
-                prepare(token);
-                if (waitForZoneInit)
-                    await _delay(3000, token);
-                token.ThrowIfCancellationRequested();
-                apply(token);
-                token.ThrowIfCancellationRequested();
-                if (waitForZoneInit)
-                {
-                    await _delay(2000, token);
-                    token.ThrowIfCancellationRequested();
-                    apply(token);
-                }
+                await apply(token);
                 token.ThrowIfCancellationRequested();
                 return true;
             }

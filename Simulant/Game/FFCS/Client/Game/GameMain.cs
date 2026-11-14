@@ -11,6 +11,7 @@ namespace Simulant.Game.FFCS.Client.Game
         [SigPattern("48 8D 0D * * * * 0F 28 F2 48 89 44 24 ?")]
         public static IntPtr InstancePtr { get; set; }
         public static GameMain Instance => InstancePtr.As<GameMain>();
+        public MemoryField<uint> TerritoryLoadState => Ptr.Field<uint>(0x4100); // 1：加载中，2：已加载，3：卸载中。
         public MemoryField<uint> CurrentTerritoryTypeId => Ptr.Field<uint>(0x4108);
         public MemoryField<ushort> CurrentContentFinderConditionId => Ptr.Field<ushort>(0x4114);
 

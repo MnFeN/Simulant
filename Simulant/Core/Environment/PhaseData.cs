@@ -6,25 +6,25 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 namespace Simulant.Core.Environment
 {
-    public readonly struct PhaseData
+    public class PhaseData
     {
         public readonly string Name;
         public readonly byte Weather;
         public readonly ushort BGM;
-        public readonly Vector3? Spawn;
+        /// <summary>默认使用当前地图的出生圈中心；只有需要特殊位置的阶段才覆盖。</summary>
+        public virtual Vector3? Spawn => null;
         /// <summary>下标为地图效果槽位；值为 null 时跳过该槽位。</summary>
         public readonly IReadOnlyList<ushort?> MapEffectFlags;
 
-        public PhaseData(string name, byte weather, ushort bgm, Vector3? spawn, IEnumerable<ushort?> mapEffectFlags)
+        public PhaseData(string name, byte weather, ushort bgm, IEnumerable<ushort?> mapEffectFlags)
         {
             Name = name;
             Weather = weather;
             BGM = bgm;
-            Spawn = spawn;
             MapEffectFlags = mapEffectFlags.ToList();
         }
 
-        public static PhaseData Empty => new PhaseData("无数据", 0, 0, null, Enumerable.Empty<ushort?>());
+        public static PhaseData Empty => new PhaseData("无数据", 0, 0, Enumerable.Empty<ushort?>());
 
         public override string ToString()
             => $"[阶段] {Name}";

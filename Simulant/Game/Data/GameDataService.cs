@@ -55,6 +55,15 @@ namespace Simulant.Game.Data
             }
         }
 
+        internal T GetFile<T>(string path) where T : FileResource
+        {
+            lock (_gate)
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(GameDataService));
+                return _data.GetFile<T>(path);
+            }
+        }
+
         internal void Activate()
         {
             GameDataService previous;

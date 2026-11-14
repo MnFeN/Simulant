@@ -167,7 +167,10 @@ namespace Simulant.Core.Entity
             });
         }
 
-        public EventObject SpawnEObj(EventObjectSpawnSpec spec)
+        public EventObject SpawnEObj(EventObjectSpawnSpec spec) => SpawnEObj(spec, false);
+
+        /// <summary>自动分配时从尾部寻找空槽，不覆盖已有实体，也避开机制常用的低位槽。</summary>
+        internal EventObject SpawnEObj(EventObjectSpawnSpec spec, bool autoIndex)
         {
             if (spec == null) throw new ArgumentNullException(nameof(spec));
             if (spec.Index >= 40) throw new ArgumentOutOfRangeException(nameof(spec), "EventObject 索引必须为 0-39。");
@@ -176,9 +179,17 @@ namespace Simulant.Core.Entity
                 EnsureWorldReady();
                 // 构包校验失败时保留原槽位及其回收责任。
                 var packet = spec.ToPacket(0);
+                if (autoIndex)
+                {
+                    var objects = GameObjectManager.Instance().Objects.IndexSorted;
+                    var index = 39;
+                    while (index >= 0 && !objects[EventObjectSlotStart + index].IsNull()) index--;
+                    if (index < 0) throw new InvalidOperationException("EventObject 的 40 个槽位均已占用，无法生成场地实体。");
+                    packet.ObjectIndex = (byte)index;
+                }
                 packet.EntityId = NextAvailableId(CharacterManager.Instance(),
                     GameObjectManager.Instance().Objects.IndexSorted, false);
-                var slot = (ushort)(EventObjectSlotStart + spec.Index);
+                var slot = (ushort)(EventObjectSlotStart + packet.ObjectIndex);
                 // 包生成操作会覆盖指定槽位。先撤销旧实例，防止旧节点继续操作新对象。
                 foreach (var entry in _owned.Values.Where(e => e.Entity.Identity.Slot == slot).ToArray())
                     DeleteCore(entry.Entity);
@@ -191,7 +202,7 @@ namespace Simulant.Core.Entity
                         ?? throw new InvalidOperationException($"生成实体失败：槽位 {slot} 中不是 EObj。");
                     if (entity.Id != packet.EntityId)
                         throw new InvalidOperationException($"生成实体失败：槽位 {slot} 的 EObj ID 不匹配。");
-                    _owned.Add(entity.Identity, new OwnedEntity { Entity = entity, LocalIndex = spec.Index });
+                    _owned.Add(entity.Identity, new OwnedEntity { Entity = entity, LocalIndex = packet.ObjectIndex });
                     return entity;
                 }
                 catch (Exception setupError)
@@ -200,7 +211,7 @@ namespace Simulant.Core.Entity
                     var current = _registry.Get(slot);
                     if (current is EventObject && current.Id == packet.EntityId)
                     {
-                        _owned[current.Identity] = new OwnedEntity { Entity = current, LocalIndex = spec.Index };
+                        _owned[current.Identity] = new OwnedEntity { Entity = current, LocalIndex = packet.ObjectIndex };
                         try { DeleteCore(current); }
                         catch (Exception cleanupError)
                         {

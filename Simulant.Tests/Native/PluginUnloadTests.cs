@@ -9,6 +9,7 @@ namespace Simulant.Tests.Native
     using Simulant.Game.FFCS.Client.Game;
     using Simulant.Game.FFCS.Client.Game.Event;
     using Simulant.Game.FFCS.Client.Game.Object;
+    using Simulant.Game.FFCS.Client.LayoutEngine;
     using Simulant.Simulation;
     using Simulant.Simulation.Runtime;
     using Simulant.Simulation.Timeline;
@@ -149,6 +150,7 @@ namespace Simulant.Tests.Native
                 typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[] { new NamazuPlugin(native) });
                 GameMain.InstancePtr = UnloadMemory.Game;
                 GameMain.LoadZoneFuncPtr = UnloadPlugin.LoadFunction;
+                LayoutWorld.InstancePtrPtr = UnloadMemory.LayoutPointer;
                 EventFramework.InstancePtrPtr = UnloadMemory.EventPointer;
                 EventFramework.SetTerritoryTypeIdFuncPtr = UnloadPlugin.TerritoryFunction;
                 EventFramework.SetupInstanceContentFuncPtr = UnloadPlugin.SetupFunction;
@@ -193,7 +195,9 @@ namespace Simulant.Tests.Native
                 Memory.Failure = null;
                 Memory.Put(UnloadMemory.Player + 0xB0, new Vector3(100, 0, 100));
                 // 部分进入失败不允许阶段应用；此用例只需验证真实返回记录仍参与卸载。
-                Phase = (Task<bool>)Invoke(_zone, "EnterPhase", PhaseData.Empty, true);
+                Phase = (Task<bool>)Invoke(_zone, "EnterPhase", PhaseData.Empty);
+                Assert(interruptedEntry || !Phase.IsCompleted,
+                    "卸载用例必须确实在等待地图就绪，不能用提前报错结束的任务代替。");
                 _entityPresent = true;
                 var entity = registry.RegisterCreated(1);
                 var owned = Activator.CreateInstance(typeof(EntitySpawner).GetNestedType("OwnedEntity", BindingFlags.NonPublic), true);
@@ -273,7 +277,8 @@ namespace Simulant.Tests.Native
     {
         public static readonly IntPtr Game = new IntPtr(0x100000), EventPointer = new IntPtr(0x200000),
             BgmPointer = new IntPtr(0x300000), Scene = new IntPtr(0x320000), Player = new IntPtr(0x40000),
-            Receive = new IntPtr(0xA00000), Send = new IntPtr(0xB00000), Cave = new IntPtr(0xC00000);
+            Receive = new IntPtr(0xA00000), Send = new IntPtr(0xB00000), Cave = new IntPtr(0xC00000),
+            LayoutPointer = new IntPtr(0xD00000);
         private readonly FakeLocalMemory _storage = new FakeLocalMemory();
         private readonly List<string> _events;
         public string Failure;
@@ -283,6 +288,10 @@ namespace Simulant.Tests.Native
         {
             _events = events;
             Put(Game + 0x4108, 177u);
+            Put(LayoutPointer, new IntPtr(0xD10000));
+            Put(new IntPtr(0xD10020), new IntPtr(0xD20000));
+            Put(new IntPtr(0xD20018), 5);
+            Put(new IntPtr(0xD20020), 65000u);
             Put(EventPointer, new IntPtr(0x210000));
             Put(BgmPointer, new IntPtr(0x310000));
             Put(new IntPtr(0x3100C0), Scene);
@@ -334,6 +343,7 @@ namespace Simulant.Tests.Native
             if (function == LoadFunction)
             {
                 Memory.Step("加载地图");
+                Memory.Put(UnloadMemory.Game + 0x4100, 1u);
                 Memory.Put(UnloadMemory.Game + 0x4108, Convert.ToUInt32(args[1]));
             }
             else if (function != SetupFunction && function != FinalizeFunction)

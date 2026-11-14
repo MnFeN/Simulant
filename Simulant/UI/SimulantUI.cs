@@ -402,7 +402,7 @@ namespace Simulant.UI
                 !IsCurrentTerritorySelected())
                 return;
 
-            await _host.ZoneService.EnterPhase(phaseData, false);
+            await _host.ZoneService.EnterPhase(phaseData);
         }
 
         private async void btnSimEnter_Click(object sender, EventArgs e)
@@ -434,7 +434,7 @@ namespace Simulant.UI
                 if (!_host.ZoneService.TryEnterTerritory(_selectedTerritoryId))
                     return;
 
-                await _host.ZoneService.EnterPhase(phaseData, true);
+                await _host.ZoneService.EnterPhase(phaseData);
             }
             finally
             {

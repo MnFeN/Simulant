@@ -41,6 +41,7 @@
             Check("仅回收失败分配，保留已交付实体", VerifyDeliveredEntity);
             Check("EObj 回收失败保留身份，重试后释放槽位", VerifyEventObjectRetry);
             Check("EObj 槽位复用后不回收新对象", VerifyEventObjectReplacement);
+            Check("场地 EObj 自动避让占用槽位并按实际索引回收", VerifyEventObjectAutoIndex);
             Check("实体 ID 变化时拒绝删除", () => VerifyChanged(scene => scene.Memory.Put(scene.Native + 0x78, 999u), false));
             Check("实体指针变化时拒绝删除", () => VerifyChanged(scene => scene.SetIdentity(new IntPtr(0x50000), 444u), false));
             Check("本地表单独变化时拒绝删除", () => VerifyChanged(scene => scene.Memory.Put(scene.LocalPointer, new IntPtr(0x50000)), false));
@@ -60,6 +61,22 @@
             Check("初始化时槽位不符不得首次删除", () => VerifySetupConflict(scene => scene.Memory.Put(scene.Native + 0x8C, (ushort)300)));
             Check("已见替换对象后原地址重现也不得认领", VerifyConflictRemainsAfterOriginalReturns);
             Console.WriteLine("真实生成器故障注入通过：" + _passed + " 项。");
+        }
+
+        private static void VerifyEventObjectAutoIndex()
+        {
+            var scene = new Scene();
+            var occupied = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 39, BaseId = 1 });
+            var spawn = typeof(EntitySpawner).GetMethod("SpawnEObj", BindingFlags.Instance | BindingFlags.NonPublic,
+                null, new[] { typeof(EventObjectSpawnSpec), typeof(bool) }, null);
+            var entrance = (Simulant.Core.Entity.EventObject)spawn.Invoke(scene.Spawner,
+                new object[] { new EventObjectSpawnSpec { BaseId = 2007457 }, true });
+            Assert(entrance.Identity.Slot == 449 + 38 && occupied.IsAlive && scene.Plugin.DeletedEventIndices.Count == 0,
+                "入口应自动使用下一个空槽，不能覆盖现有实体。");
+            scene.Spawner.Delete(entrance);
+            Assert(scene.Plugin.DeletedEventIndices.Single() == 38 && occupied.IsAlive,
+                "回收必须使用实际分配的槽，而不是配置中默认的索引零。");
+            scene.Spawner.Clear();
         }
 
         private static void VerifyEventObjectRetry()
