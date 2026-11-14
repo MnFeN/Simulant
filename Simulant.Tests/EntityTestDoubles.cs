@@ -49,6 +49,7 @@ namespace Simulant.Core.Entity
         internal Action<Vector2> OnPositionWritten;
         internal int PositionReads;
         internal readonly List<NetworkMove> NetworkMoves = new List<NetworkMove>();
+        internal int NativeKnockbackCalls;
         internal Action<Vector3, float, byte> OnActorMove;
         internal readonly List<uint> CastStarts = new List<uint>();
         internal readonly List<uint> FinalizedCasts = new List<uint>();
@@ -118,19 +119,22 @@ namespace Simulant.Core.Entity
             internal Vector3 Position;
             internal float Heading;
             internal byte SpeedParam;
+            internal Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags Flags;
             internal int Thread;
         }
 
-        public void ActorMove(Vector3 position, float heading, byte speedParam = 20)
+        public void ActorMove(Vector3 position, float heading, byte speedParam = 20,
+            Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags flags = Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags.None)
         {
             if (!IsAlive) throw new InvalidOperationException("移动控制器向已失效的实体发送了移动包。");
             NetworkMoves.Add(new NetworkMove
             {
-                Position = position, Heading = heading, SpeedParam = speedParam,
+                Position = position, Heading = heading, SpeedParam = speedParam, Flags = flags,
                 Thread = System.Threading.Thread.CurrentThread.ManagedThreadId
             });
             OnActorMove?.Invoke(position, heading, speedParam);
         }
+        public void Knockback(float heading, float distance, float duration) { NativeKnockbackCalls++; }
         public float HitboxRadius { get; set; }
         private uint _castingActionId;
         internal Action BeforeCastingActionIdRead;

@@ -11,6 +11,72 @@ namespace Simulant.Tests
 {
     internal static class MovementTests
     {
+        public static void KnockbackUsesNetworkTrajectoryAndKeepsLocalPlayerNative()
+        {
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; done.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var local = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
+                var remote = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                remote.Entity.Pos3D = new Vector3(100, 100, 7);
+                remote.Heading = -0.4f;
+                var sentAt = new List<double>();
+                remote.Entity.OnActorMove = (pos, _, __) =>
+                {
+                    remote.Entity.Pos3D = pos;
+                    sentAt.Add(scheduler.ElapsedSeconds);
+                };
+                local.Knockback((float)Math.PI / 2, 20, 0.8f);
+                remote.Knockback((float)Math.PI / 2, 20, 0.8f);
+                Assert(local.Entity.NativeKnockbackCalls == 1 && local.Entity.NetworkMoves.Count == 0,
+                    "自身必须保留已实测正常的原生击退，不能发送不生效的 ActorMove。");
+                Assert(scheduler.PendingCount == 1, "击退轨迹必须复用移动控制器的单个更新节点。");
+                scheduler.Schedule(0.5, () => Assert(remote.Pos.X > 110 && remote.Pos.X < 120,
+                    "网络击退应先快后慢，不能瞬移到终点或继续留在原地。"));
+                scheduler.Schedule(1.1, done.Set);
+                scheduler.Start();
+                Assert(done.Wait(2000), "网络击退检查超时。");
+                scheduler.Dispose();
+                Assert(failure == null && Math.Abs(remote.Pos.X - 120) < 0.001 && Math.Abs(remote.Pos.Y - 100) < 0.001 && !remote.IsMoving,
+                    "网络假玩家应按距离和时长完成击退：" + failure);
+                var packets = remote.Entity.NetworkMoves;
+                Assert(remote.Entity.NativeKnockbackCalls == 0 && packets.Count > 3 && packets.All(p => p.Heading == -0.4f && p.Position.Z == 7),
+                    "假玩家击退不能依赖本机击退函数，且必须保留面向及高度。");
+                Assert(packets.Count <= 5 && sentAt[1] - sentAt[0] >= 0.32,
+                    "击退应按回放中约每秒三次的节奏发包，不能退回每 50 毫秒发包。");
+                Assert(packets.Take(packets.Count - 1).All(p => p.Flags == Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags.Knockback) &&
+                    packets.Last().Flags == Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags.None,
+                    "沿途包应带击退标志，到位后清除击退姿态。");
+            }
+        }
+
+        public static void CancelledKnockbackDoesNotContinueMoving()
+        {
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; done.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                actor.Entity.OnActorMove = (pos, _, __) => actor.Entity.Pos3D = pos;
+                actor.Knockback(0, 20, 0.8f);
+                var packets = 0;
+                scheduler.Schedule(0.15, () => { actor.Dispose(); packets = actor.Entity.NetworkMoves.Count; });
+                scheduler.Schedule(0.4, () =>
+                {
+                    Assert(packets > 0 && packets == actor.Entity.NetworkMoves.Count && !actor.IsMoving,
+                        "停止模拟必须取消尚未完成的击退，不能让旧轨迹继续控制角色。");
+                    Assert(actor.Entity.NetworkMoves.Last().Flags == Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags.None,
+                        "中断击退时也应清除移动包的击退标志。");
+                    done.Set();
+                });
+                scheduler.Start();
+                Assert(done.Wait(2000) && failure == null, "击退取消检查失败：" + failure);
+            }
+        }
+
         public static void MovementSharesOneTickAndSchedulerThread()
         {
             var world = new EntityTestWorld();

@@ -55,6 +55,17 @@ namespace Lumina.Excel.Sheets
     {
         public RowRef<ModelChara> ModelChara;
         public RowRef<Battalion> Battalion;
+        public RowRef<NpcEquip> NpcEquip;
+    }
+
+    public struct Stain : IExcelRow<Stain> { }
+    public struct NpcEquip : IExcelRow<NpcEquip>
+    {
+        public ulong ModelMainHand, ModelOffHand;
+        public uint ModelHead, ModelBody, ModelHands, ModelLegs, ModelFeet, ModelEars, ModelNeck, ModelWrists, ModelRightRing, ModelLeftRing;
+        public RowRef<Stain> DyeMainHand, DyeOffHand, Dye2MainHand, Dye2OffHand;
+        public RowRef<Stain> DyeHead, DyeBody, DyeHands, DyeLegs, DyeFeet, DyeEars, DyeNeck, DyeWrists, DyeRightRing, DyeLeftRing;
+        public RowRef<Stain> Dye2Head, Dye2Body, Dye2Hands, Dye2Legs, Dye2Feet, Dye2Ears, Dye2Neck, Dye2Wrists, Dye2RightRing, Dye2LeftRing;
     }
 
     public struct BNpcName : IExcelRow<BNpcName>

@@ -24,6 +24,8 @@
     <Compile Include="MathParserTests.cs" />
     <Compile Include="..\Simulant\Utils\Maths\MathParser.cs"><Link>Utils\Maths\MathParser.cs</Link></Compile>
     <Compile Include="CosmoArrowTests.cs" />
+    <Compile Include="CrystallizeTimeTests.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P4时间结晶.Plan.cs"><Link>Content\P4时间结晶.Plan.cs</Link></Compile>
     <Compile Include="..\Simulant\Content\U6b\Presets\宇宙天箭.Plan.cs"><Link>Content\宇宙天箭.Plan.cs</Link></Compile>
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="..\Simulant\Game\Data\FfxivInstallation.cs"><Link>Game\FfxivInstallation.cs</Link></Compile>
@@ -47,6 +49,7 @@
     <Compile Include="SessionStatusTests.cs" />
     <Compile Include="PartyNameTests.cs" />
     <Compile Include="EntityTestDoubles.cs" />
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\ActorMovePacket.cs"><Link>Runtime\ActorMovePacket.cs</Link></Compile>
     <Compile Include="GameDataTestDoubles.cs" />
     <Compile Include="NetworkSpawnTests.cs" />
     <Compile Include="NetworkManagerTests.cs" />

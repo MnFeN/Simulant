@@ -12,6 +12,51 @@ namespace Simulant.Tests
 {
     internal static class BehaviorMovementTests
     {
+        public static void NewMechanicMoveWaitsForKnockbackToFinish()
+        {
+            Exception failure = null;
+            using (var finished = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var actor = CreateActor(behavior, movement, casts);
+                actor.Knockback((float)Math.PI / 2, 20, 0.3f);
+                scheduler.Schedule(0.1, () => actor.MoveForMechanic(new Vector2(22, 0), 1.5, 2, urgent: true));
+                scheduler.Schedule(0.45, () => Assert(Vector2.Distance(actor.Pos, new Vector2(20, 0)) < 0.025,
+                    "击退期间收到下一条移动指令，仍须先到击退落点，不能截断轨迹。"));
+                scheduler.Schedule(1.6, () =>
+                {
+                    Assert(Vector2.Distance(actor.Pos, new Vector2(22, 0)) < 0.025 && !actor.IsMoving,
+                        "暂停结束后必须从击退落点继续走向新的安全范围。");
+                    finished.Set();
+                });
+                scheduler.Start();
+                Assert(finished.Wait(3000) && failure == null, "击退后的机制移动检查失败：" + failure);
+            }
+        }
+
+        public static void ForcedMovementSuspendsAndResumesBehavior()
+        {
+            Exception failure=null;
+            using (var finished=new ManualResetEventSlim())
+            using (var scheduler=new SimScheduler((error,_)=>{failure=error;finished.Set();}))
+            using (var movement=new SimMovementController(scheduler))
+            using (var casts=new SimCastController(scheduler))
+            using (var behavior=new SimActorBehaviorController(scheduler,movement,casts))
+            {
+                var actor=CreateActor(behavior,movement,casts);
+                actor.MoveForMechanic(new Vector2(8,0),3,4,urgent:true);
+                scheduler.Schedule(0.2,()=>{actor.SuspendBehavior(0.8);actor.Pos=new Vector2(20,0);});
+                scheduler.Schedule(0.8,()=>Assert(actor.Pos==new Vector2(20,0) && !actor.IsMoving,"暂停行为期间不能追赶旧目的地，覆盖强制移动。"));
+                scheduler.Schedule(1.1,()=>actor.MoveForMechanic(new Vector2(22,0),2.2,3,urgent:true));
+                scheduler.Schedule(2.3,()=>{Assert(Vector2.Distance(actor.Pos,new Vector2(22,0))<0.025,"暂停结束后应能继续处理新的移动指令。");finished.Set();});
+                scheduler.Start();
+                Assert(finished.Wait(4000),"暂停行为检查超时。");
+                Assert(failure==null,"暂停行为检查失败："+failure);
+            }
+        }
         public static void EntityChoosesDepartureAndHonorsDeadlineAndUrgency()
         {
             Exception failure = null;

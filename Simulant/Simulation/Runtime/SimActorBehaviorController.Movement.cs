@@ -30,8 +30,9 @@ namespace Simulant.Simulation.Runtime
                 var destination = area.Sample(_random, northHeading);
                 if (Math.Abs(destination.X) > 1000 || Math.Abs(destination.Y) > 1000)
                     throw new ArgumentOutOfRangeException(nameof(area), "移动目的地必须位于网络坐标范围内。");
-                var now = _scheduler.ElapsedSeconds;
-                var position = actor.Pos;
+                // 暂停期间可以接收下一段走位，但只能从击退落点、暂停结束后开始规划。
+                var now = Math.Max(_scheduler.ElapsedSeconds, state.SuspendedUntil);
+                var position = _movement.PositionAfterKnockback(actor);
                 // 关闭延迟与紧急意图都直接就位，不让自动读条、滑步、贪刀或绕路推迟移动。
                 var immediate = urgent || !state.Options.DelayArrival;
                 var plan = new MovePlan { Destination = destination, Latest = arriveBy, HoldUntil = holdUntil, Immediate = immediate,
@@ -74,7 +75,7 @@ namespace Simulant.Simulation.Runtime
                     plan.Arrival = Math.Max(earliest, plan.Arrival);
                 }
                 else plan.Arrived = true;
-                _movement.Stop(actor);
+                if (_scheduler.ElapsedSeconds >= state.SuspendedUntil) _movement.Stop(actor);
                 state.Move = plan;
                 state.Anchor = destination;
                 state.Initialized = true;

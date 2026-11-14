@@ -21,7 +21,7 @@ namespace Simulant.Simulation.Runtime
             public int ActionIndex;
             public uint OwnCast;
             public uint SelectedTarget = 0xE0000000;
-            public double NextAction, NextIdle, NextRefresh, NextFacing;
+            public double NextAction, NextIdle, NextRefresh, NextFacing, SuspendedUntil;
             public MovePlan Move;
         }
 
@@ -106,6 +106,22 @@ namespace Simulant.Simulation.Runtime
                 { state.OwnCast = 0; state.NextAction = _scheduler.ElapsedSeconds + 2.5; }
         }
 
+        /// <summary>强制移动、回返或眩晕期间交出控制，避免自动走位把原生动作覆盖。</summary>
+        internal void Suspend(SimActor actor, double seconds)
+        {
+            lock (_gate)
+            {
+                if (!_states.TryGetValue(actor, out var state)) return;
+                CancelOwnCast(state);
+                _movement.Stop(actor);
+                state.Move = null;
+                state.ManualMovement = true;
+                state.SuspendedUntil = Math.Max(state.SuspendedUntil, _scheduler.ElapsedSeconds + seconds);
+                state.NextIdle = state.SuspendedUntil + 5;
+                state.NextAction = Math.Max(state.NextAction, state.SuspendedUntil);
+            }
+        }
+
         private void Tick()
         {
             lock (_gate)
@@ -120,6 +136,7 @@ namespace Simulant.Simulation.Runtime
                 {
                     var actor = state.Actor;
                     if (!actor.IsActive) continue;
+                    if (now < state.SuspendedUntil) continue;
                     if (!state.Initialized)
                     { state.Anchor = actor.Pos; state.Initialized = true; state.NextIdle = now + 3 + _random.NextDouble() * 3; }
                     if (actor.Entity.HP == 0) { CancelOwnCast(state); _movement.Stop(actor); continue; }

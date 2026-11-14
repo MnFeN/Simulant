@@ -84,6 +84,24 @@ namespace Simulant.Simulation.Runtime
         /// <summary>取消本会话的读条及其预兆，保留角色、移动及实体上不同技能编号的外部读条。</summary>
         public void StopCasting() => _casts.Cancel(this);
 
+        /// <summary>暂停自动攻击和移动，让原生击退、眩晕等强制动作完整执行。</summary>
+        public void SuspendBehavior(double seconds)
+        {
+            EnsureActive();
+            if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0)
+                throw new ArgumentOutOfRangeException(nameof(seconds), "行为暂停时间必须为非负有限数。");
+            BehaviorController?.Suspend(this, seconds);
+            _casts.Cancel(this);
+            _movement.Stop(this);
+        }
+
+        /// <summary>施加击退并暂停自动行为；自身用原生击退，网络角色用带击退标志的移动包同步轨迹。</summary>
+        public void Knockback(float heading, float distance, float duration)
+        {
+            EnsureActive();
+            _movement.Knockback(this, heading, distance, duration);
+        }
+
         /// <summary>
         /// 在 ACT 的 X/Y 平面内移动，速度单位为世界单位每秒，并保持当前高度。
         /// 可指定模型适用的移动动画；正常到达后在调度线程执行同步回调，停止或换目标时取消旧回调。

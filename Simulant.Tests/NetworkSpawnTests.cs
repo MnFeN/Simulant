@@ -63,6 +63,44 @@ namespace Simulant.Tests
                 "解析默认值不得改写调用者的可复用参数。");
         }
 
+        public static unsafe void NetworkNpcDefaultEquipmentPreservesBodyWeaponsAndOverrides()
+        {
+            var data = GameDataService.Instance;
+            data.GetSheet<BNpcBase>()[17835] = new BNpcBase { ModelChara = 3057, Battalion = 4, NpcEquip = 2106 };
+            data.GetSheet<NpcEquip>()[2106] = new NpcEquip { ModelBody = 0x10001, ModelMainHand = 0x100041F53 };
+            var spec = new NetworkNpcSpawnSpec { BNpcBaseId = 17835, Name = "暗之巫女" };
+            var packet = spec.ToPacket(1);
+            Assert(packet.Common.ModelChara == 3057 && packet.Common.Equipment[1] == 0x10001 &&
+                packet.Common.MainhandWeaponModel == 0x100041F53,
+                "暗之巫女应携带回放与 NpcEquip 共同确认的身体和武器模型，不能只生成空骨架。");
+            Assert(spec.Equipment == null && spec.MainhandWeaponModel == 0,
+                "读取 NPC 默认装备不得改写调用者的生成参数。");
+            data.GetSheet<NpcEquip>()[2106] = new NpcEquip
+            {
+                ModelBody = 0x10001, ModelRightRing = 8, ModelLeftRing = 9, ModelMainHand = 0x100041F53,
+                DyeBody = 3, Dye2Body = 4, DyeMainHand = 5, Dye2MainHand = 6
+            };
+            packet = spec.ToPacket(2);
+            Assert(packet.Common.Equipment[1] == 0x03010001 && packet.Common.ModelStain2[1] == 4 &&
+                packet.Common.Equipment[8] == 8 && packet.Common.Equipment[9] == 9 &&
+                packet.Common.MainhandWeaponModel == 0x0605000100041F53,
+                "默认装备应正确编码双染色，并保持右戒指、左戒指的包顺序。");
+            spec.MainhandWeaponModel = 123;
+            Assert(spec.ToPacket(3).Common.MainhandWeaponModel == 123, "显式武器应覆盖 NPC 的默认武器。");
+            spec.Equipment = new uint[10];
+            spec.MainhandWeaponModel = 0;
+            packet = spec.ToPacket(4);
+            Assert(packet.Common.Equipment[1] == 0 && packet.Common.MainhandWeaponModel == 0 && packet.Common.ModelStain2[1] == 0,
+                "显式空装备必须保留，不能被表内默认装备或染色覆盖。");
+            spec.Equipment = null;
+            spec.ModelCharaId = 480;
+            packet = spec.ToPacket(5);
+            Assert(packet.Common.Equipment[1] == 0 && packet.Common.MainhandWeaponModel == 0,
+                "覆盖模型时不能给新模型套用原 NPC 的默认部件。");
+            data.GetSheet<BNpcBase>().Remove(17835);
+            data.GetSheet<NpcEquip>().Remove(2106);
+        }
+
         public static void NetworkSpawnOverridesDoNotRequireGameDataRows()
         {
             GameDataService.Instance.GetSheet<BNpcBase>().Clear();

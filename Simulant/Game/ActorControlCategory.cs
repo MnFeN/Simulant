@@ -74,6 +74,8 @@ namespace Simulant.Game
         DmgTakenMsg = 0x002D,
         /// <summary>取消连线。</summary>
         TetherCancel = 0x002F,
+        /// <summary>模型缩放状态。绝伊甸 P4 二运（时间结晶）中，龙头首次接触后发送 a1=4，使龙头缩小。</summary>
+        SetModelScale = 0x0030,
         /// <summary>切换目标；目标实体 ID 通过 HandleActorControl 的 targetId 传递，不是 a1。</summary>
         SetTarget = 0x0032,
         /// <summary>可选中开关；a1：0 不可选中、1 可选中。旧来源也称 ToggleNameHidden。</summary>
