@@ -14,25 +14,37 @@ namespace Simulant.Game.FFCS.Client.Game.Network
         public const int ExtraStatusesOffset = 0;
         public const int StatusesOffset = 0x17C;
 
-        [FieldOffset(ExtraStatusesOffset)] public fixed byte ExtraStatuses[Capacity * StatusEffectListStatus.Size];
-        [FieldOffset(0x168)] public byte ClassJob;
-        [FieldOffset(0x169)] public byte Level;
-        [FieldOffset(0x16B)] public byte Level_2;
-        [FieldOffset(0x16C)] public uint CurrentHP;
-        [FieldOffset(0x170)] public uint MaxHP;
-        [FieldOffset(0x174)] public ushort CurrentMP;
-        [FieldOffset(0x176)] public ushort MaxMP;
-        [FieldOffset(0x178)] public byte DamageShield;
-        [FieldOffset(StatusesOffset)] public fixed byte Statuses[Capacity * StatusEffectListStatus.Size];
+        [FieldOffset(ExtraStatusesOffset)]
+        public fixed byte ExtraStatuses[Capacity * StatusEffectListStatus.Size];
+        [FieldOffset(0x168)]
+        public byte ClassJob;
+        [FieldOffset(0x169)]
+        public byte Level;
+        [FieldOffset(0x16B)]
+        public byte Level_2;
+        [FieldOffset(0x16C)]
+        public uint CurrentHP;
+        [FieldOffset(0x170)]
+        public uint MaxHP;
+        [FieldOffset(0x174)]
+        public ushort CurrentMP;
+        [FieldOffset(0x176)]
+        public ushort MaxMP;
+        [FieldOffset(0x178)]
+        public byte DamageShield;
+        [FieldOffset(StatusesOffset)]
+        public fixed byte Statuses[Capacity * StatusEffectListStatus.Size];
 
         public StatusEffectListStatus GetStatus(int index)
         {
             ValidateIndex(index);
+
             if (index < Capacity)
             {
                 fixed (byte* statuses = Statuses)
                     return ((StatusEffectListStatus*)statuses)[index];
             }
+
             fixed (byte* statuses = ExtraStatuses)
                 return ((StatusEffectListStatus*)statuses)[index - Capacity];
         }
@@ -40,6 +52,7 @@ namespace Simulant.Game.FFCS.Client.Game.Network
         public void SetStatus(int index, StatusEffectListStatus status)
         {
             ValidateIndex(index);
+
             if (index < Capacity)
             {
                 fixed (byte* statuses = Statuses)
@@ -63,9 +76,13 @@ namespace Simulant.Game.FFCS.Client.Game.Network
     public struct StatusEffectListStatus
     {
         public const int Size = 0xC;
-        [FieldOffset(0)] public ushort StatusId;
-        [FieldOffset(2)] public ushort Param;
-        [FieldOffset(4)] public float RemainingTime;
-        [FieldOffset(8)] public uint SourceEntityId;
+        [FieldOffset(0)]
+        public ushort StatusId;
+        [FieldOffset(2)]
+        public ushort Param;
+        [FieldOffset(4)]
+        public float RemainingTime;
+        [FieldOffset(8)]
+        public uint SourceEntityId;
     }
 }

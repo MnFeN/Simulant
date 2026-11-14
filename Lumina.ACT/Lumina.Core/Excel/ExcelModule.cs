@@ -13,16 +13,25 @@ namespace Lumina.Excel
     {
         private readonly GameData gameData;
         private readonly Dictionary<string, RawExcelSheet> cache = new Dictionary<string, RawExcelSheet>();
-        private readonly object gate = new object ();
+        private readonly object gate = new object();
         public IReadOnlyList<string> SheetNames { get; private set; }
-        public Language Language { get { return gameData.Options.DefaultExcelLanguage; } }
+
+        public Language Language
+        {
+            get
+            {
+                return gameData.Options.DefaultExcelLanguage;
+            }
+        }
 
         internal ExcelModule(GameData gameData)
         {
             this.gameData = gameData;
             var list = gameData.GetFile<ExcelListFile>("exd/root.exl");
+
             if (list == null)
                 throw new FileNotFoundException("The selected installation does not contain exd/root.exl.");
+
             SheetNames = list.ExdMap.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
@@ -30,19 +39,27 @@ namespace Lumina.Excel
         {
             if (!SheetNames.Contains(name, StringComparer.OrdinalIgnoreCase))
                 throw new FileNotFoundException("Unknown sheet: " + name);
+
             var requested = language ?? gameData.Options.DefaultExcelLanguage;
             string key = name.ToLowerInvariant() + ":" + requested;
+
             lock (gate)
             {
                 RawExcelSheet sheet;
+
                 if (cache.TryGetValue(key, out sheet))
                     return sheet;
+
                 var header = gameData.GetFile<ExcelHeaderFile>("exd/" + name + ".exh");
+
                 if (header == null)
                     throw new FileNotFoundException("Sheet header missing: " + name);
+
                 var resolved = header.Languages.Contains(requested) ? requested : Language.None;
+
                 if (!header.Languages.Contains(resolved))
                     throw new NotSupportedException("Sheet does not support language " + requested);
+
                 sheet = new RawExcelSheet(gameData, name, resolved, header);
                 cache.Add(key, sheet);
                 return sheet;
@@ -83,7 +100,10 @@ namespace Lumina.Excel
             }
         }
 
-        public ushort GetColumnOffset(int columnIdx) { return Columns[columnIdx].Offset; }
+        public ushort GetColumnOffset(int columnIdx)
+        {
+            return Columns[columnIdx].Offset;
+        }
 
         public bool HasSubrows
         {
@@ -99,31 +119,41 @@ namespace Lumina.Excel
             Name = name;
             Language = language;
             Header = header;
+
             if (header.Header.Variant != ExcelVariant.Default && header.Header.Variant != ExcelVariant.Subrows)
                 throw new NotSupportedException("Unsupported sheet variant: " + header.Header.Variant);
+
             foreach (var pageInfo in header.DataPages)
             {
                 string suffix = language == Language.None ? "" : "_" + LanguageUtil.GetLanguageStr(language);
                 string path = "exd/" + name + "_" + pageInfo.StartId + suffix + ".exd";
                 var page = gameData.GetFile<ExcelDataFile>(path);
+
                 if (page == null)
                     throw new FileNotFoundException("Sheet page missing: " + path);
+
                 var typedPage = new ExcelPage(this, page.Data);
+
                 foreach (var pointer in page.RowData.Values.OrderBy(p => p.RowId))
                 {
                     int offset = checked((int)pointer.Offset);
                     var data = page.Data;
                     CheckBounds(data, offset, 6);
                     int end = checked(offset + 6 + (int)ReadUInt32(data, offset));
+
                     if (end > data.Length)
                         throw new InvalidDataException("EXD row exceeds its page.");
+
                     int count = HasSubrows ? ReadUInt16(data, offset + 4) : 1;
                     int stride = checked(header.Header.DataOffset + 2);
                     int fixedStart = offset + 6;
                     int strings = checked(fixedStart + (HasSubrows ? count * stride : header.Header.DataOffset));
+
                     if (strings > end)
                         throw new InvalidDataException("EXD fixed data exceeds its row.");
+
                     var group = new List<RawExcelRow>();
+
                     for (int i = 0; i < count; i++)
                     {
                         int position = HasSubrows ? checked(fixedStart + i * stride) : fixedStart;
@@ -174,7 +204,14 @@ namespace Lumina.Excel
         public uint RowId { get; private set; }
         public ushort SubrowId { get; private set; }
         public ExcelPage ExcelPage { get; internal set; }
-        public uint RowOffset { get { return checked((uint)fixedOffset); } }
+
+        public uint RowOffset
+        {
+            get
+            {
+                return checked((uint)fixedOffset);
+            }
+        }
 
         internal RawExcelRow(RawExcelSheet sheet, uint rowId, ushort subrowId, byte[] data, int fixedOffset, int stringOffset, int rowEnd, Func<string, string> resolver)
         {
@@ -194,6 +231,7 @@ namespace Lumina.Excel
             int offset = checked(fixedOffset + column.Offset);
             var type = column.Type;
             int width;
+
             switch (type)
             {
                 case ExcelColumnDataType.String:
@@ -217,7 +255,9 @@ namespace Lumina.Excel
 
             if (column.Offset + width > sheet.Header.Header.DataOffset)
                 throw new InvalidDataException("Column exceeds the fixed row size.");
+
             RawExcelSheet.CheckBounds(data, offset, width);
+
             switch (type)
             {
                 case ExcelColumnDataType.String:

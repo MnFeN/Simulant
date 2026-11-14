@@ -21,7 +21,14 @@ namespace Simulant
 {
     internal partial class Test
     {
-        internal enum EntityTestKind { NetworkNpc, NetworkPlayer, NetworkParty, LocalEntities }
+        internal enum EntityTestKind
+        {
+            NetworkNpc,
+            NetworkPlayer,
+            NetworkParty,
+            LocalEntities
+        }
+
         private readonly PluginHost _host;
         internal Test(PluginHost host)
         {
@@ -64,6 +71,7 @@ namespace Simulant
                         for (var i = 0; i < 48; i++)
                         {
                             var contentId = listing.GetMemberContentId(i);
+
                             if (contentId == 0)
                                 continue;
 
@@ -109,18 +117,22 @@ namespace Simulant
 
             for (byte i = 0; i <= 0xFF; i++)
             {
-                if (!eobj.IsAlive) break;
+                if (!eobj.IsAlive)
+                    break;
+
                 eobj.SetSharedTimelineState(i);
                 TriggernometryInterop.InvokeNamedCallback("command", $"/e Timeline {i} = {i:X2}");
 
-                if (i == 0xFF || _host.Disposed) break;
+                if (i == 0xFF || _host.Disposed)
+                    break;
+
                 await Task.Delay(1000);
             }
         }
 
         public async Task EObjTargetableFlagsTest()
         {
-            
+
             var data = new EventObjectSpawnSpec
             {
                 Index = 7,
@@ -140,7 +152,9 @@ namespace Simulant
                 var eobj = _host.DebugEntities.SpawnEObj(data);
                 TriggernometryInterop.InvokeNamedCallback("command", $"/e {i}");
 
-                if (i == 0xFF || _host.Disposed) break;
+                if (i == 0xFF || _host.Disposed)
+                    break;
+
                 await Task.Delay(1000);
             }
         }
@@ -158,6 +172,7 @@ namespace Simulant
                 sb.AppendLine().AppendLine("== " + name + " ==");
 
                 int i = 0;
+
                 foreach (var obj in ptrs.GameObjects)
                 {
                     if (!obj.IsNull())
@@ -167,19 +182,24 @@ namespace Simulant
                             .Append(", Index=").Append((ushort)obj.ObjectIndex)
                             .Append(", Type=").Append((ObjectKind)obj.ObjectKind)
                             .AppendLine();
+
                     i++;
                 }
+
                 _host.LogVerbose(sb.ToString());
             }
         }
-        
+
         private void EntityExecuteTest(uint baseId, uint actionId)
         {
             var me = _host.EntityProvider.GetMyself();
 
             _host.DebugEntities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                BNpcBaseId = baseId, Level = 100, Pos = me.Pos3D, Heading = me.Heading,
+                BNpcBaseId = baseId,
+                Level = 100,
+                Pos = me.Pos3D,
+                Heading = me.Heading,
                 Targetable = false
             }, bnpc => bnpc.Execute(actionId));
         }
@@ -190,7 +210,10 @@ namespace Simulant
 
             _host.DebugEntities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                BNpcBaseId = baseId, Level = 100, Pos = me.Pos3D, Heading = me.Heading,
+                BNpcBaseId = baseId,
+                Level = 100,
+                Pos = me.Pos3D,
+                Heading = me.Heading,
                 Targetable = false
             }, bnpc =>
             {
@@ -209,6 +232,7 @@ namespace Simulant
             for (uint slot = 0; slot < phaseData.MapEffectFlags.Count; slot++)
             {
                 var flag = phaseData.MapEffectFlags[(int)slot];
+
                 if (flag.HasValue)
                     _host.EnvironmentService.PlayMapEffect(slot, flag.Value);
             }
@@ -228,17 +252,20 @@ namespace Simulant
         {
             var me = _host.EntityProvider.GetMyself();
             var entities = _host.DebugEntities;
+
             entities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                BNpcBaseId = 4909, BNpcNameId = 3765, Level = 90,
-                Pos = me.Pos3D + new Vector3(1, 0, 0), Heading = me.Heading
+                BNpcBaseId = 4909,
+                BNpcNameId = 3765,
+                Level = 90,
+                Pos = me.Pos3D + new Vector3(1, 0, 0),
+                Heading = me.Heading
             }, bnpc => bnpc.MoveNetworkTo(bnpc.Pos + new Vector2(0, 42), speedParam: 30, onArrived: () =>
             {
                 bnpc.Entity.PlayBlendTimeline(3201);
                 entities.Scheduler.ScheduleAfter(3, () => entities.Delete(bnpc), "回收移动测试角色");
             }));
         }
-
 
         private void GetOnReceivePtr()
         {

@@ -32,16 +32,32 @@ namespace Simulant.UI
             ClientSize = new Size(600, 370);
             MinimumSize = new Size(540, 400);
 
-            var tabs = new TabControl { Dock = DockStyle.Fill };
-            var partyTab = new TabPage("模拟队员") { AutoScroll = true, Padding = new Padding(5) };
+            var tabs = new TabControl
+            {
+                Dock = DockStyle.Fill
+            };
+            var partyTab = new TabPage("模拟队员")
+            {
+                AutoScroll = true,
+                Padding = new Padding(5)
+            };
             var table = new TableLayoutPanel();
-            var toolTip = new ToolTip(_components) { AutoPopDelay = 60000, ToolTipTitle = "说明", ToolTipIcon = ToolTipIcon.Info };
+            var toolTip = new ToolTip(_components)
+            {
+                AutoPopDelay = 60000,
+                ToolTipTitle = "说明",
+                ToolTipIcon = ToolTipIcon.Info
+            };
             _partyOptions = CreatePartyOptions(_draft.SimulatedParty);
             partyTab.Controls.Add(table);
             new OptionEditor(table, toolTip).Build(_partyOptions);
             tabs.TabPages.Add(partyTab);
 
-            var miscTab = new TabPage("杂项") { AutoScroll = true, Padding = new Padding(5) };
+            var miscTab = new TabPage("杂项")
+            {
+                AutoScroll = true,
+                Padding = new Padding(5)
+            };
             var miscTable = new TableLayoutPanel();
             _miscOptions = new List<SimOptionBase>
             {
@@ -55,10 +71,24 @@ namespace Simulant.UI
             new OptionEditor(miscTable, toolTip).Build(_miscOptions);
             tabs.TabPages.Add(miscTab);
 
-            var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true,
-                FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(8) };
-            var cancel = new Button { Text = "取消", AutoSize = true, DialogResult = DialogResult.Cancel };
-            var save = new Button { Text = "保存", AutoSize = true };
+            var buttons = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                FlowDirection = FlowDirection.RightToLeft,
+                Padding = new Padding(8)
+            };
+            var cancel = new Button
+            {
+                Text = "取消",
+                AutoSize = true,
+                DialogResult = DialogResult.Cancel
+            };
+            var save = new Button
+            {
+                Text = "保存",
+                AutoSize = true
+            };
             save.Click += Save;
             buttons.Controls.Add(cancel);
             buttons.Controls.Add(save);
@@ -84,8 +114,12 @@ namespace Simulant.UI
         {
             try
             {
-                foreach (var option in _partyOptions) option.ApplyTo(_draft.SimulatedParty);
-                foreach (var option in _miscOptions) option.ApplyTo(_draft);
+                foreach (var option in _partyOptions)
+                    option.ApplyTo(_draft.SimulatedParty);
+
+                foreach (var option in _miscOptions)
+                    option.ApplyTo(_draft);
+
                 _host.SaveConfiguration(_draft);
                 DialogResult = DialogResult.OK;
             }
@@ -98,7 +132,9 @@ namespace Simulant.UI
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) _components.Dispose();
+            if (disposing)
+                _components.Dispose();
+
             base.Dispose(disposing);
         }
     }

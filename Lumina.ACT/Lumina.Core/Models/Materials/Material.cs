@@ -54,6 +54,7 @@ namespace Lumina.Models.Materials
             if (MaterialPath.StartsWith("/"))
             {
                 ResolvedPath = ResolveRelativeMaterialPath(MaterialPath, VariantId);
+
                 if (ResolvedPath == null)
                 {
                     return this;
@@ -68,6 +69,7 @@ namespace Lumina.Models.Materials
 
             if (File != null)
                 BuildMaterial();
+
             return this;
         }
 
@@ -76,8 +78,10 @@ namespace Lumina.Models.Materials
         {
             Regex rx = strictSuffixValidation ? MatNameRegexStrictSuffix() : MatNameRegexLaxSuffix();
             var result = rx.Match(relativePath);
+
             if (!result.Success)
                 return null;
+
             var id1 = result.Groups["id1"].Value[0];
             var val1 = result.Groups["val1"].Value;
             var id2 = result.Groups["id2"].Value[0];
@@ -101,9 +105,12 @@ namespace Lumina.Models.Materials
         {
             var v = 1;
             var vStart = matPath.IndexOf("/v", StringComparison.Ordinal);
+
             if (vStart == -1)
                 return v;
+
             var vSub = matPath.Substring(vStart + 2, 4);
+
             try
             {
                 v = int.Parse(vSub);
@@ -125,6 +132,7 @@ namespace Lumina.Models.Materials
         private void ReadTextures()
         {
             Textures = new Texture[File.TextureOffsets.Length];
+
             for (int i = 0; i < File.TextureOffsets.Length; i++)
             {
                 TextureUsage raw = (TextureUsage)File.Samplers[i].SamplerId;
@@ -145,6 +153,7 @@ namespace Lumina.Models.Materials
             var uniqueColorOffsetCount = File.ColorSets.Select(t => t.NameOffset).Distinct().Count();
             // Add one for the shader package name at the end
             var stringCount = uniqueTextureCount + uniqueUvColorSetCount + uniqueColorOffsetCount + 1;
+
             for (int i = 0; i < stringCount; i++)
             {
                 long startOffset = br.BaseStream.Position;

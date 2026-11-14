@@ -63,7 +63,9 @@ namespace Simulant.Simulation
 
         /// <summary>在调度线程上定义准备节点；网络实体就绪后再排入机制时间轴。时间单位为秒，节点应为短同步动作。</summary>
         protected abstract void BuildTimeline(SimTimeline timeline);
-        protected virtual void OnStop() { }
+        protected virtual void OnStop()
+        {
+        }
 
         /// <summary>子轴以当前节点的计划时间为原点，因此父节点迟到不会逐层积累漂移。</summary>
         protected void Play(SimTimeline timeline, double delaySeconds = 0)
@@ -72,7 +74,9 @@ namespace Simulant.Simulation
         /// <summary>把一次机制接入子时间轴；开始、判定和清理由当前会话管理。</summary>
         protected SimTimeline Mechanic(SimMechanic mechanic)
         {
-            if (mechanic == null) throw new ArgumentNullException(nameof(mechanic));
+            if (mechanic == null)
+                throw new ArgumentNullException(nameof(mechanic));
+
             return new SimTimeline().At(0, () => EntityManager.RunMechanic(mechanic), mechanic.Name);
         }
 
@@ -101,7 +105,6 @@ namespace Simulant.Simulation
         }
 
         #region Party / Roles
-
         protected List<SimActor> Party => EntityManager.Party;
         protected virtual SimActor MT => EntityManager.GetPartyMember(1);
         protected virtual SimActor ST => EntityManager.GetPartyMember(2);
@@ -114,17 +117,53 @@ namespace Simulant.Simulation
 
         protected enum JobRole
         {
-            None, Tank, Healer, Melee, PhysicalRanged, MagicalRanged
+            None,
+            Tank,
+            Healer,
+            Melee,
+            PhysicalRanged,
+            MagicalRanged
         }
 
         protected Dictionary<JobRole, List<Job>> JobsByRole = new Dictionary<JobRole, List<Job>>()
         {
             [JobRole.None] = new List<Job>(),
-            [JobRole.Tank] = new List<Job> { Job.PLD, Job.WAR, Job.DRK, Job.GNB },
-            [JobRole.Healer] = new List<Job> { Job.WHM, Job.AST, Job.SGE, Job.SCH },
-            [JobRole.Melee] = new List<Job> { Job.MNK, Job.DRG, Job.NIN, Job.SAM, Job.RPR, Job.VPR },
-            [JobRole.PhysicalRanged] = new List<Job> { Job.BRD, Job.MCH, Job.DNC },
-            [JobRole.MagicalRanged] = new List<Job> { Job.BLM, Job.SMN, Job.RDM, Job.PCT },
+            [JobRole.Tank] = new List<Job>
+            {
+                Job.PLD,
+                Job.WAR,
+                Job.DRK,
+                Job.GNB
+            },
+            [JobRole.Healer] = new List<Job>
+            {
+                Job.WHM,
+                Job.AST,
+                Job.SGE,
+                Job.SCH
+            },
+            [JobRole.Melee] = new List<Job>
+            {
+                Job.MNK,
+                Job.DRG,
+                Job.NIN,
+                Job.SAM,
+                Job.RPR,
+                Job.VPR
+            },
+            [JobRole.PhysicalRanged] = new List<Job>
+            {
+                Job.BRD,
+                Job.MCH,
+                Job.DNC
+            },
+            [JobRole.MagicalRanged] = new List<Job>
+            {
+                Job.BLM,
+                Job.SMN,
+                Job.RDM,
+                Job.PCT
+            },
         };
 
         protected struct AutoRole
@@ -138,13 +177,28 @@ namespace Simulant.Simulation
             internal bool IsFixedJob;
 
             public static AutoRole Asc(JobRole role)
-                => new AutoRole { Role = role, IsAscending = true, IsFixedJob = false };
+                => new AutoRole
+                {
+                    Role = role,
+                    IsAscending = true,
+                    IsFixedJob = false
+                };
 
             public static AutoRole Desc(JobRole role)
-                => new AutoRole { Role = role, IsAscending = false, IsFixedJob = false };
+                => new AutoRole
+                {
+                    Role = role,
+                    IsAscending = false,
+                    IsFixedJob = false
+                };
 
             public static AutoRole Fixed(Job job)
-                => new AutoRole { Role = JobRole.None, Job = job, IsFixedJob = true };
+                => new AutoRole
+                {
+                    Role = JobRole.None,
+                    Job = job,
+                    IsFixedJob = true
+                };
         }
 
         /// <summary>
@@ -168,19 +222,27 @@ namespace Simulant.Simulation
         protected void GeneratePartyMembers(int myPartyIdx, Action onReady)
         {
             SimTimeline.ValidateAction(onReady, nameof(onReady));
+
             if (_preparingParty || Party.Count != 0)
                 throw new InvalidOperationException("本次模拟已准备小队，不能重复追加队员；请停止并完成清理后重新开始。");
+
             var partyRoles = PartyRoles();
 
             var isOutOfRange = myPartyIdx < 1 || myPartyIdx > partyRoles.Count;
+
             if (isOutOfRange)
                 throw new ArgumentOutOfRangeException(nameof(myPartyIdx), $"小队职能序号必须在小队范围内（1-{partyRoles.Count}）。");
 
             var myself = _host.EntityProvider.GetMyself();
+
             if (myself == null || !myself.IsAlive)
                 throw new InvalidOperationException("未找到有效的自身玩家，无法准备模拟小队。");
+
             var myJob = myself.Job;
-            var usedJobs = new HashSet<Job> { myJob };
+            var usedJobs = new HashSet<Job>
+            {
+                myJob
+            };
 
             List<Job?> jobs = new List<Job?>();
 
@@ -230,7 +292,10 @@ namespace Simulant.Simulation
             void CompleteParty()
             {
                 Party.AddRange(members);
-                if (members.Length > 1) EntityManager.ShowParty(_host.PartyService);
+
+                if (members.Length > 1)
+                    EntityManager.ShowParty(_host.PartyService);
+
                 _preparingParty = false;
                 onReady();
             }
@@ -243,8 +308,11 @@ namespace Simulant.Simulation
 
             for (var i = 0; i < jobs.Count; i++)
             {
-                if (!jobs[i].HasValue) continue;
+                if (!jobs[i].HasValue)
+                    continue;
+
                 var slot = i;
+
                 EntityManager.SpawnNetworkPlayer(new NetworkPlayerSpawnSpec
                 {
                     Job = jobs[i].Value,
@@ -255,13 +323,14 @@ namespace Simulant.Simulation
                 }, player =>
                 {
                     members[slot] = player;
-                    if (--remaining == 0) CompleteParty();
+
+                    if (--remaining == 0)
+                        CompleteParty();
                 });
             }
         }
 
         #endregion Party / Roles
-
         protected void Dummy(Vector3 pos, float heading, Action<SimActor> onReady)
         {
             // 不可见模型仍承载技能特效；就绪时只关闭选中能力，不关闭游戏绘制。
@@ -279,7 +348,10 @@ namespace Simulant.Simulation
             float? omenDelay = 0, Action onCast = null)
         {
             ValidateLifetime(despawnSeconds);
-            if (onCast != null) SimTimeline.ValidateAction(onCast, nameof(onCast));
+
+            if (onCast != null)
+                SimTimeline.ValidateAction(onCast, nameof(onCast));
+
             Dummy(pos, heading, dummy =>
             {
                 dummy.Cast(abilityId, omenDelay);
@@ -291,7 +363,10 @@ namespace Simulant.Simulation
         protected void DummyExecute(Vector3 pos, float heading, uint abilityId, float despawnSeconds, Action onExecuted = null)
         {
             ValidateLifetime(despawnSeconds);
-            if (onExecuted != null) SimTimeline.ValidateAction(onExecuted, nameof(onExecuted));
+
+            if (onExecuted != null)
+                SimTimeline.ValidateAction(onExecuted, nameof(onExecuted));
+
             Dummy(pos, heading, dummy =>
             {
                 dummy.Execute(abilityId);

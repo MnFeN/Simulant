@@ -6,7 +6,14 @@ namespace Simulant.Simulation.Geometry
     /// <summary>用于命中判定的二维范围；不依赖实体、预兆绘制或远程内存。</summary>
     public readonly partial struct ActionArea
     {
-        private enum AreaKind : byte { None, Circle, Cone, Rectangle, Donut }
+        private enum AreaKind : byte
+        {
+            None,
+            Circle,
+            Cone,
+            Rectangle,
+            Donut
+        }
 
         // 只容纳浮点坐标旋转产生的舍入误差，不作为玩家碰撞半径。
         private const double BoundaryTolerance = 0.00001;
@@ -35,8 +42,10 @@ namespace Simulant.Simulation.Geometry
         {
             RequirePositive(radius, nameof(radius), "扇形半径");
             RequirePositive(fullAngleDegrees, nameof(fullAngleDegrees), "扇形完整张角");
+
             if (fullAngleDegrees > 360)
                 throw new ArgumentOutOfRangeException(nameof(fullAngleDegrees), "扇形完整张角不能超过 360 度。");
+
             return new ActionArea(AreaKind.Cone, radius, halfAngleCosine: Math.Cos(fullAngleDegrees * Math.PI / 360));
         }
 
@@ -53,8 +62,10 @@ namespace Simulant.Simulation.Geometry
         {
             RequireNonNegative(inner, nameof(inner), "圆环内半径");
             RequirePositive(outer, nameof(outer), "圆环外半径");
+
             if (inner >= outer)
                 throw new ArgumentOutOfRangeException(nameof(inner), "圆环内半径必须小于外半径。");
+
             return new ActionArea(AreaKind.Donut, outer, inner);
         }
 
@@ -66,10 +77,13 @@ namespace Simulant.Simulation.Geometry
         {
             if (_kind == AreaKind.None)
                 throw new InvalidOperationException("技能范围尚未初始化，请使用 Circle、Cone、Rectangle、Donut 或 FromAction 创建范围。");
+
             if (!IsFinite(point.X) || !IsFinite(point.Y))
                 throw new ArgumentOutOfRangeException(nameof(point), "判定点坐标必须是有限数值。");
+
             if (!IsFinite(origin.X) || !IsFinite(origin.Y))
                 throw new ArgumentOutOfRangeException(nameof(origin), "范围原点坐标必须是有限数值。");
+
             if (!IsFinite(heading))
                 throw new ArgumentOutOfRangeException(nameof(heading), "范围朝向必须是有限数值，单位为弧度。");
 
@@ -78,9 +92,13 @@ namespace Simulant.Simulation.Geometry
             var dy = (double)point.Y - origin.Y;
             var distanceSquared = dx * dx + dy * dy;
             var outer = _extent + BoundaryTolerance;
-            if (_kind != AreaKind.Rectangle && distanceSquared > outer * outer) return false;
 
-            if (_kind == AreaKind.Circle) return true;
+            if (_kind != AreaKind.Rectangle && distanceSquared > outer * outer)
+                return false;
+
+            if (_kind == AreaKind.Circle)
+                return true;
+
             if (_kind == AreaKind.Donut)
             {
                 var inner = Math.Max(0, _secondary - BoundaryTolerance);
@@ -90,6 +108,7 @@ namespace Simulant.Simulation.Geometry
             var sin = Math.Sin(heading);
             var cos = Math.Cos(heading);
             var forward = dx * sin + dy * cos;
+
             if (_kind == AreaKind.Cone)
                 return forward >= Math.Sqrt(distanceSquared) * _halfAngleCosine - BoundaryTolerance;
 

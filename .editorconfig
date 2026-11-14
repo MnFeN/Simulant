@@ -1,0 +1,20 @@
+root = true
+
+[*]
+end_of_line = crlf
+insert_final_newline = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+tab_width = 4
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+# 保留自动属性和空 lambda 的同行写法；有执行语句的块仍使用换行风格。
+csharp_preserve_single_line_blocks = true
+csharp_preserve_single_line_statements = false

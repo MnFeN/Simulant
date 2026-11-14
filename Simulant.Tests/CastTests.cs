@@ -25,9 +25,18 @@ namespace Simulant.Tests
                 actor.Cast(2);
                 Assert(scene.Scheduler.PendingCount == 1, "替换读条必须移除两个旧调度节点。");
                 scene.RunPast(0.08);
-                Assert(actor.Entity.CastStarts.SequenceEqual(new uint[] { 1, 2 }), "两个请求都必须启动各自的原生读条。");
-                Assert(actor.Entity.FinalizedCasts.SequenceEqual(new uint[] { 1, 2 }), "替换与完成操作必须分别结束对应的读条。");
-                Assert(actor.Entity.PlayedTimelines.SequenceEqual(new ushort[] { 102 }), "只有替换后的读条可以播放完成动作。");
+                Assert(actor.Entity.CastStarts.SequenceEqual(new uint[]
+                {
+                    1, 2
+                }), "两个请求都必须启动各自的原生读条。");
+                Assert(actor.Entity.FinalizedCasts.SequenceEqual(new uint[]
+                {
+                    1, 2
+                }), "替换与完成操作必须分别结束对应的读条。");
+                Assert(actor.Entity.PlayedTimelines.SequenceEqual(new ushort[]
+                {
+                    102
+                }), "只有替换后的读条可以播放完成动作。");
                 Assert(TriggernometryInterop.Commands.Count == 0, "已取消的延迟预兆不得出现。");
             }
         }
@@ -79,9 +88,18 @@ namespace Simulant.Tests
                 scene.RunPast(0.2);
                 Assert(actor.Pos == target && !actor.IsMoving,
                     "停止读条后，已有移动仍必须到达原目标。");
-                Assert(actor.Entity.CastStarts.SequenceEqual(new uint[] { 1, 2 }) &&
-                    actor.Entity.FinalizedCasts.SequenceEqual(new uint[] { 1, 2 }) &&
-                    actor.Entity.PlayedTimelines.SequenceEqual(new ushort[] { 102 }),
+                Assert(actor.Entity.CastStarts.SequenceEqual(new uint[]
+                {
+                    1, 2
+                }) &&
+                    actor.Entity.FinalizedCasts.SequenceEqual(new uint[]
+                {
+                    1, 2
+                }) &&
+                    actor.Entity.PlayedTimelines.SequenceEqual(new ushort[]
+                {
+                    102
+                }),
                     "停止后必须能重新读条，且只有新读条可以播放完成动作。");
                 Assert(TriggernometryInterop.Commands.Count(command => !IsRemoval(command)) == 1 &&
                     TriggernometryInterop.Commands.Count(IsRemoval) == 1,
@@ -101,7 +119,10 @@ namespace Simulant.Tests
                 var shows = TriggernometryInterop.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
                 Assert(shows.Length == 2 && shows.Distinct().Count() == 2, "两个模拟角色不得共享预兆移除标签。");
                 first.StopCasting();
-                Assert(TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[] { shows[0] }),
+                Assert(TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[]
+                {
+                    shows[0]
+                }),
                     "取消一个模拟角色的读条时，只能移除该角色的预兆。");
                 second.Cast(1);
                 var newShows = TriggernometryInterop.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
@@ -146,22 +167,34 @@ namespace Simulant.Tests
                 var actor = scene.Actor(0);
                 var expected = new InvalidOperationException("旧外部回调失败");
                 var replaced = false;
+
                 TriggernometryInterop.OnCommand = command =>
                 {
-                    if (IsRemoval(command) || replaced) return;
+                    if (IsRemoval(command) || replaced)
+                        return;
+
                     replaced = true;
                     actor.Cast(2);
                     throw expected;
                 };
-                try { actor.Cast(1); throw new Exception("预期抛出原始回调错误。"); }
+
+                try
+                {
+                    actor.Cast(1);
+                    throw new Exception("预期抛出原始回调错误。");
+                }
                 catch (InvalidOperationException error)
                 {
                     Assert(ReferenceEquals(error, expected), "失败的旧回调必须保留原始错误。");
                 }
+
                 TriggernometryInterop.OnCommand = null;
                 var shown = TriggernometryInterop.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
                 var removed = TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).ToArray();
-                Assert(shown.Length == 2 && removed.SequenceEqual(new[] { shown[0] }),
+                Assert(shown.Length == 2 && removed.SequenceEqual(new[]
+                {
+                    shown[0]
+                }),
                     "同步替换必须移除旧的可见预兆并保留新预兆。");
                 Assert(actor.Entity.CastingActionId == 2 && scene.Scheduler.PendingCount == 1,
                     "被替换的外层回调出错时，不得取消新读条。");
@@ -178,12 +211,16 @@ namespace Simulant.Tests
                 var actor = scene.Actor(0);
                 actor.Cast(1);
                 var oldTag = Tag(TriggernometryInterop.Commands.Single());
+
                 TriggernometryInterop.OnCommand = command =>
                 {
-                    if (!IsRemoval(command) || Tag(command) != oldTag) return;
+                    if (!IsRemoval(command) || Tag(command) != oldTag)
+                        return;
+
                     actor.Cast(2);
                     replaced.Set();
                 };
+
                 scene.Scheduler.Start();
                 Assert(replaced.Wait(5000), "读条完成时未移除预兆。");
                 scene.Scheduler.Dispose();
@@ -196,53 +233,92 @@ namespace Simulant.Tests
 
         public static void CastCancellationReentryPreservesTheNewerCast()
         {
-            foreach (var executeOuter in new[] { false, true })
-            using (var scene = new CastTestScene())
+            foreach (var executeOuter in new[]
             {
-                scene.AddAction(1, 1, omen: true);
-                scene.AddAction(2, 1);
-                scene.AddAction(3, 1);
-                var actor = scene.Actor(0);
-                actor.Cast(1);
-                var oldTag = Tag(TriggernometryInterop.Commands.Single());
-                TriggernometryInterop.OnCommand = command =>
+                false,
+                true
+            }
+
+            )
+                using (var scene = new CastTestScene())
                 {
-                    if (IsRemoval(command) && Tag(command) == oldTag) actor.Cast(3);
-                };
-                if (executeOuter) actor.Execute(2);
-                else actor.Cast(2);
-                Assert(actor.Entity.CastingActionId == 3 && actor.Entity.CastStarts.SequenceEqual(new uint[] { 1, 3 }) &&
+                    scene.AddAction(1, 1, omen: true);
+                    scene.AddAction(2, 1);
+                    scene.AddAction(3, 1);
+                    var actor = scene.Actor(0);
+                    actor.Cast(1);
+                    var oldTag = Tag(TriggernometryInterop.Commands.Single());
+
+                    TriggernometryInterop.OnCommand = command =>
+                    {
+                        if (IsRemoval(command) && Tag(command) == oldTag)
+                            actor.Cast(3);
+                    };
+
+                    if (executeOuter)
+                        actor.Execute(2);
+                    else
+                        actor.Cast(2);
+
+                    Assert(actor.Entity.CastingActionId == 3 && actor.Entity.CastStarts.SequenceEqual(new uint[]
+                    {
+                    1, 3
+                    }) &&
                     actor.Entity.PlayedTimelines.Count == 0 && actor.Entity.BaseTimelineResetCount == 0 &&
                     scene.Scheduler.PendingCount == 1,
                     "取消回调启动新读条后，较早的 Cast 或 Execute 必须让出控制权，不能重复登记或覆盖新动画。");
-            }
+                }
         }
 
         public static void CastCancellationReentryCannotResumeAfterCleanup()
         {
-            foreach (var executeOuter in new[] { false, true })
-            foreach (var disposeController in new[] { false, true })
-            using (var scene = new CastTestScene())
+            foreach (var executeOuter in new[]
             {
-                scene.AddAction(1, 1, omen: true);
-                scene.AddAction(2, 1);
-                var actor = scene.Actor(0);
-                actor.Cast(1);
-                var oldTag = Tag(TriggernometryInterop.Commands.Single());
-                TriggernometryInterop.OnCommand = command =>
+                false,
+                true
+            }
+
+            )
+                foreach (var disposeController in new[]
                 {
-                    if (!IsRemoval(command) || Tag(command) != oldTag) return;
-                    if (disposeController) scene.Casts.Dispose();
-                    else actor.Dispose();
-                };
-                if (executeOuter) actor.Execute(2);
-                else actor.Cast(2);
-                Assert(actor.Entity.IsAlive && actor.Entity.CastingActionId == 0 &&
-                    actor.Entity.CastStarts.SequenceEqual(new uint[] { 1 }) &&
+                    false,
+                    true
+                }
+
+                )
+                    using (var scene = new CastTestScene())
+                    {
+                        scene.AddAction(1, 1, omen: true);
+                        scene.AddAction(2, 1);
+                        var actor = scene.Actor(0);
+                        actor.Cast(1);
+                        var oldTag = Tag(TriggernometryInterop.Commands.Single());
+
+                        TriggernometryInterop.OnCommand = command =>
+                        {
+                            if (!IsRemoval(command) || Tag(command) != oldTag)
+                                return;
+
+                            if (disposeController)
+                                scene.Casts.Dispose();
+                            else
+                                actor.Dispose();
+                        };
+
+                        if (executeOuter)
+                            actor.Execute(2);
+                        else
+                            actor.Cast(2);
+
+                        Assert(actor.Entity.IsAlive && actor.Entity.CastingActionId == 0 &&
+                    actor.Entity.CastStarts.SequenceEqual(new uint[]
+                        {
+                    1
+                        }) &&
                     actor.Entity.PlayedTimelines.Count == 0 && actor.Entity.BaseTimelineResetCount == 0 &&
                     scene.Scheduler.PendingCount == 0,
                     "取消回调解除角色或释放控制器后，旧调用不得在仍存活的借用实体上重新读条或播放动作。");
-            }
+                    }
         }
 
         public static void CompletionRemovalPreservesAnExternalReplacementCast()
@@ -254,18 +330,25 @@ namespace Simulant.Tests
                 var actor = scene.Actor(0);
                 actor.Cast(1);
                 var oldTag = Tag(TriggernometryInterop.Commands.Single());
+
                 TriggernometryInterop.OnCommand = command =>
                 {
-                    if (!IsRemoval(command) || Tag(command) != oldTag) return;
+                    if (!IsRemoval(command) || Tag(command) != oldTag)
+                        return;
+
                     // 外部原生读条不会进入本控制器的字典，不能仅靠字典判断动画所有权。
                     actor.Entity.SetCastInfo(999, 2);
                     replaced.Set();
                 };
+
                 scene.Scheduler.Start();
                 Assert(replaced.Wait(5000), "完成清理没有触发外部替代读条。");
                 scene.Scheduler.Dispose();
                 scene.AssertNoFailure();
-                Assert(actor.Entity.CastingActionId == 999 && actor.Entity.FinalizedCasts.SequenceEqual(new uint[] { 1 }) &&
+                Assert(actor.Entity.CastingActionId == 999 && actor.Entity.FinalizedCasts.SequenceEqual(new uint[]
+                {
+                    1
+                }) &&
                     actor.Entity.PlayedTimelines.Count == 0 && actor.Entity.BaseTimelineResetCount == 0,
                     "完成清理期间出现外部读条后，不得重置其基础动画或播放旧技能完成动作。");
             }
@@ -279,19 +362,25 @@ namespace Simulant.Tests
                 scene.AddAction(1, 1, omen: true);
                 var actor = scene.Actor(0);
                 string command = null;
+
                 TriggernometryInterop.OnCommand = value =>
                 {
-                    if (IsRemoval(value)) return;
+                    if (IsRemoval(value))
+                        return;
+
                     command = value;
                     shown.Set();
                 };
+
                 actor.Cast(1, omenDelay: 0.02f);
+
                 scene.Scheduler.Schedule(0, () =>
                 {
                     Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
                     actor.Pos3D = new Vector3(1.5f, 2.5f, 3.5f);
                     actor.Heading = 0.5f;
                 });
+
                 scene.Scheduler.Start();
                 Assert(shown.Wait(5000), "延迟预兆未出现。");
                 scene.Scheduler.Dispose();
@@ -311,12 +400,23 @@ namespace Simulant.Tests
                 first.Cast(1);
                 second.Cast(1);
                 var removalCount = 0;
+
                 TriggernometryInterop.OnCommand = command =>
                 {
-                    if (IsRemoval(command) && ++removalCount == 1) throw new InvalidOperationException("一个回调失败");
+                    if (IsRemoval(command) && ++removalCount == 1)
+                        throw new InvalidOperationException("一个回调失败");
                 };
-                try { scene.Casts.Dispose(); throw new Exception("预期抛出汇总的清理错误。"); }
-                catch (AggregateException error) { Assert(error.InnerExceptions.Count == 1, "只应报告失败的回调。"); }
+
+                try
+                {
+                    scene.Casts.Dispose();
+                    throw new Exception("预期抛出汇总的清理错误。");
+                }
+                catch (AggregateException error)
+                {
+                    Assert(error.InnerExceptions.Count == 1, "只应报告失败的回调。");
+                }
+
                 TriggernometryInterop.OnCommand = null;
                 Assert(scene.Scheduler.PendingCount == 0 && first.Entity.CastingActionId == 0 && second.Entity.CastingActionId == 0 &&
                     removalCount == 2, "一次外部清理失败后，不得让另一模拟角色的读条或预兆继续运行。");
@@ -334,17 +434,22 @@ namespace Simulant.Tests
                 actor.Cast(1);
                 var shownTag = Tag(TriggernometryInterop.Commands.Single());
                 var expected = new InvalidOperationException("访问读条信息时实体消失");
+
                 actor.Entity.BeforeCastingActionIdRead = () =>
                 {
                     scene.World.Registry.Reset();
                     throw expected;
                 };
+
                 scene.Scheduler.Start();
                 Assert(SpinWait.SpinUntil(() => !scene.Scheduler.IsRunning, 5000),
                     "完成节点未触发模拟的原生读取错误。");
                 scene.Scheduler.Dispose();
                 Assert(ReferenceEquals(scene.Failure, expected), "调度器必须报告原始的原生读取错误。");
-                Assert(TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[] { shownTag }),
+                Assert(TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[]
+                {
+                    shownTag
+                }),
                     "读条信息读取失败后，完成清理仍必须移除可见预兆。");
                 Assert(actor.Entity.FinalizedCasts.Count == 0 && actor.Entity.PlayedTimelines.Count == 0,
                     "读取失败后不得写入已消失的实体。");
@@ -359,7 +464,8 @@ namespace Simulant.Tests
             => command.Split('\n').Single(line => line.StartsWith("Tag: ", StringComparison.Ordinal)).Substring(5).Trim();
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
         private sealed class CastTestScene : IDisposable
@@ -385,9 +491,19 @@ namespace Simulant.Tests
             {
                 GameDataService.Instance.GetSheet<ActionRow>()[id] = new ActionRow
                 {
-                    RowId = (uint)id, Cast100ms = checked((ushort)(castTime * 10)), AnimationEnd = (short)(100 + id),
-                    CastType = 2, EffectRange = 5,
-                    Omen = new Lumina.Excel.RowRef<Lumina.Excel.Sheets.Omen> { RowId = (uint)(omen ? 1 : 0), ValueNullable = new Lumina.Excel.Sheets.Omen { Path = "test_omen_" + id } }
+                    RowId = (uint)id,
+                    Cast100ms = checked((ushort)(castTime * 10)),
+                    AnimationEnd = (short)(100 + id),
+                    CastType = 2,
+                    EffectRange = 5,
+                    Omen = new Lumina.Excel.RowRef<Lumina.Excel.Sheets.Omen>
+                    {
+                        RowId = (uint)(omen ? 1 : 0),
+                        ValueNullable = new Lumina.Excel.Sheets.Omen
+                        {
+                            Path = "test_omen_" + id
+                        }
+                    }
                 };
             }
 
@@ -409,8 +525,16 @@ namespace Simulant.Tests
             {
                 Scheduler.Dispose();
                 TriggernometryInterop.OnCommand = null;
-                try { Casts.Dispose(); }
-                finally { Movement.Dispose(); TriggernometryInterop.Reset(); }
+
+                try
+                {
+                    Casts.Dispose();
+                }
+                finally
+                {
+                    Movement.Dispose();
+                    TriggernometryInterop.Reset();
+                }
             }
         }
     }

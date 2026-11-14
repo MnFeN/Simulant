@@ -19,37 +19,67 @@ namespace Simulant
         private void BeginPartyTest(EntityBehaviorRun run)
         {
             EnsureEntityTestReady();
+
             if (StatusManager.SetStatusFuncPtr == IntPtr.Zero || StatusManager.RemoveStatusFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("状态设置或移除函数尚未定位，无法运行小队列表测试。");
+
             var source = _host.EntityProvider.GetMyself();
+
             if (source == null || !source.IsAlive)
                 throw new InvalidOperationException("未找到有效的自身玩家，无法准备测试小队。");
+
             var origin = source.Pos3D;
             var heading = source.Heading;
             var forward = new Vector2((float)Math.Sin(heading), (float)Math.Cos(heading));
             var right = new Vector2(-forward.Y, forward.X);
             var members = new SimActor[8];
             members[0] = run.Entities.Attach(source);
-            var jobs = new[] { Job.PLD, Job.WHM, Job.SCH, Job.MNK, Job.DRG, Job.BRD, Job.BLM };
-            var names = new[] { "小队测试骑士", "小队测试白魔", "小队测试学者", "小队测试武僧", "小队测试龙骑", "小队测试诗人", "小队测试黑魔" };
+            var jobs = new[]
+            {
+                Job.PLD,
+                Job.WHM,
+                Job.SCH,
+                Job.MNK,
+                Job.DRG,
+                Job.BRD,
+                Job.BLM
+            };
+            var names = new[]
+            {
+                "小队测试骑士",
+                "小队测试白魔",
+                "小队测试学者",
+                "小队测试武僧",
+                "小队测试龙骑",
+                "小队测试诗人",
+                "小队测试黑魔"
+            };
             SimActor boss = null;
             var readyCount = 0;
             Action ready = () =>
             {
-                if (++readyCount != 8) return;
+                if (++readyCount != 8)
+                    return;
+
                 run.Entities.Party.AddRange(members);
                 run.Entities.ShowParty(_host.PartyService);
                 WaitForPartyTestRoster(run, members, boss, run.Scheduler.ElapsedSeconds + 5);
             };
+
             for (var i = 0; i < jobs.Length; i++)
             {
                 var index = i + 1;
                 var position = new Vector2(origin.X, origin.Y) + forward * 5 + right * ((i - 3) * 3);
+
                 run.Entities.SpawnNetworkPlayer(new NetworkPlayerSpawnSpec
                 {
-                    Job = jobs[i], Name = names[i], AppearanceSource = source,
-                    Pos = new Vector3(position, origin.Z), Heading = heading,
-                    MaxHealthPoints = 10000, HealthPoints = 10000
+                    Job = jobs[i],
+                    Name = names[i],
+                    AppearanceSource = source,
+                    Pos = new Vector3(position, origin.Z),
+                    Heading = heading,
+                    MaxHealthPoints = 10000,
+                    HealthPoints = 10000
                 }, actor =>
                 {
                     members[index] = actor;
@@ -58,10 +88,14 @@ namespace Simulant
                     ready();
                 });
             }
+
             run.Entities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
-                BNpcBaseId = 4909, BNpcNameId = 3765, Level = 90,
-                Pos = new Vector3(new Vector2(origin.X, origin.Y) + forward * 12, origin.Z), Heading = heading
+                BNpcBaseId = 4909,
+                BNpcNameId = 3765,
+                Level = 90,
+                Pos = new Vector3(new Vector2(origin.X, origin.Y) + forward * 12, origin.Z),
+                Heading = heading
             }, actor =>
             {
                 boss = actor;
@@ -77,8 +111,10 @@ namespace Simulant
             {
                 var group = GroupManager.Instance().ThrowIfNull().MainGroup;
                 var matches = group.MemberCount.Get() == members.Length;
+
                 for (var i = 0; matches && i < members.Length; i++)
                     matches = group.GetPartyMember(i).EntityId.Get() == members[i].Id;
+
                 if (matches)
                 {
                     CheckEntityTest(run, true, "原生小队包含八人，实体编号与指定顺序一致");
@@ -145,9 +181,12 @@ namespace Simulant
         private static int FindEmptyPartyTestStatusSlot(SimActor actor)
         {
             var statuses = actor.Entity.Native.StatusManager;
+
             // 小队包包含前 30 项；测试也限制在这些槽中，避免把截断当成刷新失败。
             for (var i = 0; i < 30; i++)
-                if (statuses.GetStatus(i).StatusId.Get() == 0) return i;
+                if (statuses.GetStatus(i).StatusId.Get() == 0)
+                    return i;
+
             throw new InvalidOperationException("模拟玩家没有可用于小队测试的空状态槽。");
         }
 
@@ -157,9 +196,15 @@ namespace Simulant
         private static void SetPartyTestStatus(SimActor actor, int slot, ushort statusId, float remaining)
         {
             var statuses = actor.Entity.Native.StatusManager;
+
             if (statuses.GetStatus(slot).StatusId.Get() != 0)
                 throw new InvalidOperationException("小队测试的状态槽已被占用，拒绝覆盖其他状态。");
-            statuses.SetStatus(slot, statusId, remaining, 0, new GameObjectId { ObjectId = actor.Id }, true);
+
+            statuses.SetStatus(slot, statusId, remaining, 0, new GameObjectId
+            {
+                ObjectId = actor.Id
+            }, true);
+
             if (statuses.GetStatus(slot).StatusId.Get() != statusId)
                 throw new InvalidOperationException("原生状态设置后未读到预期的测试状态。");
         }
@@ -169,10 +214,15 @@ namespace Simulant
             var statuses = actor.Entity.Native.StatusManager;
             var status = statuses.GetStatus(slot);
             var statusId = status.StatusId.Get();
-            if (statusId == 0) return;
+
+            if (statusId == 0)
+                return;
+
             if (statusId != expectedStatusId || status.SourceObject.Get().ObjectId != actor.Id)
                 throw new InvalidOperationException("小队测试状态已被替换，拒绝移除不属于本次测试的状态。");
+
             statuses.RemoveStatus(slot);
+
             if (statuses.GetStatus(slot).StatusId.Get() != 0)
                 throw new InvalidOperationException("原生状态移除后测试状态仍然存在。");
         }
@@ -196,13 +246,18 @@ namespace Simulant
         {
             var bytes = statuses.Ptr.ReadBytes(PartyMember.StatusCount * 0x10, 0x8);
             var found = expectedStatus == 0;
+
             for (var i = 0; i < PartyMember.StatusCount; i++)
             {
                 var statusId = BitConverter.ToUInt16(bytes, i * 0x10);
-                if (statusId == expectedStatus) found = true;
+
+                if (statusId == expectedStatus)
+                    found = true;
+
                 if ((statusId == PartyTestRegen || statusId == PartyTestWeakness) && statusId != expectedStatus)
                     return false;
             }
+
             return found;
         }
     }

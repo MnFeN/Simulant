@@ -25,6 +25,7 @@ namespace Lumina.Data.Files.Excel
             // exd data is always in big endian
             Reader.IsLittleEndian = false;
             Header = ExcelHeaderHeader.Read(Reader);
+
             if (Header.Magic[0] != 'E' || Header.Magic[1] != 'X' || Header.Magic[2] != 'H' || Header.Magic[3] != 'F')
             {
                 throw new InvalidDataException("fucked exh file :(((((");
@@ -32,11 +33,15 @@ namespace Lumina.Data.Files.Excel
 
             ColumnDefinitions = new ExcelColumnDefinition[Header.ColumnCount];
             DataPages = new ExcelDataPagination[Header.PageCount];
+
             for (int i = 0; i < Header.ColumnCount; i++)
                 ColumnDefinitions[i] = ExcelColumnDefinition.Read(Reader);
+
             for (int i = 0; i < Header.PageCount; i++)
                 DataPages[i] = ExcelDataPagination.Read(Reader);
+
             Languages = new Language[Header.LanguageCount];
+
             for (var i = 0; i < Header.LanguageCount; i++)
             {
                 Languages[i] = (Language)Reader.ReadByte();

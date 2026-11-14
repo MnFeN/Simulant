@@ -22,7 +22,10 @@ namespace Lumina.Excel.Sheets
         public uint RowOffset => offset;
         public uint RowId => row;
         public ushort SubrowId => subrow;
-        public global::Lumina.Excel.RowRef Question => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[] { typeof(LogMessage), typeof(Addon) }, 1212297796, page.Language);
+        public global::Lumina.Excel.RowRef Question => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[]
+        {
+            typeof(LogMessage), typeof(Addon)
+        }, 1212297796, page.Language);
         public global::Lumina.Excel.RowRef<Addon> Confirm => new global::Lumina.Excel.RowRef<Addon>(page.Module, page.ReadUInt32(offset + 4), page.Language);
         public global::Lumina.Excel.RowRef<AddonTransient> Category => new global::Lumina.Excel.RowRef<AddonTransient>(page.Module, (uint)page.ReadUInt16(offset + 8), page.Language);
 

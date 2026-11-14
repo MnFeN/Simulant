@@ -43,21 +43,34 @@ namespace Simulant.Utils.Maths
         /// </summary>
         public static (int[] SrcIndexes, double MinCost) Match<TSrc, TTgt>(TSrc[] src, TTgt[] tgt, Func<TSrc, TTgt, double> costSelector)
         {
-            if (src == null) throw new ArgumentNullException(nameof(src));
-            if (tgt == null) throw new ArgumentNullException(nameof(tgt));
-            if (costSelector == null) throw new ArgumentNullException(nameof(costSelector));
-            if (src.Length != tgt.Length) throw new ArgumentException("src 和 tgt 的长度必须相同。");
+            if (src == null)
+                throw new ArgumentNullException(nameof(src));
+
+            if (tgt == null)
+                throw new ArgumentNullException(nameof(tgt));
+
+            if (costSelector == null)
+                throw new ArgumentNullException(nameof(costSelector));
+
+            if (src.Length != tgt.Length)
+                throw new ArgumentException("src 和 tgt 的长度必须相同。");
 
             int n = src.Length;
-            if (n == 0) return (new int[0], 0);
-            if (n > 30) throw new ArgumentOutOfRangeException(nameof(src), "元素数量过大。");
+
+            if (n == 0)
+                return (new int[0], 0);
+
+            if (n > 30)
+                throw new ArgumentOutOfRangeException(nameof(src), "元素数量过大。");
 
             double[,] cost = new double[n, n];
+
             for (int i = 0; i < n; i++)
             {
                 for (int j = 0; j < n; j++)
                 {
                     double value = costSelector(src[i], tgt[j]);
+
                     if (double.IsNaN(value) || double.IsInfinity(value))
                         throw new ArgumentException($"组 ({i}, {j}) 返回了无效值 {value}。");
 
@@ -86,6 +99,7 @@ namespace Simulant.Utils.Maths
 
                 int tgtIndex = 0;
                 int x = mask;
+
                 while (x != 0)
                 {
                     x &= x - 1;
@@ -102,6 +116,7 @@ namespace Simulant.Utils.Maths
 
                     int nextMask = mask | (1 << srcIndex);
                     double newCost = dp[mask] + cost[srcIndex, tgtIndex];
+
                     if (newCost < dp[nextMask])
                     {
                         dp[nextMask] = newCost;
@@ -117,6 +132,7 @@ namespace Simulant.Utils.Maths
             for (int tgtIndex = n - 1; tgtIndex >= 0; tgtIndex--)
             {
                 int srcIndex = prevChoice[curMask];
+
                 if (srcIndex < 0)
                     throw new InvalidOperationException("未能还原完整匹配结果。");
 

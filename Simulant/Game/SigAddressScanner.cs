@@ -14,6 +14,7 @@ namespace Simulant.Game
             ClearPtrs(ptrProps);
 
             var scanner = NamazuInterop.Plugin?.SigScanner;
+
             if (!NamazuInterop.IsReady || scanner == null)
                 throw new Exception("[AddressStore] Namazu scanner 未就绪。");
 
@@ -24,6 +25,7 @@ namespace Simulant.Game
             foreach (var ptrProp in ptrProps)
             {
                 var key = GetPropKey(ptrProp);
+
                 if (result.ContainsKey(key))
                     continue;
 
@@ -92,11 +94,13 @@ namespace Simulant.Game
                     continue;
 
                 var sigs = ptrProp.GetCustomAttribute<SigPatternAttribute>().Signatures;
+
                 if (sigs == null || sigs.Length == 0)
                     continue;
 
                 var key = GetPropKey(ptrProp);
                 var ptr = scanner.TryScanMultiple(sigs, key);
+
                 if (ptr == IntPtr.Zero)
                 {
                     result[key] = "未能找到与签名对应的内存地址";

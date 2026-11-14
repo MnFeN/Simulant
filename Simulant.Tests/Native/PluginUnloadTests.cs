@@ -37,12 +37,27 @@ namespace Simulant.Tests.Native
         {
             try
             {
-                if (args.Length != 1) throw new ArgumentException("卸载验证需要客户端目录，以只读方式加载地图表。");
+                if (args.Length != 1)
+                    throw new ArgumentException("卸载验证需要客户端目录，以只读方式加载地图表。");
+
                 _gamePath = args[0];
                 VerifySuccess(false);
                 VerifySuccess(true);
-                foreach (var failure in new[] { "回收实体", "加载地图", "设置区域", "恢复位置", "恢复音乐", "恢复收包", "释放代码洞" })
+
+                foreach (var failure in new[]
+                {
+                    "回收实体",
+                    "加载地图",
+                    "设置区域",
+                    "恢复位置",
+                    "恢复音乐",
+                    "恢复收包",
+                    "释放代码洞"
+                }
+
+                )
                     VerifyRetry(failure);
+
                 Console.WriteLine("真实插件卸载故障注入通过：" + _passed + " 项。");
                 return 0;
             }
@@ -58,14 +73,27 @@ namespace Simulant.Tests.Native
             var scene = new Scene(interruptedEntry);
             scene.Main.DeInitPlugin();
             scene.AssertCompleted();
-            var stages = new[] { "停止预设", "回收实体", "加载地图", "设置区域", "恢复位置", "恢复音乐", "恢复收包", "恢复发包", "释放代码洞" };
+            var stages = new[]
+            {
+                "停止预设",
+                "回收实体",
+                "加载地图",
+                "设置区域",
+                "恢复位置",
+                "恢复音乐",
+                "恢复收包",
+                "恢复发包",
+                "释放代码洞"
+            };
             var last = -1;
+
             foreach (var stage in stages)
             {
                 var index = scene.Events.IndexOf(stage);
                 Assert(index > last, "卸载顺序不正确：" + stage + "；实际：" + string.Join("、", scene.Events));
                 last = index;
             }
+
             var count = scene.Events.Count;
             scene.Main.DeInitPlugin();
             Assert(scene.Events.Count == count, "卸载成功后不能重复执行原生恢复。");
@@ -83,11 +111,14 @@ namespace Simulant.Tests.Native
             Assert(!scene.Session.IsRunning && !scene.DebugScheduler.IsRunning && scene.Phase.IsCompleted && !scene.Phase.Result,
                 "恢复失败不能让模拟节点或阶段等待继续执行。");
             var hookFailure = failure == "恢复收包" || failure == "释放代码洞";
+
             if (!hookFailure)
             {
                 Assert(scene.PendingReturn && !scene.Events.Contains("恢复收包") && !scene.Events.Contains("恢复发包"),
                     "实体或地图恢复失败时不得提前恢复通信，必须保留真实地图记录。");
-                if (failure == "回收实体") Assert(!scene.Events.Contains("加载地图"), "实体未清理完成不能先切图。");
+
+                if (failure == "回收实体")
+                    Assert(!scene.Events.Contains("加载地图"), "实体未清理完成不能先切图。");
             }
             else
                 Assert(!scene.PendingReturn && scene.FirewallPending, "地图已恢复后，仅保留尚未完成的防火墙清理。");
@@ -97,27 +128,54 @@ namespace Simulant.Tests.Native
             scene.Main.DeInitPlugin();
             scene.AssertCompleted();
             Assert(scene.Events.Count(item => item == "停止预设") == 1, "重试卸载不能重复执行预设 OnStop。");
+
             if (hookFailure)
                 Assert(scene.Events.Count(item => item == "加载地图") == loads, "仅防火墙失败时不能重复切图。");
+
             Passed(failure + "失败保留记录，下一次禁用可完成卸载");
         }
 
-        private static void Passed(string name) { _passed++; Console.WriteLine("通过：" + name); }
-        internal static void Assert(bool value, string message) { if (!value) throw new Exception(message); }
-        private static void Throws<T>(Action action) where T : Exception
+        private static void Passed(string name)
         {
-            try { action(); }
-            catch (T) { return; }
+            _passed++;
+            Console.WriteLine("通过：" + name);
+        }
+
+        internal static void Assert(bool value, string message)
+        {
+            if (!value)
+                throw new Exception(message);
+        }
+
+        private static void Throws<T>(Action action)
+            where T : Exception
+        {
+            try
+            {
+                action();
+            }
+            catch (T)
+            {
+                return;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
+
         internal static object Get(object target, string name) => target.GetType().GetField(name, Members).GetValue(target);
         internal static void Set(object target, string name, object value) => target.GetType().GetField(name, Members).SetValue(target, value);
         private static object Create(string name, params object[] args)
             => Activator.CreateInstance(typeof(PluginHost).Assembly.GetType(name, true), Members, null, args, null);
         private static object Invoke(object target, string name, params object[] args)
         {
-            try { return target.GetType().GetMethod(name, Members).Invoke(target, args); }
-            catch (TargetInvocationException error) { throw error.InnerException; }
+            try
+            {
+                return target.GetType().GetMethod(name, Members).Invoke(target, args);
+            }
+            catch (TargetInvocationException error)
+            {
+                throw error.InnerException;
+            }
         }
 
         internal sealed class Scene
@@ -147,7 +205,10 @@ namespace Simulant.Tests.Native
                         "回收实体前必须停止预设和调试调度器。");
                     _entityPresent = false;
                 });
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[] { new NamazuPlugin(native) });
+                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
+                {
+                    new NamazuPlugin(native)
+                });
                 GameMain.InstancePtr = UnloadMemory.Game;
                 GameMain.LoadZoneFuncPtr = UnloadPlugin.LoadFunction;
                 LayoutWorld.InstancePtrPtr = UnloadMemory.LayoutPointer;
@@ -166,7 +227,18 @@ namespace Simulant.Tests.Native
                 var data = new GameDataService(_gamePath);
                 typeof(GameDataService).GetMethod("Activate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(data, null);
                 Set(Host, "_gameData", data);
-                foreach (var gate in new[] { "_initLock", "_subscriptionGate", "_disposeGate", "_debugGate" }) Set(Host, gate, new object());
+
+                foreach (var gate in new[]
+                {
+                    "_initLock",
+                    "_subscriptionGate",
+                    "_disposeGate",
+                    "_debugGate"
+                }
+
+                )
+                    Set(Host, gate, new object());
+
                 Set(Host, "_statusLabel", new Label());
                 Set(Host, "PluginLog", Create("Simulant.Core.PluginLog"));
                 var registry = new EntityRegistry(slot => slot == 0
@@ -189,7 +261,9 @@ namespace Simulant.Tests.Native
                 SeedHook("_receive", UnloadMemory.Receive, false);
                 SeedHook("_send", UnloadMemory.Send, true);
 
-                if (interruptedEntry) Memory.Failure = "加载地图";
+                if (interruptedEntry)
+                    Memory.Failure = "加载地图";
+
                 var entered = (bool)Invoke(_zone, "TryEnterTerritory", 65000, 0);
                 Assert(entered != interruptedEntry && PendingReturn, "测试必须通过真实区域入口取得返回责任。");
                 Memory.Failure = null;
@@ -212,7 +286,12 @@ namespace Simulant.Tests.Native
                 Set(presetControl, "_session", Session);
                 Session.Start();
                 Assert(Prepared.Wait(3000), "测试预设未开始执行。");
-                DebugScheduler.Schedule(60, () => { throw new Exception("已取消调试节点不应执行。"); });
+
+                DebugScheduler.Schedule(60, () =>
+                {
+                    throw new Exception("已取消调试节点不应执行。");
+                });
+
                 DebugScheduler.Start();
                 Set(Host, "_debugScheduler", DebugScheduler);
                 Set(Host, "_debugEntities", new SimEntityManager(spawner));
@@ -242,7 +321,12 @@ namespace Simulant.Tests.Native
                     Memory.Read<Vector3>(UnloadMemory.Player + 0xB0) == new Vector3(1, 3, 2), "必须恢复原地图及原始玩家位置。");
                 Assert((bool)Get(Host, "_disposeCompleted"), "全部恢复完成后才可标记卸载成功。");
                 Assert(Get(Host, "_gameData") == null, "完整卸载必须释放客户端数据。");
-                Throws<InvalidOperationException>(() => { var unused = GameDataService.Instance; });
+
+                Throws<InvalidOperationException>(() =>
+                {
+                    var unused = GameDataService.Instance;
+                });
+
                 Prepared.Dispose();
             }
         }
@@ -263,12 +347,20 @@ namespace Simulant.Tests.Native
 
     public sealed class UnloadLogic : SimLogicBase
     {
-        public UnloadLogic(PluginHost host, SimPresetBase preset) : base(host, preset) { }
+        public UnloadLogic(PluginHost host, SimPresetBase preset) : base(host, preset)
+        {
+        }
+
         protected override void BuildTimeline(SimTimeline timeline)
         {
             timeline.At(0, () => PluginUnloadTests.Current.Prepared.Set());
-            timeline.At(60, () => { throw new Exception("已取消预设节点不应执行。"); });
+
+            timeline.At(60, () =>
+            {
+                throw new Exception("已取消预设节点不应执行。");
+            });
         }
+
         protected override void OnStop() => PluginUnloadTests.Current.Events.Add("停止预设");
     }
 
@@ -284,6 +376,7 @@ namespace Simulant.Tests.Native
         public string Failure;
         public IntPtr ProcessHandle => new IntPtr(101);
         public bool IsProcessOpen => true;
+
         public UnloadMemory(List<string> events)
         {
             _events = events;
@@ -299,26 +392,39 @@ namespace Simulant.Tests.Native
             Put(Player, new IntPtr(0x60000));
             Put(new IntPtr(0x60000 + 54 * 8), UnloadPlugin.PositionFunction);
         }
+
         public void Step(string name)
         {
             _events.Add(name);
-            if (Failure == name) throw new InvalidOperationException("注入卸载失败：" + name);
+
+            if (Failure == name)
+                throw new InvalidOperationException("注入卸载失败：" + name);
         }
-        public void Put<T>(IntPtr address, T value) where T : struct => _storage.Put(address, value);
-        public T Read<T>(IntPtr address) where T : struct => _storage.Read<T>(address);
+
+        public void Put<T>(IntPtr address, T value)
+            where T : struct => _storage.Put(address, value);
+        public T Read<T>(IntPtr address)
+            where T : struct => _storage.Read<T>(address);
         public byte[] ReadBytes(IntPtr address, int length) => _storage.ReadBytes(address, length);
-        public void Write<T>(IntPtr address, T value) where T : struct
+        public void Write<T>(IntPtr address, T value)
+            where T : struct
         {
-            if (address == Player + 0xB0) Step("恢复位置");
-            if (address == Scene + 4) Step("恢复音乐");
+            if (address == Player + 0xB0)
+                Step("恢复位置");
+
+            if (address == Scene + 4)
+                Step("恢复音乐");
+
             Put(address, value);
         }
+
         public int WriteBytes(IntPtr address, byte[] bytes)
         {
             PluginUnloadTests.Assert(address == Receive || address == Send, "不能恢复不属于本次宿主的函数入口。");
             Step(address == Receive ? "恢复收包" : "恢复发包");
             return bytes.Length;
         }
+
         public bool FreeMemory(IntPtr address)
         {
             PluginUnloadTests.Assert(address == Cave, "不能释放不属于本次宿主的代码洞。");
@@ -330,15 +436,23 @@ namespace Simulant.Tests.Native
     public sealed class UnloadPlugin
     {
         public string State => "Ready";
+
         public readonly object CallScheduler = new object();
         private readonly object PluginUi = new object();
         public static readonly IntPtr LoadFunction = new IntPtr(0x101), TerritoryFunction = new IntPtr(0x102),
             SetupFunction = new IntPtr(0x103), FinalizeFunction = new IntPtr(0x104), DeleteFunction = new IntPtr(0x105),
             PositionFunction = new IntPtr(0x106);
         public UnloadMemory Memory { get; }
+
         private readonly Action _deleted;
-        public UnloadPlugin(UnloadMemory memory, Action deleted) { Memory = memory; _deleted = deleted; }
-        public T Call<T>(IntPtr function, params object[] args) where T : struct
+        public UnloadPlugin(UnloadMemory memory, Action deleted)
+        {
+            Memory = memory;
+            _deleted = deleted;
+        }
+
+        public T Call<T>(IntPtr function, params object[] args)
+            where T : struct
         {
             if (function == LoadFunction)
             {
@@ -348,13 +462,21 @@ namespace Simulant.Tests.Native
             }
             else if (function != SetupFunction && function != FinalizeFunction)
                 throw new InvalidOperationException("未知区域原生调用。");
+
             return default(T);
         }
+
         public void Call(IntPtr function, params object[] args)
         {
-            if (function == TerritoryFunction) Memory.Step("设置区域");
-            else if (function == DeleteFunction) { Memory.Step("回收实体"); _deleted(); }
-            else if (function != PositionFunction) throw new InvalidOperationException("未知卸载原生调用。");
+            if (function == TerritoryFunction)
+                Memory.Step("设置区域");
+            else if (function == DeleteFunction)
+            {
+                Memory.Step("回收实体");
+                _deleted();
+            }
+            else if (function != PositionFunction)
+                throw new InvalidOperationException("未知卸载原生调用。");
         }
     }
 }

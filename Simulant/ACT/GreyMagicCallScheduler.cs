@@ -139,7 +139,6 @@ namespace Simulant.ACT
         ///   FrameLock 到期、队列空闲或调度器释放时结束当前 FrameLock。<br />
         ///   如果工作线程本身发生异常，会将异常传播给尚未执行的队列项。
         /// </remarks>
-
         private void WorkerProc(object _state)
         {
             _currentWorkerScheduler = this;
@@ -189,6 +188,7 @@ namespace Simulant.ACT
                         return false;
 
                     var remaining = frameDeadline - DateTime.UtcNow;
+
                     if (remaining <= TimeSpan.Zero)
                         return false;
 
@@ -199,6 +199,7 @@ namespace Simulant.ACT
                     }
 
                     remaining = frameDeadline - DateTime.UtcNow;
+
                     if (remaining <= TimeSpan.Zero)
                         return false;
 
@@ -294,7 +295,8 @@ namespace Simulant.ACT
 
             lock (_gate)
             {
-                if (_disposed) return;
+                if (_disposed)
+                    return;
 
                 _disposed = true;
                 calls = DrainQueueNoLock();

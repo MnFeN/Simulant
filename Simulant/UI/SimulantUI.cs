@@ -60,19 +60,30 @@ namespace Simulant.UI
 
         private void ConfigureMainMenu()
         {
-            var menu = new ContextMenuStrip(components) { Font = splitMainV.Font };
+            var menu = new ContextMenuStrip(components)
+            {
+                Font = splitMainV.Font
+            };
             menu.Items.Add("配置", null, btnConfiguration_Click);
             var update = new ToolStripMenuItem("更新");
             update.DropDownItems.Add("检查更新", null, async (_, __) => await _host.Updater.CheckAsync());
             update.DropDownItems.Add("安装更新", null, async (_, __) => await _host.Updater.InstallAsync());
+
             update.DropDownItems.Add("打开发布页面", null, (_, __) =>
             {
                 try
                 {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(PluginUpdater.ReleasesUrl) { UseShellExecute = true });
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(PluginUpdater.ReleasesUrl)
+                    {
+                        UseShellExecute = true
+                    });
                 }
-                catch (Exception error) { _host.LogError("打开发布页面失败：" + error.Message); }
+                catch (Exception error)
+                {
+                    _host.LogError("打开发布页面失败：" + error.Message);
+                }
             });
+
             menu.Items.Add(update);
             var debug = new ToolStripMenuItem("调试功能");
             _addEntityMenuItem = new ToolStripMenuItem("添加实体")
@@ -83,8 +94,12 @@ namespace Simulant.UI
             {
                 ToolTipText = "单击测试网络 NPC；右键选择网络玩家、小队列表或本地三实体测试。运行时再次点击停止。"
             };
-            debug.DropDownItems.AddRange(new ToolStripItem[] { _addEntityMenuItem, _debugMenuItem });
+            debug.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                _addEntityMenuItem, _debugMenuItem
+            });
             var resources = new ToolStripMenuItem("游戏资源");
+
             _exdResourceMenuItem = new ToolStripMenuItem("通用 exd", null, (_, __) =>
             {
                 if (_exdBrowserForm == null || _exdBrowserForm.IsDisposed)
@@ -92,9 +107,15 @@ namespace Simulant.UI
                     _exdBrowserForm = new ExdBrowserForm();
                     _exdBrowserForm.Show(this);
                 }
-                else { _exdBrowserForm.Show(); _exdBrowserForm.Activate(); }
+                else
+                {
+                    _exdBrowserForm.Show();
+                    _exdBrowserForm.Activate();
+                }
             });
+
             resources.DropDownItems.Add(_exdResourceMenuItem);
+
             _actionResourceMenuItem = new ToolStripMenuItem("Action", null, (_, __) =>
             {
                 if (_actionListForm == null || _actionListForm.IsDisposed)
@@ -102,8 +123,13 @@ namespace Simulant.UI
                     _actionListForm = new ActionListForm(_host);
                     _actionListForm.Show(this);
                 }
-                else { _actionListForm.Show(); _actionListForm.Activate(); }
+                else
+                {
+                    _actionListForm.Show();
+                    _actionListForm.Activate();
+                }
             });
+
             resources.DropDownItems.Add(_actionResourceMenuItem);
             menu.Items.Add(resources);
             debug.DropDown.ShowItemToolTips = true;
@@ -121,10 +147,18 @@ namespace Simulant.UI
             var rightClick = false;
             menu.Opening += (_, __) => rightClick = false;
             item.MouseDown += (_, e) => rightClick = e.Button == MouseButtons.Right;
-            item.Click += (sender, e) => { if (!rightClick) command(sender, e); };
+
+            item.Click += (sender, e) =>
+            {
+                if (!rightClick)
+                    command(sender, e);
+            };
+
             item.MouseUp += (_, e) =>
             {
-                if (e.Button != MouseButtons.Right) return;
+                if (e.Button != MouseButtons.Right)
+                    return;
+
                 var position = Cursor.Position;
                 menu.Close();
                 options.Show(position);
@@ -136,12 +170,17 @@ namespace Simulant.UI
 
         internal void OnEntityWorldChanged()
         {
-            if (IsDisposed || Disposing || _host.Disposed) return;
+            if (IsDisposed || Disposing || _host.Disposed)
+                return;
+
             if (InvokeRequired)
             {
-                if (IsHandleCreated) BeginInvoke(new System.Action(OnEntityWorldChanged));
+                if (IsHandleCreated)
+                    BeginInvoke(new System.Action(OnEntityWorldChanged));
+
                 return;
             }
+
             StopCurrentSession();
             _host.StopDebugEntities();
             _host.CompleteEntityWorldChange();
@@ -189,7 +228,6 @@ namespace Simulant.UI
         }
 
         #region Firewall
-
         private bool _updatingFirewallToggle;
 
         private void chkToggleFirewall_CheckedChanged(object sender, EventArgs e)
@@ -234,6 +272,7 @@ namespace Simulant.UI
                 _host.StopDebugEntities();
                 _host.PartyService?.RestoreAll();
                 _host.EntitySpawner.Clear();
+
                 if (_host.ZoneService.HasPendingReturn && !_host.ZoneService.ExitToInitialTerritory())
                     throw new InvalidOperationException("未能返回真实区域，防火墙保持开启；请处理错误后重试。");
 
@@ -260,11 +299,10 @@ namespace Simulant.UI
         }
 
         #endregion Firewall
-
         #region Territory
-
         private bool _switchingTerritory;
         internal bool IsSwitchingTerritory => _switchingTerritory;
+
         private int _selectedTerritoryId;
         private bool _updatingTerritoryIdInput;
         private bool _updatingPhaseSelection;
@@ -272,15 +310,18 @@ namespace Simulant.UI
         private void btnSelectTerritory_Click(object sender, EventArgs e)
         {
             int territoryId;
+
             using (var form = new TerritoryForm())
             {
                 if (form.ShowDialog(this) != DialogResult.OK)
                     return;
+
                 territoryId = form.TerritoryIdResult;
             }
 
             // 同步数值框的地图 ID
             _updatingTerritoryIdInput = true;
+
             try
             {
                 numTerritoryId.Value = territoryId;
@@ -312,16 +353,19 @@ namespace Simulant.UI
             if (territoryId > 0 && GameDataService.Instance.GetSheet<TerritoryType>().TryGetRow((uint)_selectedTerritoryId, out var territory))
             {
                 territoryName = territory.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
+
                 if (!string.IsNullOrWhiteSpace(territory.ContentFinderCondition.ValueNullable?.Name.ExtractText()))
                 {
                     instanceName = territory.ContentFinderCondition.Value.Name.ExtractText();
                 }
             }
+
             lblTerritory.Text = $"选中区域：{territoryName}\n选中副本：{instanceName}";
 
             presetControl.ClearPreset();
 
             _updatingPhaseSelection = true;
+
             try
             {
                 cbxPhase.Items.Clear();
@@ -330,14 +374,14 @@ namespace Simulant.UI
                 cbxPhase.Items.AddRange(phases.Cast<object>().ToArray());
 
                 var sims = Assembly.GetExecutingAssembly().GetTypes() // 应该放在别的地方
-                    .Where(type =>
+                .Where(type =>
                         typeof(SimPresetBase).IsAssignableFrom(type)
                         && !type.IsAbstract
                         && type.GetConstructor(Type.EmptyTypes) != null)
                     .Select(type => (SimPresetBase)Activator.CreateInstance(type))
                     .Where(preset => preset.TerritoryId == _selectedTerritoryId)
                     .OrderBy(preset => preset.Name) // to-do: 用 attribute 排序
-                    .ToList();
+                .ToList();
                 cbxPhase.Items.AddRange(sims.Cast<object>().ToArray());
                 cbxPhase.SelectedIndex = cbxPhase.Items.Count > 0 ? 0 : -1;
             }
@@ -431,6 +475,7 @@ namespace Simulant.UI
                 }
 
                 StopCurrentSession();
+
                 if (!_host.ZoneService.TryEnterTerritory(_selectedTerritoryId))
                     return;
 
@@ -452,7 +497,6 @@ namespace Simulant.UI
         }
 
         #endregion Territory
-
         internal void RefreshLogView()
             => logView.RefreshLogView();
 
@@ -493,9 +537,11 @@ namespace Simulant.UI
                 _host.LogWarning("插件尚未完成初始化；如有未回收实体，请右键选择清理后再重试初始化。");
                 return;
             }
+
             try
             {
                 string result;
+
                 using (var form = new SimpleInputForm(
                     "输入实体数据",
 
@@ -507,8 +553,9 @@ namespace Simulant.UI
                     result = form.GetInput();
                 }
 
-                if (result == null) 
+                if (result == null)
                     return;
+
                 _addBNpcInputCache = result;
 
                 var (baseId, a2, a3) = result.ParseArgs<uint, uint?, uint?>((1, null), (2, null));
@@ -534,8 +581,11 @@ namespace Simulant.UI
                         var me = GetManualSpawnSource();
                         _host.DebugEntities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
                         {
-                            BNpcBaseId = baseId, BNpcNameId = nameId, Level = level,
-                            Pos = me.Pos3D, Heading = me.Heading
+                            BNpcBaseId = baseId,
+                            BNpcNameId = nameId,
+                            Level = level,
+                            Pos = me.Pos3D,
+                            Heading = me.Heading
                         }, LogManualNetworkEntity);
                     }
                 }
@@ -558,7 +608,8 @@ namespace Simulant.UI
 
                     _host.LogSim($"已生成 EObj: ID={eobj.Id:X8}, BaseID={baseId}, TimelineState={timelineState}, Index={eobj.Identity.Slot} ({data.Index}), Ptr={eobj.Address.Hex()}");
                 }
-                else throw new ArgumentOutOfRangeException(nameof(baseId), baseId, "BaseID 不属于 BattleNpc / EventObject 的有效范围。");
+                else
+                    throw new ArgumentOutOfRangeException(nameof(baseId), baseId, "BaseID 不属于 BattleNpc / EventObject 的有效范围。");
             }
             catch (Exception ex)
             {

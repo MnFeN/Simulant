@@ -66,6 +66,7 @@ namespace Lumina.Data.Parsing.Scd
             ReverbType = binaryReader.ReadByte();
             AbGroupNo = binaryReader.ReadUInt16();
             ArrayVolume = binaryReader.ReadSingleArray(4);
+
             switch (Type)
             {
                 case SoundObjectType.Ambient:

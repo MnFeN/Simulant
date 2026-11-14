@@ -39,6 +39,7 @@ namespace Simulant.Simulation.Mechanics
         {
             if (Interlocked.CompareExchange(ref _claimAttempted, 1, 0) != 0)
                 throw new InvalidOperationException("机制实例只能运行一次；重复播放请创建新实例。");
+
             lock (_gate)
             {
                 SimTimeline.ValidateSeconds(ResolveAfter, nameof(ResolveAfter));
@@ -54,46 +55,88 @@ namespace Simulant.Simulation.Mechanics
         {
             lock (_gate)
             {
-                if (_stopping || _completed) return;
+                if (_stopping || _completed)
+                    return;
+
                 _begun = true;
+
                 try
                 {
-                    if (!Context.IsWorldValid) { Stop(); return; }
+                    if (!Context.IsWorldValid)
+                    {
+                        Stop();
+                        return;
+                    }
+
                     OnStart();
-                    if (_stopping) return;
-                    if (!Context.IsWorldValid) { Stop(); return; }
+
+                    if (_stopping)
+                        return;
+
+                    if (!Context.IsWorldValid)
+                    {
+                        Stop();
+                        return;
+                    }
+
                     Started?.Invoke(Context);
+
                     if (!_stopping && scheduleResolution)
                         ScheduleAfter(ResolveAfter, Resolve, Name + "判定");
                 }
-                catch { Interrupt(); throw; }
+                catch
+                {
+                    Interrupt();
+                    throw;
+                }
             }
         }
 
-        protected virtual void Validate() { }
-        protected virtual void OnStart() { }
+        protected virtual void Validate()
+        {
+        }
+
+        protected virtual void OnStart()
+        {
+        }
+
         protected abstract MechanicResult Evaluate(PartySnapshot snapshot);
-        protected virtual void OnCleanup() { }
+        protected virtual void OnCleanup()
+        {
+        }
 
         /// <summary>子类可增加同步节点；机制结束或停止时，尚未执行的节点统一取消。</summary>
         protected void ScheduleAfter(double seconds, Action action, string name = null)
         {
             SimTimeline.ValidateAction(action, nameof(action));
+
             lock (_gate)
             {
                 if (!_claimed || _stopping || _completed)
                     throw new InvalidOperationException("机制尚未开始或正在停止，不能继续添加节点。");
+
                 var node = Context.Scheduler.ScheduleRelativeToNode(seconds, () =>
                 {
                     lock (_gate)
                     {
-                        if (_stopping || _completed) return;
+                        if (_stopping || _completed)
+                            return;
+
                         try
                         {
-                            if (!Context.IsWorldValid) { Stop(); return; }
+                            if (!Context.IsWorldValid)
+                            {
+                                Stop();
+                                return;
+                            }
+
                             action();
                         }
-                        catch { Interrupt(); throw; }
+                        catch
+                        {
+                            Interrupt();
+                            throw;
+                        }
                     }
                 }, name ?? Name);
                 _nodes.Add(node);
@@ -113,7 +156,9 @@ namespace Simulant.Simulation.Mechanics
         {
             lock (_gate)
             {
-                if (!_claimed || _stopping) throw new InvalidOperationException("已停止的机制不能继续判定。");
+                if (!_claimed || _stopping)
+                    throw new InvalidOperationException("已停止的机制不能继续判定。");
+
                 return Evaluate(snapshot) ?? throw new InvalidOperationException("机制没有返回判定结果。");
             }
         }
@@ -122,8 +167,15 @@ namespace Simulant.Simulation.Mechanics
         {
             lock (_gate)
             {
-                if (_stopping || _completed) return;
-                if (!Context.IsWorldValid) { Stop(); return; }
+                if (_stopping || _completed)
+                    return;
+
+                if (!Context.IsWorldValid)
+                {
+                    Stop();
+                    return;
+                }
+
                 Visual?.Invoke(result);
             }
         }
@@ -132,17 +184,29 @@ namespace Simulant.Simulation.Mechanics
         {
             lock (_gate)
             {
-                if (_stopping || _completed) return;
-                if (!Context.IsWorldValid) { Stop(); return; }
+                if (_stopping || _completed)
+                    return;
+
+                if (!Context.IsWorldValid)
+                {
+                    Stop();
+                    return;
+                }
+
                 Result = result;
-                if (result.Success) Succeeded?.Invoke(result);
+
+                if (result.Success)
+                    Succeeded?.Invoke(result);
                 else
                 {
                     Failed?.Invoke(result);
+
                     if (result.FailureSeverity == MechanicFailureSeverity.Fatal)
                         throw new SimMechanicFailedException(Name, result.Reason);
                 }
-                if (!_stopping && Context.IsWorldValid) Resolved?.Invoke(result);
+
+                if (!_stopping && Context.IsWorldValid)
+                    Resolved?.Invoke(result);
             }
         }
 
@@ -150,20 +214,35 @@ namespace Simulant.Simulation.Mechanics
         {
             lock (_gate)
             {
-                if (!_claimed || _completed || _cleaning) return;
+                if (!_claimed || _completed || _cleaning)
+                    return;
+
                 _stopping = true;
                 _cleaning = true;
+
                 try
                 {
-                    foreach (var node in _nodes) node.Cancel();
+                    foreach (var node in _nodes)
+                        node.Cancel();
+
                     _nodes.Clear();
                     List<Exception> errors = null;
+
                     foreach (var child in Children)
                     {
-                        try { child.Stop(); }
-                        catch (Exception error) { (errors ?? (errors = new List<Exception>())).Add(error); }
+                        try
+                        {
+                            child.Stop();
+                        }
+                        catch (Exception error)
+                        {
+                            (errors ?? (errors = new List<Exception>())).Add(error);
+                        }
                     }
-                    if (errors != null) throw new AggregateException("部分子机制清理失败，请重试停止。", errors);
+
+                    if (errors != null)
+                        throw new AggregateException("部分子机制清理失败，请重试停止。", errors);
+
                     if (_begun && Context.IsWorldValid)
                     {
                         if (!_onCleanupFinished)
@@ -171,16 +250,21 @@ namespace Simulant.Simulation.Mechanics
                             OnCleanup();
                             _onCleanupFinished = true;
                         }
+
                         if (!_cleanupCallbackFinished && Context.IsWorldValid)
                         {
                             Cleanup?.Invoke(Context);
                             _cleanupCallbackFinished = true;
                         }
                     }
+
                     _completed = true;
                     _released?.Invoke(this);
                 }
-                finally { _cleaning = false; }
+                finally
+                {
+                    _cleaning = false;
+                }
             }
         }
 
@@ -189,22 +273,40 @@ namespace Simulant.Simulation.Mechanics
         {
             lock (_gate)
             {
-                if (!_claimed || _completed) return;
+                if (!_claimed || _completed)
+                    return;
+
                 _stopping = true;
-                foreach (var node in _nodes) node.Cancel();
+
+                foreach (var node in _nodes)
+                    node.Cancel();
+
                 _nodes.Clear();
-                foreach (var child in Children) child.Interrupt();
+
+                foreach (var child in Children)
+                    child.Interrupt();
             }
         }
 
         private void ValidateCallbacks()
         {
-            if (Started != null) SimTimeline.ValidateAction(Started, nameof(Started));
-            if (Cleanup != null) SimTimeline.ValidateAction(Cleanup, nameof(Cleanup));
-            if (Visual != null) SimTimeline.ValidateAction(Visual, nameof(Visual));
-            if (Succeeded != null) SimTimeline.ValidateAction(Succeeded, nameof(Succeeded));
-            if (Failed != null) SimTimeline.ValidateAction(Failed, nameof(Failed));
-            if (Resolved != null) SimTimeline.ValidateAction(Resolved, nameof(Resolved));
+            if (Started != null)
+                SimTimeline.ValidateAction(Started, nameof(Started));
+
+            if (Cleanup != null)
+                SimTimeline.ValidateAction(Cleanup, nameof(Cleanup));
+
+            if (Visual != null)
+                SimTimeline.ValidateAction(Visual, nameof(Visual));
+
+            if (Succeeded != null)
+                SimTimeline.ValidateAction(Succeeded, nameof(Succeeded));
+
+            if (Failed != null)
+                SimTimeline.ValidateAction(Failed, nameof(Failed));
+
+            if (Resolved != null)
+                SimTimeline.ValidateAction(Resolved, nameof(Resolved));
         }
     }
 }

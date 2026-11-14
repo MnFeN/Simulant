@@ -14,8 +14,14 @@ namespace Simulant.Tests
 
         public static void ReplayReadsHeaderChaptersAndPackets()
         {
-            var bytes = CreateReplay(new Packet(0x123, 1500, 0x10203040, new byte[] { 1, 2, 3 }),
-                new Packet(0x456, 2000, 0x50607080, new byte[] { 4, 5 }));
+            var bytes = CreateReplay(new Packet(0x123, 1500, 0x10203040, new byte[]
+            {
+                1, 2, 3
+            }),
+                new Packet(0x456, 2000, 0x50607080, new byte[]
+            {
+                4, 5
+            }));
             SetUInt16(bytes, 0x0E, 2);
             SetUInt32(bytes, 0x10, 987654321);
             SetUInt32(bytes, 0x14, 1700000000);
@@ -25,10 +31,16 @@ namespace Simulant.Tests
             bytes[0x28] = 0xA5;
             SetUInt32(bytes, 0x30, 0x55667788);
             SetUInt32(bytes, 0x34, 0x11223344);
-            for (var i = 0; i < 8; i++) bytes[0x38 + i] = (byte)(19 + i);
+
+            for (var i = 0; i < 8; i++)
+                bytes[0x38 + i] = (byte)(19 + i);
+
             bytes[0x40] = 3;
             SetUInt32(bytes, 0x48, (uint)(bytes.Length - DataOffset));
-            for (var i = 0; i < 7; i++) SetUInt16(bytes, 0x4E + i * 2, (ushort)(1000 + i));
+
+            for (var i = 0; i < 7; i++)
+                SetUInt16(bytes, 0x4E + i * 2, (ushort)(1000 + i));
+
             SetUInt32(bytes, 0x68, 2);
             SetChapter(bytes, 0, 1, 0, 1500);
             SetChapter(bytes, 1, -7, 15, 2000);
@@ -58,20 +70,42 @@ namespace Simulant.Tests
                     packets[0].Offset == DataOffset && packets[1].Offset == DataOffset + 15,
                     "记录序号应从 1 开始，包体后不能增加对齐字节。");
                 Assert(packets[0].Opcode == 0x123 && packets[0].TimestampMs == 1500 && packets[0].ObjectId == 0x10203040 &&
-                    packets[0].Payload.SequenceEqual(new byte[] { 1, 2, 3 }) && packets[1].Payload.SequenceEqual(new byte[] { 4, 5 }),
+                    packets[0].Payload.SequenceEqual(new byte[]
+                {
+                    1, 2, 3
+                }) && packets[1].Payload.SequenceEqual(new byte[]
+                {
+                    4, 5
+                }),
                     "每条记录的操作码、时间、来源与包体必须正确分离。");
             }
         }
 
         public static void ReplayPreservesUnknownPacketsAndOriginalOrdering()
         {
-            var bytes = CreateReplay(new Packet(0xFFFF, 90, uint.MaxValue, new byte[] { 8 }),
-                new Packet(0xF123, 90, 0, new byte[] { 9 }), new Packet(0, 10, 1, new byte[] { 10 }));
+            var bytes = CreateReplay(new Packet(0xFFFF, 90, uint.MaxValue, new byte[]
+            {
+                8
+            }),
+                new Packet(0xF123, 90, 0, new byte[]
+            {
+                9
+            }), new Packet(0, 10, 1, new byte[]
+            {
+                10
+            }));
+
             using (var reader = Open(bytes))
             {
                 var packets = reader.ReadPackets().ToArray();
-                Assert(packets.Select(packet => packet.Opcode).SequenceEqual(new ushort[] { 0xFFFF, 0xF123, 0 }) &&
-                    packets.Select(packet => packet.TimestampMs).SequenceEqual(new uint[] { 90, 90, 10 }) &&
+                Assert(packets.Select(packet => packet.Opcode).SequenceEqual(new ushort[]
+                {
+                    0xFFFF, 0xF123, 0
+                }) &&
+                    packets.Select(packet => packet.TimestampMs).SequenceEqual(new uint[]
+                {
+                    90, 90, 10
+                }) &&
                     packets[0].ObjectId == uint.MaxValue, "未知包、同刻顺序和时间回退不能被过滤或重排。");
                 packets[0].Payload[0] = 99;
                 Assert(packets[1].Payload[0] == 9 && reader.ReadPackets().First().Payload[0] == 8,
@@ -82,6 +116,7 @@ namespace Simulant.Tests
         public static void ReplayReadsZeroAndMaximumPayloads()
         {
             var large = Enumerable.Range(0, ushort.MaxValue).Select(index => (byte)(index * 17)).ToArray();
+
             using (var reader = Open(CreateReplay(new Packet(1, 0, 0, new byte[0]), new Packet(2, uint.MaxValue, 0, large))))
             {
                 var packets = reader.ReadPackets().ToArray();
@@ -93,14 +128,26 @@ namespace Simulant.Tests
 
         public static void ReplayAcceptsUnfinalizedAndMismatchedDeclaredLengths()
         {
-            foreach (var declaredLength in new uint[] { 0, 1, uint.MaxValue })
+            foreach (var declaredLength in new uint[]
             {
-                var bytes = CreateReplay(new Packet(7, 10, 11, new byte[] { 3, 4 }));
+                0,
+                1,
+                uint.MaxValue
+            }
+
+            )
+            {
+                var bytes = CreateReplay(new Packet(7, 10, 11, new byte[]
+                {
+                    3, 4
+                }));
                 SetUInt32(bytes, 0x48, declaredLength);
+
                 using (var reader = Open(bytes))
                     Assert(reader.Header.DeclaredDataLength == declaredLength && reader.Chapters.Count == 0 &&
                         reader.ReadPackets().Count() == 1, "尚未收尾的头信息应保留，实际文件边界不能被声明长度截断。");
             }
+
             using (var reader = Open(CreateReplay()))
                 Assert(!reader.ReadPackets().Any(), "没有任何包的合法回放应返回空列表。");
 
@@ -108,6 +155,7 @@ namespace Simulant.Tests
             {
                 var initial = CreateReplay(new Packet(1, 0, 0, new byte[0]));
                 stream.Write(initial, 0, initial.Length);
+
                 using (var reader = new ReplayReader(stream, true))
                 {
                     stream.Position = stream.Length;
@@ -123,13 +171,30 @@ namespace Simulant.Tests
             var magic = CreateReplay();
             magic[4] ^= 0xFF;
             RejectAt(() => Open(magic), 4);
-            foreach (var version in new ushort[] { 0, 4, 6, ushort.MaxValue })
+
+            foreach (var version in new ushort[]
+            {
+                0,
+                4,
+                6,
+                ushort.MaxValue
+            }
+
+            )
             {
                 var bytes = CreateReplay();
                 SetUInt16(bytes, 0x0C, version);
                 RejectAt(() => Open(bytes), 0x0C);
             }
-            foreach (var count in new uint[] { 65, int.MaxValue, uint.MaxValue })
+
+            foreach (var count in new uint[]
+            {
+                65,
+                int.MaxValue,
+                uint.MaxValue
+            }
+
+            )
             {
                 var bytes = CreateReplay();
                 SetUInt32(bytes, 0x68, count);
@@ -140,25 +205,49 @@ namespace Simulant.Tests
         public static void ReplayReportsTruncatedHeaderAndChapterTableOffsets()
         {
             var bytes = CreateReplay();
-            foreach (var length in new[] { 0, 10, 0x67, 0x68, 0x6B, DataOffset - 1 })
+
+            foreach (var length in new[]
+            {
+                0,
+                10,
+                0x67,
+                0x68,
+                0x6B,
+                DataOffset - 1
+            }
+
+            )
                 RejectAt(() => Open(bytes.Take(length).ToArray()), 0);
         }
 
         public static void ReplayReportsTruncatedPacketHeaderAndPayloadOffsets()
         {
-            var complete = CreateReplay(new Packet(1, 0, 1, new byte[] { 1, 2, 3 }));
+            var complete = CreateReplay(new Packet(1, 0, 1, new byte[]
+            {
+                1, 2, 3
+            }));
+
             for (var remaining = 1; remaining < 12; remaining++)
             {
                 using (var reader = Open(complete.Take(DataOffset + remaining).ToArray()))
                     RejectAt(() => reader.ReadPackets().ToArray(), DataOffset);
             }
+
             for (var payloadLength = 0; payloadLength < 3; payloadLength++)
             {
                 using (var reader = Open(complete.Take(DataOffset + 12 + payloadLength).ToArray()))
                     RejectAt(() => reader.ReadPackets().ToArray(), DataOffset + 12);
             }
-            var two = CreateReplay(new Packet(1, 0, 1, new byte[] { 1, 2, 3 }),
-                new Packet(2, 0, 1, new byte[] { 4, 5 }));
+
+            var two = CreateReplay(new Packet(1, 0, 1, new byte[]
+            {
+                1, 2, 3
+            }),
+                new Packet(2, 0, 1, new byte[]
+            {
+                4, 5
+            }));
+
             using (var reader = Open(two.Take(two.Length - 1).ToArray()))
             using (var enumerator = reader.ReadPackets().GetEnumerator())
             {
@@ -171,15 +260,22 @@ namespace Simulant.Tests
         {
             var bytes = CreateReplay(new Packet(1, 0, 0, new byte[0]));
             SetUInt32(bytes, 0x68, 64);
-            for (var i = 0; i < 64; i++) SetChapter(bytes, i, i, 12, (uint)i);
+
+            for (var i = 0; i < 64; i++)
+                SetChapter(bytes, i, i, 12, (uint)i);
+
             using (var reader = Open(bytes))
                 Assert(reader.Chapters.Count == 64 && reader.Chapters[63].Offset == 12,
                     "章节容量边界和指向记录区末尾的章节应被接受。");
+
             SetChapter(bytes, 63, 1, 13, 0);
+
             using (var reader = Open(bytes))
                 Assert(reader.Chapters[63].Offset == 13 && reader.ReadPackets().Count() == 1,
                     "未收尾章节偏移应保留供上层报告，不能据此跳过或截断完整记录。");
+
             SetChapter(bytes, 63, 1, uint.MaxValue, 0);
+
             using (var reader = Open(bytes))
                 Assert(reader.Chapters[63].Offset == uint.MaxValue && reader.ReadPackets().Count() == 1,
                     "不可信的章节偏移不能被直接用作读取位置，也不能产生整数溢出。");
@@ -187,11 +283,19 @@ namespace Simulant.Tests
 
         public static void ReplayHandlesShortReads()
         {
-            var bytes = CreateReplay(new Packet(1, 12, 34, new byte[] { 5, 6, 7, 8, 9 }));
+            var bytes = CreateReplay(new Packet(1, 12, 34, new byte[]
+            {
+                5, 6, 7, 8, 9
+            }));
+
             using (var stream = new LimitedReadStream(bytes, 3))
             using (var reader = new ReplayReader(stream))
-                Assert(reader.ReadPackets().Single().Payload.SequenceEqual(new byte[] { 5, 6, 7, 8, 9 }),
+                Assert(reader.ReadPackets().Single().Payload.SequenceEqual(new byte[]
+                {
+                5, 6, 7, 8, 9
+                }),
                     "一次 Read 未填满缓冲区时应继续读取，而不能把短读误当成文件结束。");
+
             using (var stream = new LimitedReadStream(bytes, 3, DataOffset + 13))
             using (var reader = new ReplayReader(stream))
                 RejectAt(() => reader.ReadPackets().ToArray(), DataOffset + 13);
@@ -203,8 +307,10 @@ namespace Simulant.Tests
             {
                 Assert(reader.ReadPackets().Count() == 2 && reader.ReadPackets().Count() == 2,
                     "正常结束后应允许重新扫描同一文件。");
+
                 using (var enumerator = reader.ReadPackets().GetEnumerator())
                     Assert(enumerator.MoveNext() && enumerator.Current.Opcode == 1, "提前结束枚举前应读取第一条记录。");
+
                 Assert(reader.ReadPackets().Count() == 2, "提前释放枚举器后应释放独占标记，并从头重新读取。");
             }
         }
@@ -212,25 +318,36 @@ namespace Simulant.Tests
         public static void ReplayRejectsConcurrentEnumerationAndDisposedAccess()
         {
             var reader = Open(CreateReplay(new Packet(1, 0, 0, new byte[0]), new Packet(2, 0, 0, new byte[0])));
+
             using (reader)
             using (var first = reader.ReadPackets().GetEnumerator())
             {
                 Assert(first.MoveNext(), "首次枚举应能启动。");
+
                 using (var second = reader.ReadPackets().GetEnumerator())
                     Throws<InvalidOperationException>(() => second.MoveNext());
+
                 Assert(first.MoveNext() && first.Current.Index == 2, "拒绝并行枚举不能破坏原枚举的文件位置。");
             }
+
             Throws<ObjectDisposedException>(() => reader.ReadPackets());
             var delayedReader = Open(CreateReplay(new Packet(1, 0, 0, new byte[0])));
             var delayed = delayedReader.ReadPackets();
             delayedReader.Dispose();
+
             using (var enumerator = delayed.GetEnumerator())
                 Throws<ObjectDisposedException>(() => enumerator.MoveNext());
         }
 
         public static void ReplayHonorsStreamOwnershipAndCapabilities()
         {
-            foreach (var leaveOpen in new[] { false, true })
+            foreach (var leaveOpen in new[]
+            {
+                false,
+                true
+            }
+
+            )
             {
                 var stream = new MemoryStream(CreateReplay());
                 var reader = new ReplayReader(stream, leaveOpen);
@@ -243,9 +360,12 @@ namespace Simulant.Tests
                 Assert(invalidStream.CanRead == leaveOpen, "构造失败也必须遵循输入流的所有权约定。");
                 invalidStream.Dispose();
             }
+
             Throws<ArgumentNullException>(() => new ReplayReader(null));
+
             using (var stream = new LimitedReadStream(CreateReplay(), 3, canSeek: false))
                 Throws<ArgumentException>(() => new ReplayReader(stream));
+
             var closedStream = new MemoryStream(CreateReplay());
             closedStream.Dispose();
             Throws<ArgumentException>(() => new ReplayReader(closedStream));
@@ -253,7 +373,14 @@ namespace Simulant.Tests
 
         public static void ReplayOpcodeRecognitionRequiresExplicitProfile()
         {
-            foreach (var version in new uint[] { 0, 757, uint.MaxValue })
+            foreach (var version in new uint[]
+            {
+                0,
+                757,
+                uint.MaxValue
+            }
+
+            )
             {
                 var unspecified = ReplayPacketCatalog.Classify(version, 0x217, 16);
                 Assert(string.IsNullOrEmpty(unspecified.Name) && unspecified.Confidence == ReplayPacketConfidence.OpcodeCandidate &&
@@ -296,7 +423,10 @@ namespace Simulant.Tests
             using (var directory = new ExportTestDirectory())
             {
                 var bytes = CreateReplay(new Packet(0x217, 20, 1, new byte[16]),
-                    new Packet(0xFFFF, 30, 2, new byte[] { 1, 2, 3 }), new Packet(0, 10, 3, new byte[0]));
+                    new Packet(0xFFFF, 30, 2, new byte[]
+                {
+                    1, 2, 3
+                }), new Packet(0, 10, 3, new byte[0]));
                 File.WriteAllBytes(directory.InputPath, bytes);
                 var originalHash = FileHash(directory.InputPath);
                 var result = ReplayInspector.Export(directory.InputPath, directory.OutputPath, ReplayPacketCatalog.China757Profile);
@@ -307,7 +437,10 @@ namespace Simulant.Tests
                 var rows = File.ReadAllLines(Path.Combine(directory.OutputPath, "packets.csv"));
                 Assert(rows.Length == 4 && rows[1].Contains("ActorMove") && rows[2].Contains("0xFFFF") &&
                     rows[3].Contains("\"0x0000\",\"0\""), "逐条清单必须包含完整包、未知包与零负载包，不能过滤或改变顺序。");
-                Assert(new[] { "packets.csv", "opcodes.csv", "chapters.csv", "summary.md" }
+                Assert(new[]
+                {
+                    "packets.csv", "opcodes.csv", "chapters.csv", "summary.md"
+                }
                     .All(name => File.Exists(Path.Combine(directory.OutputPath, name))) &&
                     Directory.GetFiles(directory.OutputPath, "*.partial").Length == 0,
                     "完整扫描成功后应发布四份结果，不能遗留临时清单。");
@@ -340,8 +473,14 @@ namespace Simulant.Tests
         {
             using (var directory = new ExportTestDirectory())
             {
-                var complete = CreateReplay(new Packet(1, 10, 1, new byte[] { 1 }),
-                    new Packet(2, 20, 1, new byte[] { 2, 3, 4 }));
+                var complete = CreateReplay(new Packet(1, 10, 1, new byte[]
+                {
+                    1
+                }),
+                    new Packet(2, 20, 1, new byte[]
+                {
+                    2, 3, 4
+                }));
                 File.WriteAllBytes(directory.InputPath, complete.Take(complete.Length - 1).ToArray());
                 var originalHash = FileHash(directory.InputPath);
                 var error = Throws<IOException>(() => ReplayInspector.Export(directory.InputPath, directory.OutputPath));
@@ -387,6 +526,7 @@ namespace Simulant.Tests
                 Encoding.ASCII.GetBytes("FFXIVREPLAY\0").CopyTo(prefix, 0);
                 SetUInt16(prefix, 0x0C, 5);
                 writer.Write(prefix);
+
                 foreach (var packet in packets)
                 {
                     writer.Write(packet.Opcode);
@@ -395,6 +535,7 @@ namespace Simulant.Tests
                     writer.Write(packet.ObjectId);
                     writer.Write(packet.Payload);
                 }
+
                 return stream.ToArray();
             }
         }
@@ -414,7 +555,8 @@ namespace Simulant.Tests
 
         private static void SetUInt32(byte[] bytes, int offset, uint value)
         {
-            for (var i = 0; i < 4; i++) bytes[offset + i] = (byte)(value >> (i * 8));
+            for (var i = 0; i < 4; i++)
+                bytes[offset + i] = (byte)(value >> (i * 8));
         }
 
         private static void RejectAt(Action action, long offset)
@@ -424,16 +566,25 @@ namespace Simulant.Tests
                 "损坏文件应指出预期偏移 0x" + offset.ToString("X") + "，实际错误：" + error.Message);
         }
 
-        private static T Throws<T>(Action action) where T : Exception
+        private static T Throws<T>(Action action)
+            where T : Exception
         {
-            try { action(); }
-            catch (T error) { return error; }
+            try
+            {
+                action();
+            }
+            catch (T error)
+            {
+                return error;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
         private sealed class Packet
@@ -469,7 +620,9 @@ namespace Simulant.Tests
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                if (Position >= _end) return 0;
+                if (Position >= _end)
+                    return 0;
+
                 return base.Read(buffer, offset, Math.Min(Math.Min(count, _maxRead), (int)Math.Min(int.MaxValue, _end - Position)));
             }
         }
@@ -495,11 +648,14 @@ namespace Simulant.Tests
             {
                 var resolved = Path.GetFullPath(_root);
                 var temporaryRoot = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
                 if (!resolved.StartsWith(temporaryRoot, StringComparison.OrdinalIgnoreCase) ||
                     !Path.GetFileName(resolved).StartsWith(DirectoryPrefix, StringComparison.Ordinal) ||
                     !string.Equals(resolved, _root, StringComparison.Ordinal))
                     throw new InvalidOperationException("测试清理路径不在本次创建的临时目录内。");
-                if (Directory.Exists(resolved)) Directory.Delete(resolved, true);
+
+                if (Directory.Exists(resolved))
+                    Directory.Delete(resolved, true);
             }
         }
     }

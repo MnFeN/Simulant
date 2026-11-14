@@ -19,7 +19,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Excel.ExcelPage ExcelPage => page;
         public uint RowOffset => offset;
         public uint RowId => row;
-        public global::Lumina.Excel.RowRef Quest => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[] { typeof(ArrayEventHandler), typeof(Quest) }, -600516196, page.Language);
+        public global::Lumina.Excel.RowRef Quest => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[]
+        {
+            typeof(ArrayEventHandler), typeof(Quest)
+        }, -600516196, page.Language);
 
         static public QuestRepeatFlag Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row) => new QuestRepeatFlag(page, offset, row);
     }

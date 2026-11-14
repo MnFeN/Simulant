@@ -51,9 +51,10 @@ namespace Simulant.Content.U7b
 
             // 补上九个洞
             p5Effects[0x14] = 0x200;
+
             for (var i = 0x15; i <= 0x1C; i++)
                 p5Effects[i] = 0x1;
-            
+
             // 瓦砾之塔
             for (var i = 0x1D; i <= 0x21; i++)
                 p5Effects[i] = 0x2;

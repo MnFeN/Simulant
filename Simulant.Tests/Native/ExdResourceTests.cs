@@ -24,6 +24,7 @@ namespace Simulant.Tests.Native
             {
                 _path = GameDataService.ResolveSqPackPath(args.Single());
                 Control.CheckForIllegalCrossThreadCalls = true;
+
                 foreach (var method in typeof(ExdResourceTests).GetMethods(BindingFlags.Public | BindingFlags.Static)
                     .Where(method => method.ReturnType == typeof(void) && method.GetParameters().Length == 0))
                 {
@@ -31,9 +32,14 @@ namespace Simulant.Tests.Native
                     method.Invoke(null, null);
                     Console.WriteLine($"通过：{method.Name}（{watch.Elapsed.TotalSeconds:F2} 秒）");
                 }
+
                 return 0;
             }
-            catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+            catch (Exception error)
+            {
+                Console.Error.WriteLine(error);
+                return 1;
+            }
         }
 
         public static void DiscoversSheetsAndResolvesTimelineNamesWithoutAnActionMapping()
@@ -43,12 +49,17 @@ namespace Simulant.Tests.Native
             var id = Array.IndexOf(page.Columns, "RowId");
             var timeline = Array.IndexOf(page.Columns, "AnimationEnd");
             Assert(page.Rows.Length == ExdResource.PageSize && page.Total > page.Rows.Length, "大表应按页预览。");
-            using (var data = new GameData(_path, new LuminaOptions { DefaultExcelLanguage = Language.ChineseSimplified }))
+
+            using (var data = new GameData(_path, new LuminaOptions
+            {
+                DefaultExcelLanguage = Language.ChineseSimplified
+            }))
             {
                 var row = page.Rows.First(cells => cells[timeline].Contains(" → "));
                 var action = data.GetExcelSheet<Lumina.Excel.Sheets.Action>().GetRow(uint.Parse(row[id]));
                 Assert(row[timeline] == $"ActionTimeline#{action.AnimationEnd.RowId} → {action.AnimationEnd.Value.Key.ExtractText()}", "时间轴名称必须来自关联行的 Key。");
             }
+
             var next = Read("Action", page: 1);
             Assert(next.Rows[0][id] != page.Rows[0][id], "下一页必须使用不同的行。");
         }
@@ -68,11 +79,20 @@ namespace Simulant.Tests.Native
             var nameWithoutSchema = ExdResource.ListSheets(_path, Language.ChineseSimplified, CancellationToken.None).First(name => !types.Contains(name));
             var raw = Read(nameWithoutSchema);
             Assert(raw.Notice.Contains("原始列") && raw.Columns.Any(column => column.StartsWith("列 ")), "无强类型定义时仍应显示原始列。");
+
             using (var cancel = new CancellationTokenSource())
             {
                 cancel.Cancel();
-                try { ExdResource.Read(_path, Language.ChineseSimplified, "Action", "", 0, cancel.Token); }
-                catch (OperationCanceledException) { return; }
+
+                try
+                {
+                    ExdResource.Read(_path, Language.ChineseSimplified, "Action", "", 0, cancel.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException("已取消的请求不应继续读取。");
             }
         }
@@ -80,8 +100,19 @@ namespace Simulant.Tests.Native
         public static void FormsCenterAndSwitchSheetsWithoutBlockingOrApplyingStaleResults()
         {
             using (var data = new GameDataService(_path))
-            using (var form = new ExdBrowserForm { Opacity = 0, ShowInTaskbar = false })
-            using (var timer = new System.Windows.Forms.Timer { Interval = 10 })
+            using (var form = new ExdBrowserForm
+            {
+                Opacity = 0,
+                ShowInTaskbar = false
+            }
+
+            )
+            using (var timer = new System.Windows.Forms.Timer
+            {
+                Interval = 10
+            }
+
+            )
             {
                 typeof(GameDataService).GetMethod("Activate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(data, null);
                 var pulses = 0;
@@ -98,17 +129,32 @@ namespace Simulant.Tests.Native
                 Field<ListBox>(form, "listSheets").SelectedItem = "ActionTimeline";
                 Await(() => Field<Label>(form, "lblStatus").Text.StartsWith("ActionTimeline："));
                 Assert(grid.Columns.Contains("Key"), "切换表后不能显示旧请求的结果。");
+
                 using (var bitmap = new Bitmap(form.Width, form.Height))
                 {
                     form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
                     bitmap.Save(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ExdBrowserForm.png"));
                 }
+
                 Context();
                 Field<ListBox>(form, "listSheets").SelectedItem = "Item";
                 form.Close();
                 Assert(Field<CancellationToken>(form, "_token").IsCancellationRequested, "关闭窗口应取消读取。");
-                using (var owner = new Form { Opacity = 0, ShowInTaskbar = false })
-                using (var action = new ActionListForm { Opacity = 0, ShowInTaskbar = false })
+
+                using (var owner = new Form
+                {
+                    Opacity = 0,
+                    ShowInTaskbar = false
+                }
+
+                )
+                using (var action = new ActionListForm
+                {
+                    Opacity = 0,
+                    ShowInTaskbar = false
+                }
+
+                )
                 {
                     var panel = new Panel();
                     owner.Controls.Add(panel);
@@ -130,11 +176,25 @@ namespace Simulant.Tests.Native
             Assert(Math.Abs(form.Left + form.Width / 2 - area.Left - area.Width / 2) <= 1 &&
                 Math.Abs(form.Top + form.Height / 2 - area.Top - area.Height / 2) <= 1, "窗口最终尺寸应在屏幕工作区居中。");
         }
+
         private static void Await(Func<bool> ready)
         {
             var watch = Stopwatch.StartNew();
-            while (!ready()) { if (watch.Elapsed.TotalSeconds > 60) throw new TimeoutException("等待窗口读取超时。"); Application.DoEvents(); Thread.Sleep(1); }
+
+            while (!ready())
+            {
+                if (watch.Elapsed.TotalSeconds > 60)
+                    throw new TimeoutException("等待窗口读取超时。");
+
+                Application.DoEvents();
+                Thread.Sleep(1);
+            }
         }
-        private static void Assert(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+
+        private static void Assert(bool condition, string message)
+        {
+            if (!condition)
+                throw new InvalidOperationException(message);
+        }
     }
 }

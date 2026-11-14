@@ -23,7 +23,10 @@ namespace Lumina.Excel.Sheets
         public uint RowId => row;
         public ushort SubrowId => subrow;
         public global::Lumina.Excel.RowRef<Quest> Quest => new global::Lumina.Excel.RowRef<Quest>(page.Module, page.ReadUInt32(offset), page.Language);
-        public global::Lumina.Excel.RowRef BGM => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 4), new System.Type[] { typeof(BGM), typeof(BGMSituation) }, -1048018041, page.Language);
+        public global::Lumina.Excel.RowRef BGM => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 4), new System.Type[]
+        {
+            typeof(BGM), typeof(BGMSituation)
+        }, -1048018041, page.Language);
         public global::Lumina.Excel.RowRef<BGMSystemDefine> BGMSystemDefine => new global::Lumina.Excel.RowRef<BGMSystemDefine>(page.Module, (uint)page.ReadUInt8(offset + 6), page.Language);
         public byte Unknown0 => page.ReadUInt8(offset + 7);
 

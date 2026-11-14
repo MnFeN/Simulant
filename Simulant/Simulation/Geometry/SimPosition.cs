@@ -10,7 +10,13 @@ namespace Simulant.Simulation.Geometry
     /// </summary>
     public readonly struct SimPosition
     {
-        private enum Shape : byte { Ellipse, Rectangle, AnnularSector }
+        private enum Shape : byte
+        {
+            Ellipse,
+            Rectangle,
+            AnnularSector
+        }
+
         private const double Tolerance = 0.00001;
         private readonly Shape _shape;
         // 椭圆：半长轴、半短轴；矩形：半长、半宽；扇环：外半径、内半径。
@@ -38,8 +44,10 @@ namespace Simulant.Simulation.Geometry
             var minor = semiMinor ?? semiMajor;
             RequireLength(semiMajor, nameof(semiMajor));
             RequireLength(minor, nameof(semiMinor));
+
             if (minor > semiMajor)
                 throw new ArgumentOutOfRangeException(nameof(semiMinor), "半短轴不能大于半长轴。");
+
             return new SimPosition(Shape.Ellipse, pos, semiMajor, minor, heading);
         }
 
@@ -48,8 +56,10 @@ namespace Simulant.Simulation.Geometry
         {
             RequireLength(halfLength, nameof(halfLength));
             RequireLength(halfWidth, nameof(halfWidth));
+
             if (halfWidth > halfLength)
                 throw new ArgumentOutOfRangeException(nameof(halfWidth), "半宽不能大于半长，heading 始终表示长边朝向。");
+
             return new SimPosition(Shape.Rectangle, pos, halfLength, halfWidth, heading);
         }
 
@@ -62,10 +72,13 @@ namespace Simulant.Simulation.Geometry
             RequireLength(radius, nameof(radius));
             RequireLength(radialTolerance, nameof(radialTolerance));
             RequireFinite(angularTolerance, nameof(angularTolerance));
+
             if (radialTolerance > radius)
                 throw new ArgumentOutOfRangeException(nameof(radialTolerance), "径向半宽不能大于中间半径。");
+
             if (angularTolerance < 0 || angularTolerance > Math.PI)
                 throw new ArgumentOutOfRangeException(nameof(angularTolerance), "扇环角度半宽必须在 0 至 π 弧度之间。");
+
             var outer = radius + radialTolerance;
             RequireLength(outer, nameof(radius));
             return new SimPosition(Shape.AnnularSector, pos, outer, radius - radialTolerance, heading, angularTolerance);
@@ -81,7 +94,10 @@ namespace Simulant.Simulation.Geometry
         public Vector2 Midpoint(double northHeading = Math.PI)
         {
             var heading = WorldHeading(northHeading);
-            if (_shape != Shape.AnnularSector) return Pos;
+
+            if (_shape != Shape.AnnularSector)
+                return Pos;
+
             var radius = ((double)_extent + _secondary) * 0.5;
             return Pos + new Vector2((float)(radius * Math.Sin(heading)), (float)(radius * Math.Cos(heading)));
         }
@@ -91,8 +107,12 @@ namespace Simulant.Simulation.Geometry
         {
             get
             {
-                if (_shape == Shape.Rectangle) return Math.Sqrt((double)_extent * _extent + (double)_secondary * _secondary);
-                if (_shape != Shape.AnnularSector) return _extent;
+                if (_shape == Shape.Rectangle)
+                    return Math.Sqrt((double)_extent * _extent + (double)_secondary * _secondary);
+
+                if (_shape != Shape.AnnularSector)
+                    return _extent;
+
                 var radius = ((double)_extent + _secondary) * 0.5;
                 var halfWidth = ((double)_extent - _secondary) * 0.5;
                 return Math.Sqrt(halfWidth * halfWidth + 2 * _extent * radius * (1 - Math.Cos(_halfAngle)));
@@ -103,9 +123,13 @@ namespace Simulant.Simulation.Geometry
         internal SimPosition ScaleTolerance(float scale, double? heading = null)
         {
             RequireLength(scale, nameof(scale));
-            if (scale > 1) throw new ArgumentOutOfRangeException(nameof(scale), "缩小容差的比例不能大于一。");
+
+            if (scale > 1)
+                throw new ArgumentOutOfRangeException(nameof(scale), "缩小容差的比例不能大于一。");
+
             if (_shape != Shape.AnnularSector)
                 return new SimPosition(_shape, Pos, _extent * scale, _secondary * scale, heading ?? Heading);
+
             var radius = (float)(((double)_extent + _secondary) * 0.5);
             var halfWidth = (float)(((double)_extent - _secondary) * 0.5 * scale);
             return new SimPosition(_shape, Pos, radius + halfWidth, radius - halfWidth, heading ?? Heading, _halfAngle * scale);
@@ -117,10 +141,16 @@ namespace Simulant.Simulation.Geometry
         /// </summary>
         public Vector2 Sample(Random random, double northHeading = Math.PI)
         {
-            if (random == null) throw new ArgumentNullException(nameof(random));
+            if (random == null)
+                throw new ArgumentNullException(nameof(random));
+
             var heading = WorldHeading(northHeading);
-            if (_extent == 0 && _secondary == 0) return Pos;
+
+            if (_extent == 0 && _secondary == 0)
+                return Pos;
+
             double forward, lateral;
+
             switch (_shape)
             {
                 case Shape.Rectangle:
@@ -140,6 +170,7 @@ namespace Simulant.Simulation.Geometry
                     lateral = _secondary * scale * Math.Sin(angle);
                     break;
             }
+
             var sin = Math.Sin(heading);
             var cos = Math.Cos(heading);
             var point = new Vector2((float)(Pos.X + forward * sin + lateral * cos),
@@ -157,17 +188,21 @@ namespace Simulant.Simulation.Geometry
             var dy = (double)point.Y - Pos.Y;
             var forward = dx * Math.Sin(heading) + dy * Math.Cos(heading);
             var lateral = dx * Math.Cos(heading) - dy * Math.Sin(heading);
+
             if (_shape == Shape.Rectangle)
                 return Math.Abs(forward) <= _extent + Tolerance && Math.Abs(lateral) <= _secondary + Tolerance;
+
             if (_shape == Shape.AnnularSector)
             {
                 var radius = Math.Sqrt(dx * dx + dy * dy);
                 return radius >= _secondary - Tolerance && radius <= _extent + Tolerance &&
                     forward >= radius * Math.Cos(_halfAngle) - Tolerance;
             }
+
             // 同时支持退化成线段或单点的椭圆，不对零轴长做除法。
             if (_secondary == 0)
                 return Math.Abs(forward) <= _extent + Tolerance && Math.Abs(lateral) <= Tolerance;
+
             var x = forward / (_extent + Tolerance);
             var y = lateral / (_secondary + Tolerance);
             return x * x + y * y <= 1;
@@ -193,7 +228,8 @@ namespace Simulant.Simulation.Geometry
 
         private static void RequireFinite(double value, string name)
         {
-            if (!IsFinite(value)) throw new ArgumentOutOfRangeException(name, "点位角度必须是有限数值，单位为弧度。");
+            if (!IsFinite(value))
+                throw new ArgumentOutOfRangeException(name, "点位角度必须是有限数值，单位为弧度。");
         }
 
         private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);

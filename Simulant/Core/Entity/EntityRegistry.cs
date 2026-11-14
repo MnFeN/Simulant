@@ -24,13 +24,17 @@ namespace Simulant.Core.Entity
         private long _worldEpoch = 1;
         private long _generation;
 
-        public EntityRegistry() : this(ObserveNative) { }
+        public EntityRegistry() : this(ObserveNative)
+        {
+        }
 
         public EntityRegistry(Func<ushort, EntityObservation?> observe, int capacity = GameObjectPtrs.Count)
         {
             _observe = observe ?? throw new ArgumentNullException(nameof(observe));
+
             if (capacity <= 0 || capacity > ushort.MaxValue + 1)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
+
             _entries = new Entry[capacity];
         }
 
@@ -40,14 +44,18 @@ namespace Simulant.Core.Entity
             {
                 ValidateSlot(slot);
                 var observed = _observe(slot);
+
                 if (!IsSupported(observed))
                 {
                     _entries[slot] = null;
                     return null;
                 }
+
                 var entry = _entries[slot];
+
                 if (entry != null && entry.Observation.Equals(observed.Value))
                     return entry.Entity; // null 表示已显式释放，不应重新关联尚未从对象表移除的旧对象。
+
                 return Register(slot, observed.Value);
             }
         }
@@ -57,7 +65,9 @@ namespace Simulant.Core.Entity
             for (int slot = 0; slot < _entries.Length; slot++)
             {
                 var entity = Get((ushort)slot);
-                if (entity != null) yield return entity;
+
+                if (entity != null)
+                    yield return entity;
             }
         }
 
@@ -68,27 +78,39 @@ namespace Simulant.Core.Entity
             {
                 ValidateSlot(slot);
                 var observed = _observe(slot);
+
                 if (!IsSupported(observed))
                 {
                     _entries[slot] = null;
                     throw new InvalidOperationException($"槽位 {slot} 中没有可登记的实体。");
                 }
+
                 return Register(slot, observed.Value);
             }
         }
 
         public bool IsAlive(EntityBase entity)
         {
-            if (entity == null) return false;
+            if (entity == null)
+                return false;
+
             lock (_gate)
             {
                 var identity = entity.Identity;
+
                 if (identity.WorldEpoch != _worldEpoch || identity.Slot >= _entries.Length)
                     return false;
+
                 var entry = _entries[identity.Slot];
-                if (entry == null || !ReferenceEquals(entry.Entity, entity)) return false;
+
+                if (entry == null || !ReferenceEquals(entry.Entity, entity))
+                    return false;
+
                 var observed = _observe(identity.Slot);
-                if (observed.HasValue && entry.Observation.Equals(observed.Value)) return true;
+
+                if (observed.HasValue && entry.Observation.Equals(observed.Value))
+                    return true;
+
                 _entries[identity.Slot] = null;
                 return false;
             }
@@ -96,12 +118,18 @@ namespace Simulant.Core.Entity
 
         public void Invalidate(EntityBase entity)
         {
-            if (entity == null) return;
+            if (entity == null)
+                return;
+
             lock (_gate)
             {
                 var identity = entity.Identity;
-                if (identity.WorldEpoch != _worldEpoch || identity.Slot >= _entries.Length) return;
+
+                if (identity.WorldEpoch != _worldEpoch || identity.Slot >= _entries.Length)
+                    return;
+
                 var entry = _entries[identity.Slot];
+
                 if (entry != null && ReferenceEquals(entry.Entity, entity))
                     entry.Entity = null;
             }
@@ -111,15 +139,26 @@ namespace Simulant.Core.Entity
         // 检查保留的代次，避免重试时操作已替换的新实体。
         internal bool MatchesCurrent(EntityBase entity)
         {
-            if (entity == null) return false;
+            if (entity == null)
+                return false;
+
             lock (_gate)
             {
                 var identity = entity.Identity;
-                if (identity.WorldEpoch != _worldEpoch || identity.Slot >= _entries.Length) return false;
+
+                if (identity.WorldEpoch != _worldEpoch || identity.Slot >= _entries.Length)
+                    return false;
+
                 var entry = _entries[identity.Slot];
-                if (entry == null || entry.Identity != identity) return false;
+
+                if (entry == null || entry.Identity != identity)
+                    return false;
+
                 var observed = _observe(identity.Slot);
-                if (observed.HasValue && entry.Observation.Equals(observed.Value)) return true;
+
+                if (observed.HasValue && entry.Observation.Equals(observed.Value))
+                    return true;
+
                 _entries[identity.Slot] = null;
                 return false;
             }
@@ -131,7 +170,9 @@ namespace Simulant.Core.Entity
             {
                 ValidateSlot(slot);
                 var entry = _entries[slot];
-                if (entry != null) entry.Entity = null;
+
+                if (entry != null)
+                    entry.Entity = null;
             }
         }
 
@@ -150,18 +191,26 @@ namespace Simulant.Core.Entity
             EntityBase entity = observation.ObjectKind == ObjectKind.EventObj
                 ? (EntityBase)new EventObject(this, identity, observation)
                 : new Character(this, identity, observation);
-            _entries[slot] = new Entry { Identity = identity, Observation = observation, Entity = entity };
+            _entries[slot] = new Entry
+            {
+                Identity = identity,
+                Observation = observation,
+                Entity = entity
+            };
             return entity;
         }
 
         private void ValidateSlot(ushort slot)
         {
-            if (slot >= _entries.Length) throw new ArgumentOutOfRangeException(nameof(slot));
+            if (slot >= _entries.Length)
+                throw new ArgumentOutOfRangeException(nameof(slot));
         }
 
         private static bool IsSupported(EntityObservation? observation)
         {
-            if (!observation.HasValue) return false;
+            if (!observation.HasValue)
+                return false;
+
             var value = observation.Value;
             return value.Address != IntPtr.Zero
                 && (value.ObjectKind == ObjectKind.Pc || value.ObjectKind == ObjectKind.BattleNpc
@@ -171,9 +220,15 @@ namespace Simulant.Core.Entity
         private static EntityObservation? ObserveNative(ushort slot)
         {
             var manager = GameObjectManager.Instance();
-            if (manager.IsNull()) return null;
+
+            if (manager.IsNull())
+                return null;
+
             var native = manager.Objects.IndexSorted[slot];
-            if (native.IsNull()) return null;
+
+            if (native.IsNull())
+                return null;
+
             return new EntityObservation(native.Ptr, native.EntityId, native.ObjectKind);
         }
     }

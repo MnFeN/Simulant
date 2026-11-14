@@ -14,6 +14,7 @@ namespace Simulant.Utils.Maths
             {
                 throw new ArgumentException("A must not be zero");
             }
+
             var Δ = B * B - 4 * A * C;
 
             if (Δ < -eps)
@@ -32,7 +33,6 @@ namespace Simulant.Utils.Maths
             }
         }
 
-
         /// <summary>
         /// 求 (x - x0)² + (y - y0)² = r² 与 ax + by + c = 0 的交点，
         /// 按照 sorter 的顺序（如果提供了）返回两个交点坐标或 null（无交点）
@@ -46,7 +46,10 @@ namespace Simulant.Utils.Maths
             {
                 // 直线偏向竖直方向，交换 x 和 y 复用代码
                 var result = CircleLineIntersections(y0, x0, r, b, a, c, null);
-                if (result == null) return null;
+
+                if (result == null)
+                    return null;
+
                 var p1 = new Vector2(result.Value.Item1.Y, result.Value.Item1.X);
                 var p2 = new Vector2(result.Value.Item2.Y, result.Value.Item2.X);
                 return sorter != null && sorter(p1) > sorter(p2) ? (p2, p1) : (p1, p2);
@@ -61,6 +64,7 @@ namespace Simulant.Utils.Maths
             var C = x0 * x0 + yOffset * yOffset - r * r;
 
             var x12 = SolveQuadratic(A, B, C);
+
             if (x12 == null) // 无交点
             {
                 return null;

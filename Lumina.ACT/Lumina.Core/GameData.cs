@@ -13,35 +13,63 @@ namespace Lumina
     /// <summary>ACT/.NET Framework facade over Lumina 7.7.2's resource readers.</summary>
     public sealed class GameData : IDisposable
     {
-        [ThreadStatic] private static WeakReference<GameData> context;
+        [ThreadStatic]
+        private static WeakReference<GameData> context;
         private bool disposed;
         public DirectoryInfo DataPath { get; private set; }
         public Dictionary<string, Repository> Repositories { get; private set; }
         public LuminaOptions Options { get; private set; }
         public ExcelModule Excel { get; private set; }
-        public ExcelSheet<T> GetExcelSheet<T>(Language? language = null, string name = null) where T : struct, IExcelRow<T>
-        { if (disposed) throw new ObjectDisposedException(nameof(GameData)); return Excel.GetSheet<T>(language, name); }
-        public SubrowExcelSheet<T> GetSubrowExcelSheet<T>(Language? language = null, string name = null) where T : struct, IExcelSubrow<T>
-        { if (disposed) throw new ObjectDisposedException(nameof(GameData)); return Excel.GetSubrowSheet<T>(language, name); }
+
+        public ExcelSheet<T> GetExcelSheet<T>(Language? language = null, string name = null)
+            where T : struct, IExcelRow<T>
+        {
+            if (disposed)
+                throw new ObjectDisposedException(nameof(GameData));
+
+            return Excel.GetSheet<T>(language, name);
+        }
+
+        public SubrowExcelSheet<T> GetSubrowExcelSheet<T>(Language? language = null, string name = null)
+            where T : struct, IExcelSubrow<T>
+        {
+            if (disposed)
+                throw new ObjectDisposedException(nameof(GameData));
+
+            return Excel.GetSubrowSheet<T>(language, name);
+        }
+
         public FileHandleManager FileHandleManager { get; private set; }
         public SqPackStreamPool StreamPool { get; set; }
         internal ILogger Logger { get; private set; }
 
-        public static GameData CurrentContext { get { GameData value; return context != null && context.TryGetTarget(out value) ? value : null; } }
+        public static GameData CurrentContext
+        {
+            get
+            {
+                GameData value;
+                return context != null && context.TryGetTarget(out value) ? value : null;
+            }
+        }
 
         public GameData(string dataPath, LuminaOptions options = null)
         {
             Options = options ?? new LuminaOptions();
             DataPath = new DirectoryInfo(dataPath);
+
             if (!DataPath.Exists)
                 throw new DirectoryNotFoundException(DataPath.FullName);
+
             if (!DataPath.Name.Equals("sqpack", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Choose the game's sqpack directory.", nameof(dataPath));
+
             Repositories = new Dictionary<string, Repository>(StringComparer.OrdinalIgnoreCase);
+
             try
             {
                 foreach (var directory in DataPath.GetDirectories())
                     Repositories.Add(directory.Name, new Repository(directory, this));
+
                 FileHandleManager = new FileHandleManager(this);
                 Excel = new ExcelModule(this);
                 StreamPool = new SqPackStreamPool();
@@ -62,14 +90,19 @@ namespace Lumina
         {
             if (string.IsNullOrWhiteSpace(path))
                 return null;
+
             path = path.Trim().Replace('\\', '/').ToLowerInvariant();
             int split = path.LastIndexOf('/');
+
             if (path.Length >= 260 || split < 1 || split == path.Length - 1)
                 return null;
+
             var parts = path.Split('/');
             var repository = parts[1];
+
             if (repository.Length < 3 || !repository.StartsWith("ex", StringComparison.Ordinal) || !char.IsDigit(repository[2]))
                 repository = "ffxiv";
+
             return new ParsedFilePath
             {
                 Category = parts[0],
@@ -90,6 +123,7 @@ namespace Lumina
         {
             if (disposed)
                 throw new ObjectDisposedException(nameof(GameData));
+
             SetCurrentContext();
             var parsed = ParseFilePath(path);
             Repository repo;
@@ -101,6 +135,7 @@ namespace Lumina
         {
             if (disposed)
                 throw new ObjectDisposedException(nameof(GameData));
+
             SetCurrentContext();
             var file = Activator.CreateInstance<T>();
             file.Data = File.ReadAllBytes(path);
@@ -149,20 +184,23 @@ namespace Lumina
         {
             if (disposed)
                 return;
+
             disposed = true;
+
             if (StreamPool != null)
             {
                 StreamPool.Dispose();
                 StreamPool = null;
             }
 
-            if (ReferenceEquals(CurrentContext, this)) context = null;
+            if (ReferenceEquals(CurrentContext, this))
+                context = null;
         }
     }
 
     public sealed class ParsedFilePath
     {
-        public static implicit operator string (ParsedFilePath value)
+        public static implicit operator string(ParsedFilePath value)
         {
             return value == null ? null : value.Path;
         }

@@ -2,12 +2,12 @@
 {
     partial class LogView
     {
-        /// <summary> 
+        /// <summary>
         /// 必需的设计器变量。
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
+        /// <summary>
         /// 清理所有正在使用的资源。
         /// </summary>
         /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
@@ -17,12 +17,12 @@
             {
                 components.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
         #region 组件设计器生成的代码
-
-        /// <summary> 
+        /// <summary>
         /// 设计器支持所需的方法 - 不要修改
         /// 使用代码编辑器修改此方法的内容。
         /// </summary>
@@ -51,9 +51,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.dgvLog)).BeginInit();
             this.ctxRightClickMenu.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // tableLog
-            // 
+            //
             this.tableLog.AutoSize = true;
             this.tableLog.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.tableLog.BackColor = System.Drawing.SystemColors.ActiveCaption;
@@ -91,9 +91,9 @@
             this.tableLog.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLog.Size = new System.Drawing.Size(1014, 649);
             this.tableLog.TabIndex = 1;
-            // 
+            //
             // chkLogFilterVerbose
-            // 
+            //
             this.chkLogFilterVerbose.AutoCheck = false;
             this.chkLogFilterVerbose.AutoSize = true;
             this.chkLogFilterVerbose.Checked = false;
@@ -111,9 +111,9 @@
             this.chkLogFilterVerbose.UseVisualStyleBackColor = true;
             this.chkLogFilterVerbose.MouseClick += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseClick);
             this.chkLogFilterVerbose.MouseDown += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseDown);
-            // 
+            //
             // chkLogFilterSim
-            // 
+            //
             this.chkLogFilterSim.AutoCheck = false;
             this.chkLogFilterSim.AutoSize = true;
             this.chkLogFilterSim.Checked = true;
@@ -131,9 +131,9 @@
             this.chkLogFilterSim.UseVisualStyleBackColor = true;
             this.chkLogFilterSim.MouseClick += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseClick);
             this.chkLogFilterSim.MouseDown += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseDown);
-            // 
+            //
             // chkLogFilterRuntime
-            // 
+            //
             this.chkLogFilterRuntime.AutoCheck = false;
             this.chkLogFilterRuntime.AutoSize = true;
             this.chkLogFilterRuntime.Checked = true;
@@ -151,9 +151,9 @@
             this.chkLogFilterRuntime.UseVisualStyleBackColor = true;
             this.chkLogFilterRuntime.MouseClick += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseClick);
             this.chkLogFilterRuntime.MouseDown += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseDown);
-            // 
+            //
             // chkLogWarning
-            // 
+            //
             this.chkLogWarning.AutoCheck = false;
             this.chkLogWarning.AutoSize = true;
             this.chkLogWarning.Checked = true;
@@ -171,9 +171,9 @@
             this.chkLogWarning.UseVisualStyleBackColor = true;
             this.chkLogWarning.MouseClick += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseClick);
             this.chkLogWarning.MouseDown += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseDown);
-            // 
+            //
             // chkLogFilterError
-            // 
+            //
             this.chkLogFilterError.AutoCheck = false;
             this.chkLogFilterError.AutoSize = true;
             this.chkLogFilterError.Checked = true;
@@ -191,9 +191,9 @@
             this.chkLogFilterError.UseVisualStyleBackColor = true;
             this.chkLogFilterError.MouseClick += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseClick);
             this.chkLogFilterError.MouseDown += new System.Windows.Forms.MouseEventHandler(this.chkLogFilters_MouseDown);
-            // 
+            //
             // chkLogFilterAll
-            // 
+            //
             this.chkLogFilterAll.AutoCheck = false;
             this.chkLogFilterAll.AutoSize = true;
             this.chkLogFilterAll.CheckState = System.Windows.Forms.CheckState.Indeterminate;
@@ -210,9 +210,9 @@
             this.chkLogFilterAll.UseVisualStyleBackColor = true;
             this.chkLogFilterAll.MouseClick += new System.Windows.Forms.MouseEventHandler(this.chkLogFilterAll_MouseClick);
             this.chkLogFilterAll.MouseDown += new System.Windows.Forms.MouseEventHandler(this.chkLogFilterAll_MouseDown);
-            // 
+            //
             // lblLogRegex
-            // 
+            //
             this.lblLogRegex.AutoSize = true;
             this.lblLogRegex.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblLogRegex.Location = new System.Drawing.Point(15, 604);
@@ -222,9 +222,9 @@
             this.lblLogRegex.TabIndex = 0;
             this.lblLogRegex.Text = "正则搜索";
             this.lblLogRegex.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
+            //
             // btnLogSearch
-            // 
+            //
             this.btnLogSearch.AutoSize = true;
             this.btnLogSearch.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnLogSearch.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -237,9 +237,9 @@
             this.btnLogSearch.Text = "　搜索　";
             this.btnLogSearch.UseVisualStyleBackColor = true;
             this.btnLogSearch.Click += new System.EventHandler(this.btnLogSearch_Click);
-            // 
+            //
             // txtLogRegex
-            // 
+            //
             this.txtLogRegex.Dock = System.Windows.Forms.DockStyle.Fill;
             this.txtLogRegex.Location = new System.Drawing.Point(107, 607);
             this.txtLogRegex.Margin = new System.Windows.Forms.Padding(3, 13, 3, 13);
@@ -248,18 +248,20 @@
             this.txtLogRegex.TabIndex = 2;
             this.txtLogRegex.TextChanged += new System.EventHandler(this.txtLogRegex_TextChanged);
             this.txtLogRegex.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtLogRegex_KeyDown);
-            // 
+            //
             // dgvLog
-            // 
+            //
             this.dgvLog.AllowUserToAddRows = false;
             this.dgvLog.AllowUserToDeleteRows = false;
             this.dgvLog.AllowUserToResizeRows = false;
             this.dgvLog.BackgroundColor = System.Drawing.SystemColors.Control;
             this.dgvLog.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvLog.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.colTime,
-            this.colType,
-            this.colText});
+            this.dgvLog.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[]
+            {
+                this.colTime,
+                this.colType,
+                this.colText
+            });
             this.tableLog.SetColumnSpan(this.dgvLog, 2);
             this.dgvLog.ContextMenuStrip = this.ctxRightClickMenu;
             this.dgvLog.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -278,66 +280,68 @@
             this.dgvLog.CellFormatting += new System.Windows.Forms.DataGridViewCellFormattingEventHandler(this.dgvLog_CellFormatting);
             this.dgvLog.CellMouseDown += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dgvLog_CellMouseDown);
             this.dgvLog.CellValueNeeded += new System.Windows.Forms.DataGridViewCellValueEventHandler(this.dgvLog_CellValueNeeded);
-            // 
+            //
             // colTime
-            // 
+            //
             this.colTime.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
             this.colTime.HeaderText = "时间";
             this.colTime.MinimumWidth = 6;
             this.colTime.Name = "colTime";
             this.colTime.ReadOnly = true;
             this.colTime.Width = 71;
-            // 
+            //
             // colType
-            // 
+            //
             this.colType.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
             this.colType.HeaderText = "类别";
             this.colType.MinimumWidth = 6;
             this.colType.Name = "colType";
             this.colType.ReadOnly = true;
             this.colType.Width = 71;
-            // 
+            //
             // colText
-            // 
+            //
             this.colText.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.colText.HeaderText = "信息";
             this.colText.MinimumWidth = 6;
             this.colText.Name = "colText";
             this.colText.ReadOnly = true;
-            // 
+            //
             // ctxRightClickMenu
-            // 
+            //
             this.ctxRightClickMenu.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.ctxRightClickMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.mnuLogCopySelected,
-            this.mnuLogDeleteSelected,
-            this.mnuLogClearAll});
+            this.ctxRightClickMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[]
+            {
+                this.mnuLogCopySelected,
+                this.mnuLogDeleteSelected,
+                this.mnuLogClearAll
+            });
             this.ctxRightClickMenu.Name = "ctxRightClickMenu";
             this.ctxRightClickMenu.Size = new System.Drawing.Size(154, 76);
-            // 
+            //
             // mnuLogCopySelected
-            // 
+            //
             this.mnuLogCopySelected.Name = "mnuLogCopySelected";
             this.mnuLogCopySelected.Size = new System.Drawing.Size(210, 24);
             this.mnuLogCopySelected.Text = "复制选中行";
             this.mnuLogCopySelected.Click += new System.EventHandler(this.mnuLogCopySelected_Click);
-            // 
+            //
             // mnuLogDeleteSelected
-            // 
+            //
             this.mnuLogDeleteSelected.Name = "mnuLogDeleteSelected";
             this.mnuLogDeleteSelected.Size = new System.Drawing.Size(210, 24);
             this.mnuLogDeleteSelected.Text = "删除选中行";
             this.mnuLogDeleteSelected.Click += new System.EventHandler(this.mnuLogDeleteSelected_Click);
-            // 
+            //
             // mnuLogClearAll
-            // 
+            //
             this.mnuLogClearAll.Name = "mnuLogClearAll";
             this.mnuLogClearAll.Size = new System.Drawing.Size(210, 24);
             this.mnuLogClearAll.Text = "全部清空";
             this.mnuLogClearAll.Click += new System.EventHandler(this.mnuLogClearAll_Click);
-            // 
+            //
             // LogView
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.tableLog);
@@ -353,7 +357,6 @@
         }
 
         #endregion
-
         private System.Windows.Forms.TableLayoutPanel tableLog;
         private System.Windows.Forms.CheckBox chkLogFilterVerbose;
         private System.Windows.Forms.CheckBox chkLogFilterSim;

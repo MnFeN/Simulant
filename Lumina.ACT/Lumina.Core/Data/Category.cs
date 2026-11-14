@@ -28,12 +28,14 @@ namespace Lumina.Data
             Index = index;
             RootDir = rootDir;
             DatFiles = new Dictionary<byte, SqPack>();
+
             // init dats
             for (byte id = 0; id < index.IndexHeader.number_of_data_file; id++)
             {
                 var datName = Repository.BuildDatStr(CategoryId, Expansion, Chunk, Platform, $"dat{id}");
                 var path = Path.Combine(RootDir.FullName, datName);
                 var fileInfo = new FileInfo(path);
+
                 if (fileInfo.Exists)
                 {
                     DatFiles[id] = new SqPack(fileInfo, _gameData);
@@ -42,6 +44,7 @@ namespace Lumina.Data
 
             // postprocess indexes into one hashlist
             IndexHashTableEntries = new Dictionary<ulong, IndexHashTableEntry>();
+
             if (index.IsIndex2)
             {
                 Index2HashTableEntries = index.HashTableEntries2;
@@ -87,7 +90,7 @@ namespace Lumina.Data
             }
 
             cleanup:
-                dataFileId = 0;
+            dataFileId = 0;
             offset = 0;
             return false;
         }
@@ -107,7 +110,7 @@ namespace Lumina.Data
             }
 
             cleanup:
-                dataFileId = 0;
+            dataFileId = 0;
             offset = 0;
             return false;
         }
@@ -126,6 +129,7 @@ namespace Lumina.Data
             where T : FileResource
         {
             var status = TryGetFileDatOffset(hash, out var dataFileId, out var offset);
+
             if (!status)
             {
                 return null;
@@ -138,6 +142,7 @@ namespace Lumina.Data
             where T : FileResource
         {
             var status = TryGetFileDatOffset(hash, out var dataFileId, out var offset);
+
             if (!status)
             {
                 return null;
@@ -150,6 +155,7 @@ namespace Lumina.Data
             where T : FileResource
         {
             var status = TryGetFileDatOffset(path, out var dataFileId, out var offset);
+
             if (!status)
             {
                 return null;
@@ -171,6 +177,7 @@ namespace Lumina.Data
         public SqPackFileInfo? GetFileMetadata(ParsedFilePath path)
         {
             var status = TryGetFileDatOffset(path, out var dataFileId, out var offset);
+
             if (!status)
             {
                 return null;

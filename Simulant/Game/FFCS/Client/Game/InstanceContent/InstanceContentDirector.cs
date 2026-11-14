@@ -17,11 +17,12 @@ namespace Simulant.Game.FFCS.Client.Game.InstanceContent
         public MemoryField<byte> ContentTypeRowId => ContentDirector.ContentTypeRowId;
         public ContentDirector.MapEffectList MapEffects => ContentDirector.MapEffects;
         public MemoryField<float> ContentTimeLeft => ContentDirector.ContentTimeLeft;
+
         public uint GetCurrentLevel() => ContentDirector.GetCurrentLevel();
         public uint GetMaxLevel() => ContentDirector.GetMaxLevel();
         public uint GetContentTimeMax() => ContentDirector.GetContentTimeMax();
-        #endregion
 
+        #endregion
         public MemoryField<InstanceContentType> InstanceContentType => Ptr.Field<InstanceContentType>(0xD30 + 0x9E);
     }
 

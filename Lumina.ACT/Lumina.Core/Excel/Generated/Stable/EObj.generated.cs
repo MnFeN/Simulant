@@ -19,7 +19,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Excel.ExcelPage ExcelPage => page;
         public uint RowOffset => offset;
         public uint RowId => row;
-        public global::Lumina.Excel.RowRef Data => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[] { typeof(Quest), typeof(CustomTalk), typeof(Warp) }, -1704485337, page.Language);
+        public global::Lumina.Excel.RowRef Data => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[]
+        {
+            typeof(Quest), typeof(CustomTalk), typeof(Warp)
+        }, -1704485337, page.Language);
         public global::Lumina.Excel.RowRef<ExportedSG> SgbPath => new global::Lumina.Excel.RowRef<ExportedSG>(page.Module, (uint)page.ReadUInt16(offset + 4), page.Language);
         public byte PopType => page.ReadUInt8(offset + 6);
         public byte Invisibility => page.ReadUInt8(offset + 7);

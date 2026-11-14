@@ -22,7 +22,6 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         public MemoryField<float> CurrentCastTime => Ptr.Field<float>(0x34);
         public MemoryField<float> BaseCastTime => Ptr.Field<float>(0x38);
         public MemoryField<float> TotalCastTime => Ptr.Field<float>(0x3C);
-
         /* 模拟器不需要 Response 相关字段
         
         // fields below (Response*) are set when ActionEffect is received - at this point cast can't be cancelled - this is the start of the slidecast window

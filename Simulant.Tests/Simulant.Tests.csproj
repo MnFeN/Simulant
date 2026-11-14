@@ -22,25 +22,51 @@
     <Reference Include="System.Web.Extensions" />
     <Compile Include="Program.cs" />
     <Compile Include="MathParserTests.cs" />
-    <Compile Include="..\Simulant\Utils\Maths\MathParser.cs"><Link>Utils\Maths\MathParser.cs</Link></Compile>
+    <Compile Include="..\Simulant\Utils\Maths\MathParser.cs">
+      <Link>Utils\Maths\MathParser.cs</Link>
+    </Compile>
     <Compile Include="CosmoArrowTests.cs" />
     <Compile Include="CrystallizeTimeTests.cs" />
-    <Compile Include="..\Simulant\Content\U7a\Presets\P4时间结晶.Plan.cs"><Link>Content\P4时间结晶.Plan.cs</Link></Compile>
-    <Compile Include="..\Simulant\Content\U6b\Presets\宇宙天箭.Plan.cs"><Link>Content\宇宙天箭.Plan.cs</Link></Compile>
+    <Compile Include="..\Simulant\Content\U7a\Presets\P4时间结晶.Plan.cs">
+      <Link>Content\P4时间结晶.Plan.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Content\U6b\Presets\宇宙天箭.Plan.cs">
+      <Link>Content\宇宙天箭.Plan.cs</Link>
+    </Compile>
     <Compile Include="ConfigurationTests.cs" />
-    <Compile Include="..\Simulant\Game\Data\FfxivInstallation.cs"><Link>Game\FfxivInstallation.cs</Link></Compile>
+    <Compile Include="..\Simulant\Game\Data\FfxivInstallation.cs">
+      <Link>Game\FfxivInstallation.cs</Link>
+    </Compile>
     <Compile Include="PluginUpdaterTests.cs" />
-    <Compile Include="..\Simulant\Core\PluginUpdater.cs"><Link>Core\PluginUpdater.cs</Link></Compile>
-    <Compile Include="..\Simulant\Configuration.cs"><Link>Configuration.cs</Link></Compile>
+    <Compile Include="..\Simulant\Core\PluginUpdater.cs">
+      <Link>Core\PluginUpdater.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Configuration.cs">
+      <Link>Configuration.cs</Link>
+    </Compile>
     <Compile Include="SessionTests.cs" />
     <Compile Include="WaymarkTests.cs" />
-    <Compile Include="..\Simulant\Core\Environment\WaymarkLayout.cs"><Link>Environment\WaymarkLayout.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Environment\PhaseData.cs"><Link>Environment\PhaseData.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Environment\Attributes.cs"><Link>Environment\Attributes.cs</Link></Compile>
-    <Compile Include="..\Simulant\Content\U5a\U5a.cs"><Link>Content\U5a.cs</Link></Compile>
-    <Compile Include="..\Simulant\Content\U6b\U6b.cs"><Link>Content\U6b.cs</Link></Compile>
-    <Compile Include="..\Simulant\Content\U7a\U7a.cs"><Link>Content\U7a.cs</Link></Compile>
-    <Compile Include="..\Simulant\Content\U7b\U7b.cs"><Link>Content\U7b.cs</Link></Compile>
+    <Compile Include="..\Simulant\Core\Environment\WaymarkLayout.cs">
+      <Link>Environment\WaymarkLayout.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Environment\PhaseData.cs">
+      <Link>Environment\PhaseData.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Environment\Attributes.cs">
+      <Link>Environment\Attributes.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Content\U5a\U5a.cs">
+      <Link>Content\U5a.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Content\U6b\U6b.cs">
+      <Link>Content\U6b.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Content\U7a\U7a.cs">
+      <Link>Content\U7a.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Content\U7b\U7b.cs">
+      <Link>Content\U7b.cs</Link>
+    </Compile>
     <Compile Include="EntityTests.cs" />
     <Compile Include="MovementTests.cs" />
     <Compile Include="BehaviorMovementTests.cs" />
@@ -49,7 +75,9 @@
     <Compile Include="SessionStatusTests.cs" />
     <Compile Include="PartyNameTests.cs" />
     <Compile Include="EntityTestDoubles.cs" />
-    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\ActorMovePacket.cs"><Link>Runtime\ActorMovePacket.cs</Link></Compile>
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\ActorMovePacket.cs">
+      <Link>Runtime\ActorMovePacket.cs</Link>
+    </Compile>
     <Compile Include="GameDataTestDoubles.cs" />
     <Compile Include="NetworkSpawnTests.cs" />
     <Compile Include="NetworkManagerTests.cs" />
@@ -66,43 +94,117 @@
     <Compile Include="ZonePhaseTests.cs" />
     <Compile Include="FirewallTests.cs" />
     <Compile Include="FirewallTestDoubles.cs" />
-    <Compile Include="..\Simulant\ACT\XivPluginInterop.cs"><Link>ACT\XivPluginInterop.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Firewall\FirewallService.cs"><Link>Firewall\FirewallService.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Zone\PhaseApplication.cs"><Link>Zone\PhaseApplication.cs</Link></Compile>
-    <Compile Include="..\Simulant\Content\U7b\Presets\P5地火.Placement.cs"><Link>Content\P5地火.Placement.cs</Link></Compile>
-    <Compile Include="..\Simulant\Content\U7b\Presets\P2遗弃末世.Plan.cs"><Link>Content\P2遗弃末世.Plan.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Options\RandomEnumAttribute.cs"><Link>Options\RandomEnumAttribute.cs</Link></Compile>
-    <Compile Include="..\Simulant\Content\U7b\Presets\P2遗弃末世.Timing.cs"><Link>Content\P2遗弃末世.Timing.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Entity\NetworkNpcSpawnSpec.cs"><Link>Entity\NetworkNpcSpawnSpec.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Entity\NetworkPlayerSpawnSpec.cs"><Link>Entity\NetworkPlayerSpawnSpec.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Entity\PlayerAppearanceSnapshot.cs"><Link>Entity\PlayerAppearanceSnapshot.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Entity\JobEquipment.cs"><Link>Entity\JobEquipment.cs</Link></Compile>
-    <Compile Include="..\Simulant\Game\PacketCodec.cs"><Link>Game\PacketCodec.cs</Link></Compile>
-    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Character\CharacterEnums.cs"><Link>Game\CharacterEnums.cs</Link></Compile>
-    <Compile Include="..\Simulant\Replay\*.cs"><Link>Replay\%(Filename)%(Extension)</Link></Compile>
-    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\SpawnPackets.cs"><Link>Game\SpawnPackets.cs</Link></Compile>
-    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\NetworkSpawnPackets.cs"><Link>Game\NetworkSpawnPackets.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Entity\EntityIdentity.cs"><Link>Entity\EntityIdentity.cs</Link></Compile>
-    <Compile Include="..\Simulant\Core\Entity\EntityRegistry.cs"><Link>Entity\EntityRegistry.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimActor.cs"><Link>Runtime\SimActor.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimActorBehavior*.cs"><Link>Runtime\%(Filename)%(Extension)</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimJobActions.cs"><Link>Runtime\SimJobActions.cs</Link></Compile>
-    <Compile Include="..\Simulant\Game\ActorControlCategory.cs"><Link>Game\ActorControlCategory.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimCastController.cs"><Link>Runtime\SimCastController.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimOmenRenderer.cs"><Link>Runtime\SimOmenRenderer.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.cs"><Link>Runtime\SimEntityManager.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Network.cs"><Link>Runtime\SimEntityManager.Network.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Statuses.cs"><Link>Runtime\SimEntityManager.Statuses.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Names.cs"><Link>Runtime\SimEntityManager.Names.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimPartyNames.cs"><Link>Runtime\SimPartyNames.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Mechanics.cs"><Link>Runtime\SimEntityManager.Mechanics.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Geometry\*.cs"><Link>Geometry\%(Filename)%(Extension)</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Mechanics\*.cs"><Link>Mechanics\%(Filename)%(Extension)</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimMovementController.cs"><Link>Runtime\SimMovementController.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Runtime\SimSession.cs"><Link>Runtime\SimSession.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Timeline\SimTimeline.cs"><Link>Timeline\SimTimeline.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Timeline\SimScheduler.cs"><Link>Timeline\SimScheduler.cs</Link></Compile>
-    <Compile Include="..\Simulant\Simulation\Timeline\SimScheduledAction.cs"><Link>Timeline\SimScheduledAction.cs</Link></Compile>
+    <Compile Include="..\Simulant\ACT\XivPluginInterop.cs">
+      <Link>ACT\XivPluginInterop.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Firewall\FirewallService.cs">
+      <Link>Firewall\FirewallService.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Zone\PhaseApplication.cs">
+      <Link>Zone\PhaseApplication.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Content\U7b\Presets\P5地火.Placement.cs">
+      <Link>Content\P5地火.Placement.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Content\U7b\Presets\P2遗弃末世.Plan.cs">
+      <Link>Content\P2遗弃末世.Plan.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Options\RandomEnumAttribute.cs">
+      <Link>Options\RandomEnumAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Content\U7b\Presets\P2遗弃末世.Timing.cs">
+      <Link>Content\P2遗弃末世.Timing.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Entity\NetworkNpcSpawnSpec.cs">
+      <Link>Entity\NetworkNpcSpawnSpec.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Entity\NetworkPlayerSpawnSpec.cs">
+      <Link>Entity\NetworkPlayerSpawnSpec.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Entity\PlayerAppearanceSnapshot.cs">
+      <Link>Entity\PlayerAppearanceSnapshot.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Entity\JobEquipment.cs">
+      <Link>Entity\JobEquipment.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Game\PacketCodec.cs">
+      <Link>Game\PacketCodec.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Character\CharacterEnums.cs">
+      <Link>Game\CharacterEnums.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Replay\*.cs">
+      <Link>Replay\%(Filename)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\SpawnPackets.cs">
+      <Link>Game\SpawnPackets.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\Network\NetworkSpawnPackets.cs">
+      <Link>Game\NetworkSpawnPackets.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Entity\EntityIdentity.cs">
+      <Link>Entity\EntityIdentity.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Entity\EntityRegistry.cs">
+      <Link>Entity\EntityRegistry.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimActor.cs">
+      <Link>Runtime\SimActor.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimActorBehavior*.cs">
+      <Link>Runtime\%(Filename)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimJobActions.cs">
+      <Link>Runtime\SimJobActions.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Game\ActorControlCategory.cs">
+      <Link>Game\ActorControlCategory.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimCastController.cs">
+      <Link>Runtime\SimCastController.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimOmenRenderer.cs">
+      <Link>Runtime\SimOmenRenderer.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.cs">
+      <Link>Runtime\SimEntityManager.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Network.cs">
+      <Link>Runtime\SimEntityManager.Network.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Statuses.cs">
+      <Link>Runtime\SimEntityManager.Statuses.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Names.cs">
+      <Link>Runtime\SimEntityManager.Names.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimPartyNames.cs">
+      <Link>Runtime\SimPartyNames.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Mechanics.cs">
+      <Link>Runtime\SimEntityManager.Mechanics.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Geometry\*.cs">
+      <Link>Geometry\%(Filename)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Mechanics\*.cs">
+      <Link>Mechanics\%(Filename)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimMovementController.cs">
+      <Link>Runtime\SimMovementController.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimSession.cs">
+      <Link>Runtime\SimSession.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Timeline\SimTimeline.cs">
+      <Link>Timeline\SimTimeline.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Timeline\SimScheduler.cs">
+      <Link>Timeline\SimScheduler.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Simulation\Timeline\SimScheduledAction.cs">
+      <Link>Timeline\SimScheduledAction.cs</Link>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

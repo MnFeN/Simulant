@@ -308,16 +308,22 @@ namespace Lumina.Data.Files
             var header = new BinaryHeader(Reader);
             var scdHeader = Reader.ReadStructure<ScdHeader>();
             _soundOffsets = new uint[scdHeader.SoundCount];
+
             for (var i = 0; i < scdHeader.SoundCount; i++)
                 _soundOffsets[i] = Reader.ReadUInt32();
+
             Reader.BaseStream.Position = scdHeader.TrackOffset;
             _trackOffsets = new uint[scdHeader.TrackCount];
+
             for (var i = 0; i < scdHeader.TrackCount; i++)
                 _trackOffsets[i] = Reader.ReadUInt32();
+
             Reader.BaseStream.Position = scdHeader.AudioOffset;
             _audioOffsets = new uint[scdHeader.AudioCount];
+
             for (var i = 0; i < scdHeader.AudioCount; i++)
                 _audioOffsets[i] = Reader.ReadUInt32();
+
             if (scdHeader.LayoutOffset != 0)
             {
                 Reader.Position = scdHeader.LayoutOffset;
@@ -343,6 +349,7 @@ namespace Lumina.Data.Files
             var soundBasicDesc = Reader.ReadStructure<SoundBasicDesc>();
             var sound = new Sound();
             sound.SoundBasicDesc = soundBasicDesc;
+
             if (soundBasicDesc.Attribute.HasFlag(SoundAttribute.ExistRoutingSetting))
             {
                 var routingInfo = Reader.ReadStructure<RoutingInfo>();
@@ -374,6 +381,7 @@ namespace Lumina.Data.Files
             if ((((soundBasicDesc.Type == SoundType.Random) || (soundBasicDesc.Type == SoundType.Cycle)) || (soundBasicDesc.Type == SoundType.GroupRandom)))
             {
                 sound.TrackInfos = Reader.ReadStructures<RandomTrackInfo>(soundBasicDesc.TrackCount);
+
                 if (soundBasicDesc.Type == SoundType.Cycle)
                 {
                     sound.CycleInfo = Reader.ReadStructure<CycleInfo>();
@@ -392,10 +400,12 @@ namespace Lumina.Data.Files
         {
             Reader.Position = _trackOffsets[index];
             var trackCmdData = new List<(TrackCmd, object)>();
+
             while (true)
             {
                 var cmd = (TrackCmd)Reader.ReadUInt16();
                 object data = null;
+
                 switch (cmd)
                 {
                     case TrackCmd.End:
@@ -642,6 +652,7 @@ namespace Lumina.Data.Files
             var audio = new Audio();
             audio.AudioBasicDesc = audioBasicDesc;
             var subInfoStartPos = Reader.Position;
+
             if (audioBasicDesc.Flg.HasFlag(AudioFlag.MarkerChunk))
             {
                 var subInfoMarkerChunk = Reader.ReadStructure<SubInfoMarkerChunk>();
@@ -656,37 +667,38 @@ namespace Lumina.Data.Files
                     audio.AudioData = Array.Empty<byte>();
                     break;
                 case AudioFormat.OggVorbis:
-                {
-                    var oggSeekTableHeader = Reader.ReadStructure<OggVorbisSeekTableHeader>();
-                    audio.AudioDataHeader = oggSeekTableHeader;
-                    audio.SeekTable = Reader.ReadUInt32Array((int)(oggSeekTableHeader.SeekTableSize / 4));
-                    Reader.Position = subInfoStartPos + audioBasicDesc.SubInfoSize - oggSeekTableHeader.OggHeaderSize;
-                    var oggFile = new byte[oggSeekTableHeader.OggHeaderSize + audioBasicDesc.Size];
-                    Array.Copy(Reader.ReadBytes((int)oggSeekTableHeader.OggHeaderSize), oggFile, oggSeekTableHeader.OggHeaderSize);
-                    Array.Copy(Reader.ReadBytes((int)audioBasicDesc.Size), 0, oggFile, oggSeekTableHeader.OggHeaderSize, audioBasicDesc.Size);
-                    switch (oggSeekTableHeader.Version)
                     {
-                        case 2:
-                            for (var j = 0; j < oggSeekTableHeader.OggHeaderSize; j++)
-                                oggFile[j] ^= oggSeekTableHeader.XorByte;
-                            break;
-                        case 3:
-                            var byte1 = (byte)(audioBasicDesc.Size & 0x7F);
-                            var byte2 = (byte)(byte1 & 0x3F);
-                            for (var j = 0; j < oggFile.Length; j++)
-                            {
-                                byte xorByte = OggXorTable[(byte2 + j) & 0xFF];
-                                xorByte ^= oggFile[j];
-                                xorByte ^= byte1;
-                                oggFile[j] = xorByte;
-                            }
+                        var oggSeekTableHeader = Reader.ReadStructure<OggVorbisSeekTableHeader>();
+                        audio.AudioDataHeader = oggSeekTableHeader;
+                        audio.SeekTable = Reader.ReadUInt32Array((int)(oggSeekTableHeader.SeekTableSize / 4));
+                        Reader.Position = subInfoStartPos + audioBasicDesc.SubInfoSize - oggSeekTableHeader.OggHeaderSize;
+                        var oggFile = new byte[oggSeekTableHeader.OggHeaderSize + audioBasicDesc.Size];
+                        Array.Copy(Reader.ReadBytes((int)oggSeekTableHeader.OggHeaderSize), oggFile, oggSeekTableHeader.OggHeaderSize);
+                        Array.Copy(Reader.ReadBytes((int)audioBasicDesc.Size), 0, oggFile, oggSeekTableHeader.OggHeaderSize, audioBasicDesc.Size);
 
-                            break;
+                        switch (oggSeekTableHeader.Version)
+                        {
+                            case 2:
+                                for (var j = 0; j < oggSeekTableHeader.OggHeaderSize; j++)
+                                    oggFile[j] ^= oggSeekTableHeader.XorByte;
+                                break;
+                            case 3:
+                                var byte1 = (byte)(audioBasicDesc.Size & 0x7F);
+                                var byte2 = (byte)(byte1 & 0x3F);
+                                for (var j = 0; j < oggFile.Length; j++)
+                                {
+                                    byte xorByte = OggXorTable[(byte2 + j) & 0xFF];
+                                    xorByte ^= oggFile[j];
+                                    xorByte ^= byte1;
+                                    oggFile[j] = xorByte;
+                                }
+
+                                break;
+                        }
+
+                        audio.AudioData = oggFile;
+                        break;
                     }
-
-                    audio.AudioData = oggFile;
-                    break;
-                }
 
                 case AudioFormat.Mp3:
                     var id = Reader.PeekBytes(4);
@@ -730,6 +742,7 @@ namespace Lumina.Data.Files
         {
             if (_layoutOffset == 0)
                 return null;
+
             Reader.BaseStream.Position = _layoutOffset;
             return new SoundObject(Reader);
         }
@@ -738,6 +751,7 @@ namespace Lumina.Data.Files
         {
             if (_attributeOffset == 0)
                 return null;
+
             Reader.Position = _attributeOffset;
             return new AttributeData(Reader);
         }

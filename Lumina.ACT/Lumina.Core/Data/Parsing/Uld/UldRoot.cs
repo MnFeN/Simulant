@@ -121,6 +121,7 @@ namespace Lumina.Data.Parsing.Uld
                 ret.Id = br.ReadUInt32();
                 ret.Path = br.ReadChars(44);
                 ret.IconId = br.ReadUInt32();
+
                 if (version > 100)
                 {
                     ret.ThemeSupportBitmask = br.ReadByte();
@@ -166,8 +167,10 @@ namespace Lumina.Data.Parsing.Uld
                 ret.PartCount = br.ReadUInt32();
                 ret.Offset = br.ReadUInt32();
                 ret.Parts = new PartData[ret.PartCount];
+
                 for (int i = 0; i < ret.PartCount; i++)
                     ret.Parts[i] = PartData.Read(br);
+
                 return ret;
             }
         }
@@ -277,6 +280,7 @@ namespace Lumina.Data.Parsing.Uld
                 ret.Alpha = br.ReadByte();
                 ret.ClipCount = br.ReadByte();
                 ret.TimelineId = br.ReadUInt16();
+
                 switch (ret.NodeType)
                 {
                     case 1:
@@ -343,6 +347,7 @@ namespace Lumina.Data.Parsing.Uld
                 ret.NodeCount = br.ReadUInt32();
                 ret.Size = br.ReadUInt16();
                 ret.Offset = br.ReadUInt16();
+
                 switch (ret.Type)
                 {
                     case Uld.ComponentData.ComponentType.Button:
@@ -419,8 +424,10 @@ namespace Lumina.Data.Parsing.Uld
                 // adjust position because of inconsisty within the same ComponentList version...
                 br.BaseStream.Position = originalPos + ret.Offset;
                 ret.Nodes = new NodeData[ret.NodeCount];
+
                 for (int i = 0; i < ret.NodeCount; i++)
                     ret.Nodes[i] = NodeData.Read(br, definedComponentList);
+
                 return ret;
             }
         }
@@ -440,6 +447,7 @@ namespace Lumina.Data.Parsing.Uld
                 ret.Offset = br.ReadUInt16();
                 ret.KeyframeCount = br.ReadUInt16();
                 ret.Frames = new IKeyframe[ret.KeyframeCount];
+
                 switch (ret.Type)
                 {
                     case KeyGroupType.Float1:
@@ -568,8 +576,10 @@ namespace Lumina.Data.Parsing.Uld
                 ret.Offset = br.ReadUInt32();
                 ret.KeygroupCount = br.ReadUInt32();
                 ret.KeyGroups = new KeyGroup[ret.KeygroupCount];
+
                 for (int i = 0; i < ret.KeygroupCount; i++)
                     ret.KeyGroups[i] = KeyGroup.Read(br);
+
                 return ret;
             }
         }
@@ -593,8 +603,10 @@ namespace Lumina.Data.Parsing.Uld
                 ret.numframes2 = br.ReadUInt16();
                 ret.NumFrames = (uint)(ret.numframes1 + ret.numframes2);
                 ret.FrameData = new FrameData[ret.NumFrames];
+
                 for (int i = 0; i < ret.NumFrames; i++)
                     ret.FrameData[i] = UldRoot.FrameData.Read(br);
+
                 br.BaseStream.Position = pos + ret.Offset;
                 return ret;
             }
@@ -622,8 +634,10 @@ namespace Lumina.Data.Parsing.Uld
                 ret.NodeCount = br.ReadUInt16();
                 ret.Offset = br.ReadUInt16();
                 ret.Nodes = new NodeData[ret.NodeCount];
+
                 for (int i = 0; i < ret.NodeCount; i++)
                     ret.Nodes[i] = NodeData.Read(br, definedComponentList);
+
                 return ret;
             }
         }

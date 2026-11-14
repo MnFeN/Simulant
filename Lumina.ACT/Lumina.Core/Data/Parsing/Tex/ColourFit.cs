@@ -16,6 +16,7 @@ namespace Lumina.Data.Parsing.Tex
             if (this._Flags.HasFlag(SquishOptions.DXT1))
             {
                 Compress3(block);
+
                 if (!this._Colours.IsTransparent)
                     Compress4(block);
             }

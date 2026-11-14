@@ -54,7 +54,14 @@
         private static void VerifyExhaustion(bool player)
         {
             var baseId = player ? PlayerBase : NpcBase;
-            foreach (var clientAtLimit in new[] { false, true })
+
+            foreach (var clientAtLimit in new[]
+            {
+                false,
+                true
+            }
+
+            )
             {
                 var scene = new Scene();
                 SetObject(scene, 818, new IntPtr(0x800000),
@@ -87,23 +94,44 @@
         {
             var scene = new Scene();
             var baseId = player ? PlayerBase : NpcBase;
-            var occupied = new[] { baseId + 0x23, baseId + 0x2345, baseId + 0x1234 };
-            var slots = new ushort[] { 3, 500, 818 };
-            for (var i = 0; i < occupied.Length; i++) SetObject(scene, slots[i], new IntPtr(0x800000 + i * 0x1000), occupied[i], ObjectKind.EventObj);
+            var occupied = new[]
+            {
+                baseId + 0x23,
+                baseId + 0x2345,
+                baseId + 0x1234
+            };
+            var slots = new ushort[]
+            {
+                3,
+                500,
+                818
+            };
+
+            for (var i = 0; i < occupied.Length; i++)
+                SetObject(scene, slots[i], new IntPtr(0x800000 + i * 0x1000), occupied[i], ObjectKind.EventObj);
+
             SetCounter(player, 0);
             var entity = SpawnLocal(scene, player);
             Assert(entity.Id == baseId + 0x2346,
                 "计数器归零后必须从客户端同前缀最大低位编号加一，不能从较低空洞开始。");
             Assert(scene.Memory.ReadBytesCalls == 1, "一次分配只能批量读取一次全局指针表。");
+
             foreach (var i in Enumerable.Range(0, occupied.Length))
                 Assert(scene.Memory.ReadsByAddress[0x800000 + i * 0x1000 + 0x78] == 1,
                     "确定最大编号时每个原生对象 ID 只能读取一次。");
+
             scene.Spawner.Clear();
         }
 
         private static void VerifyIndependentPrefixes()
         {
-            foreach (var player in new[] { false, true })
+            foreach (var player in new[]
+            {
+                false,
+                true
+            }
+
+            )
             {
                 var scene = new Scene();
                 var baseId = player ? PlayerBase : NpcBase;
@@ -121,7 +149,13 @@
 
         private static void VerifyDeletionKeepsCounter()
         {
-            foreach (var player in new[] { false, true })
+            foreach (var player in new[]
+            {
+                false,
+                true
+            }
+
+            )
             {
                 var scene = new Scene();
                 var baseId = player ? PlayerBase : NpcBase;
@@ -142,7 +176,11 @@
         {
             var scene = new Scene();
             SetCounter(false, 0x1000);
-            var hidden = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0, BaseId = 1 });
+            var hidden = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec
+            {
+                Index = 0,
+                BaseId = 1
+            });
             var oldId = hidden.Id;
             hidden.DisableDraw();
             // 模拟旧插件只隐藏并丢弃引用的残留；新实现的 Delete 已会释放原生槽位。
@@ -190,10 +228,13 @@
             var scene = new Scene();
             SetCounter(false, 0x4000);
             scene.Plugin.FailDelete = true;
+
             scene.Memory.BeforeWrite = address =>
             {
-                if (address == scene.Native + 0xB0) throw new InvalidOperationException("模拟 ID 已赋值后的初始化失败。");
+                if (address == scene.Native + 0xB0)
+                    throw new InvalidOperationException("模拟 ID 已赋值后的初始化失败。");
             };
+
             Throws<AggregateException>(() => scene.Spawner.SpawnBNpc(1, 1, 1));
             Assert(scene.Pending && scene.FailedCount == 1 && scene.Memory.Read<uint>(scene.Native + 0x78) == NpcBase + 0x4001,
                 "必须实际留下带已分配 ID 的未交付失败记录。");
@@ -201,7 +242,10 @@
             scene.Memory.Put(scene.ObjectPointer, IntPtr.Zero);
             scene.Memory.Put(scene.LocalPointer, IntPtr.Zero);
             SetCounter(false, 0);
-            var current = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0 });
+            var current = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec
+            {
+                Index = 0
+            });
             Assert(current.Id == NpcBase + 0x4002 && scene.Plugin.DeleteCalls == 1,
                 "全局表已缺项时仍须从失败记录的高位 ID 继续，且不能顺带回收未知原对象。");
             scene.Spawner.ResetWorld();
@@ -210,13 +254,16 @@
         private static void VerifyLocalScanFailure(bool idRead)
         {
             var scene = new Scene();
+
             if (idRead)
             {
                 var pointer = new IntPtr(0x800000);
                 SetObject(scene, 818, pointer, NpcBase + 1, ObjectKind.EventObj);
                 scene.Memory.FailReadAddress = pointer + 0x78;
             }
-            else scene.Memory.FailReadBytes = true;
+            else
+                scene.Memory.FailReadBytes = true;
+
             Throws<InvalidOperationException>(() => scene.Spawner.SpawnBNpc(1, 1, 1));
             Assert(scene.Plugin.CreateCalls == 0 && scene.Plugin.DeleteCalls == 0 && scene.Plugin.CallCount == 0 &&
                 scene.Memory.WriteCalls == 0 && scene.Memory.AllocateCalls == 0 && !scene.Pending,
@@ -226,12 +273,18 @@
         private static void VerifyEventObjectScanFailure()
         {
             var scene = new Scene();
-            var original = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0 });
+            var original = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec
+            {
+                Index = 0
+            });
             var calls = scene.Plugin.CallCount;
             var writes = scene.Memory.WriteCalls;
             var allocations = scene.Memory.AllocateCalls;
             scene.Memory.FailReadBytes = true;
-            Throws<InvalidOperationException>(() => scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0 }));
+            Throws<InvalidOperationException>(() => scene.Spawner.SpawnEObj(new EventObjectSpawnSpec
+            {
+                Index = 0
+            }));
             Assert(scene.Spawner.Owns(original) && original.IsAlive && scene.Plugin.HiddenObjects.Count == 0 &&
                 scene.Plugin.CallCount == calls && scene.Memory.WriteCalls == writes && scene.Memory.AllocateCalls == allocations,
                 "扫描失败不能隐藏旧 EObj、发送覆盖包或破坏回收责任。");
@@ -290,15 +343,34 @@
 
         private static object BeginNetwork(Scene scene)
         {
-            var args = new object[] { new NetworkNpcSpawnSpec { BNpcBaseId = 1, ModelCharaId = 1, Battalion = 4 }, null };
-            try { typeof(EntitySpawner).GetMethod("BeginSpawnNetworkBNpc", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(scene.Spawner, args); }
-            catch (TargetInvocationException error) { throw error.InnerException; }
+            var args = new object[]
+            {
+                new NetworkNpcSpawnSpec
+                {
+                    BNpcBaseId = 1,
+                    ModelCharaId = 1,
+                    Battalion = 4
+                },
+                null
+            };
+
+            try
+            {
+                typeof(EntitySpawner).GetMethod("BeginSpawnNetworkBNpc", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(scene.Spawner, args);
+            }
+            catch (TargetInvocationException error)
+            {
+                throw error.InnerException;
+            }
+
             return args[1];
         }
 
         private static Simulant.Core.Entity.Character SpawnLocal(Scene scene, bool player)
         {
-            if (!player) return scene.Spawner.SpawnBNpc(1, 1, 1);
+            if (!player)
+                return scene.Spawner.SpawnBNpc(1, 1, 1);
+
             SetObject(scene, 0, new IntPtr(0x900000), 10, ObjectKind.Pc);
             return scene.Spawner.SpawnPlayer(Job.PLD, (Simulant.Core.Entity.Character)scene.Registry.Get(0));
         }
@@ -326,13 +398,22 @@
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
-        private static T Throws<T>(Action action) where T : Exception
+        private static T Throws<T>(Action action)
+            where T : Exception
         {
-            try { action(); }
-            catch (T error) { return error; }
+            try
+            {
+                action();
+            }
+            catch (T error)
+            {
+                return error;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
     }

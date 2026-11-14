@@ -178,6 +178,7 @@ namespace Lumina.Data.Parsing.Uld
                 ret.LineSpacing = br.ReadByte();
                 ret.TextFlags2 = (TextFlags2)br.ReadByte();
                 br.ReadBytes(3); // unused
+
                 return ret;
             }
         }
@@ -368,6 +369,7 @@ namespace Lumina.Data.Parsing.Uld
                 ret.Unk2 = br.ReadByte();
                 ret.OffsetX = br.ReadInt16();
                 ret.OffsetY = br.ReadInt16();
+
                 // the commented types seem to not have extra data
                 switch (parentType)
                 {
@@ -419,7 +421,7 @@ namespace Lumina.Data.Parsing.Uld
                     // case ComponentData.ComponentType.Map: ret.ComponentNodeData = MapComponentNode.Read( br ); break;
                     // case ComponentData.ComponentType.Preview: ret.ComponentNodeData = PreviewComponentNode.Read( br ); break;
                     default:
-                        // Console.WriteLine( $"No custom node for type {parentType}..." ); 
+                        // Console.WriteLine( $"No custom node for type {parentType}..." );
                         break;
                 }
 

@@ -22,7 +22,10 @@ namespace Lumina.Excel.Sheets
         public uint RowOffset => offset;
         public uint RowId => row;
         public ushort SubrowId => subrow;
-        public global::Lumina.Excel.RowRef NestHandler => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[] { typeof(GilShop), typeof(SpecialShop), typeof(DisposalShop), typeof(ContentEntry) }, 2042898580, page.Language);
+        public global::Lumina.Excel.RowRef NestHandler => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[]
+        {
+            typeof(GilShop), typeof(SpecialShop), typeof(DisposalShop), typeof(ContentEntry)
+        }, 2042898580, page.Language);
 
         static public CustomTalkNestHandlers Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row, ushort subrow) => new CustomTalkNestHandlers(page, offset, row, subrow);
     }

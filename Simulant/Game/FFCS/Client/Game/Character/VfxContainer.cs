@@ -10,7 +10,7 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         private ContainerInterface ContainerInterface => Ptr.As<ContainerInterface>();
         #region ContainerInterface
         public Character OwnerObject => ContainerInterface.OwnerObject;
-        #endregion
 
+        #endregion
     }
 }

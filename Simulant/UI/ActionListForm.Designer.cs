@@ -11,6 +11,7 @@ namespace Simulant.UI
                 CancelPendingWork();
                 components?.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
@@ -96,9 +97,9 @@ namespace Simulant.UI
             ((System.ComponentModel.ISupportInitialize)(this.gridActions)).BeginInit();
             this.contextActions.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // layoutMain
-            // 
+            //
             this.layoutMain.ColumnCount = 2;
             this.layoutMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.layoutMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.AutoSize));
@@ -109,9 +110,9 @@ namespace Simulant.UI
             this.layoutMain.RowCount = 1;
             this.layoutMain.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.layoutMain.TabIndex = 1;
-            // 
+            //
             // panelTop
-            // 
+            //
             this.panelTop.AutoSize = true;
             this.panelTop.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.panelTop.ColumnCount = 3;
@@ -126,18 +127,18 @@ namespace Simulant.UI
             this.panelTop.Name = "panelTop";
             this.panelTop.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.panelTop.TabIndex = 0;
-            // 
+            //
             // chkNewOnly
-            // 
+            //
             this.chkNewOnly.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.chkNewOnly.AutoSize = true;
             this.chkNewOnly.Name = "chkNewOnly";
             this.chkNewOnly.TabIndex = 0;
             this.chkNewOnly.Text = "仅显示新增项 (?)";
             this.toolTip.SetToolTip(this.chkNewOnly, "仅显示在最新版本中新增的技能。当前暂不比较旧版本，所有技能均视为非新增。");
-            // 
+            //
             // panelButtons
-            // 
+            //
             this.panelButtons.AutoSize = true;
             this.panelButtons.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.panelButtons.Controls.Add(this.btnReset);
@@ -148,9 +149,9 @@ namespace Simulant.UI
             this.panelButtons.Name = "panelButtons";
             this.panelButtons.TabIndex = 1;
             this.panelButtons.WrapContents = false;
-            // 
+            //
             // btnReset
-            // 
+            //
             this.btnReset.AutoSize = true;
             this.btnReset.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnReset.Enabled = false;
@@ -158,18 +159,18 @@ namespace Simulant.UI
             this.btnReset.TabIndex = 0;
             this.btnReset.Text = "重置";
             this.btnReset.Click += new System.EventHandler(this.btnReset_Click);
-            // 
+            //
             // btnExport
-            // 
+            //
             this.btnExport.AutoSize = true;
             this.btnExport.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnExport.Name = "btnExport";
             this.btnExport.TabIndex = 1;
             this.btnExport.Text = "复制所选行";
             this.btnExport.Click += new System.EventHandler(this.btnExport_Click);
-            // 
+            //
             // btnSearch
-            // 
+            //
             this.btnSearch.AutoSize = true;
             this.btnSearch.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnSearch.Enabled = false;
@@ -177,18 +178,18 @@ namespace Simulant.UI
             this.btnSearch.TabIndex = 2;
             this.btnSearch.Text = "搜索";
             this.btnSearch.Click += new System.EventHandler(this.btnSearch_Click);
-            // 
+            //
             // lblResult
-            // 
+            //
             this.lblResult.AutoSize = true;
             this.lblResult.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblResult.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.lblResult.Name = "lblResult";
             this.lblResult.TabIndex = 3;
             this.lblResult.Text = "正在准备……";
-            // 
+            //
             // panelShapes
-            // 
+            //
             this.panelShapes.AutoScroll = true;
             this.panelShapes.AutoSize = true;
             this.panelShapes.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
@@ -217,161 +218,161 @@ namespace Simulant.UI
             this.panelShapes.TabIndex = 1;
             this.panelShapes.WrapContents = false;
             this.panelShapes.Layout += new System.Windows.Forms.LayoutEventHandler(this.panelShapes_Layout);
-            // 
+            //
             // chkShapeAll
-            // 
+            //
             this.chkShapeAll.AutoSize = true;
             this.chkShapeAll.Name = "chkShapeAll";
             this.chkShapeAll.TabIndex = 0;
             this.chkShapeAll.Text = "全选";
             this.chkShapeAll.CheckedChanged += new System.EventHandler(this.chkShapeAll_CheckedChanged);
-            // 
+            //
             // chkShape0
-            // 
+            //
             this.chkShape0.AutoSize = true;
             this.chkShape0.Name = "chkShape0";
             this.chkShape0.TabIndex = 1;
             this.chkShape0.Text = "无 (0)";
             this.chkShape0.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape1
-            // 
+            //
             this.chkShape1.AutoSize = true;
             this.chkShape1.Name = "chkShape1";
             this.chkShape1.TabIndex = 2;
             this.chkShape1.Text = "单体 (1)";
             this.chkShape1.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape2
-            // 
+            //
             this.chkShape2.AutoSize = true;
             this.chkShape2.Name = "chkShape2";
             this.chkShape2.TabIndex = 3;
             this.chkShape2.Text = "圆形 (2)";
             this.chkShape2.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape3
-            // 
+            //
             this.chkShape3.AutoSize = true;
             this.chkShape3.Name = "chkShape3";
             this.chkShape3.TabIndex = 4;
             this.chkShape3.Text = "扇形+ (3)";
             this.chkShape3.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape4
-            // 
+            //
             this.chkShape4.AutoSize = true;
             this.chkShape4.Name = "chkShape4";
             this.chkShape4.TabIndex = 5;
             this.chkShape4.Text = "矩形+ (4)";
             this.chkShape4.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape5
-            // 
+            //
             this.chkShape5.AutoSize = true;
             this.chkShape5.Name = "chkShape5";
             this.chkShape5.TabIndex = 6;
             this.chkShape5.Text = "圆形+ (5)";
             this.chkShape5.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape6
-            // 
+            //
             this.chkShape6.AutoSize = true;
             this.chkShape6.Name = "chkShape6";
             this.chkShape6.TabIndex = 7;
             this.chkShape6.Text = "未知 (6)";
             this.chkShape6.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape7
-            // 
+            //
             this.chkShape7.AutoSize = true;
             this.chkShape7.Name = "chkShape7";
             this.chkShape7.TabIndex = 8;
             this.chkShape7.Text = "未知 (7)";
             this.chkShape7.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape8
-            // 
+            //
             this.chkShape8.AutoSize = true;
             this.chkShape8.Name = "chkShape8";
             this.chkShape8.TabIndex = 9;
             this.chkShape8.Text = "矩形至 (8)";
             this.chkShape8.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape9
-            // 
+            //
             this.chkShape9.AutoSize = true;
             this.chkShape9.Name = "chkShape9";
             this.chkShape9.TabIndex = 10;
             this.chkShape9.Text = "未知 (9)";
             this.chkShape9.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape10
-            // 
+            //
             this.chkShape10.AutoSize = true;
             this.chkShape10.Name = "chkShape10";
             this.chkShape10.TabIndex = 11;
             this.chkShape10.Text = "月环 (10)";
             this.chkShape10.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape11
-            // 
+            //
             this.chkShape11.AutoSize = true;
             this.chkShape11.Name = "chkShape11";
             this.chkShape11.TabIndex = 12;
             this.chkShape11.Text = "十字 (11)";
             this.chkShape11.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape12
-            // 
+            //
             this.chkShape12.AutoSize = true;
             this.chkShape12.Name = "chkShape12";
             this.chkShape12.TabIndex = 13;
             this.chkShape12.Text = "矩形 (12)";
             this.chkShape12.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape13
-            // 
+            //
             this.chkShape13.AutoSize = true;
             this.chkShape13.Name = "chkShape13";
             this.chkShape13.TabIndex = 14;
             this.chkShape13.Text = "扇形 (13)";
             this.chkShape13.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape14
-            // 
+            //
             this.chkShape14.AutoSize = true;
             this.chkShape14.Name = "chkShape14";
             this.chkShape14.TabIndex = 15;
             this.chkShape14.Text = "三角 (14)";
             this.chkShape14.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape15
-            // 
+            //
             this.chkShape15.AutoSize = true;
             this.chkShape15.Name = "chkShape15";
             this.chkShape15.TabIndex = 16;
             this.chkShape15.Text = "矩形穿 (15)";
             this.chkShape15.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape16
-            // 
+            //
             this.chkShape16.AutoSize = true;
             this.chkShape16.Name = "chkShape16";
             this.chkShape16.TabIndex = 17;
             this.chkShape16.Text = "右矩形至 (16)";
             this.chkShape16.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // chkShape17
-            // 
+            //
             this.chkShape17.AutoSize = true;
             this.chkShape17.Name = "chkShape17";
             this.chkShape17.TabIndex = 18;
             this.chkShape17.Text = "左矩形至 (17)";
             this.chkShape17.CheckedChanged += new System.EventHandler(this.Shape_CheckedChanged);
-            // 
+            //
             // panelFilters
-            // 
+            //
             this.panelFilters.AutoSize = true;
             this.panelFilters.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.panelFilters.ColumnCount = 5;
@@ -390,9 +391,9 @@ namespace Simulant.UI
             this.panelFilters.Name = "panelFilters";
             this.panelFilters.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.panelFilters.TabIndex = 2;
-            // 
+            //
             // filterHexId
-            // 
+            //
             this.filterHexId.AutoSize = true;
             this.filterHexId.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.filterHexId.ColumnCount = 1;
@@ -405,24 +406,24 @@ namespace Simulant.UI
             this.filterHexId.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterHexId.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterHexId.TabIndex = 0;
-            // 
+            //
             // lblHexId
-            // 
+            //
             this.lblHexId.AutoSize = true;
             this.lblHexId.Name = "lblHexId";
             this.lblHexId.TabIndex = 0;
             this.lblHexId.Text = "HexID";
             this.toolTip.SetToolTip(this.lblHexId, "使用正则表达式过滤技能 HexID，大小写不敏感。");
-            // 
+            //
             // txtHexId
-            // 
+            //
             this.txtHexId.Dock = System.Windows.Forms.DockStyle.Fill;
             this.txtHexId.Name = "txtHexId";
             this.txtHexId.TabIndex = 1;
             this.toolTip.SetToolTip(this.txtHexId, "使用正则表达式过滤技能 HexID，大小写不敏感。");
-            // 
+            //
             // filterName
-            // 
+            //
             this.filterName.AutoSize = true;
             this.filterName.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.filterName.ColumnCount = 1;
@@ -435,24 +436,24 @@ namespace Simulant.UI
             this.filterName.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterName.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterName.TabIndex = 1;
-            // 
+            //
             // lblName
-            // 
+            //
             this.lblName.AutoSize = true;
             this.lblName.Name = "lblName";
             this.lblName.TabIndex = 0;
             this.lblName.Text = "技能名";
             this.toolTip.SetToolTip(this.lblName, "使用正则表达式过滤技能名称，大小写不敏感。");
-            // 
+            //
             // txtName
-            // 
+            //
             this.txtName.Dock = System.Windows.Forms.DockStyle.Fill;
             this.txtName.Name = "txtName";
             this.txtName.TabIndex = 1;
             this.toolTip.SetToolTip(this.txtName, "使用正则表达式过滤技能名称，大小写不敏感。");
-            // 
+            //
             // filterExpression
-            // 
+            //
             this.filterExpression.AutoSize = true;
             this.filterExpression.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.filterExpression.ColumnCount = 1;
@@ -465,24 +466,24 @@ namespace Simulant.UI
             this.filterExpression.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterExpression.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterExpression.TabIndex = 2;
-            // 
+            //
             // lblExpression
-            // 
+            //
             this.lblExpression.AutoSize = true;
             this.lblExpression.Name = "lblExpression";
             this.lblExpression.TabIndex = 0;
             this.lblExpression.Text = "过滤表达式";
             this.toolTip.SetToolTip(this.lblExpression, resources.GetString("lblExpression.ToolTip"));
-            // 
+            //
             // txtExpression
-            // 
+            //
             this.txtExpression.Dock = System.Windows.Forms.DockStyle.Fill;
             this.txtExpression.Name = "txtExpression";
             this.txtExpression.TabIndex = 1;
             this.toolTip.SetToolTip(this.txtExpression, resources.GetString("txtExpression.ToolTip"));
-            // 
+            //
             // filterOmen
-            // 
+            //
             this.filterOmen.AutoSize = true;
             this.filterOmen.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.filterOmen.ColumnCount = 1;
@@ -495,24 +496,24 @@ namespace Simulant.UI
             this.filterOmen.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterOmen.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterOmen.TabIndex = 3;
-            // 
+            //
             // lblOmen
-            // 
+            //
             this.lblOmen.AutoSize = true;
             this.lblOmen.Name = "lblOmen";
             this.lblOmen.TabIndex = 0;
             this.lblOmen.Text = "预兆 (Omen)";
             this.toolTip.SetToolTip(this.lblOmen, "使用正则表达式过滤预兆名称。");
-            // 
+            //
             // txtOmen
-            // 
+            //
             this.txtOmen.Dock = System.Windows.Forms.DockStyle.Fill;
             this.txtOmen.Name = "txtOmen";
             this.txtOmen.TabIndex = 1;
             this.toolTip.SetToolTip(this.txtOmen, "使用正则表达式过滤预兆名称。");
-            // 
+            //
             // filterAnimationEnd
-            // 
+            //
             this.filterAnimationEnd.AutoSize = true;
             this.filterAnimationEnd.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.filterAnimationEnd.ColumnCount = 1;
@@ -525,43 +526,45 @@ namespace Simulant.UI
             this.filterAnimationEnd.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterAnimationEnd.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.filterAnimationEnd.TabIndex = 4;
-            // 
+            //
             // lblAnimationEnd
-            // 
+            //
             this.lblAnimationEnd.AutoSize = true;
             this.lblAnimationEnd.Name = "lblAnimationEnd";
             this.lblAnimationEnd.TabIndex = 0;
             this.lblAnimationEnd.Text = "结束时间轴";
             this.toolTip.SetToolTip(this.lblAnimationEnd, "使用正则表达式过滤结束时间轴名称。");
-            // 
+            //
             // txtAnimationEnd
-            // 
+            //
             this.txtAnimationEnd.Dock = System.Windows.Forms.DockStyle.Fill;
             this.txtAnimationEnd.Name = "txtAnimationEnd";
             this.txtAnimationEnd.TabIndex = 1;
             this.toolTip.SetToolTip(this.txtAnimationEnd, "使用正则表达式过滤结束时间轴名称。");
-            // 
+            //
             // gridActions
-            // 
+            //
             this.gridActions.AllowUserToAddRows = false;
             this.gridActions.AllowUserToDeleteRows = false;
             this.gridActions.AllowUserToResizeRows = false;
             this.gridActions.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.gridActions.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.gridActions.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.Disable;
-            this.gridActions.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.col0,
-            this.col1,
-            this.col2,
-            this.col3,
-            this.col4,
-            this.col5,
-            this.col6,
-            this.col7,
-            this.col8,
-            this.col9,
-            this.col10,
-            this.col11});
+            this.gridActions.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[]
+            {
+                this.col0,
+                this.col1,
+                this.col2,
+                this.col3,
+                this.col4,
+                this.col5,
+                this.col6,
+                this.col7,
+                this.col8,
+                this.col9,
+                this.col10,
+                this.col11
+            });
             this.gridActions.ContextMenuStrip = this.contextActions;
             this.gridActions.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gridActions.Name = "gridActions";
@@ -573,152 +576,154 @@ namespace Simulant.UI
             this.gridActions.CellMouseDown += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.gridActions_CellMouseDown);
             this.gridActions.CellValueNeeded += new System.Windows.Forms.DataGridViewCellValueEventHandler(this.gridActions_CellValueNeeded);
             this.gridActions.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.gridActions_ColumnHeaderMouseClick);
-            // 
+            //
             // contextActions
-            // 
-            this.contextActions.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.miCopyCell,
-            this.miCopyTemplate,
-            this.menuSeparator,
-            this.miOmen,
-            this.miGimmick});
+            //
+            this.contextActions.Items.AddRange(new System.Windows.Forms.ToolStripItem[]
+            {
+                this.miCopyCell,
+                this.miCopyTemplate,
+                this.menuSeparator,
+                this.miOmen,
+                this.miGimmick
+            });
             this.contextActions.Name = "contextActions";
             this.contextActions.Opening += new System.ComponentModel.CancelEventHandler(this.contextActions_Opening);
-            // 
+            //
             // miCopyCell
-            // 
+            //
             this.miCopyCell.Name = "miCopyCell";
             this.miCopyCell.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
             this.miCopyCell.Text = "复制当前单元格";
             this.miCopyCell.Click += new System.EventHandler(this.miCopyCell_Click);
-            // 
+            //
             // miCopyTemplate
-            // 
+            //
             this.miCopyTemplate.Name = "miCopyTemplate";
-            this.miCopyTemplate.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            this.miCopyTemplate.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
             | System.Windows.Forms.Keys.C)));
             this.miCopyTemplate.Text = "将选中行复制为简易播报动作模板";
             this.miCopyTemplate.Click += new System.EventHandler(this.miCopyTemplate_Click);
-            // 
+            //
             // menuSeparator
-            // 
+            //
             this.menuSeparator.Name = "menuSeparator";
-            // 
+            //
             // miOmen
-            // 
+            //
             this.miOmen.Name = "miOmen";
             this.miOmen.Text = "显示 Omen";
             this.miOmen.Click += new System.EventHandler(this.miOmen_Click);
-            // 
+            //
             // miGimmick
-            // 
+            //
             this.miGimmick.Name = "miGimmick";
             this.miGimmick.Text = "显示 Gimmick VFX";
             this.miGimmick.ToolTipText = "在当前目标（未选中目标时为自己）身上播放全部关联的时间轴特效。";
             this.miGimmick.Click += new System.EventHandler(this.miGimmick_Click);
-            // 
+            //
             // col0
-            // 
+            //
             this.col0.FillWeight = 75F;
             this.col0.HeaderText = "ID";
             this.col0.Name = "col0";
             this.col0.ReadOnly = true;
             this.col0.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col1
-            // 
+            //
             this.col1.FillWeight = 65F;
             this.col1.HeaderText = "Hex";
             this.col1.Name = "col1";
             this.col1.ReadOnly = true;
             this.col1.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col2
-            // 
+            //
             this.col2.FillWeight = 180F;
             this.col2.HeaderText = "技能名";
             this.col2.Name = "col2";
             this.col2.ReadOnly = true;
             this.col2.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col3
-            // 
+            //
             this.col3.HeaderText = "咏唱";
             this.col3.Name = "col3";
             this.col3.ReadOnly = true;
             this.col3.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col4
-            // 
+            //
             this.col4.FillWeight = 140F;
             this.col4.HeaderText = "形状";
             this.col4.Name = "col4";
             this.col4.ReadOnly = true;
             this.col4.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col5
-            // 
+            //
             this.col5.FillWeight = 70F;
             this.col5.HeaderText = "X";
             this.col5.Name = "col5";
             this.col5.ReadOnly = true;
             this.col5.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col6
-            // 
+            //
             this.col6.FillWeight = 70F;
             this.col6.HeaderText = "Y";
             this.col6.Name = "col6";
             this.col6.ReadOnly = true;
             this.col6.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col7
-            // 
+            //
             this.col7.HeaderText = "分类";
             this.col7.Name = "col7";
             this.col7.ReadOnly = true;
             this.col7.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col8
-            // 
+            //
             this.col8.HeaderText = "攻击";
             this.col8.Name = "col8";
             this.col8.ReadOnly = true;
             this.col8.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col9
-            // 
+            //
             this.col9.FillWeight = 80F;
             this.col9.HeaderText = "属性";
             this.col9.Name = "col9";
             this.col9.ReadOnly = true;
             this.col9.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col10
-            // 
+            //
             this.col10.FillWeight = 280F;
             this.col10.HeaderText = "预兆名称 (ID)";
             this.col10.Name = "col10";
             this.col10.ReadOnly = true;
             this.col10.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // col11
-            // 
+            //
             this.col11.FillWeight = 500F;
             this.col11.HeaderText = "结束时间轴名称 (ID)";
             this.col11.Name = "col11";
             this.col11.ReadOnly = true;
             this.col11.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
+            //
             // toolTip
-            // 
+            //
             this.toolTip.AutoPopDelay = 30000;
             this.toolTip.InitialDelay = 300;
             this.toolTip.ReshowDelay = 100;
             this.toolTip.ShowAlways = true;
-            // 
+            //
             // ActionListForm
-            // 
+            //
             this.AcceptButton = this.btnSearch;
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -756,8 +761,8 @@ namespace Simulant.UI
             this.PerformLayout();
 
         }
-        #endregion
 
+        #endregion
         private System.Windows.Forms.TableLayoutPanel layoutMain;
         private System.Windows.Forms.TableLayoutPanel panelTop;
         private System.Windows.Forms.FlowLayoutPanel panelButtons;

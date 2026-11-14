@@ -27,6 +27,7 @@ namespace Simulant.Simulation.Options
 
                 return _items[index].Value;
             }
+
             set
             {
                 if (_indexMap.TryGetValue(key, out int index))

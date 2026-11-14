@@ -13,10 +13,12 @@ namespace Lumina.Models.Models
             var ret = new ShapeMesh[file.ModelHeader.ShapeMeshCount];
             var idx = 0;
             var meshDict = meshes.ToDictionary(m => file.Meshes[m.MeshIndex].StartIndex, m => m);
+
             foreach (var shapeMeshStruct in file.ShapeMeshes)
             {
                 if (!meshDict.TryGetValue(shapeMeshStruct.MeshIndexOffset, out var mesh))
                     continue;
+
                 var values = Enumerable.Range((int)shapeMeshStruct.ShapeValueOffset, (int)shapeMeshStruct.ShapeValueCount).Select(i => (file.ShapeValues[i].BaseIndicesIndex, file.ShapeValues[i].ReplacingVertexIndex)).ToArray();
                 ret[idx++] = new ShapeMesh
                 {
@@ -41,6 +43,7 @@ namespace Lumina.Models.Models
             Meshes = new ShapeMesh[currentShape.ShapeMeshCount[(int)lod]];
             var end = currentShape.ShapeMeshCount[(int)lod];
             var offset = currentShape.ShapeMeshStartIndex[(int)lod];
+
             for (var i = 0; i < end; ++i)
             {
                 Meshes[i] = shapeMeshes[i + offset];

@@ -22,7 +22,10 @@ namespace Lumina.Excel.Sheets
         public uint RowOffset => offset;
         public uint RowId => row;
         public ushort SubrowId => subrow;
-        public global::Lumina.Excel.RowRef Item => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset), new System.Type[] { typeof(FittingShopItemSet), typeof(Item) }, 1407051538, page.Language);
+        public global::Lumina.Excel.RowRef Item => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset), new System.Type[]
+        {
+            typeof(FittingShopItemSet), typeof(Item)
+        }, 1407051538, page.Language);
         /// <summary>
         /// If not 0, the item will only appear if sent in a FittingShopUpdate packet.
         /// </summary>

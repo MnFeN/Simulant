@@ -37,6 +37,7 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         public MemoryField<Vector3> DrawOffset => GameObject.DrawOffset;
         public DrawObject DrawObject => GameObject.DrawObject;
         public MemoryField<VisibilityFlags> RenderFlags => GameObject.RenderFlags;
+
         public bool GetIsTargetable() => GameObject.GetIsTargetable();
         public IntPtr GetName() => GameObject.GetName();
         public float GetRadius(bool adjustByTransformation = true) => GameObject.GetRadius(adjustByTransformation);
@@ -46,8 +47,8 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         public void PositionModified() => GameObject.PositionModified();
         public void RotationModified() => GameObject.RotationModified();
         public bool IsNotMounted() => GameObject.IsNotMounted();
-        #endregion
 
+        #endregion
         // Inherits<CharacterData>
         private CharacterData CharacterData => Ptr.As<CharacterData>(0x1A0);
         #region CharacterData
@@ -74,8 +75,8 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         public MemoryField<byte> Flags => CharacterData.Flags;
         public MemoryBitField IsHostile => CharacterData.IsHostile;
         public MemoryBitField InCombat => CharacterData.InCombat;
-        #endregion
 
+        #endregion
         public EmoteController EmoteController => Ptr.As<EmoteController>(0x630);
         public DrawDataContainer DrawData => Ptr.As<DrawDataContainer>(0x6F8);
         public TimelineContainer Timeline => Ptr.As<TimelineContainer>(0xA30);
@@ -93,27 +94,31 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         // The fields below are from BattleChara, just put here for simplicity
         public StatusManager StatusManager => Ptr.As<StatusManager>(0x23B0);
         public CastInfo CastInfo => Ptr.As<CastInfo>(0x2790);
-        // public ActionEffectHandler ActionEffectHandler => Ptr.As<ActionEffectHandler>(0x2900);
 
+        // public ActionEffectHandler ActionEffectHandler => Ptr.As<ActionEffectHandler>(0x2900);
         [SigPattern("E8 * * * * 45 84 FF 75 40")]
         public static IntPtr SetModeFuncPtr { get; set; }
-        public void SetMode(CharacterModes mode, byte modeParam) 
+
+        public void SetMode(CharacterModes mode, byte modeParam)
             => SetModeFuncPtr.Call(Ptr, (byte)mode, modeParam);
 
         [SigPattern("E8 * * * * 38 43 ? 0F 85")]
         public static IntPtr HasStatusFuncPtr { get; set; }
-        public bool HasStatus(uint statusId) 
+
+        public bool HasStatus(uint statusId)
             => HasStatusFuncPtr.Call<bool>(Ptr, statusId);
 
         /// <summary>Check if this character is in a jumping/falling animation.</summary>
         [SigPattern("E8 * * * * 84 C0 75 46 48 8B 4B 08")]
         public static IntPtr IsJumpingFuncPtr { get; set; }
-        public bool IsJumping() 
+
+        public bool IsJumping()
             => IsJumpingFuncPtr.Call<bool>(Ptr);
 
         // from Kodakku
         [SigPattern("E8 * * * * 48 8D 0D ? ? ? ? E8 ? ? ? ? FF C6")]
         public static IntPtr KnockbackFuncPtr { get; set; }
+
         public IntPtr Knockback(float angle, float distance, float duration, byte a5 = 0, int a6 = 0)
         {
             return KnockbackFuncPtr.Call<IntPtr>(Ptr, angle, distance, duration, a5, a6);
@@ -123,6 +128,7 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         // sub_1409097A0(actor, actionType, actionId, withExtraStopEffect)
         [SigPattern("48 89 6C 24 18 48 89 74 24 20 41 54 41 56 41 57 48 83 EC 30 48 8B 01 45 0F B6 E1 45 8B F8 44 8B F2 48 8B F1 48 8B E9 FF 50 10 83 F8 02")]
         public static IntPtr ClearCastAnimationAndStateFuncPtr { get; set; }
+
         public IntPtr ClearCastAnimationAndState(byte actionType, uint actionId, byte withExtraStopEffect = 0)
         {
             return ClearCastAnimationAndStateFuncPtr.Call<IntPtr>(Ptr, (uint)actionType, actionId, withExtraStopEffect);

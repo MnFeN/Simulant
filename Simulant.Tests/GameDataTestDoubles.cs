@@ -9,11 +9,14 @@ namespace Simulant.Game.Data
     public sealed class GameDataService
     {
         public static GameDataService Instance { get; } = new GameDataService();
+
         private readonly Dictionary<Type, object> _tables = new Dictionary<Type, object>();
-        public ExcelSheet<T> GetSheet<T>() where T : struct, IExcelRow<T>
+        public ExcelSheet<T> GetSheet<T>()
+            where T : struct, IExcelRow<T>
         {
             if (!_tables.TryGetValue(typeof(T), out var table))
                 _tables.Add(typeof(T), table = new ExcelSheet<T>());
+
             return (ExcelSheet<T>)table;
         }
     }
@@ -21,7 +24,9 @@ namespace Simulant.Game.Data
 
 namespace Lumina.Excel
 {
-    public interface IExcelRow<T> { }
+    public interface IExcelRow<T>
+    {
+    }
 
     public sealed class ExcelSheet<T> : Dictionary<int, T> where T : struct, IExcelRow<T>
     {
@@ -29,27 +34,43 @@ namespace Lumina.Excel
         public T? GetRowOrDefault(uint id) => TryGetRow(id, out var row) ? row : (T?)null;
     }
 
-    public struct RowRef<T> where T : struct, IExcelRow<T>
+    public struct RowRef<T>
+        where T : struct, IExcelRow<T>
     {
         public uint RowId;
         public T? ValueNullable;
         public T Value => ValueNullable ?? throw new InvalidOperationException("测试行引用不存在。");
-        public static implicit operator RowRef<T>(int id) => new RowRef<T> { RowId = unchecked((uint)id) };
+
+        public static implicit operator RowRef<T>(int id) => new RowRef<T>
+        {
+            RowId = unchecked((uint)id)
+        };
     }
 
     public struct TestText
     {
         private string _text;
         public string ExtractText() => _text ?? string.Empty;
-        public static implicit operator TestText(string text) => new TestText { _text = text };
+        public static implicit operator TestText(string text) => new TestText
+        {
+            _text = text
+        };
     }
 }
 
 namespace Lumina.Excel.Sheets
 {
-    public struct ModelChara : IExcelRow<ModelChara> { }
-    public struct Battalion : IExcelRow<Battalion> { }
-    public struct ActionTimeline : IExcelRow<ActionTimeline> { }
+    public struct ModelChara : IExcelRow<ModelChara>
+    {
+    }
+
+    public struct Battalion : IExcelRow<Battalion>
+    {
+    }
+
+    public struct ActionTimeline : IExcelRow<ActionTimeline>
+    {
+    }
 
     public struct BNpcBase : IExcelRow<BNpcBase>
     {
@@ -58,7 +79,10 @@ namespace Lumina.Excel.Sheets
         public RowRef<NpcEquip> NpcEquip;
     }
 
-    public struct Stain : IExcelRow<Stain> { }
+    public struct Stain : IExcelRow<Stain>
+    {
+    }
+
     public struct NpcEquip : IExcelRow<NpcEquip>
     {
         public ulong ModelMainHand, ModelOffHand;

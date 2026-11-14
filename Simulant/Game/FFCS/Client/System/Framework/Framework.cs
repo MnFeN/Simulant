@@ -14,7 +14,7 @@ namespace Simulant.Game.FFCS.Client.System.Framework
 
         public IntPtr Ptr { get; set; }
 
-        public NetworkModuleProxy NetworkModuleProxy 
+        public NetworkModuleProxy NetworkModuleProxy
             => Ptr.ReadPtr(0x1678).As<NetworkModuleProxy>();
 
         public UIModule UIModule

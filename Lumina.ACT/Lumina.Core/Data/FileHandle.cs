@@ -39,6 +39,7 @@ namespace Lumina.Data
         {
             State = FileState.Loading;
             var file = GameData.GetFile<T>(Path);
+
             if (file == null)
             {
                 State = FileState.Error;

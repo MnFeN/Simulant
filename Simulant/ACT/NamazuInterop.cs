@@ -10,8 +10,7 @@ namespace Simulant.ACT
         public static NamazuPlugin Plugin { get; private set; }
 
         // private static GreyMagicCallScheduler _callScheduler;
-
-        public static bool IsReady => Plugin?.IsReady == true;// && _callScheduler != null;
+        public static bool IsReady => Plugin?.IsReady == true; // && _callScheduler != null;
 
         public static void Init()
         {
@@ -32,16 +31,17 @@ namespace Simulant.ACT
             var rawPlugin = pluginData.pluginObj;
             var version = rawPlugin.GetType().Assembly.GetName().Version;
             var minimumVersion = new Version(1, 3, 6, 7);
+
             if (version == null || version < minimumVersion)
                 throw new InvalidOperationException($"[{nameof(NamazuInterop)}] PostNamazu 版本过低（当前版本：{version?.ToString() ?? "未知"}，最低要求：{minimumVersion}）。请在 Triggernometry 远程库中的自检工具箱中尝试检查鲶鱼精邮差版本。");
 
             var plugin = new NamazuPlugin(rawPlugin);
             var readinessError = plugin.GetReadinessError();
+
             if (readinessError != null)
                 throw new InvalidOperationException($"[{nameof(NamazuInterop)}] {readinessError}");
 
             // var scheduler = new GreyMagicCallScheduler(plugin.Memory, frameLeaseMs: 10);
-
             RawPlugin = rawPlugin;
             Plugin = plugin;
             // _callScheduler = scheduler;
@@ -49,14 +49,13 @@ namespace Simulant.ACT
 
         public static void DeInit()
         {
+
             // var scheduler = _callScheduler;
             // _callScheduler = null;
             // scheduler?.Dispose();
-
             RawPlugin = null;
             Plugin = null;
         }
-
         /*
         /// <summary>
         ///   尝试在 GreyMagic FrameLock 窗口内同步执行 Call 等操作。<br />

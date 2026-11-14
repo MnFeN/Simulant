@@ -11,9 +11,14 @@ namespace Simulant.Game
         /// <summary>角色包的名字保留一个零字节结尾，不截断 UTF-8 字符。</summary>
         internal static byte[] EncodeActorName(string name)
         {
-            if (name == null) throw new ArgumentNullException(nameof(name));
-            if (name.IndexOf('\0') >= 0) throw new ArgumentException("实体名字不能包含空字符。", nameof(name));
+            if (name == null)
+                throw new ArgumentNullException(nameof(name));
+
+            if (name.IndexOf('\0') >= 0)
+                throw new ArgumentException("实体名字不能包含空字符。", nameof(name));
+
             var bytes = new byte[32];
+
             try
             {
                 ActorNameEncoding.GetByteCount(name);
@@ -25,6 +30,7 @@ namespace Simulant.Game
             {
                 throw new ArgumentException("实体名字包含无效的 Unicode 字符。", nameof(name), error);
             }
+
             return bytes;
         }
 
@@ -48,6 +54,7 @@ namespace Simulant.Game
         {
             if (float.IsNaN(coord) || float.IsInfinity(coord))
                 throw new ArgumentOutOfRangeException(nameof(coord), "坐标必须为有限数。");
+
             // 先在浮点范围内截断，避免极大坐标转成整数时溢出并反向落到下界。
             var raw = Math.Round((coord + 1000.0) / CoordScale);
 
@@ -75,7 +82,9 @@ namespace Simulant.Game
         {
             if (float.IsNaN(heading) || float.IsInfinity(heading))
                 throw new ArgumentOutOfRangeException(nameof(heading), "朝向必须为有限数。");
+
             var normalized = (heading + Math.PI) % TwoPi;
+
             if (normalized < 0)
                 normalized += TwoPi;
 

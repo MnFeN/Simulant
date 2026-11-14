@@ -17,9 +17,17 @@ namespace Lumina.Data
         public PlatformId PlatformId { get; internal set; }
 
         private bool isLittleEndian;
-        public bool IsLittleEndian { get => isLittleEndian; set => isLittleEndian = value; }
+        public bool IsLittleEndian
+        {
+            get => isLittleEndian;
+            set => isLittleEndian = value;
+        }
         public bool ConvertEndianness => BitConverter.IsLittleEndian != isLittleEndian;
-        public long Position { get => BaseStream.Position; set => BaseStream.Position = value; }
+        public long Position
+        {
+            get => BaseStream.Position;
+            set => BaseStream.Position = value;
+        }
 
         public LuminaBinaryReader(byte[] array, PlatformId platformId = PlatformId.Win32) : this(new MemoryStream(array, false), Encoding.UTF8, false, platformId)
         {
@@ -68,8 +76,10 @@ namespace Lumina.Data
             where T : struct
         {
             var data = ReadBytes(Unsafe.SizeOf<T>());
+
             if (ConvertEndianness)
                 ConvertEndian(typeof(T), data);
+
             T structure = MemoryMarshal.Read<T>(data);
             return structure;
         }
@@ -78,19 +88,25 @@ namespace Lumina.Data
         private static void ConvertEndian(Type type, Span<byte> data, int startOffset = 0)
         {
             var offset = 0;
+
             foreach (var field in type.GetFields())
             {
                 var fieldType = field.FieldType;
+
                 if (field.IsStatic || fieldType == typeof(string))
                     continue;
+
                 if (fieldType.IsEnum)
                     fieldType = Enum.GetUnderlyingType(fieldType);
+
                 var subFields = fieldType.GetFields().Where(subField => subField.IsStatic == false).ToArray();
                 var effectiveOffset = startOffset + offset;
+
                 if (subFields.Length == 0)
                     data.Slice(effectiveOffset, Marshal.SizeOf(fieldType)).Reverse();
                 else
                     ConvertEndian(fieldType, data, effectiveOffset);
+
                 offset += Marshal.SizeOf(fieldType);
             }
         }
@@ -100,6 +116,7 @@ namespace Lumina.Data
         {
             var structs = ReadStructuresAsSpan<T>(count);
             var list = new List<T>(structs.Length);
+
             for (var i = 0; i < structs.Length; i++)
             {
                 list.Add(structs[i]);
@@ -119,9 +136,11 @@ namespace Lumina.Data
         {
             var tSize = Unsafe.SizeOf<T>();
             Span<byte> data = ReadBytes(tSize * count);
+
             if (ConvertEndianness)
                 for (var i = 0; i < count; i++)
                     ConvertEndian(typeof(T), data, tSize * i);
+
             return MemoryMarshal.Cast<byte, T>(data);
         }
 
@@ -130,6 +149,7 @@ namespace Lumina.Data
         {
             var size = Unsafe.SizeOf<T>();
             var span = MemoryMarshal.Cast<byte, T>(ReadBytes(count * size).AsSpan());
+
             if (ConvertEndianness)
             {
                 switch (size)

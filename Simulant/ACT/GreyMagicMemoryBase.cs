@@ -15,12 +15,14 @@ namespace Simulant.ACT
         {
             _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         }
+
         public Process Process => _memory.Process;
         public IntPtr ProcessHandle => _memory.ProcessHandle;
         public bool IsProcessOpen => _memory.IsProcessOpen;
         public IntPtr ImageBase => _memory.ImageBase;
 
-        public byte[] ReadBytes<T>(IntPtr addr) where T : struct
+        public byte[] ReadBytes<T>(IntPtr addr)
+            where T : struct
             => _memory.ReadBytes<T>(addr);
 
         public byte[] ReadBytes(IntPtr addr, int count, bool isRelative)
@@ -29,19 +31,24 @@ namespace Simulant.ACT
         public byte[] ReadBytes(IntPtr addr, int count)
             => _memory.ReadBytes(addr, count);
 
-        public T Read<T>(bool isRelative, params IntPtr[] addrs) where T : struct
+        public T Read<T>(bool isRelative, params IntPtr[] addrs)
+            where T : struct
             => _memory.Read<T>(isRelative, addrs);
 
-        public T Read<T>(IntPtr addr, bool isRelative) where T : struct
+        public T Read<T>(IntPtr addr, bool isRelative)
+            where T : struct
             => _memory.Read<T>(addr, isRelative);
 
-        public T Read<T>(IntPtr addr) where T : struct
+        public T Read<T>(IntPtr addr)
+            where T : struct
             => _memory.Read<T>(addr);
 
-        public T[] ReadArray<T>(IntPtr addr, int count, bool isRelative) where T : struct
+        public T[] ReadArray<T>(IntPtr addr, int count, bool isRelative)
+            where T : struct
             => _memory.ReadArray<T>(addr, count, isRelative);
 
-        public T[] ReadArray<T>(IntPtr addr, int count) where T : struct
+        public T[] ReadArray<T>(IntPtr addr, int count)
+            where T : struct
             => _memory.ReadArray<T>(addr, count);
 
         public string ReadString(IntPtr address, Encoding encoding)
@@ -62,10 +69,12 @@ namespace Simulant.ACT
         public int WriteBytes(IntPtr addr, byte[] bytes)
             => _memory.WriteBytes(addr, bytes);
 
-        public void Write<T>(IntPtr addr, T value, bool isRelative) where T : struct
+        public void Write<T>(IntPtr addr, T value, bool isRelative)
+            where T : struct
             => _memory.Write<T>(addr, value, isRelative);
 
-        public void Write<T>(IntPtr addr, T value) where T : struct
+        public void Write<T>(IntPtr addr, T value)
+            where T : struct
             => _memory.Write<T>(addr, value);
 
         public bool WriteString(IntPtr addr, string value, Encoding encoding)

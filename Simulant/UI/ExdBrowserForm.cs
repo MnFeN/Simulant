@@ -35,12 +35,16 @@ namespace Simulant.UI
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            if (StartPosition == FormStartPosition.CenterScreen) CenterToScreen();
+
+            if (StartPosition == FormStartPosition.CenterScreen)
+                CenterToScreen();
         }
 
         private async void ExdBrowserForm_Shown(object sender, EventArgs e)
         {
-            if (DesignMode) return;
+            if (DesignMode)
+                return;
+
             try
             {
                 var service = GameDataService.Instance;
@@ -48,12 +52,20 @@ namespace Simulant.UI
                 _language = service.Language;
                 lblStatus.Text = "正在读取表目录……";
                 _sheets = await Task.Run(() => ExdResource.ListSheets(_path, _language, _token), _token);
-                if (_token.IsCancellationRequested) return;
+
+                if (_token.IsCancellationRequested)
+                    return;
+
                 txtSheets.Enabled = btnSearch.Enabled = true;
                 FilterSheets();
             }
-            catch (OperationCanceledException) { }
-            catch (Exception error) { ShowError(error); }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception error)
+            {
+                ShowError(error);
+            }
         }
 
         private void txtSheets_TextChanged(object sender, EventArgs e) => FilterSheets();
@@ -69,12 +81,16 @@ namespace Simulant.UI
             listSheets.SelectedItem = names.Contains(selected) ? selected : names.Contains("Action") ? "Action" : names.FirstOrDefault();
             listSheets.EndUpdate();
             _updatingSheets = false;
-            if (selected != listSheets.SelectedItem as string) listSheets_SelectedIndexChanged(this, EventArgs.Empty);
+
+            if (selected != listSheets.SelectedItem as string)
+                listSheets_SelectedIndexChanged(this, EventArgs.Empty);
         }
 
         private async void listSheets_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (_updatingSheets) return;
+            if (_updatingSheets)
+                return;
+
             _query = "";
             txtSearch.Clear();
             await LoadPageAsync(0);
@@ -97,18 +113,35 @@ namespace Simulant.UI
             grid.Rows.Clear();
             grid.Columns.Clear();
             btnPrevious.Enabled = btnNext.Enabled = false;
-            if (name == null) { lblStatus.Text = "没有匹配的表。"; return; }
+
+            if (name == null)
+            {
+                lblStatus.Text = "没有匹配的表。";
+                return;
+            }
+
             var request = CancellationTokenSource.CreateLinkedTokenSource(_token);
             _request = request;
             var query = _query;
             lblStatus.Text = $"正在读取 {name}……";
+
             try
             {
                 var view = await Task.Run(() => ExdResource.Read(_path, _language, name, query, page, request.Token), request.Token);
-                if (request.IsCancellationRequested) return;
+
+                if (request.IsCancellationRequested)
+                    return;
+
                 _view = view;
+
                 foreach (var column in view.Columns)
-                    grid.Columns.Add(new DataGridViewTextBoxColumn { Name = column, HeaderText = column, SortMode = DataGridViewColumnSortMode.NotSortable });
+                    grid.Columns.Add(new DataGridViewTextBoxColumn
+                    {
+                        Name = column,
+                        HeaderText = column,
+                        SortMode = DataGridViewColumnSortMode.NotSortable
+                    });
+
                 grid.RowCount = view.Rows.Length;
                 grid.ClearSelection();
                 var pages = Math.Max(1, (view.Matches + ExdResource.PageSize - 1) / ExdResource.PageSize);
@@ -116,11 +149,19 @@ namespace Simulant.UI
                 btnPrevious.Enabled = view.Page > 0;
                 btnNext.Enabled = view.Page + 1 < pages;
             }
-            catch (OperationCanceledException) { }
-            catch (Exception error) { if (!request.IsCancellationRequested) ShowError(error); }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception error)
+            {
+                if (!request.IsCancellationRequested)
+                    ShowError(error);
+            }
             finally
             {
-                if (ReferenceEquals(_request, request)) _request = null;
+                if (ReferenceEquals(_request, request))
+                    _request = null;
+
                 request.Dispose();
             }
         }
@@ -133,12 +174,15 @@ namespace Simulant.UI
 
         private void ShowError(Exception error)
         {
-            if (!_token.IsCancellationRequested) lblStatus.Text = "读取游戏表失败：" + error.Message;
+            if (!_token.IsCancellationRequested)
+                lblStatus.Text = "读取游戏表失败：" + error.Message;
         }
 
         private void CancelPendingWork()
         {
-            if (_closed) return;
+            if (_closed)
+                return;
+
             _closed = true;
             _lifetime.Cancel();
             _request?.Cancel();

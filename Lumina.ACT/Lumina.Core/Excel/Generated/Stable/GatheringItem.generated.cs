@@ -21,7 +21,10 @@ namespace Lumina.Excel.Sheets
         public uint RowId => row;
         public uint Unknown0 => page.ReadUInt32(offset);
         public global::Lumina.Excel.RowRef<GatheringItem> SublimeVariant => new global::Lumina.Excel.RowRef<GatheringItem>(page.Module, page.ReadUInt32(offset + 4), page.Language);
-        public global::Lumina.Excel.RowRef Item => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 8), new System.Type[] { typeof(Item), typeof(EventItem) }, -1750568667, page.Language);
+        public global::Lumina.Excel.RowRef Item => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 8), new System.Type[]
+        {
+            typeof(Item), typeof(EventItem)
+        }, -1750568667, page.Language);
         public global::Lumina.Excel.RowRef<GatheringItemLevelConvertTable> GatheringItemLevel => new global::Lumina.Excel.RowRef<GatheringItemLevelConvertTable>(page.Module, (uint)page.ReadUInt16(offset + 12), page.Language);
         public ushort PerceptionReq => page.ReadUInt16(offset + 14);
         public ushort Unknown2 => page.ReadUInt16(offset + 16);

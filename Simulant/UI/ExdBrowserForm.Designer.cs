@@ -11,6 +11,7 @@ namespace Simulant.UI
                 CancelPendingWork();
                 components?.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
@@ -159,8 +160,8 @@ namespace Simulant.UI
             this.layoutMain.ResumeLayout(false);
             this.ResumeLayout(false);
         }
-        #endregion
 
+        #endregion
         private System.Windows.Forms.TableLayoutPanel layoutMain;
         private System.Windows.Forms.TableLayoutPanel panelSheets;
         private System.Windows.Forms.Label lblSheets;

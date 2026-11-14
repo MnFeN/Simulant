@@ -19,12 +19,15 @@ namespace Lumina.Data.Parsing.Tex
             _IterationCount = flags.HasFlag(SquishOptions.ColourIterativeClusterFit) ? MaxIterations : 1;
             // Initialise the best error.
             _BestError = new Vector4(float.MaxValue);
+
             // Initialize the metric
             var perceptual = flags.HasFlag(SquishOptions.ColourMetricPerceptual);
+
             if (perceptual)
                 _Metric = new Vector4(0.2126f, 0.7152f, 0.0722f, 0.0f);
             else
                 _Metric = new Vector4(1.0f);
+
             // Get the covariance matrix.
             var covariance = Sym3x3.ComputeWeightedCovariance(colours.Count, colours.Points, colours.Weights);
             // Compute the principle component
@@ -36,6 +39,7 @@ namespace Lumina.Data.Parsing.Tex
             // Build the list of dot products.
             var dps = new float[16];
             var ordOff = 16 * iteration;
+
             for (int i = 0; i < _Colours.Count; ++i)
             {
                 dps[i] = Vector3.Dot(_Colours.Points[i], axis);
@@ -61,6 +65,7 @@ namespace Lumina.Data.Parsing.Tex
             {
                 var prevOff = 16 * it;
                 var same = true;
+
                 for (int i = 0; i < _Colours.Count; ++i)
                 {
                     if (_Order[ordOff + i] != _Order[prevOff + i])
@@ -76,6 +81,7 @@ namespace Lumina.Data.Parsing.Tex
 
             // Copy the ordering and weight all the points
             _XSumWSum = new Vector4(0f);
+
             for (int i = 0; i < _Colours.Count; ++i)
             {
                 var j = _Order[ordOff + i];
@@ -102,11 +108,13 @@ namespace Lumina.Data.Parsing.Tex
             var gridrcp = new Vector4(1f / 31f, 1f / 63f, 1f / 31f, 0f);
             // Prepare the ordering using the principle axis.
             ConstructOrdering(_Principle, 0);
+
             // Check all possible clusters and iterate on the total order.
             var bestStart = zero;
             var bestEnd = zero;
             var bestError = _BestError;
             var bestIndices = new byte[16];
+
             //var bestIteration = 0;
             //int besti = 0, bestj = 0;
             //// Loop over iterations (we avoid the case that all points in first or last cluster)

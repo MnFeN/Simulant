@@ -21,7 +21,10 @@ namespace Lumina.Excel.Sheets
         public uint RowId => row;
         public global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef> Data => new global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef>(page, offset, offset, DataCtor, 16);
 
-        private static global::Lumina.Excel.RowRef DataCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + i * 4), new System.Type[] { typeof(InstanceContentGuide), typeof(Story), typeof(Opening), typeof(CustomTalk), typeof(DefaultTalk), typeof(GilShop), typeof(Warp), typeof(Quest) }, 1409177986, page.Language);
+        private static global::Lumina.Excel.RowRef DataCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + i * 4), new System.Type[]
+        {
+            typeof(InstanceContentGuide), typeof(Story), typeof(Opening), typeof(CustomTalk), typeof(DefaultTalk), typeof(GilShop), typeof(Warp), typeof(Quest)
+        }, 1409177986, page.Language);
         static public ArrayEventHandler Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row) => new ArrayEventHandler(page, offset, row);
     }
 }

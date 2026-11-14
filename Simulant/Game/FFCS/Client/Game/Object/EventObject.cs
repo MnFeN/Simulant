@@ -34,6 +34,7 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         public MemoryField<Vector3> DrawOffset => GameObject.DrawOffset;
         public DrawObject DrawObject => GameObject.DrawObject;
         public MemoryField<VisibilityFlags> RenderFlags => GameObject.RenderFlags;
+
         public bool GetIsTargetable() => GameObject.GetIsTargetable();
         public IntPtr GetName() => GameObject.GetName();
         public float GetRadius(bool adjustByTransformation = true) => GameObject.GetRadius(adjustByTransformation);
@@ -43,8 +44,8 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         public void PositionModified() => GameObject.PositionModified();
         public void RotationModified() => GameObject.RotationModified();
         public bool IsNotMounted() => GameObject.IsNotMounted();
-        #endregion
 
+        #endregion
         public MemoryField<IntPtr> EObjRowPtr => Ptr.Field<IntPtr>(0x1A0);
         public MemoryField<IntPtr> ExportedSGRowPtr => Ptr.Field<IntPtr>(0x1A8);
 

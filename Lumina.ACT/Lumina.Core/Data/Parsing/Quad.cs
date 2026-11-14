@@ -55,7 +55,7 @@ namespace Lumina.Data.Parsing
         {
             Data = (ulong)data
         };
-        public static implicit operator ulong (Quad quad) => quad.Data;
+        public static implicit operator ulong(Quad quad) => quad.Data;
     }
 
     public static class QuadExtensions

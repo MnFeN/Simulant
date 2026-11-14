@@ -16,8 +16,10 @@ namespace Simulant.Simulation.Runtime
         {
             if (double.IsNaN(IdleRadius) || double.IsInfinity(IdleRadius) || IdleRadius < 0 || IdleRadius > 3)
                 throw new ArgumentOutOfRangeException(nameof(IdleRadius), "空闲走动半径必须在 0 至 3 米之间。");
+
             if (double.IsNaN(RouteAngleDegrees) || double.IsInfinity(RouteAngleDegrees) || RouteAngleDegrees < 0 || RouteAngleDegrees > 90)
                 throw new ArgumentOutOfRangeException(nameof(RouteAngleDegrees), "绕路角度范围必须在 0 至 90 度之间。");
+
             return (SimActorBehaviorOptions)MemberwiseClone();
         }
     }

@@ -16,7 +16,6 @@ namespace Simulant.Game.FFCS.Client.Game.InstanceContent
         // private Director Director => Ptr.As<Director>();
         // #region Director
         // #endregion
-
         public MemoryField<byte> ContentTypeRowId => Ptr.Field<byte>(0x4E6);
         public MapEffectList MapEffects => Ptr.ReadPtr(0xC90).As<MapEffectList>();
         /// <remarks> This might also be a countdown until the content starts (e.g. Frontlines), then the actual time left of the content. </remarks>
@@ -25,13 +24,13 @@ namespace Simulant.Game.FFCS.Client.Game.InstanceContent
         // ECommons/ECommons/Hooks/MapEffect.cs
         // MapEffect 函数：48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC 20 8B FA 41 0F B7 E8
         // 这里使用的是其下一层函数：
-        [SigPattern("E8 * * * * 3C ? 75 ? 80 64 B3 ? ?", 
+        [SigPattern("E8 * * * * 3C ? 75 ? 80 64 B3 ? ?",
                     "48 89 6C 24 ? 56 48 83 EC ? 8B C2 41 0F B7 E8 45 33 C0 48 8D 14 40 48 8B 81 ? ? ? ? B1 ?")]
         public static IntPtr MapEffectFuncPtr { get; set; }
 
         /// <returns>Success</returns>
         public bool MapEffect(uint index, ushort flag) // byte index?
-            => MapEffectFuncPtr.Call<bool>(Ptr, index, flag);
+        => MapEffectFuncPtr.Call<bool>(Ptr, index, flag);
 
         public uint GetCurrentLevel() => Ptr.CallVFunc<uint>(302);
 

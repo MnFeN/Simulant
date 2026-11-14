@@ -31,7 +31,10 @@ namespace Simulant.UI
         public TerritoryForm()
         {
             InitializeComponent();
-            if (components == null) components = new System.ComponentModel.Container();
+
+            if (components == null)
+                components = new System.ComponentModel.Container();
+
             _filterErrors = new ErrorProvider(components)
             {
                 ContainerControl = this,
@@ -56,6 +59,7 @@ namespace Simulant.UI
                 return;
 
             var rowIndex = _filteredTerritories.FindIndex(t => t.Id == _lastSelectedTerritoryId.Value);
+
             if (rowIndex < 0 || rowIndex >= dgvTerritory.RowCount)
                 return;
 
@@ -93,7 +97,6 @@ namespace Simulant.UI
         }
 
         #region Territory
-
         private sealed class TerritoryViewItem
         {
             public int Id;
@@ -146,6 +149,7 @@ namespace Simulant.UI
                         continue;
 
                     var value = attribute.ConstructorArguments[0].Value;
+
                     if (value is int territoryId)
                     {
                         result.Add(territoryId);
@@ -162,6 +166,7 @@ namespace Simulant.UI
         {
             _invalidRegex = false;
             _filterErrors.SetError(txtFilter, string.Empty);
+
             try
             {
                 _cachedRegex = string.IsNullOrWhiteSpace(txtFilter.Text)
@@ -175,12 +180,15 @@ namespace Simulant.UI
                 RejectSearch("正则表达式格式不正确，请修改后重试。");
                 return;
             }
+
             ApplySearch();
         }
 
         private void ApplySearch()
         {
-            if (_invalidRegex || _allTerritories == null) return;
+            if (_invalidRegex || _allTerritories == null)
+                return;
+
             var result = new List<TerritoryViewItem>();
             var timer = Stopwatch.StartNew();
 
@@ -188,6 +196,7 @@ namespace Simulant.UI
             {
                 if (timer.ElapsedMilliseconds >= 200)
                     throw new TimeoutException();
+
                 return _cachedRegex.IsMatch(text ?? string.Empty);
             }
 
@@ -195,10 +204,13 @@ namespace Simulant.UI
             {
                 foreach (var territory in _allTerritories)
                 {
-                    if (chkPresetOnly.Checked && !territory.HasPreset) continue;
+                    if (chkPresetOnly.Checked && !territory.HasPreset)
+                        continue;
+
                     if (_cachedRegex != null && !Matches(territory.IdString) &&
                         !Matches(territory.InstanceName) && !Matches(territory.PlaceName) && !Matches(territory.RegionName))
                         continue;
+
                     result.Add(territory);
                 }
             }
@@ -265,7 +277,9 @@ namespace Simulant.UI
 
         private void dgvTerritory_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0) return;
+            if (e.RowIndex < 0)
+                return;
+
             btnOk_Click(sender, e);
         }
 
@@ -275,10 +289,10 @@ namespace Simulant.UI
         }
 
         #endregion Territory
-
         private void btnOk_Click(object sender, EventArgs e)
         {
             var rowIndex = dgvTerritory.CurrentCell?.RowIndex ?? -1;
+
             if (rowIndex < 0 || rowIndex >= _filteredTerritories.Count)
                 return;
 

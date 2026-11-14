@@ -34,6 +34,7 @@ namespace Simulant.Tests
             }
 
             var failures = 0;
+
             foreach (var test in tests)
             {
                 try
@@ -68,14 +69,26 @@ namespace Simulant.Tests
                 .At(99, new SimTimeline())
                 .After(0.1, noop);
 
-            SequenceNear(new[] { 3.0, 1, 1.5, 4.2, 4.5, 4.6, 6, 6.2, 6.4, 6.5 },
+            SequenceNear(new[]
+            {
+                3.0, 1, 1.5, 4.2, 4.5, 4.6, 6, 6.2, 6.4, 6.5
+            },
                 timeline.Snapshot().Select(node => node.Seconds));
-            foreach (var node in timeline.Snapshot()) node.Action();
-            SequenceEqual(new[] { 0, 1, 2 }, repeated);
+
+            foreach (var node in timeline.Snapshot())
+                node.Action();
+
+            SequenceEqual(new[]
+            {
+                0, 1, 2
+            }, repeated);
 
             // Child insertion order defines the cursor, even when its last node is earlier.
             var unordered = new SimTimeline().At(4, noop).At(1, noop);
-            SequenceNear(new[] { 6.0, 3, 3.5 },
+            SequenceNear(new[]
+            {
+                6.0, 3, 3.5
+            },
                 new SimTimeline().At(2, unordered).After(0.5, noop).Snapshot().Select(node => node.Seconds));
         }
 
@@ -95,7 +108,10 @@ namespace Simulant.Tests
                 scheduler.Start();
                 Wait(finished, "snapshot execution");
                 scheduler.Dispose();
-                SequenceEqual(new[] { "original" }, calls);
+                SequenceEqual(new[]
+                {
+                    "original"
+                }, calls);
             }
         }
 
@@ -103,22 +119,37 @@ namespace Simulant.Tests
         {
             Action noop = () => { };
             var timeline = new SimTimeline().At(1, noop);
+
             using (var scheduler = new SimScheduler())
             {
-                foreach (var invalid in new[] { -1.0, double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+                foreach (var invalid in new[]
+                {
+                    -1.0,
+                    double.NaN,
+                    double.PositiveInfinity,
+                    double.NegativeInfinity
+                }
+
+                )
                 {
                     Throws<ArgumentOutOfRangeException>(() => timeline.At(invalid, noop));
                     Throws<ArgumentOutOfRangeException>(() => timeline.After(invalid, noop));
+
                     Throws<ArgumentOutOfRangeException>(() => timeline.Repeat(0, invalid, 1, _ => { }));
+
                     Throws<ArgumentOutOfRangeException>(() => scheduler.Schedule(invalid, noop));
                     Throws<ArgumentOutOfRangeException>(() => scheduler.ScheduleAfter(invalid, noop));
                     Throws<ArgumentOutOfRangeException>(() => scheduler.Play(timeline, invalid));
                 }
+
                 Throws<ArgumentNullException>(() => timeline.At(0, (Action)null));
                 Throws<ArgumentNullException>(() => timeline.At(0, (SimTimeline)null));
                 Throws<ArgumentNullException>(() => timeline.Repeat(0, 1, 1, null));
+
                 Throws<ArgumentOutOfRangeException>(() => timeline.Repeat(0, 1, -1, _ => { }));
+
                 Throws<ArgumentOutOfRangeException>(() => timeline.Repeat(double.MaxValue, double.MaxValue, 3, _ => { }));
+
                 Throws<ArgumentOutOfRangeException>(() => timeline.At(double.MaxValue,
                     new SimTimeline().At(double.MaxValue, noop)));
                 Throws<ArgumentNullException>(() => scheduler.Schedule(0, null));
@@ -139,6 +170,7 @@ namespace Simulant.Tests
         public static void StableDeadlineOrdering()
         {
             var calls = new List<string>();
+
             using (var finished = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
             {
@@ -151,7 +183,10 @@ namespace Simulant.Tests
                 scheduler.Start();
                 Wait(finished, "ordered nodes");
                 scheduler.Dispose();
-                SequenceEqual(new[] { "at 10", "at 20", "first at 40", "second at 40" }, calls);
+                SequenceEqual(new[]
+                {
+                    "at 10", "at 20", "first at 40", "second at 40"
+                }, calls);
             }
         }
 
@@ -162,6 +197,7 @@ namespace Simulant.Tests
             Action multicast = () => { };
             multicast += asyncAction;
             var timeline = new SimTimeline();
+
             using (var scheduler = new SimScheduler())
             {
                 Throws<ArgumentException>(() => timeline.At(0, asyncAction));
@@ -178,25 +214,30 @@ namespace Simulant.Tests
         public static void NestedTimelineUsesPlannedTime()
         {
             var calls = new List<string>();
+
             using (var entered = new ManualResetEventSlim())
             using (var release = new ManualResetEventSlim())
             using (var finished = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
             {
                 SimScheduledAction actualRelative = null;
+
                 scheduler.Schedule(0, () =>
                 {
                     entered.Set();
                     Wait(release, "release late parent");
                     scheduler.Play(new SimTimeline().At(0.02, () => calls.Add("planned child")));
+
                     actualRelative = scheduler.ScheduleAfter(0.02, () =>
                     {
                         calls.Add("actual relative");
                         finished.Set();
                     });
                 });
+
                 scheduler.Schedule(0.04, () => calls.Add("absolute marker"));
                 scheduler.Start();
+
                 try
                 {
                     Wait(entered, "late parent entry");
@@ -204,9 +245,16 @@ namespace Simulant.Tests
                     release.Set();
                     Wait(finished, "relative callback");
                 }
-                finally { release.Set(); }
+                finally
+                {
+                    release.Set();
+                }
+
                 scheduler.Dispose();
-                SequenceEqual(new[] { "planned child", "absolute marker", "actual relative" }, calls);
+                SequenceEqual(new[]
+                {
+                    "planned child", "absolute marker", "actual relative"
+                }, calls);
                 Assert(actualRelative.Seconds > 0.04, "ScheduleAfter must use actual elapsed time inside a late callback.");
             }
         }
@@ -217,7 +265,10 @@ namespace Simulant.Tests
             using (var scheduler = new SimScheduler())
             {
                 // The maximum finite deadline also exercises the bounded native wait conversion.
-                var distant = scheduler.Schedule(double.MaxValue, () => { throw new Exception("Distant node ran."); });
+                var distant = scheduler.Schedule(double.MaxValue, () =>
+                {
+                    throw new Exception("Distant node ran.");
+                });
                 scheduler.Start();
                 Thread.Sleep(20);
                 scheduler.ScheduleAfter(0.01, finished.Set);
@@ -234,6 +285,7 @@ namespace Simulant.Tests
             var handles = new SimScheduledAction[count];
             var deadlines = new double[count];
             var random = new Random(314159);
+
             using (var finished = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
             {
@@ -243,12 +295,14 @@ namespace Simulant.Tests
                     deadlines[i] = random.Next(4) * 0.001;
                     handles[i] = scheduler.Schedule(deadlines[i], () => seen.Add(index));
                 }
+
                 for (var i = 0; i < count; i += 3)
                 {
                     Assert(handles[i].Cancel(), "First queued cancellation should succeed.");
                     Assert(!handles[i].Cancel(), "Repeated cancellation should be harmless.");
                     Assert(handles[i].IsCancelled && handles[i].IsCompleted, "Cancelled handles must be terminal.");
                 }
+
                 scheduler.Schedule(0.01, finished.Set);
                 scheduler.Start();
                 Wait(finished, "remaining heap nodes");
@@ -267,6 +321,7 @@ namespace Simulant.Tests
             var stoppedBeforeReport = false;
             var unexpectedRan = false;
             SimScheduler scheduler = null;
+
             using (var reportedEvent = new ManualResetEventSlim())
             {
                 scheduler = new SimScheduler((exception, name) =>
@@ -277,9 +332,13 @@ namespace Simulant.Tests
                     reportedEvent.Set();
                     throw new Exception("Error reporting itself failed.");
                 });
+
                 using (scheduler)
                 {
-                    var failing = scheduler.Schedule(0, () => { throw expected; }, "failing node");
+                    var failing = scheduler.Schedule(0, () =>
+                    {
+                        throw expected;
+                    }, "failing node");
                     var skipped = scheduler.Schedule(0, () => unexpectedRan = true);
                     scheduler.Start();
                     Wait(reportedEvent, "error handler");
@@ -304,8 +363,12 @@ namespace Simulant.Tests
                     Wait(release, "cancelled active callback release");
                     finished = true;
                 });
-                var skipped = scheduler.Schedule(0, () => { throw new Exception("Cancelled node ran."); });
+                var skipped = scheduler.Schedule(0, () =>
+                {
+                    throw new Exception("Cancelled node ran.");
+                });
                 scheduler.Start();
+
                 try
                 {
                     Wait(entered, "active callback");
@@ -317,7 +380,11 @@ namespace Simulant.Tests
                     Assert(!active.IsCompleted && skipped.IsCancelled && scheduler.PendingCount == 0,
                         "Cancel should clear queued work without interrupting the active callback.");
                 }
-                finally { release.Set(); }
+                finally
+                {
+                    release.Set();
+                }
+
                 scheduler.Dispose();
                 Assert(finished && active.IsCompleted, "The already running callback should finish normally.");
             }
@@ -333,12 +400,14 @@ namespace Simulant.Tests
             {
                 Exception threadFailure = null;
                 var completed = false;
+
                 scheduler.Schedule(0, () =>
                 {
                     entered.Set();
                     Wait(release, "dispose barrier release");
                     completed = true;
                 });
+
                 scheduler.Start();
                 Wait(entered, "dispose barrier entry");
                 var disposer = BackgroundThread(() =>
@@ -348,16 +417,27 @@ namespace Simulant.Tests
                         disposeStarted.Set();
                         scheduler.Dispose();
                     }
-                    catch (Exception ex) { threadFailure = ex; }
-                    finally { disposeFinished.Set(); }
+                    catch (Exception ex)
+                    {
+                        threadFailure = ex;
+                    }
+                    finally
+                    {
+                        disposeFinished.Set();
+                    }
                 });
+
                 try
                 {
                     disposer.Start();
                     Wait(disposeStarted, "disposer start");
                     Assert(!disposeFinished.Wait(50), "Dispose returned while a callback still owned resources.");
                 }
-                finally { release.Set(); }
+                finally
+                {
+                    release.Set();
+                }
+
                 Wait(disposeFinished, "disposer finish");
                 Join(disposer);
                 Assert(threadFailure == null && completed, "Dispose must finish after the callback completes.");
@@ -366,31 +446,47 @@ namespace Simulant.Tests
 
         public static void StopRaceDoesNotReportAnError()
         {
-            foreach (var disposeInsideCallback in new[] { false, true })
-            using (var entered = new ManualResetEventSlim())
-            using (var release = new ManualResetEventSlim())
+            foreach (var disposeInsideCallback in new[]
             {
-                var reported = false;
-                using (var scheduler = new SimScheduler((_, __) => reported = true))
-                {
-                    scheduler.Schedule(0, () =>
-                    {
-                        entered.Set();
-                        Wait(release, "stop race release");
-                        if (disposeInsideCallback) scheduler.Dispose();
-                        scheduler.Schedule(0, () => { });
-                    });
-                    scheduler.Start();
-                    try
-                    {
-                        Wait(entered, "stop race entry");
-                        scheduler.Cancel();
-                    }
-                    finally { release.Set(); }
-                    scheduler.Dispose();
-                    Assert(!reported, "An intentional stop racing with a callback must not report a second failure.");
-                }
+                false,
+                true
             }
+
+            )
+                using (var entered = new ManualResetEventSlim())
+                using (var release = new ManualResetEventSlim())
+                {
+                    var reported = false;
+
+                    using (var scheduler = new SimScheduler((_, __) => reported = true))
+                    {
+                        scheduler.Schedule(0, () =>
+                        {
+                            entered.Set();
+                            Wait(release, "stop race release");
+
+                            if (disposeInsideCallback)
+                                scheduler.Dispose();
+
+                            scheduler.Schedule(0, () => { });
+                        });
+
+                        scheduler.Start();
+
+                        try
+                        {
+                            Wait(entered, "stop race entry");
+                            scheduler.Cancel();
+                        }
+                        finally
+                        {
+                            release.Set();
+                        }
+
+                        scheduler.Dispose();
+                        Assert(!reported, "An intentional stop racing with a callback must not report a second failure.");
+                    }
+                }
         }
 
         public static void CallbackCanDisposeScheduler()
@@ -404,7 +500,10 @@ namespace Simulant.Tests
                     scheduler.Dispose();
                     finished.Set();
                 });
-                var pending = scheduler.Schedule(0, () => { throw new Exception("Work after self-disposal ran."); });
+                var pending = scheduler.Schedule(0, () =>
+                {
+                    throw new Exception("Work after self-disposal ran.");
+                });
                 scheduler.Start();
                 Wait(finished, "self disposal");
                 scheduler.Dispose();
@@ -424,18 +523,30 @@ namespace Simulant.Tests
                     try
                     {
                         Wait(start, "concurrent cancellation start");
+
                         for (var i = worker; i < handles.Length; i += 4)
                         {
                             handles[i].Cancel();
-                            if (i > 100) scheduler.Cancel();
+
+                            if (i > 100)
+                                scheduler.Cancel();
                         }
                     }
-                    catch (Exception ex) { errors.Enqueue(ex); }
+                    catch (Exception ex)
+                    {
+                        errors.Enqueue(ex);
+                    }
                 })).ToArray();
                 scheduler.Start();
-                foreach (var thread in cancellers) thread.Start();
+
+                foreach (var thread in cancellers)
+                    thread.Start();
+
                 start.Set();
-                foreach (var thread in cancellers) Join(thread);
+
+                foreach (var thread in cancellers)
+                    Join(thread);
+
                 scheduler.Dispose();
                 Assert(errors.IsEmpty, "Concurrent cancellation must not corrupt the heap.");
                 Assert(scheduler.PendingCount == 0 && handles.All(handle => handle.IsCancelled), "All pending nodes must be cancelled.");
@@ -454,22 +565,36 @@ namespace Simulant.Tests
                     try
                     {
                         Wait(start, "concurrent producer start");
+
                         for (var i = 0; i < 2000; i++)
                         {
                             var handle = scheduler.Schedule(30, () => { });
                             firstScheduled.Set();
-                            if (i % 2 == 0) handle.Cancel();
+
+                            if (i % 2 == 0)
+                                handle.Cancel();
                         }
                     }
-                    catch (InvalidOperationException) { /* The permanent stop rejects later producers. */ }
-                    catch (Exception ex) { errors.Enqueue(ex); }
+                    catch (InvalidOperationException)
+                    { /* The permanent stop rejects later producers. */
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Enqueue(ex);
+                    }
                 })).ToArray();
                 scheduler.Start();
-                foreach (var thread in producers) thread.Start();
+
+                foreach (var thread in producers)
+                    thread.Start();
+
                 start.Set();
                 Wait(firstScheduled, "first producer node");
                 scheduler.Cancel();
-                foreach (var thread in producers) Join(thread);
+
+                foreach (var thread in producers)
+                    Join(thread);
+
                 scheduler.Dispose();
                 Assert(errors.IsEmpty && scheduler.PendingCount == 0, "Concurrent producers must finish without orphaned nodes.");
             }
@@ -484,26 +609,32 @@ namespace Simulant.Tests
             var wrongOrder = false;
             var usedThreadPool = false;
             var threadIds = new HashSet<int>();
+
             using (var finished = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
             {
                 for (var i = 0; i < count; i++)
                 {
                     var expected = i;
+
                     scheduler.Schedule(0, () =>
                     {
                         wrongOrder |= next != expected;
                         next++;
                         threadIds.Add(Thread.CurrentThread.ManagedThreadId);
                         usedThreadPool |= Thread.CurrentThread.IsThreadPoolThread;
-                        if (next == count) finished.Set();
+
+                        if (next == count)
+                            finished.Set();
                     });
                 }
+
                 Assert(scheduler.PendingCount == count, "Queueing must not execute nodes before Start.");
                 scheduler.Start();
                 Wait(finished, "50,000 scheduled nodes");
                 scheduler.Dispose();
             }
+
             stopwatch.Stop();
             ThreadPool.GetAvailableThreads(out var workersAfter, out var portsAfter);
             Assert(next == count && !wrongOrder, "Every same-time node must execute exactly once in insertion order.");
@@ -513,7 +644,10 @@ namespace Simulant.Tests
         }
 
         private static Thread BackgroundThread(ThreadStart action)
-            => new Thread(action) { IsBackground = true };
+            => new Thread(action)
+            {
+                IsBackground = true
+            };
 
         private static void Wait(ManualResetEventSlim signal, string description)
             => Assert(signal.Wait(TimeoutMs), "Timed out waiting for " + description + ".");
@@ -523,13 +657,22 @@ namespace Simulant.Tests
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
-        private static void Throws<T>(Action action) where T : Exception
+        private static void Throws<T>(Action action)
+            where T : Exception
         {
-            try { action(); }
-            catch (T) { return; }
+            try
+            {
+                action();
+            }
+            catch (T)
+            {
+                return;
+            }
+
             throw new Exception("Expected " + typeof(T).Name + ".");
         }
 

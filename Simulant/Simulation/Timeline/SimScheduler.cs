@@ -26,23 +26,39 @@ namespace Simulant.Simulation.Timeline
         public SimScheduler(Action<Exception, string> errorHandler = null)
         {
             _errorHandler = errorHandler;
-            _worker = new Thread(Run) { IsBackground = true, Name = "Simulant timeline" };
+            _worker = new Thread(Run)
+            {
+                IsBackground = true,
+                Name = "Simulant timeline"
+            };
         }
 
         public double ElapsedSeconds
         {
-            get { lock (_gate) return _clock.Elapsed.TotalSeconds; }
+            get
+            {
+                lock (_gate)
+                    return _clock.Elapsed.TotalSeconds;
+            }
         }
 
         /// <summary>The number of queued nodes; excludes the currently running node.</summary>
         public int PendingCount
         {
-            get { lock (_gate) return _heap.Count; }
+            get
+            {
+                lock (_gate)
+                    return _heap.Count;
+            }
         }
 
         public bool IsRunning
         {
-            get { lock (_gate) return _started && !_cancelled; }
+            get
+            {
+                lock (_gate)
+                    return _started && !_cancelled;
+            }
         }
 
         public bool IsSchedulerThread => Thread.CurrentThread == _worker;
@@ -53,8 +69,12 @@ namespace Simulant.Simulation.Timeline
             lock (_gate)
             {
                 ThrowIfStopped();
-                if (_started) return;
+
+                if (_started)
+                    return;
+
                 _clock.Start();
+
                 try
                 {
                     _worker.Start();
@@ -73,6 +93,7 @@ namespace Simulant.Simulation.Timeline
         {
             SimTimeline.ValidateSeconds(seconds, nameof(seconds));
             SimTimeline.ValidateAction(action, nameof(action));
+
             lock (_gate)
             {
                 ThrowIfStopped();
@@ -87,6 +108,7 @@ namespace Simulant.Simulation.Timeline
         {
             SimTimeline.ValidateSeconds(seconds, nameof(seconds));
             SimTimeline.ValidateAction(action, nameof(action));
+
             lock (_gate)
             {
                 ThrowIfStopped();
@@ -103,6 +125,7 @@ namespace Simulant.Simulation.Timeline
         {
             SimTimeline.ValidateSeconds(seconds, nameof(seconds));
             SimTimeline.ValidateAction(action, nameof(action));
+
             lock (_gate)
             {
                 ThrowIfStopped();
@@ -121,18 +144,24 @@ namespace Simulant.Simulation.Timeline
         /// </summary>
         public void Play(SimTimeline timeline, double delaySeconds = 0)
         {
-            if (timeline == null) throw new ArgumentNullException(nameof(timeline));
+            if (timeline == null)
+                throw new ArgumentNullException(nameof(timeline));
+
             SimTimeline.ValidateSeconds(delaySeconds, nameof(delaySeconds));
             var nodes = timeline.Snapshot();
+
             lock (_gate)
             {
                 ThrowIfStopped();
                 var anchor = (IsSchedulerThread && _executing ? _currentNodeSeconds : _clock.Elapsed.TotalSeconds) + delaySeconds;
                 SimTimeline.ValidateSeconds(anchor, nameof(delaySeconds));
+
                 foreach (var node in nodes)
                     SimTimeline.ValidateSeconds(anchor + node.Seconds, nameof(timeline));
+
                 foreach (var node in nodes)
                     Enqueue(anchor + node.Seconds, node.Action, node.Name);
+
                 Monitor.Pulse(_gate);
             }
         }
@@ -154,6 +183,7 @@ namespace Simulant.Simulation.Timeline
         public void Dispose()
         {
             bool join;
+
             lock (_gate)
             {
                 _disposed = true;
@@ -161,22 +191,31 @@ namespace Simulant.Simulation.Timeline
                 Monitor.PulseAll(_gate);
                 join = _started && !IsSchedulerThread;
             }
+
             // No callback, error handler, or thread join runs while holding the queue lock.
-            if (join) _worker.Join();
+            if (join)
+                _worker.Join();
         }
 
         /// <summary>中断后在原调度线程等待演出，不再运行节点；手动停止或卸载可立即唤醒。</summary>
         internal void WaitForFailureDisplay(double seconds)
         {
             SimTimeline.ValidateSeconds(seconds, nameof(seconds));
-            if (!IsSchedulerThread) throw new InvalidOperationException("演出等待只能在调度线程执行。");
+
+            if (!IsSchedulerThread)
+                throw new InvalidOperationException("演出等待只能在调度线程执行。");
+
             var wait = Stopwatch.StartNew();
+
             lock (_gate)
             {
                 while (_cancelled && !_disposed)
                 {
                     var remaining = seconds - wait.Elapsed.TotalSeconds;
-                    if (remaining <= 0) return;
+
+                    if (remaining <= 0)
+                        return;
+
                     var milliseconds = remaining >= int.MaxValue / 1000.0
                         ? int.MaxValue : Math.Max(1, (int)Math.Ceiling(remaining * 1000));
                     Monitor.Wait(_gate, milliseconds);
@@ -188,7 +227,9 @@ namespace Simulant.Simulation.Timeline
         {
             lock (_gate)
             {
-                if (node.State != SimScheduledAction.Queued) return false;
+                if (node.State != SimScheduledAction.Queued)
+                    return false;
+
                 RemoveAt(node.HeapIndex);
                 node.Action = null;
                 Volatile.Write(ref node.State, SimScheduledAction.Cancelled);
@@ -199,23 +240,30 @@ namespace Simulant.Simulation.Timeline
 
         private void CancelCore()
         {
-            if (_cancelled) return;
+            if (_cancelled)
+                return;
+
             _cancelled = true;
             _clock.Stop();
+
             foreach (var node in _heap)
             {
                 node.HeapIndex = -1;
                 node.Action = null;
                 Volatile.Write(ref node.State, SimScheduledAction.Cancelled);
             }
+
             _heap.Clear();
             Monitor.PulseAll(_gate);
         }
 
         private void ThrowIfStopped()
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(SimScheduler));
-            if (_cancelled) throw new InvalidOperationException("The scheduler has been cancelled and cannot be restarted.");
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(SimScheduler));
+
+            if (_cancelled)
+                throw new InvalidOperationException("The scheduler has been cancelled and cannot be restarted.");
         }
 
         private void Run()
@@ -224,11 +272,14 @@ namespace Simulant.Simulation.Timeline
             {
                 SimScheduledAction node;
                 Action action;
+
                 lock (_gate)
                 {
                     while (true)
                     {
-                        if (_cancelled) return;
+                        if (_cancelled)
+                            return;
+
                         if (_heap.Count == 0)
                         {
                             Monitor.Wait(_gate);
@@ -237,6 +288,7 @@ namespace Simulant.Simulation.Timeline
 
                         node = _heap[0];
                         var remaining = node.Seconds - _clock.Elapsed.TotalSeconds;
+
                         if (remaining > 0)
                         {
                             // Clamp before converting so very distant deadlines cannot overflow the wait.
@@ -263,18 +315,27 @@ namespace Simulant.Simulation.Timeline
                 catch (Exception exception)
                 {
                     bool report;
+
                     lock (_gate)
                     {
                         // A callback may try to enqueue more work after another thread has stopped us.
                         // That is normal shutdown, not a second simulation failure.
                         report = !_cancelled;
-                        if (report) CancelCore();
+
+                        if (report)
+                            CancelCore();
                     }
+
                     if (report)
                     {
                         // Freeze scheduling before reporting: the handler may tear down simulation state.
-                        try { _errorHandler?.Invoke(exception, node.Name); }
-                        catch { /* An error reporter must not bring down the host process. */ }
+                        try
+                        {
+                            _errorHandler?.Invoke(exception, node.Name);
+                        }
+                        catch
+                        { /* An error reporter must not bring down the host process. */
+                        }
                     }
                 }
                 finally
@@ -307,10 +368,13 @@ namespace Simulant.Simulation.Timeline
             var last = _heap[lastIndex];
             _heap.RemoveAt(lastIndex);
             removed.HeapIndex = -1;
-            if (index == lastIndex) return;
+
+            if (index == lastIndex)
+                return;
 
             _heap[index] = last;
             last.HeapIndex = index;
+
             if (index > 0 && ComesBefore(last, _heap[(index - 1) / 2]))
                 SiftUp(index);
             else
@@ -322,7 +386,10 @@ namespace Simulant.Simulation.Timeline
             while (index > 0)
             {
                 var parent = (index - 1) / 2;
-                if (!ComesBefore(_heap[index], _heap[parent])) return;
+
+                if (!ComesBefore(_heap[index], _heap[parent]))
+                    return;
+
                 Swap(index, parent);
                 index = parent;
             }
@@ -333,8 +400,13 @@ namespace Simulant.Simulation.Timeline
             while (index < _heap.Count / 2)
             {
                 var child = index * 2 + 1;
-                if (child + 1 < _heap.Count && ComesBefore(_heap[child + 1], _heap[child])) child++;
-                if (!ComesBefore(_heap[child], _heap[index])) return;
+
+                if (child + 1 < _heap.Count && ComesBefore(_heap[child + 1], _heap[child]))
+                    child++;
+
+                if (!ComesBefore(_heap[child], _heap[index]))
+                    return;
+
                 Swap(index, child);
                 index = child;
             }

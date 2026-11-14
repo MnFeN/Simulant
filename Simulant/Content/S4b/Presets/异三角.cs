@@ -26,7 +26,10 @@ namespace Simulant.Content.S4b.Presets
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
             new ComboBoxOption<bool>(nameof(O8s_异三角Logic.VerifyEntranceMovement), "入场移动验证", false,
-                new Map<bool> { [false] = "关闭", [true] = "开启：移动到场中后施法" }),
+                new Map<bool>
+            {
+                [false ] = "关闭", [true ] = "开启：移动到场中后施法"
+            }),
         };
 
     }
@@ -66,6 +69,7 @@ namespace Simulant.Content.S4b.Presets
                 mechanic.At(5.2, () => StartTriangles(2), "第二组异三角");
                 mechanic.At(7.2, () => StartTriangles(3), "第三组异三角");
                 mechanic.At(20, () => EntityManager.Delete(boss), "回收本体");
+
                 if (VerifyEntranceMovement)
                     boss.MoveNetworkTo(Vector2.Zero, speedParam: 30,
                         onArrived: () => Scheduler.ScheduleAfter(1, () => Play(mechanic), "入场后开始异三角"));
@@ -81,7 +85,7 @@ namespace Simulant.Content.S4b.Presets
                 Play(SingleTriangleTimeline());
             }
         }
-        
+
         private SimTimeline SingleTriangleTimeline()
         {
             (Triangle triangle, byte index) = GetRandomTriangleFromList();
@@ -90,11 +94,13 @@ namespace Simulant.Content.S4b.Presets
             timeline.At(1.1, () => eobj.PlayAnimation(0x20), "异三角出现");
             timeline.At(2.6, () => eobj.PlayAnimation(0x80), "异三角旋转");
             timeline.At(9.6, () => eobj.PlayAnimation(0x8), "异三角消失");
+
             timeline.At(9.7, () =>
             {
                 foreach (var pos in triangle.ResolveAbilityPos())
                     DummyExecute(pos, 0f, 0x290E, 3f); // 实际爆炸的圆形 AoE
             }, "异三角爆炸");
+
             return timeline;
         }
 
@@ -134,7 +140,7 @@ namespace Simulant.Content.S4b.Presets
 
         public enum TriangleDirection
         {
-            Left,  // 1E84B4
+            Left, // 1E84B4
             Right, // 1E84B3
             [RandomEnum(Left, Right)]
             Both

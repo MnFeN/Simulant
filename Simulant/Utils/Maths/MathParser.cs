@@ -19,50 +19,49 @@ namespace Simulant.Utils.Maths
 
         static MathParser()
         {
-            // Numeric Operators:
 
+            // Numeric Operators:
             // NOTE: All the characters in operators are considered as operator char. (except programmatically generated " ")
             // THE LIST IS IN ORDER AND THE LOWEST OPERATOR WILL BE EXECUTED FIRST.
-
             AddOperator("√", true, 1, unaryOperation: Math.Sqrt);
-            AddOperator("!", true, 1, unaryOperation: a => IsZero(a) ? 1 : 0);                          // logic not  (!!a: double => "bool")
-            AddOperator("~", true, 1, unaryOperation: a => ~Truncate(a));                               // bitwise not
-            AddOperator(" *", false, 2, binaryOperation: (a, b) => a * b);                              // programmatically added "*"
+            AddOperator("!", true, 1, unaryOperation: a => IsZero(a) ? 1 : 0); // logic not  (!!a: double => "bool")
+            AddOperator("~", true, 1, unaryOperation: a => ~Truncate(a)); // bitwise not
+            AddOperator(" *", false, 2, binaryOperation: (a, b) => a * b); // programmatically added "*"
             AddOperator("^", true, 2, binaryOperation: Math.Pow);
-            AddOperator("%", false, 2, binaryOperation: (a, b) => a % b);                               // remainder
-            AddOperator("%%", false, 2, binaryOperation: (a, b) => ModFunction(a, b));                  // modulo
+            AddOperator("%", false, 2, binaryOperation: (a, b) => a % b); // remainder
+            AddOperator("%%", false, 2, binaryOperation: (a, b) => ModFunction(a, b)); // modulo
             AddOperator("/", false, 2, binaryOperation: (a, b) => a / b);
-            AddOperator("//", false, 2, binaryOperation: (a, b) => Math.Floor(a / b + TOLERANCE));      // exact division (always floor)
+            AddOperator("//", false, 2, binaryOperation: (a, b) => Math.Floor(a / b + TOLERANCE)); // exact division (always floor)
             AddOperator("*", false, 2, binaryOperation: (a, b) => a * b);
             // note that for any binary ops above this, "- a [op] b" is considered as "- (a [op] b)".
             // e.g.  - 2 ^ 2 = -4 (not 4);  - 9 %% 4 = -1 (not 3);  - 9 // 4 = -2 (not -3).
             // otherwise use (-a) [op] b.
             AddOperator("-", false, 2, binaryOperation: (a, b) => a - b);
             AddOperator("+", false, 2, binaryOperation: (a, b) => a + b);
-            AddOperator("<<", false, 2, binaryOperation: (a, b) => Truncate(a) << (int)Truncate(b));         // bitwise left
-            AddOperator(">>", false, 2, binaryOperation: (a, b) => Truncate(a) >> (int)Truncate(b));         // bitwise right
-            AddOperator("??", true, 2);      // string operator: (a is numeric) ? a : b. Similar to null-coalescing operator ??
+            AddOperator("<<", false, 2, binaryOperation: (a, b) => Truncate(a) << (int)Truncate(b)); // bitwise left
+            AddOperator(">>", false, 2, binaryOperation: (a, b) => Truncate(a) >> (int)Truncate(b)); // bitwise right
+            AddOperator("??", true, 2); // string operator: (a is numeric) ? a : b. Similar to null-coalescing operator ??
             AddOperator(">", false, 2, binaryOperation: (a, b) => a > b + TOLERANCE ? 1 : 0);
             AddOperator("≥", false, 2, binaryOperation: (a, b) => a + TOLERANCE >= b ? 1 : 0);
             AddOperator(">=", false, 2, binaryOperation: (a, b) => a + TOLERANCE >= b ? 1 : 0);
             AddOperator("<", false, 2, binaryOperation: (a, b) => a + TOLERANCE < b ? 1 : 0);
             AddOperator("≤", false, 2, binaryOperation: (a, b) => a <= b + TOLERANCE ? 1 : 0);
             AddOperator("<=", false, 2, binaryOperation: (a, b) => a <= b + TOLERANCE ? 1 : 0);
-            AddOperator("==", false, 2);     // string operator: string equal
+            AddOperator("==", false, 2); // string operator: string equal
             AddOperator("=", false, 2, binaryOperation: (a, b) => IsZero(a - b) ? 1 : 0);
             AddOperator("≠", false, 2, binaryOperation: (a, b) => IsZero(a - b) ? 0 : 1);
             AddOperator("!=", false, 2, binaryOperation: (a, b) => IsZero(a - b) ? 0 : 1);
             AddOperator("≈", false, 2, binaryOperation: (a, b) => Math.Abs(a - b) <= 0.5 ? 1 : 0);
             AddOperator("!≈", false, 2, binaryOperation: (a, b) => Math.Abs(a - b) > 0.5 ? 1 : 0);
-            AddOperator("&", false, 2, binaryOperation: (a, b) => Truncate(a) & Truncate(b));           // bitwise and
-            AddOperator("⊕", false, 2, binaryOperation: (a, b) => Truncate(a) ^ Truncate(b));           // bitwise xor
-            AddOperator("|", false, 2, binaryOperation: (a, b) => Truncate(a) | Truncate(b));           // bitwise or
-            AddOperator("&&", false, 2, binaryOperation: (a, b) => IsZero(a) || IsZero(b) ? 0 : 1);   // logic and
-            AddOperator("^^", false, 2, binaryOperation: (a, b) => IsZero(a) == IsZero(b) ? 0 : 1);   // logic xor
-            AddOperator("||", false, 2, binaryOperation: (a, b) => IsZero(a) && IsZero(b) ? 0 : 1);   // logic or
-            AddOperator("?", true, 3);                                                                  // ternary operator
+            AddOperator("&", false, 2, binaryOperation: (a, b) => Truncate(a) & Truncate(b)); // bitwise and
+            AddOperator("⊕", false, 2, binaryOperation: (a, b) => Truncate(a) ^ Truncate(b)); // bitwise xor
+            AddOperator("|", false, 2, binaryOperation: (a, b) => Truncate(a) | Truncate(b)); // bitwise or
+            AddOperator("&&", false, 2, binaryOperation: (a, b) => IsZero(a) || IsZero(b) ? 0 : 1); // logic and
+            AddOperator("^^", false, 2, binaryOperation: (a, b) => IsZero(a) == IsZero(b) ? 0 : 1); // logic xor
+            AddOperator("||", false, 2, binaryOperation: (a, b) => IsZero(a) && IsZero(b) ? 0 : 1); // logic or
+            AddOperator("?", true, 3); // ternary operator
             // Other operators: should not be directly executed, and the arity should be marked as 0.
-            AddOperator(":", true, 0);    // parsed together with "?"
+            AddOperator(":", true, 0); // parsed together with "?"
             AddOperator("(", false, 0);
             AddOperator(")", false, 0);
             AddOperator(",", false, 0);
@@ -176,7 +175,6 @@ namespace Simulant.Utils.Maths
         }
 
         #region Numeric Functions (Definition)
-
         /// <summary> When comparing with an number n,
         /// all numbers in the range (n ± TOLERANCE) would all be considered as == n.
         /// double.Epsilon is too small for Triggernometry use.</summary>
@@ -220,26 +218,43 @@ namespace Simulant.Utils.Maths
                 if (IsZero(input[0] - input[i]))
                     return 1;
             }
+
             return 0;
         }
 
         public static double OrFunction(double[] x)
         {
-            if (x.Length == 0) { return 0; }
+            if (x.Length == 0)
+            {
+                return 0;
+            }
+
             foreach (double sx in x)
             {
-                if (!IsZero(sx)) { return 1; }
+                if (!IsZero(sx))
+                {
+                    return 1;
+                }
             }
+
             return 0;
         }
 
         public static double AndFunction(double[] x)
         {
-            if (x.Length == 0) { return 0; }
+            if (x.Length == 0)
+            {
+                return 0;
+            }
+
             foreach (double sx in x)
             {
-                if (IsZero(sx)) { return 0; }
+                if (IsZero(sx))
+                {
+                    return 0;
+                }
             }
+
             return 1;
         }
 
@@ -248,14 +263,20 @@ namespace Simulant.Utils.Maths
         /// e.g. distance(x1, y1, x2, y2)  distance(x1, y1, z1, x2, y2, z2)
         /// </summary>
         public static double DistanceFunction(double[] x)
-        {   
-            if (x.Length == 0 || x.Length % 2 != 0) { return 0; }
+        {
+            if (x.Length == 0 || x.Length % 2 != 0)
+            {
+                return 0;
+            }
+
             int dimension = x.Length / 2;
             double squaresum = 0;
+
             for (int i = 0; i < dimension; i++)
             {
                 squaresum += Math.Pow(x[i] - x[i + dimension], 2.0);
             }
+
             return Math.Sqrt(squaresum);
         }
 
@@ -265,13 +286,19 @@ namespace Simulant.Utils.Maths
         /// </summary>
         public static double L1DistanceFunction(double[] x)
         {
-            if (x.Length == 0 || x.Length % 2 != 0) { return 0; }
+            if (x.Length == 0 || x.Length % 2 != 0)
+            {
+                return 0;
+            }
+
             int dimension = x.Length / 2;
             double d = 0;
+
             for (int i = 0; i < dimension; i++)
             {
                 d += Math.Abs(x[i] - x[i + dimension]);
             }
+
             return d;
         }
 
@@ -281,13 +308,19 @@ namespace Simulant.Utils.Maths
         /// </summary>
         public static double LinfDistanceFunction(double[] x)
         {
-            if (x.Length == 0 || x.Length % 2 != 0) { return 0; }
+            if (x.Length == 0 || x.Length % 2 != 0)
+            {
+                return 0;
+            }
+
             int dimension = x.Length / 2;
             double d = 0;
+
             for (int i = 0; i < dimension; i++)
             {
                 d = Math.Max(d, Math.Abs(x[i] - x[i + dimension]));
             }
+
             return d;
         }
 
@@ -301,10 +334,13 @@ namespace Simulant.Utils.Maths
         // projectheight = |BH|
         // AH² + BH² = AB²
         // Useful when doing calculations about line AoE.
-
         public static double ProjectDistanceFunction(double[] x)
-        {   // projectdistance(x0, y0, θ0, x1, y1)
-            if (x.Length != 5) { return 0; }
+        { // projectdistance(x0, y0, θ0, x1, y1)
+            if (x.Length != 5)
+            {
+                return 0;
+            }
+
             double dx = x[3] - x[0];
             double dy = x[4] - x[1];
             double θ = x[2];
@@ -312,8 +348,12 @@ namespace Simulant.Utils.Maths
         }
 
         public static double ProjectHeightFunction(double[] x)
-        {   // projectheight(x0, y0, θ0, x1, y1)
-            if (x.Length != 5) { return 0; }
+        { // projectheight(x0, y0, θ0, x1, y1)
+            if (x.Length != 5)
+            {
+                return 0;
+            }
+
             double dx = x[3] - x[0];
             double dy = x[4] - x[1];
             double θ = x[2];
@@ -321,8 +361,12 @@ namespace Simulant.Utils.Maths
         }
 
         public static double IsPointInRayFunction(double[] x)
-        {   // ispointinray(x0, y0, θ0, width, x1, y1)
-            if (x.Length != 6) { return 0; }
+        { // ispointinray(x0, y0, θ0, width, x1, y1)
+            if (x.Length != 6)
+            {
+                return 0;
+            }
+
             double dx = x[4] - x[0];
             double dy = x[5] - x[1];
             double θ = x[2];
@@ -332,24 +376,24 @@ namespace Simulant.Utils.Maths
 
         // roundir, roundvec
         // Matches the given direction in radian (roundir) or as a vector dx, dy (roundvec)
-        // to the direction in a circle divided into 'n' segments, 
+        // to the direction in a circle divided into 'n' segments,
         // and returns the index of the direction (rounded to the nth decimal digit).
         // indexes: 0, 1, 2, ..., n-1, from north CCW.
-
         private static double ProcessRoundir(double rad, double segments, int digits = 0)
         {
-            // 'segments' can be positive / negative. 
+
+            // 'segments' can be positive / negative.
             // Positive means north is a segment point, while negative means north is the midpoint of two segment points.
             // e.g. 4: corresponds to cardinal directions (N = 0, W = 1, S = 2, E = 3);
             // -4: corresponds to intercardinal directions (NW = 0, SW = 1, SE = 2, NE = 3)
-
             double dir;
+
             if (segments > 0)
-            {   // -pi => 0, pi => segments
+            { // -pi => 0, pi => segments
                 dir = (rad / Math.PI + 1) / 2 * segments;
             }
             else
-            {   // -pi => -0.5, pi => segments - 0.5
+            { // -pi => -0.5, pi => segments - 0.5
                 segments = -segments;
                 dir = (rad / Math.PI + 1) / 2 * segments - 0.5;
             }
@@ -390,16 +434,18 @@ namespace Simulant.Utils.Maths
         {
             double direction = input[0];
             double segments = input[1];
+
             if (segments < 0)
             {
                 segments *= -1;
                 direction += 0.5;
             }
+
             return -Math.PI + 2 * Math.PI * ModFunction(direction / segments, 1);
         }
 
         /// <summary>
-        /// Determine whether a given angle θ is within the range from θ1 to θ2 
+        /// Determine whether a given angle θ is within the range from θ1 to θ2
         /// in the direction of increasing angles (counterclockwise in the game coordinate system). <br />
         /// The angles do not need to be in the range of -pi to pi.
         /// </summary>
@@ -410,7 +456,7 @@ namespace Simulant.Utils.Maths
             switch (input.Length)
             {
                 case 3:
-                    var θ  = ModFunction(input[0] + Math.PI, 2 * Math.PI) /*- Math.PI*/;
+                    var θ = ModFunction(input[0] + Math.PI, 2 * Math.PI) /*- Math.PI*/;
                     var θ1 = ModFunction(input[1] + Math.PI, 2 * Math.PI) /*- Math.PI*/;
                     var θ2 = ModFunction(input[2] + Math.PI, 2 * Math.PI) /*- Math.PI*/;
                     bool inRange = θ1 <= θ2 ? θ1 <= θ && θ <= θ2 : θ1 <= θ || θ <= θ2;
@@ -457,20 +503,24 @@ namespace Simulant.Utils.Maths
         public static double MaxFunction(double[] input)
         {
             double max = input[0];
+
             for (int i = 1; i < input.Length; i++)
             {
                 max = Math.Max(input[i], max);
             }
+
             return max;
         }
 
         public static double MinFunction(double[] input)
         {
             double min = input[0];
+
             for (int i = 1; i < input.Length; i++)
             {
                 min = Math.Min(input[i], min);
             }
+
             return min;
         }
 
@@ -550,8 +600,8 @@ namespace Simulant.Utils.Maths
         private static double NormalizeDirValue(double dir, double n)
         {
             double segments = Math.Abs(n);
-            return n > 0 
-                ? ModFunction(dir, segments) 
+            return n > 0
+                ? ModFunction(dir, segments)
                 : ModFunction(dir + 0.5, segments) - 0.5;
         }
 
@@ -562,9 +612,7 @@ namespace Simulant.Utils.Maths
         }
 
         #endregion
-
         #region Numeric String Functions (Definition)
-
         public static double Hex2DecFunction(string[] x)
         {
             long ex = long.Parse(x[0], NumberStyles.HexNumber, CultureInfo);
@@ -604,29 +652,52 @@ namespace Simulant.Utils.Maths
         public static double Frequency(string[] x)
         {
             Match mx = rexFreq.Match(x[0]);
+
             if (mx.Success)
             {
                 double semitones = x.Length > 1 ? Parse(x[1]) : 0;
                 string noteName = mx.Groups["note"].Value;
+
                 switch (noteName)
                 {
-                    case "C": semitones += 0; break;
-                    case "D": semitones += 2; break;
-                    case "E": semitones += 4; break;
-                    case "F": semitones += 5; break;
-                    case "G": semitones += 7; break;
-                    case "A": semitones += 9; break;
-                    case "B": semitones += 11; break;
+                    case "C":
+                        semitones += 0;
+                        break;
+                    case "D":
+                        semitones += 2;
+                        break;
+                    case "E":
+                        semitones += 4;
+                        break;
+                    case "F":
+                        semitones += 5;
+                        break;
+                    case "G":
+                        semitones += 7;
+                        break;
+                    case "A":
+                        semitones += 9;
+                        break;
+                    case "B":
+                        semitones += 11;
+                        break;
                 }
 
                 string signs = mx.Groups["signs"].Value;
+
                 foreach (char c in signs)
                 {
                     switch (c)
                     {
-                        case '#': semitones += 1; break;
-                        case 'x': semitones += 2; break;
-                        case 'b': semitones -= 1; break;
+                        case '#':
+                            semitones += 1;
+                            break;
+                        case 'x':
+                            semitones += 2;
+                            break;
+                        case 'b':
+                            semitones -= 1;
+                            break;
                     }
                 }
 
@@ -636,13 +707,18 @@ namespace Simulant.Utils.Maths
                 // A4 = 57 semitones relative to C0
                 return 440 * Math.Pow(2, (semitones - 57) / 12.0);
             }
-            else { return 0; }
+            else
+            {
+                return 0;
+            }
         }
+
         /// <summary>返回距离下一个指定艾欧泽亚时间的毫秒数。</summary>
         public static double NextETms(string[] input)
         {
             string etString = input[0];
             double totalMin = 0;
+
             try
             {
                 if (etString.Contains(':'))
@@ -650,13 +726,21 @@ namespace Simulant.Utils.Maths
                     double etHour = int.Parse(etString.Substring(0, etString.IndexOf(':')), CultureInfo);
                     double etMin = double.Parse(etString.Substring(etString.IndexOf(':') + 1), CultureInfo);
                     totalMin = etHour * 60.0 + etMin;
-                    if (etHour < 0 || etMin < 0 || etMin > 60) { throw new Exception(); }
+
+                    if (etHour < 0 || etMin < 0 || etMin > 60)
+                    {
+                        throw new Exception();
+                    }
                 }
                 else
                 {
                     totalMin = double.Parse(etString, CultureInfo);
                 }
-                if (totalMin < 0 || totalMin > 1440) { throw new Exception(); }
+
+                if (totalMin < 0 || totalMin > 1440)
+                {
+                    throw new Exception();
+                }
             }
             catch
             {
@@ -669,7 +753,6 @@ namespace Simulant.Utils.Maths
         }
 
         #endregion
-
         #region Properties
         /// <summary> This function adds all properies of the operator: order, associative, arity, operation. </summary>
         /// <param name = "op" > The operator. Currently only supports single/double-character ops. </param>
@@ -680,15 +763,17 @@ namespace Simulant.Utils.Maths
         private static void AddOperator(string op, bool isRightAssociative, int arity,
             Func<double, double> unaryOperation = null, Func<double, double, double> binaryOperation = null)
         {
-            if (arity != 0)                 // add the actually used operators (for calculation)
+            if (arity != 0) // add the actually used operators (for calculation)
             {
                 OperatorOrder.Add(op);
                 OperatorRightAssociative[op] = isRightAssociative;
             }
+
             OperatorArity[op] = arity;
+
             if (op != " *")
             {
-                OperatorChar.UnionWith(op);    // add the chars which are considered as operator chars (for lexer)
+                OperatorChar.UnionWith(op); // add the chars which are considered as operator chars (for lexer)
             }
 
             if (arity == 1)
@@ -705,6 +790,7 @@ namespace Simulant.Utils.Maths
         public static List<string> OperatorOrder { get; set; } = new List<string>();
         /// <summary> The list contains all characters in the operators. For checking if a char is part of a op.</summary>
         public static HashSet<char> OperatorChar { get; set; } = new HashSet<char>();
+
         /// <summary> The operators are right-associative or not. </summary>
         public static Dictionary<string, bool> OperatorRightAssociative = new Dictionary<string, bool>();
         /// <summary> The operators are unary, binary or ternary. Also for checking if a string is a op.</summary>
@@ -723,8 +809,8 @@ namespace Simulant.Utils.Maths
 
         // 暂时不用 OrdinalIgnoreCase，详见添加常数 Math.E 处注释
         /// <summary> All variables that you want to define should be inside this property. </summary>
-        public static Dictionary<string, double> LocalVariables { get; set; } 
-            = new Dictionary<string, double>(/*StringComparer.OrdinalIgnoreCase*/);
+        public static Dictionary<string, double> LocalVariables { get; set; }
+            = new Dictionary<string, double>( /*StringComparer.OrdinalIgnoreCase*/);
 
         /// <summary>
         /// When converting the result from the Parse method or ProgrammaticallyParse method ToString(),
@@ -733,35 +819,36 @@ namespace Simulant.Utils.Maths
         public static CultureInfo CultureInfo { get; } = CultureInfo.InvariantCulture;
 
         #endregion
-
         #region Core
-
         /// <summary> Enter the math expression in form of a string. </summary>
         /// <param name="mathExpression"></param>
         public static double Parse(string mathExpression)
         {
             if (string.IsNullOrWhiteSpace(mathExpression))
                 return 0.0;
+
             // 单个十六进制数直接解析。
             if (mathExpression.Length > 2 && mathExpression.Length <= 18
                 && mathExpression[0] == '0' && mathExpression[1] == 'x'
                 && long.TryParse(mathExpression.Substring(2), NumberStyles.AllowHexSpecifier, CultureInfo, out long hexValue))
                 return double.Parse(hexValue.ToString(CultureInfo), CultureInfo);
+
             // 单个数值直接解析。
             if (double.TryParse(mathExpression, NumberStyles.Float, CultureInfo, out var result))
                 return result;
+
             return MathParserLogic(Lexer(mathExpression));
         }
 
         /// <summary> Enter the math expression in form of a list of tokens. </summary>
         /// <param name="mathExpression"></param>
-        public double Parse(ReadOnlyCollection<string> mathExpression) 
+        public double Parse(ReadOnlyCollection<string> mathExpression)
         {
             return MathParserLogic(new List<string>(mathExpression));
         }
 
         /// <summary>
-        /// This will convert a string expression into a list of tokens that 
+        /// This will convert a string expression into a list of tokens that
         /// can be later executed by Parse or ProgrammaticallyParse methods.
         /// </summary>
         /// <param name="mathExpression"></param>
@@ -791,24 +878,32 @@ namespace Simulant.Utils.Maths
             expr = MultiplePlusMinus.Replace(expr, match => match.Value.Count(c => c == '-') % 2 == 0 ? "+" : "-");
 
             for (var i = 0; i < expr.Length; i++)
-            {   // traverse all chars in the expression
+            { // traverse all chars in the expression
                 char ch = expr[i];
+
                 // A segmentation of non-operator chars:
                 // const (pi), func (sin), numbers (123), numeric string func arguments (E000)
-                // Note: this could contain invalid chars and throw customized errors in ParseBasicMathExpression(). 
+                // Note: this could contain invalid chars and throw customized errors in ParseBasicMathExpression().
                 if (!OperatorChar.Contains(ch))
                 {
-                    if (i != 0 && expr[i - 1] == ')')   // add omitted '*':  (-1)sin(0) => (-1) * sin(0)
+                    if (i != 0 && expr[i - 1] == ')') // add omitted '*':  (-1)sin(0) => (-1) * sin(0)
                     {
                         tokens.Add("*");
                     }
+
                     int start = i;
-                    while (i + 1 < expr.Length && !OperatorChar.Contains(expr[i + 1])) { i++; }
+
+                    while (i + 1 < expr.Length && !OperatorChar.Contains(expr[i + 1]))
+                    {
+                        i++;
+                    }
+
                     tokens.Add(expr.Substring(start, i - start + 1)); // add the segmentation as a token
                 }
                 else // operators
                 {
                     string op;
+
                     // double-char operators
                     if (i + 1 < expr.Length && OperatorArity.ContainsKey(expr.Substring(i, 2)))
                     {
@@ -819,24 +914,30 @@ namespace Simulant.Utils.Maths
                     {
                         op = ch.ToString();
                     }
+
                     // add a " *" if the previous char is not an operator and the previous token is not a function.
                     // 2(1+3) => 2 *(1+3)  pi(1+3) => pi *(1+3)  sin(1+3) => unchanged  6√3 => 6 *√3
                     // " *" has the highest prio among all binary ops.
                     if (op == "(" || OperatorArity[op] == 1)
                     {
                         if (i != 0
-                            && (!OperatorChar.Contains(expr[i - 1]) || expr[i - 1] == ')')  // prev char is operator
-                            && tokens.Count > 0
-                            && !LocalFunctions.ContainsKey(tokens[tokens.Count - 1])        // prev token is not function
-                            && !LocalStringFunctions.ContainsKey(tokens[tokens.Count - 1])
+                            && (!OperatorChar.Contains(expr[i - 1]) || expr[i - 1] == ')') // prev char is operator
+                        && tokens.Count > 0
+                            && !LocalFunctions.ContainsKey(tokens[tokens.Count - 1]) // prev token is not function
+                        && !LocalStringFunctions.ContainsKey(tokens[tokens.Count - 1])
                             )
                             tokens.Add(" *"); // add this " *" operator with the highest order among all binary ops
                     }
 
                     tokens.Add(op);
-                    if (op.Length == 2) { i++; }
+
+                    if (op.Length == 2)
+                    {
+                        i++;
+                    }
                 }
             }
+
             return tokens;
         }
 
@@ -859,7 +960,9 @@ namespace Simulant.Utils.Maths
                     continue;
                 }
 
-                if (tokens[i].Length <= 2) continue; 
+                if (tokens[i].Length <= 2)
+                    continue;
+
                 switch (tokens[i].Substring(0, 2))
                 {
                     case "0x":
@@ -878,7 +981,7 @@ namespace Simulant.Utils.Maths
                         break;
                 }
             }
-            
+
             for (var i = 0; i < tokens.Count; i++)
             {
                 if (LocalVariables.Keys.Contains(tokens[i]))
@@ -890,6 +993,7 @@ namespace Simulant.Utils.Maths
                 // getting data between "(" and ")"
                 var open = tokens.LastIndexOf("(");
                 var close = tokens.IndexOf(")", open);
+
                 if (open >= close || open < 0)
                 {
                     throw new ArithmeticException($"数学表达式中括号未闭合：'{string.Join(" ", tokens)}'。原始表达式：'{string.Join(" ", originalTokens)}'");
@@ -897,6 +1001,7 @@ namespace Simulant.Utils.Maths
 
                 // create a sublist of the tokens inside (...)
                 var exprTokens = new List<string>();
+
                 for (var i = open + 1; i < close; i++)
                     exprTokens.Add(tokens[i]);
 
@@ -931,7 +1036,10 @@ namespace Simulant.Utils.Maths
                     else
                     {
                         // but if we only have one argument, then we pass it directly to the function
-                        tmpResult = LocalFunctions[functionName](new[] { ParseBasicMathExpression(exprTokens, originalTokens) });
+                        tmpResult = LocalFunctions[functionName](new[]
+                        {
+                            ParseBasicMathExpression(exprTokens, originalTokens)
+                        });
                     }
                 }
                 else if (LocalStringFunctions.Keys.Contains(functionName))
@@ -948,6 +1056,7 @@ namespace Simulant.Utils.Maths
 
                             while (i < firstCommaOrEndOfExpression)
                                 defaultExpr.Add(exprTokens[i++]);
+
                             string argExpr = string.Join("", defaultExpr);
                             sargs.Add(argExpr);
                         }
@@ -959,7 +1068,10 @@ namespace Simulant.Utils.Maths
                     {
                         // but if we only have one argument, then we pass it directly to the function
                         string argExpr = string.Join("", exprTokens);
-                        tmpResult = LocalStringFunctions[functionName](new string[] { argExpr });
+                        tmpResult = LocalStringFunctions[functionName](new string[]
+                        {
+                            argExpr
+                        });
                     }
                 }
                 else
@@ -998,12 +1110,12 @@ namespace Simulant.Utils.Maths
 
         private static double ParseBasicMathExpression(List<string> tokens, string[] originalTokens)
         {
+
             // PERFORMING A BASIC ARITHMETICAL EXPRESSION CALCULATION
             // THIS METHOD CAN ONLY OPERATE WITH NUMBERS AND OPERATORS
             // AND WILL NOT UNDERSTAND ANYTHING BEYOND THAT (like parenthesis and functions).
-
             try
-            {   // optimize for 0-2 tokens
+            { // optimize for 0-2 tokens
                 switch (tokens.Count)
                 {
                     case 0:
@@ -1037,12 +1149,16 @@ namespace Simulant.Utils.Maths
 
             // 纯数值二元表达式只计算对应运算符，不必遍历其他运算符。
             IEnumerable<string> operators = OperatorOrder;
+
             if (tokens.Count == 3 && OperatorOrder.Contains(tokens[1])
                 && OperatorArity.TryGetValue(tokens[1], out int arity) && arity == 2
                 && BinaryOperation.TryGetValue(tokens[1], out var operation) && operation != null
                 && double.TryParse(tokens[0], NumberStyles.Float, CultureInfo, out _)
                 && double.TryParse(tokens[2], NumberStyles.Float, CultureInfo, out _))
-                operators = new[] { tokens[1] };
+                operators = new[]
+                {
+                    tokens[1]
+                };
 
             foreach (string op in operators)
             {
@@ -1050,6 +1166,7 @@ namespace Simulant.Utils.Maths
                 {
                     // 复用循环条件中已找到的运算符位置。
                     int opPlace;
+
                     // string operator
                     if (op == "==")
                     {
@@ -1057,70 +1174,98 @@ namespace Simulant.Utils.Maths
                         {
                             ApplyStringEqual(tokens, opPlace);
                         }
+
                         continue;
                     }
+
                     if (op == "??")
                     {
                         while ((opPlace = tokens.LastIndexOf(op)) != -1)
                         {
                             ApplyStringCoalescing(tokens, opPlace, originalTokens);
                         }
+
                         continue;
                     }
+
                     // numeric operators
                     switch (OperatorArity[op])
                     {
                         case 1:
                             while ((opPlace = tokens.IndexOf(op)) != -1)
                             {
-                                if (OperatorRightAssociative[op]) opPlace = tokens.LastIndexOf(op);
+                                if (OperatorRightAssociative[op])
+                                    opPlace = tokens.LastIndexOf(op);
+
                                 if (tokens[opPlace + 1] == "+" || tokens[opPlace + 1] == "-")
                                 {
                                     ApplyPlusMinusToNumber(tokens, opPlace + 1);
                                 }
+
                                 var numberA = double.Parse(tokens[opPlace + 1], CultureInfo);
                                 var result = UnaryOperation[op](numberA);
-                                if (double.IsNaN(result) || double.IsInfinity(result)) { throw new Exception(); }
+
+                                if (double.IsNaN(result) || double.IsInfinity(result))
+                                {
+                                    throw new Exception();
+                                }
+
                                 tokens[opPlace + 1] = result.ToString(CultureInfo);
                                 tokens.RemoveAt(opPlace);
                             }
+
                             break;
                         case 2:
                             while ((opPlace = tokens.IndexOf(op)) != -1)
                             {
-                                if (OperatorRightAssociative[op]) opPlace = tokens.LastIndexOf(op);
+                                if (OperatorRightAssociative[op])
+                                    opPlace = tokens.LastIndexOf(op);
 
                                 if ((op == "+" || op == "-")
                                     && (opPlace == 0 || OperatorArity.ContainsKey(tokens[opPlace - 1])))
-                                {   // the current op is plus/minus
+                                { // the current op is plus/minus
                                     ApplyPlusMinusToNumber(tokens, opPlace);
                                     continue;
                                 }
+
                                 if (tokens[opPlace + 1] == "+" || tokens[opPlace + 1] == "-")
-                                {   // the next op is plus/minus when dealing with the current higher-prio operator
+                                { // the next op is plus/minus when dealing with the current higher-prio operator
                                     ApplyPlusMinusToNumber(tokens, opPlace + 1);
                                 }
+
                                 var numberA = double.Parse(tokens[opPlace - 1], CultureInfo);
                                 var numberB = double.Parse(tokens[opPlace + 1], CultureInfo);
                                 var result = BinaryOperation[op](numberA, numberB);
-                                if (double.IsNaN(result) || double.IsInfinity(result)) { throw new Exception(); }
+
+                                if (double.IsNaN(result) || double.IsInfinity(result))
+                                {
+                                    throw new Exception();
+                                }
+
                                 tokens[opPlace - 1] = result.ToString(CultureInfo);
                                 tokens.RemoveRange(opPlace, 2);
                             }
+
                             break;
                         case 3: // currently only for  "? :"
                             while ((opPlace = tokens.LastIndexOf(op)) != -1)
                             {
-                                if (tokens[opPlace + 2] != ":") { throw new Exception(); }
-                                var result = IsZero(double.Parse(tokens[opPlace - 1], CultureInfo)) 
+                                if (tokens[opPlace + 2] != ":")
+                                {
+                                    throw new Exception();
+                                }
+
+                                var result = IsZero(double.Parse(tokens[opPlace - 1], CultureInfo))
                                            ? double.Parse(tokens[opPlace + 3], CultureInfo)
                                            : double.Parse(tokens[opPlace + 1], CultureInfo);
                                 // if (double.IsNaN(result) || double.IsInfinity(result)) { throw new Exception(); }
                                 tokens[opPlace - 1] = result.ToString(CultureInfo);
                                 tokens.RemoveRange(opPlace, 4);
                             }
+
                             break;
-                        default: throw new Exception();
+                        default:
+                            throw new Exception();
                     }
                 }
                 catch
@@ -1136,36 +1281,38 @@ namespace Simulant.Utils.Maths
 
             return double.Parse(tokens[0], CultureInfo);
         }
+
         /// <summary> Combine the plus/minus and the next number in the tokens list. </summary>
         private static void ApplyPlusMinusToNumber(List<string> tokens, int opIndex)
         {
             string pm = tokens[opIndex];
             tokens.RemoveAt(opIndex);
+
             if (pm == "-")
-            {                                                           // [opIndex] is now the next number to be applied +/- on.
-                tokens[opIndex] = tokens[opIndex].StartsWith("-")     // It is impossible to have a token starting with "+" now.
-                                ? tokens[opIndex].Substring(1)          // "-11" => "11"
-                                : "-" + tokens[opIndex];                // "11" => "-11"
-            }                                                           // pm == "+" is ignored
+            { // [opIndex] is now the next number to be applied +/- on.
+                tokens[opIndex] = tokens[opIndex].StartsWith("-") // It is impossible to have a token starting with "+" now.
+                ? tokens[opIndex].Substring(1) // "-11" => "11"
+                : "-" + tokens[opIndex]; // "11" => "-11"
+            } // pm == "+" is ignored
         }
 
         private static void ApplyStringEqual(List<string> tokens, int opIndex)
         {
-            if (tokens.Count == 1)                  // ["=="]
+            if (tokens.Count == 1) // ["=="]
             {
                 tokens[opIndex] = "1";
             }
-            else if (opIndex == 0)                  // ["==", ...]
+            else if (opIndex == 0) // ["==", ...]
             {
                 tokens[opIndex + 1] = "0";
                 tokens.RemoveRange(opIndex, 1);
             }
-            else if (opIndex == tokens.Count - 1)   // [..., "=="]
+            else if (opIndex == tokens.Count - 1) // [..., "=="]
             {
                 tokens[opIndex - 1] = "0";
                 tokens.RemoveRange(opIndex, 1);
             }
-            else                                    // [..., "==", ...]
+            else // [..., "==", ...]
             {
                 string result = tokens[opIndex - 1] == tokens[opIndex + 1] ? "1" : "0";
                 tokens[opIndex - 1] = result;
@@ -1174,20 +1321,27 @@ namespace Simulant.Utils.Maths
         }
 
         private static void ApplyStringCoalescing(List<string> tokens, int opIndex, string[] originalTokens)
-        {   // a ?? b  means  (a is numeric) ? a : b
-            if (opIndex == tokens.Count - 1)        // [..., "??"]
+        { // a ?? b  means  (a is numeric) ? a : b
+            if (opIndex == tokens.Count - 1) // [..., "??"]
             {
                 throw new ArithmeticException($"'??' 无法应用于表达式 '{string.Join(" ", tokens)}'。原始表达式：'{string.Join(" ", originalTokens)}'");
             }
-            else if (opIndex == 0)                  // ["??", ...]
+            else if (opIndex == 0) // ["??", ...]
             {
                 tokens.RemoveRange(opIndex, 1);
             }
-            else                                    // [..., "??", ...]
+            else // [..., "??", ...]
             {
                 bool isNumeric = double.TryParse(tokens[opIndex - 1], NumberStyles.Float, CultureInfo, out double numberA);
-                if (isNumeric) { tokens.RemoveRange(opIndex, 2); }
-                else { tokens.RemoveRange(opIndex - 1, 2); }
+
+                if (isNumeric)
+                {
+                    tokens.RemoveRange(opIndex, 2);
+                }
+                else
+                {
+                    tokens.RemoveRange(opIndex - 1, 2);
+                }
             }
         }
 

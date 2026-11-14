@@ -10,7 +10,9 @@ namespace Lumina.Extensions
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
+
             var e = source.GetEnumerator();
+
             if (e.MoveNext())
             {
                 return e.Current;
@@ -24,8 +26,10 @@ namespace Lumina.Extensions
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
+
             if (predicate == null)
                 throw new ArgumentNullException(nameof(predicate));
+
             foreach (var element in source)
             {
                 if (predicate(element))
@@ -43,6 +47,7 @@ namespace Lumina.Extensions
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
+
             using (var e = source.GetEnumerator())
             {
                 if (e.MoveNext())
@@ -62,8 +67,10 @@ namespace Lumina.Extensions
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
+
             if (predicate == null)
                 throw new ArgumentNullException(nameof(predicate));
+
             foreach (var element in source)
             {
                 if (predicate(element))

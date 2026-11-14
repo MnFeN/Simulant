@@ -20,7 +20,10 @@ namespace Lumina.Excel.Sheets
         public uint RowOffset => offset;
         public uint RowId => row;
         public global::Lumina.Text.ReadOnly.ReadOnlySeString Name => page.ReadString(offset, offset);
-        public global::Lumina.Excel.RowRef UnlockLink => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4), new System.Type[] { typeof(ChocoboTaxiStand), typeof(CraftLeve), typeof(CustomTalk), typeof(DefaultTalk), typeof(FccShop), typeof(GCShop), typeof(GilShop), typeof(GuildleveAssignment), typeof(GuildOrderGuide), typeof(GuildOrderOfficer), typeof(Quest), typeof(SpecialShop), typeof(Story), typeof(SwitchTalk), typeof(TopicSelect), typeof(TripleTriad), typeof(Warp) }, 355238536, page.Language);
+        public global::Lumina.Excel.RowRef UnlockLink => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4), new System.Type[]
+        {
+            typeof(ChocoboTaxiStand), typeof(CraftLeve), typeof(CustomTalk), typeof(DefaultTalk), typeof(FccShop), typeof(GCShop), typeof(GilShop), typeof(GuildleveAssignment), typeof(GuildOrderGuide), typeof(GuildOrderOfficer), typeof(Quest), typeof(SpecialShop), typeof(Story), typeof(SwitchTalk), typeof(TopicSelect), typeof(TripleTriad), typeof(Warp)
+        }, 355238536, page.Language);
         public ushort Icon => page.ReadUInt16(offset + 8);
         public global::Lumina.Excel.RowRef<ActionCastVFX> VFX => new global::Lumina.Excel.RowRef<ActionCastVFX>(page.Module, (uint)page.ReadUInt16(offset + 10), page.Language);
         public global::Lumina.Excel.RowRef<ActionTimeline> ActionTimelineHit => new global::Lumina.Excel.RowRef<ActionTimeline>(page.Module, (uint)page.ReadUInt16(offset + 12), page.Language);

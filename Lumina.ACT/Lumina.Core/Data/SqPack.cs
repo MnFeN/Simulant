@@ -25,13 +25,15 @@ namespace Lumina.Data
         public SqPackHeader SqPackHeader { get; private set; }
 
         [Obsolete("Use property \"ConvertEndianness\" from \"LuminaBinaryReader\" instead")]
-        public bool ShouldConvertEndianness { // todo: what about reading LE files on BE device? do we even care?
- get => BitConverter.IsLittleEndian && SqPackHeader.platformId == PlatformId.PS3 || !BitConverter.IsLittleEndian && SqPackHeader.platformId != PlatformId.PS3; }
+        public bool ShouldConvertEndianness
+        { // todo: what about reading LE files on BE device? do we even care?
+            get => BitConverter.IsLittleEndian && SqPackHeader.platformId == PlatformId.PS3 || !BitConverter.IsLittleEndian && SqPackHeader.platformId != PlatformId.PS3;
+        }
 
         [Obsolete("Not used.")]
         protected readonly Dictionary<long, WeakReference<FileResource>> FileCache = new global::System.Collections.Generic.Dictionary<long, global::System.WeakReference<global::Lumina.Data.FileResource>>();
         [Obsolete("Not used.")]
-        protected readonly object CacheLock = new object ();
+        protected readonly object CacheLock = new object();
         internal SqPack(FileInfo file, GameData gameData)
         {
             if (!file.Exists)
@@ -43,6 +45,7 @@ namespace Lumina.Data
             // always init the cache just in case the should cache setting is changed later
             _cache = new global::System.Collections.Concurrent.ConcurrentDictionary<long, global::System.WeakReference<global::Lumina.Data.FileResource>>();
             File = file;
+
             using (var sh = GetStreamHolder())
             {
                 SqPackHeader = sh.Stream.GetSqPackHeader();
@@ -61,8 +64,10 @@ namespace Lumina.Data
             where T : FileResource
         {
             var cacheBehaviour = FileOptionsAttribute.FileCacheBehaviour.None;
-            if (typeof(T).GetCustomAttribute<FileOptionsAttribute>()is global::Lumina.Data.Attributes.FileOptionsAttribute fileOpts)
+
+            if (typeof(T).GetCustomAttribute<FileOptionsAttribute>() is global::Lumina.Data.Attributes.FileOptionsAttribute fileOpts)
                 cacheBehaviour = fileOpts.CacheBehaviour;
+
             if (!_gameData.Options.CacheFileResources || cacheBehaviour == FileOptionsAttribute.FileCacheBehaviour.Never)
             {
                 using (var rsh = GetStreamHolder())
@@ -73,12 +78,15 @@ namespace Lumina.Data
 
             // WeakReference ctor accepts null.
             var weakRef = _cache.GetOrAdd(offset, _ => new global::System.WeakReference<global::Lumina.Data.FileResource>(null));
+
             if (weakRef.TryGetTarget(out var valueUntyped) && valueUntyped is T value)
                 return value;
+
             lock (weakRef)
             {
                 if (weakRef.TryGetTarget(out valueUntyped) && valueUntyped is T value2)
                     return value2;
+
                 using (var sh = GetStreamHolder())
                 {
                     var f = sh.Stream.ReadFile<T>(offset);

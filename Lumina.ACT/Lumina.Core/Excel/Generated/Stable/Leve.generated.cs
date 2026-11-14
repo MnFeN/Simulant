@@ -35,7 +35,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Excel.RowRef<PlaceName> PlaceNameIssued => new global::Lumina.Excel.RowRef<PlaceName>(page.Module, (uint)page.ReadInt32(offset + 52), page.Language);
         public global::Lumina.Excel.RowRef<PlaceName> PlaceNameStartZone => new global::Lumina.Excel.RowRef<PlaceName>(page.Module, (uint)page.ReadInt32(offset + 56), page.Language);
         public int IconCityState => page.ReadInt32(offset + 60);
-        public global::Lumina.Excel.RowRef DataId => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 64), new System.Type[] { typeof(CraftLeve), typeof(CompanyLeve), typeof(GatheringLeve), typeof(BattleLeve) }, -108838279, page.Language);
+        public global::Lumina.Excel.RowRef DataId => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 64), new System.Type[]
+        {
+            typeof(CraftLeve), typeof(CompanyLeve), typeof(GatheringLeve), typeof(BattleLeve)
+        }, -108838279, page.Language);
         public int IconIssuer => page.ReadInt32(offset + 68);
         public ushort ClassJobLevel => page.ReadUInt16(offset + 72);
         public global::Lumina.Excel.RowRef<FishingSpot> FishingSpot => new global::Lumina.Excel.RowRef<FishingSpot>(page.Module, (uint)page.ReadUInt16(offset + 74), page.Language);

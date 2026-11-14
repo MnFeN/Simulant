@@ -10,6 +10,7 @@ namespace Simulant.UI
     public sealed class OptionEditor
     {
         internal TableLayoutPanel Table { get; }
+
         private readonly ToolTip _toolTip;
 
         public OptionEditor(TableLayoutPanel table, ToolTip toolTip)
@@ -28,12 +29,18 @@ namespace Simulant.UI
         internal void Build(IEnumerable<SimOptionBase> options)
         {
             Table.SuspendLayout();
+
             try
             {
                 Clear();
-                foreach (var option in options) option?.CreateUI(this, _toolTip);
+
+                foreach (var option in options)
+                    option?.CreateUI(this, _toolTip);
             }
-            finally { Table.ResumeLayout(true); }
+            finally
+            {
+                Table.ResumeLayout(true);
+            }
         }
 
         internal void Clear()
@@ -41,12 +48,14 @@ namespace Simulant.UI
             var controls = new Control[Table.Controls.Count];
             Table.Controls.CopyTo(controls, 0);
             Table.Controls.Clear();
+
             foreach (var control in controls)
             {
                 // 多个选项卡可能共用提示组件，只移除当前编辑器的提示。
                 _toolTip?.SetToolTip(control, null);
                 control.Dispose();
             }
+
             Table.RowStyles.Clear();
             Table.RowCount = 1;
             Table.RowStyles.Add(new RowStyle(SizeType.Absolute, 5));
@@ -58,6 +67,7 @@ namespace Simulant.UI
             control.ResetFont();
             control.ResetForeColor();
             control.ResetBackColor();
+
             if (control is Label)
             {
                 control.Anchor = AnchorStyles.Left;
@@ -66,8 +76,10 @@ namespace Simulant.UI
                 control.Padding = new Padding(15, 10, 5, 10);
                 return;
             }
+
             control.Dock = DockStyle.Fill;
             control.Margin = new Padding(30, 10, 20, 10);
+
             if (control is CheckBox checkBox)
             {
                 checkBox.AutoSize = true;
@@ -76,6 +88,7 @@ namespace Simulant.UI
                 checkBox.TextAlign = ContentAlignment.MiddleRight;
                 checkBox.UseVisualStyleBackColor = true;
             }
+
             if (control is ComboBox comboBox)
             {
                 comboBox.DropDownHeight = 200;

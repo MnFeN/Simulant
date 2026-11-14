@@ -22,6 +22,7 @@ namespace Simulant.ACT
 
             var version = asm.GetName().Version;
             var minimumVersion = new Version(2, 0, 0, 0);
+
             if (version == null || version < minimumVersion)
                 throw new InvalidOperationException($"Triggernometry 版本过低（当前版本：{version?.ToString() ?? "未知"}，最低要求：{minimumVersion}）。请参考 https://github.com/MnFeN/Triggernometry 安装新版本。");
 
@@ -32,7 +33,10 @@ namespace Simulant.ACT
                 "GetEntities",
                 BindingFlags.Public | BindingFlags.Static,
                 null,
-                new[] { typeof(bool) },
+                new[]
+            {
+                typeof(bool)
+            },
                 null)
                 ?? throw new Exception($"[{nameof(TriggernometryInterop)}] 未找到 Entity.GetEntities(bool)。");
 
@@ -52,11 +56,15 @@ namespace Simulant.ACT
 
         public static IEnumerable<IntPtr> GetEntityPtrs()
         {
-            var result = _getEntitiesMethod.Invoke(null, new object[] { true });
+            var result = _getEntitiesMethod.Invoke(null, new object[]
+            {
+                true
+            });
 
             foreach (dynamic entity in (IEnumerable)result)
             {
                 IntPtr ptr = entity.Address;
+
                 if (ptr != IntPtr.Zero)
                     yield return ptr;
             }

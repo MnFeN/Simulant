@@ -18,7 +18,9 @@ namespace Simulant.Core.Entity
 
         internal static PlayerAppearanceSnapshot FromDrawData(byte[] data)
         {
-            if (data == null) throw new ArgumentNullException(nameof(data));
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+
             if (data.Length != 0x268)
                 throw new ArgumentException("玩家外观数据长度必须为 0x268 字节。", nameof(data));
 
@@ -29,14 +31,18 @@ namespace Simulant.Core.Entity
                 MainhandWeaponModel = BitConverter.ToUInt64(data, 0x10),
                 OffhandWeaponModel = BitConverter.ToUInt64(data, 0x80)
             };
+
             for (var i = 0; i < result.Equipment.Length; i++)
             {
                 result.Equipment[i] = BitConverter.ToUInt32(data, 0x1D0 + i * 8);
                 result.Stain2[i] = data[0x1D4 + i * 8];
             }
+
             Array.Copy(data, 0x220, result.Customize, 0, result.Customize.Length);
+
             for (var i = 0; i < result.Glasses.Length; i++)
                 result.Glasses[i] = BitConverter.ToUInt16(data, 0x240 + i * 2);
+
             return result;
         }
     }

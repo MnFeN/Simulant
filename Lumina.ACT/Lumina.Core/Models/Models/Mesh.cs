@@ -63,6 +63,7 @@ namespace Lumina.Models.Models
         {
             var currentMesh = Parent.File.Meshes[MeshIndex];
             Submeshes = new Submesh[currentMesh.SubMeshCount];
+
             for (int i = 0; i < currentMesh.SubMeshCount; i++)
                 Submeshes[i] = new Submesh(Parent, MeshIndex, i);
         }
@@ -73,6 +74,7 @@ namespace Lumina.Models.Models
             var currentMesh = Parent.File.Meshes[MeshIndex];
             // Copy over the bone table
             int boneTableIndex = currentMesh.BoneTableIndex;
+
             if (boneTableIndex != 255)
                 BoneTable = Parent.File.BoneTables[boneTableIndex].BoneIndex;
         }
@@ -92,8 +94,10 @@ namespace Lumina.Models.Models
             // We have to go through these in order by offset with this implementation
             var orderedElements = currentDecl.VertexElements.OrderBy(e => e.Offset).ToList();
             Vertices = new Vertex[currentMesh.VertexCount];
+
             // Vertices may be defined across at most 3 streams defined by a Mesh's VertexDeclarations
             var vertexStreamReader = new LuminaBinaryReader[3];
+
             for (int i = 0; i < 3; i++)
             {
                 vertexStreamReader[i] = new LuminaBinaryReader(new MemoryStream(Parent.File.Data, (int)Parent.File.FileHeader.VertexOffset[(int)Parent.Lod], (int)Parent.File.FileHeader.VertexBufferSize[(int)Parent.Lod]));
@@ -103,6 +107,7 @@ namespace Lumina.Models.Models
             for (int i = 0; i < Vertices.Length; i++)
             {
                 Vertices[i] = new Vertex();
+
                 foreach (var element in orderedElements)
                     SetElementField(ref Vertices[i], element, vertexStreamReader[element.Stream]);
             }
@@ -113,6 +118,7 @@ namespace Lumina.Models.Models
             var type = (Vertex.VertexType)element.Type;
             var usage = (Vertex.VertexUsage)element.Usage;
             object data = ((type == Vertex.VertexType.Single3) ? (object)(new Vector3(br.ReadSingle(), br.ReadSingle(), br.ReadSingle())) : ((type == Vertex.VertexType.Single4) ? (object)(new Vector4(br.ReadSingle(), br.ReadSingle(), br.ReadSingle(), br.ReadSingle())) : ((type == Vertex.VertexType.UInt) ? (object)(br.ReadBytes(4)) : ((type == Vertex.VertexType.ByteFloat4) ? (object)(new Vector4(br.ReadByte() / 255f, br.ReadByte() / 255f, br.ReadByte() / 255f, br.ReadByte() / 255f)) : ((type == Vertex.VertexType.Half2) ? (object)(new Vector2((float)br.ReadHalf(), (float)br.ReadHalf())) : ((type == Vertex.VertexType.Half4) ? (object)(new Vector4((float)br.ReadHalf(), (float)br.ReadHalf(), (float)br.ReadHalf(), (float)br.ReadHalf())) : throw new ArgumentOutOfRangeException()))))));
+
             switch (usage)
             {
                 case Vertex.VertexUsage.Position:
@@ -182,6 +188,7 @@ namespace Lumina.Models.Models
             var vtList = new List<Vector4>();
             var nmList = new List<Vector3>();
             var inList = new List<Vector3>();
+
             foreach (var vert in Vertices)
             {
                 Vector3 vs = new Vector3();
@@ -191,6 +198,7 @@ namespace Lumina.Models.Models
                 vs.X = vert.Position.Value.X;
                 vs.Y = vert.Position.Value.Y;
                 vs.Z = vert.Position.Value.Z;
+
                 if (vert.Color == null)
                 {
                     vc.X = 0;
@@ -239,14 +247,19 @@ namespace Lumina.Models.Models
             }
 
             var sb = new StringBuilder();
+
             foreach (var vert in vsList)
                 sb.Append($"v {(decimal)vert.X} {(decimal)vert.Y} {(decimal)vert.Z}{nl}");
+
             foreach (var color in vcList)
                 sb.Append($"vc {(decimal)color.W} {(decimal)color.X} {(decimal)color.Y} {(decimal)color.Z}{nl}");
+
             foreach (var texCoord in vtList)
                 sb.Append($"vt {(decimal)texCoord.X} {(decimal)texCoord.Y} {(decimal)texCoord.W} {(decimal)texCoord.Z}{nl}");
+
             foreach (var norm in nmList)
                 sb.Append($"vn {(decimal)norm.X} {(decimal)norm.Y} {(decimal)norm.Z}{nl}");
+
             foreach (var ind in inList)
             {
                 sb.Append(String.Format("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}{3}", (ushort)ind.X, (ushort)ind.Y, (ushort)ind.Z, nl));

@@ -33,7 +33,11 @@ namespace Simulant.Core.Entity
         /// <summary>宿主共享的未交付失败分配；不包括已经归属任何会话的成功实体。</summary>
         internal bool HasPendingCreationCleanup
         {
-            get { lock (_gate) return _failedLocalCreations.Count != 0; }
+            get
+            {
+                lock (_gate)
+                    return _failedLocalCreations.Count != 0;
+            }
         }
 
         /// <summary>只重试未交付的失败创建，不回收其他会话已拥有的实体。</summary>
@@ -42,6 +46,7 @@ namespace Simulant.Core.Entity
             lock (_gate)
             {
                 var failures = RetryFailedCreationsCore();
+
                 if (failures != null)
                     throw new AggregateException("部分失败创建尚未回收，记录已保留。", failures);
             }
@@ -66,6 +71,7 @@ namespace Simulant.Core.Entity
         private void EnsureLocalCreationContext(LocalCharacterCreation creation)
         {
             var memory = NamazuInterop.Plugin?.Memory;
+
             if (creation.WorldGeneration != _localCreationGeneration ||
                 memory == null || !ReferenceEquals(memory.RawMemory, creation.Memory.RawMemory) ||
                 !creation.Memory.IsProcessOpen || creation.ProcessHandle == IntPtr.Zero ||
@@ -83,35 +89,46 @@ namespace Simulant.Core.Entity
             var localPointerAddress = manager.BattleCharas[creation.LocalIndex].Ptr;
             var objectPointerAddress = objects.Ptr + creation.ObjectSlot * IntPtr.Size;
             var pointer = creation.Memory.Read<IntPtr>(localPointerAddress);
+
             if (pointer != IntPtr.Zero && creation.NativeAddress != IntPtr.Zero && pointer != creation.NativeAddress)
                 creation.OwnershipConflict = true;
+
             var indexedPointer = creation.Memory.Read<IntPtr>(objectPointerAddress);
+
             // 空表可能尚未完成登记，只有明确观察到其他非空指针才判定归属冲突。
             if ((pointer != IntPtr.Zero && indexedPointer != IntPtr.Zero && pointer != indexedPointer) ||
                 (creation.NativeAddress != IntPtr.Zero && indexedPointer != IntPtr.Zero &&
                     indexedPointer != creation.NativeAddress))
                 creation.OwnershipConflict = true;
+
             if (pointer == IntPtr.Zero || indexedPointer != pointer ||
                 (creation.NativeAddress != IntPtr.Zero && pointer != creation.NativeAddress))
                 throw new InvalidOperationException($"本地失败分配 #{creation.LocalIndex} 的两个对象表与原指针不一致。");
 
             var native = pointer.As<GameObject>();
+
             if (creation.Memory.Read<ushort>(native.ObjectIndex.Ptr) != creation.ObjectSlot)
             {
                 creation.OwnershipConflict = true;
                 throw new InvalidOperationException($"本地失败分配 #{creation.LocalIndex} 的对象槽位已变化。");
             }
+
             var observed = new EntityObservation(pointer, creation.Memory.Read<uint>(native.EntityId.Ptr),
                 creation.Memory.Read<ObjectKind>(native.ObjectKind.Ptr));
             EnsureLocalCreationContext(creation);
             var currentLocalPointer = creation.Memory.Read<IntPtr>(localPointerAddress);
+
             if (currentLocalPointer != IntPtr.Zero && currentLocalPointer != pointer)
                 creation.OwnershipConflict = true;
+
             var currentIndexedPointer = creation.Memory.Read<IntPtr>(objectPointerAddress);
+
             if (currentIndexedPointer != IntPtr.Zero && currentIndexedPointer != pointer)
                 creation.OwnershipConflict = true;
+
             if (currentLocalPointer != pointer || currentIndexedPointer != pointer)
                 throw new InvalidOperationException($"读取本地失败分配 #{creation.LocalIndex} 身份时对象表发生了变化。");
+
             return observed;
         }
 
@@ -124,15 +141,21 @@ namespace Simulant.Core.Entity
                 creation.NativeAddress = observed.Address;
                 creation.Observation = observed;
             }
-            catch (Exception error) { creation.IdentityError = error; }
+            catch (Exception error)
+            {
+                creation.IdentityError = error;
+            }
         }
 
         private List<Exception> RetryFailedCreationsCore()
         {
             // 日志可能同步重入清理；当前这一轮继续持有失败记录。
-            if (_retryingFailedCreations || _failedLocalCreations.Count == 0) return null;
+            if (_retryingFailedCreations || _failedLocalCreations.Count == 0)
+                return null;
+
             _retryingFailedCreations = true;
             List<Exception> failures = null;
+
             try
             {
                 foreach (var creation in _failedLocalCreations.ToArray())
@@ -141,15 +164,18 @@ namespace Simulant.Core.Entity
                     {
                         if (creation.OwnershipConflict)
                             throw new InvalidOperationException($"本地失败分配 #{creation.LocalIndex} 已观察到槽位归属冲突，不能重新认领；记录保留至世界重置。");
+
                         if (!creation.Observation.HasValue || creation.NativeAddress == IntPtr.Zero)
                             throw new InvalidOperationException($"本地失败分配 #{creation.LocalIndex} 的原始身份未确认，不能安全回收；记录保留至世界重置。",
                                 creation.IdentityError);
+
                         if (!ReadLocalCreationIdentity(creation).Equals(creation.Observation.Value) ||
                             (creation.Entity != null && !_registry.MatchesCurrent(creation.Entity)))
                         {
                             creation.OwnershipConflict = true;
                             throw new InvalidOperationException($"本地失败分配 #{creation.LocalIndex} 的实体身份已变化，不能按槽位删除。");
                         }
+
                         EnsureLocalCreationContext(creation);
                         creation.ManagerAddress.As<ClientObjectManager>().DeleteObjectByIndex(creation.LocalIndex, 0);
                         _failedLocalCreations.Remove(creation);
@@ -161,7 +187,11 @@ namespace Simulant.Core.Entity
                     }
                 }
             }
-            finally { _retryingFailedCreations = false; }
+            finally
+            {
+                _retryingFailedCreations = false;
+            }
+
             return failures;
         }
     }

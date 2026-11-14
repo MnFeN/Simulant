@@ -23,7 +23,10 @@ namespace Lumina.Excel.Sheets
         public ushort RequiredLevel => page.ReadUInt16(offset + 8);
         public global::Lumina.Excel.RowRef<ScenarioTreeTips> NextTip => new global::Lumina.Excel.RowRef<ScenarioTreeTips>(page.Module, (uint)page.ReadUInt8(offset + 10), page.Language);
 
-        private static global::Lumina.Excel.RowRef TipsCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + i * 4), new System.Type[] { typeof(ScenarioTree), typeof(Quest) }, -184694971, page.Language);
+        private static global::Lumina.Excel.RowRef TipsCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + i * 4), new System.Type[]
+        {
+            typeof(ScenarioTree), typeof(Quest)
+        }, -184694971, page.Language);
         static public ScenarioTreeTips Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row) => new ScenarioTreeTips(page, offset, row);
     }
 }

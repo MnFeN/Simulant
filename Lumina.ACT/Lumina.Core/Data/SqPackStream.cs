@@ -45,6 +45,7 @@ namespace Lumina.Data
             BaseStream.Position = offset;
             var fileInfo = Reader.ReadStructure<SqPackFileInfo>();
             var file = Activator.CreateInstance<T>();
+
             // check if we need to read the extended model header or just default to the standard file header
             if (fileInfo.Type == FileType.Model)
             {
@@ -74,6 +75,7 @@ namespace Lumina.Data
             }
 
             var buffer = new byte[(int)file.FileInfo.RawFileSize];
+
             using (var ms = new MemoryStream(buffer))
             {
                 switch (fileInfo.Type)
@@ -94,6 +96,7 @@ namespace Lumina.Data
                 }
 
                 file.Data = buffer;
+
                 if (file.Data.Length != file.FileInfo.RawFileSize)
                 {
                     Debug.WriteLine("Read data size does not match file size.");
@@ -108,6 +111,7 @@ namespace Lumina.Data
         private void ReadStandardFile(FileResource resource, byte[] buffer, MemoryStream ms)
         {
             var blocks = Reader.ReadStructures<DatStdFileBlockInfos>((int)resource.FileInfo.BlockCount);
+
             foreach (var block in blocks)
             {
                 ReadFileBlock(resource.FileInfo.Offset + resource.FileInfo.HeaderSize + block.Offset, ms, buffer);
@@ -128,12 +132,16 @@ namespace Lumina.Data
             // but it seems to work fine in explorer...
             int totalBlocks = mdlBlock.StackBlockNum;
             totalBlocks += mdlBlock.RuntimeBlockNum;
+
             for (int i = 0; i < 3; i++)
                 totalBlocks += mdlBlock.VertexBufferBlockNum[i];
+
             for (int i = 0; i < 3; i++)
                 totalBlocks += mdlBlock.EdgeGeometryVertexBufferBlockNum[i];
+
             for (int i = 0; i < 3; i++)
                 totalBlocks += mdlBlock.IndexBufferBlockNum[i];
+
             var compressedBlockSizes = Reader.ReadUInt16Array(totalBlocks);
             int currentBlock = 0;
             int stackSize;
@@ -145,6 +153,7 @@ namespace Lumina.Data
             ms.Seek(0x44, SeekOrigin.Begin);
             Reader.Seek(baseOffset + mdlBlock.StackOffset);
             long stackStart = ms.Position;
+
             for (int i = 0; i < mdlBlock.StackBlockNum; i++)
             {
                 long lastPos = Reader.BaseStream.Position;
@@ -157,6 +166,7 @@ namespace Lumina.Data
             stackSize = (int)(stackEnd - stackStart);
             Reader.Seek(baseOffset + mdlBlock.RuntimeOffset);
             long runtimeStart = ms.Position;
+
             for (int i = 0; i < mdlBlock.RuntimeBlockNum; i++)
             {
                 long lastPos = Reader.BaseStream.Position;
@@ -167,16 +177,20 @@ namespace Lumina.Data
 
             long runtimeEnd = ms.Position;
             runtimeSize = (int)(runtimeEnd - runtimeStart);
+
             for (int i = 0; i < 3; i++)
             {
                 if (mdlBlock.VertexBufferBlockNum[i] != 0)
                 {
                     int currentVertexOffset = (int)ms.Position;
+
                     if (i == 0 || currentVertexOffset != vertexDataOffsets[i - 1])
                         vertexDataOffsets[i] = currentVertexOffset;
                     else
                         vertexDataOffsets[i] = 0;
+
                     Reader.Seek(baseOffset + mdlBlock.VertexBufferOffset[i]);
+
                     for (int j = 0; j < mdlBlock.VertexBufferBlockNum[i]; j++)
                     {
                         long lastPos = Reader.BaseStream.Position;
@@ -200,10 +214,12 @@ namespace Lumina.Data
                 if (mdlBlock.IndexBufferBlockNum[i] != 0)
                 {
                     int currentIndexOffset = (int)ms.Position;
+
                     if (i == 0 || currentIndexOffset != indexDataOffsets[i - 1])
                         indexDataOffsets[i] = currentIndexOffset;
                     else
                         indexDataOffsets[i] = 0;
+
                     // i guess this is only needed in the vertex area, for i = 0
                     // Reader.Seek( baseOffset + mdlBlock.IndexBufferOffset[ i ] );
                     for (int j = 0; j < mdlBlock.IndexBufferBlockNum[i]; j++)
@@ -222,23 +238,35 @@ namespace Lumina.Data
             ms.Write(BitConverter.GetBytes(runtimeSize));
             ms.Write(BitConverter.GetBytes(mdlBlock.VertexDeclarationNum));
             ms.Write(BitConverter.GetBytes(mdlBlock.MaterialNum));
+
             for (int i = 0; i < 3; i++)
                 ms.Write(BitConverter.GetBytes(vertexDataOffsets[i]));
+
             for (int i = 0; i < 3; i++)
                 ms.Write(BitConverter.GetBytes(indexDataOffsets[i]));
+
             for (int i = 0; i < 3; i++)
                 ms.Write(BitConverter.GetBytes(vertexBufferSizes[i]));
+
             for (int i = 0; i < 3; i++)
                 ms.Write(BitConverter.GetBytes(indexBufferSizes[i]));
-            ms.Write(new[] { mdlBlock.NumLods });
+
+            ms.Write(new[]
+            {
+                mdlBlock.NumLods
+            });
             ms.Write(BitConverter.GetBytes(mdlBlock.IndexBufferStreamingEnabled));
             ms.Write(BitConverter.GetBytes(mdlBlock.EdgeGeometryEnabled));
-            ms.Write(new byte[] { 0 });
+            ms.Write(new byte[]
+            {
+                0
+            });
         }
 
         private void ReadTextureFile(FileResource resource, byte[] buffer, MemoryStream ms)
         {
             int lodBlocks = (int)resource.FileInfo.BlockCount;
+
             if (Reader.PlatformId == PlatformId.PS3)
             {
                 // unknown use
@@ -253,6 +281,7 @@ namespace Lumina.Data
             // if there is a mipmap header, the comp_offset
             // will not be 0
             uint mipMapSize = blocks[0].CompressedOffset;
+
             if (mipMapSize != 0)
             {
                 long originalPos = BaseStream.Position;
@@ -266,6 +295,7 @@ namespace Lumina.Data
             {
                 // start from comp_offset
                 long runningBlockTotal = blocks[i].CompressedOffset + resource.FileInfo.Offset + resource.FileInfo.HeaderSize;
+
                 for (int j = 0; j < blocks[i].BlockCount; j++)
                 {
                     ReadFileBlock(runningBlockTotal, ms, buffer, true);
@@ -285,6 +315,7 @@ namespace Lumina.Data
             var originalPosition = BaseStream.Position;
             BaseStream.Position = offset;
             var blockHeader = Reader.ReadStructure<DatBlockHeader>();
+
             // uncompressed block
             if (blockHeader.DatBlockType == DatBlockType.Uncompressed)
             {
@@ -296,9 +327,11 @@ namespace Lumina.Data
                 using (var zlibStream = new DeflateStream(BaseStream, CompressionMode.Decompress, true))
                 {
                     var totalRead = 0;
+
                     while (totalRead < blockHeader.BlockDataSize)
                     {
                         var bytesRead = zlibStream.Read(buffer, (int)dest.Position + totalRead, (int)blockHeader.BlockDataSize - totalRead);
+
                         if (bytesRead == 0)
                         {
                             break;
@@ -315,6 +348,7 @@ namespace Lumina.Data
             }
 
             dest.Position += (int)blockHeader.BlockDataSize;
+
             if (resetPosition)
             {
                 BaseStream.Position = originalPosition;

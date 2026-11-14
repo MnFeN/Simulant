@@ -20,6 +20,7 @@ namespace Lumina.Data.Files.Pcb
                 };
                 // Padding
                 reader.BaseStream.Position += 4;
+
                 for (var i = 0; i < nodeList.Children.Length; i++)
                 {
                     nodeList.Children[i] = ListNode.Read(reader);
@@ -52,6 +53,7 @@ namespace Lumina.Data.Files.Pcb
             var streamStart = Reader.BaseStream.Position;
             var isList = Reader.ReadUInt32() != 0;
             Reader.BaseStream.Position = streamStart;
+
             if (!isList)
             {
                 throw new InvalidOperationException("Error parsing pcb list");

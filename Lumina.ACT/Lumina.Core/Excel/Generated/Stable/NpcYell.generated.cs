@@ -22,7 +22,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Text.ReadOnly.ReadOnlySeString Text => page.ReadString(offset, offset);
         public float Unknown6 => page.ReadFloat32(offset + 4);
         public float BalloonTime => page.ReadFloat32(offset + 8);
-        public global::Lumina.Excel.RowRef Name => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 12), new System.Type[] { typeof(ENpcResident), typeof(BNpcName) }, 1759354587, page.Language);
+        public global::Lumina.Excel.RowRef Name => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 12), new System.Type[]
+        {
+            typeof(ENpcResident), typeof(BNpcName)
+        }, 1759354587, page.Language);
         public uint Unknown7 => page.ReadUInt32(offset + 16);
         public ushort Unknown8 => page.ReadUInt16(offset + 20);
         public byte OutputType => page.ReadUInt8(offset + 22);

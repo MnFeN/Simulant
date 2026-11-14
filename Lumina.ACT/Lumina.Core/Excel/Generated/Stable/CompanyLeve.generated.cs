@@ -42,7 +42,10 @@ namespace Lumina.Excel.Sheets
 
             public global::Lumina.Excel.RowRef<BNpcName> BNpcName => new global::Lumina.Excel.RowRef<BNpcName>(page.Module, page.ReadUInt32(offset), page.Language);
             public global::Lumina.Excel.Collection<uint> ToDoParam => new global::Lumina.Excel.Collection<uint>(page, parentOffset, offset, ToDoParamCtor, 6);
-            public global::Lumina.Excel.RowRef BaseID => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 28), new System.Type[] { typeof(EventItem), typeof(BNpcBase) }, 869955740, page.Language);
+            public global::Lumina.Excel.RowRef BaseID => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 28), new System.Type[]
+            {
+                typeof(EventItem), typeof(BNpcBase)
+            }, 869955740, page.Language);
             public global::Lumina.Excel.RowRef<EventItem> ItemsInvolved => new global::Lumina.Excel.RowRef<EventItem>(page.Module, (uint)page.ReadInt32(offset + 32), page.Language);
             public ushort EnemyLevel => page.ReadUInt16(offset + 36);
             public byte ItemsInvolvedQty => page.ReadUInt8(offset + 38);

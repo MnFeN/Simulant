@@ -125,10 +125,18 @@ namespace Lumina.Data.Files
             public fixed uint LodOffset[3];
             [FieldOffset(28)]
             public fixed uint OffsetToSurface[13];
-            public int MipCount {[MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => MipLevelsCount & 0x7F; set => MipLevelsCount = (byte)((MipLevelsCount & 0x80) | (((value >= 0) && (value <= 0x7F)) ? value : throw new ArgumentOutOfRangeException(nameof(value), value, "Value is out of supported range from the value type."))); }
-            public bool MipUnknownFlag {[MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => (MipLevelsCount & 0x80) != 0; set => MipLevelsCount = (byte)((MipLevelsCount & 0x7F) | (value ? 0x80 : 0)); }
+            public int MipCount
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => MipLevelsCount & 0x7F;
+                set => MipLevelsCount = (byte)((MipLevelsCount & 0x80) | (((value >= 0) && (value <= 0x7F)) ? value : throw new ArgumentOutOfRangeException(nameof(value), value, "Value is out of supported range from the value type.")));
+            }
+            public bool MipUnknownFlag
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => (MipLevelsCount & 0x80) != 0;
+                set => MipLevelsCount = (byte)((MipLevelsCount & 0x7F) | (value ? 0x80 : 0));
+            }
         }
 
         public enum DxgiFormatConversion
@@ -157,8 +165,10 @@ namespace Lumina.Data.Files
         {
             Reader.BaseStream.Position = 0;
             Header = Reader.ReadStructure<TexHeader>();
+
             if ((Header.Type & Attribute.TextureTypeCube) != 0 && Header.Depth != 1)
                 throw new NotSupportedException("Cube map texture with depth value above 1 is currently not supported.");
+
             TextureBuffer = TextureBuffer.FromStream(Header, Reader);
         }
 
@@ -166,9 +176,11 @@ namespace Lumina.Data.Files
         {
             if (mipmapIndex < 0 || mipmapIndex >= Math.Max(Header.MipCount, 1))
                 throw new ArgumentOutOfRangeException(nameof(mipmapIndex), mipmapIndex, null);
+
             var bpp = 1 << ((int)(Header.Format & TextureFormat.BppMask) >> (int)TextureFormat.BppShift);
             width = Math.Max(1, Header.Width >> mipmapIndex);
             height = Math.Max(1, Header.Height >> mipmapIndex);
+
             switch ((TextureFormat)((int)(Header.Format & TextureFormat.TypeMask) >> (int)TextureFormat.TypeShift))
             {
                 case TextureFormat.TypeBc123:
@@ -189,8 +201,10 @@ namespace Lumina.Data.Files
         public unsafe Span<byte> SliceSpan(int mipmapIndex, int sliceIndex, out int sliceSize, out int width, out int height)
         {
             sliceSize = SliceSize(mipmapIndex, out width, out height);
+
             if (mipmapIndex < 0 || mipmapIndex >= Math.Max(Header.MipCount, 1))
                 throw new ArgumentOutOfRangeException(nameof(mipmapIndex), mipmapIndex, null);
+
             switch (Header.Type & Attribute.TextureTypeMask)
             {
                 case var _ when sliceIndex < 0:
@@ -209,8 +223,8 @@ namespace Lumina.Data.Files
         public static Tuple<int, DxgiFormatConversion> GetDxgiFormatFromTextureFormat(TextureFormat format, bool useGameCompatible = true)
         {
             return ((format == TextureFormat.Unknown) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x00, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.Null) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x00, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.R32G32B32A32F) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x02, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.R16G16B16A16F) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x0a, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.R32G32F) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x10, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.R16G16F) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x22, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.R32F) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x29, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.D24S8) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x2c, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.Shadow24) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x2c, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.D16) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x35, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.Shadow16) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x35, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.A8) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x41, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.BC1) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x47, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.BC2) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x4a, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.BC3) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x4d, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.BC5) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x53, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.L8) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x57, DxgiFormatConversion.FromL8ToB8G8R8A8)) : ((format == TextureFormat.B4G4R4A4) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(useGameCompatible ? Tuple.Create(0x57, DxgiFormatConversion.FromB4G4R4A4ToB8G8R8A8) // DXGI_FORMAT_B8G8R8A8_UNORM
- : Tuple.Create(0x73, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.B5G5R5A1) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(useGameCompatible ? Tuple.Create(0x57, DxgiFormatConversion.FromB5G5R5A1ToB8G8R8A8) // DXGI_FORMAT_B8G8R8A8_UNORM
- : Tuple.Create(0x56, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.B8G8R8A8) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x57, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.B8G8R8X8) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x58, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.BC7) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x62, DxgiFormatConversion.NoConversion)) : throw new NotSupportedException($"TextureFormat {(int)format:X04} is not supported.")))))))))))))))))))))));
+            : Tuple.Create(0x73, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.B5G5R5A1) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(useGameCompatible ? Tuple.Create(0x57, DxgiFormatConversion.FromB5G5R5A1ToB8G8R8A8) // DXGI_FORMAT_B8G8R8A8_UNORM
+            : Tuple.Create(0x56, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.B8G8R8A8) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x57, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.B8G8R8X8) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x58, DxgiFormatConversion.NoConversion)) : ((format == TextureFormat.BC7) ? (global::System.Tuple<int, global::Lumina.Data.Files.TexFile.DxgiFormatConversion>)(Tuple.Create(0x62, DxgiFormatConversion.NoConversion)) : throw new NotSupportedException($"TextureFormat {(int)format:X04} is not supported.")))))))))))))))))))))));
         }
     }
 }

@@ -8,6 +8,7 @@ namespace Simulant.Simulation
     public abstract class SimOptionBase
     {
         public string PropertyName { get; protected set; }
+
         protected string _labelText;
         protected string _hint;
 
@@ -35,6 +36,7 @@ namespace Simulant.Simulation
             table.RowCount += 1;
             table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             table.Controls.Add(Label, 0, table.RowCount - 1);
+
             if (Control != null)
             {
                 table.Controls.Add(Control, 1, table.RowCount - 1);
@@ -58,7 +60,7 @@ namespace Simulant.Simulation
         }
 
         public virtual T GetValue<T>()
-        { 
+        {
             var genericOption = this as SimOption<T> ?? throw new System.Exception($"Option '{PropertyName}' is not of type {typeof(T).Name}");
             return genericOption.GetValue();
         }

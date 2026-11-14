@@ -16,6 +16,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
             {
                 var src = new Span<byte>(srcb + sourceOffset, width * height * depth);
                 var dst = new Span<uint>(dstb + destOffset, width * height * depth);
+
                 for (var i = 0; i < dst.Length; i++)
                     dst[i] = 0xFF000000U | (0x10101U * src[i]);
             }

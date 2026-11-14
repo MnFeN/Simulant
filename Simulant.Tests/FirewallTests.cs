@@ -19,15 +19,44 @@ namespace Simulant.Tests
                 Assert(scene.Parser.NetworkTimeout == int.MaxValue, "开启收包拦截时应暂停解析插件的自动断流提示。");
                 Assert(scene.Service.IsEnabled && scene.Service.HasActiveHooks && scene.Service.HasPendingCleanup,
                     "完整启用必须同时报告两个入口和清理责任。");
-                Assert(scene.Memory.Blocks[scene.Receive].SequenceEqual(new byte[] { 0x31, 0xC0, 0xC3, 0x90, 0x90 }),
+                Assert(scene.Memory.Blocks[scene.Receive].SequenceEqual(new byte[]
+                {
+                    0x31, 0xC0, 0xC3, 0x90, 0x90
+                }),
                     "收包补丁字节不能因状态管理修改而改变。");
                 var cave = scene.Memory.Allocated.Single();
-                var expectedEntry = new byte[] { 0xFF, 0x25, 0, 0, 0, 0 }
-                    .Concat(BitConverter.GetBytes((ulong)cave)).Concat(new byte[] { 0x90 });
+                var expectedEntry = new byte[]
+                {
+                    0xFF,
+                    0x25,
+                    0,
+                    0,
+                    0,
+                    0
+                }
+                    .Concat(BitConverter.GetBytes((ulong)cave)).Concat(new byte[]
+                {
+                    0x90
+                });
                 Assert(scene.Memory.Blocks[scene.Send].SequenceEqual(expectedEntry), "发包入口必须跳转到持有的代码洞。");
-                var expectedCave = new byte[] { 0x66, 0x81, 0x3A, 0x34, 0x12, 0x75, 0x1D }
-                    .Concat(scene.SendOriginal).Concat(new byte[] { 0xFF, 0x25, 0, 0, 0, 0 })
-                    .Concat(BitConverter.GetBytes((ulong)scene.Send + 15)).Concat(new byte[] { 0x31, 0xC0, 0xC3 }).ToArray();
+                var expectedCave = new byte[]
+                {
+                    0x66,
+                    0x81,
+                    0x3A,
+                    0x34,
+                    0x12,
+                    0x75,
+                    0x1D
+                }
+                    .Concat(scene.SendOriginal).Concat(new byte[]
+                {
+                    0xFF, 0x25, 0, 0, 0, 0
+                })
+                    .Concat(BitConverter.GetBytes((ulong)scene.Send + 15)).Concat(new byte[]
+                {
+                    0x31, 0xC0, 0xC3
+                }).ToArray();
                 Assert(scene.Memory.Blocks[cave].Take(expectedCave.Length).SequenceEqual(expectedCave),
                     "心跳放行、原始指令与回跳字节必须保持原有布局。");
                 var writes = scene.Memory.Writes.Count;
@@ -54,27 +83,43 @@ namespace Simulant.Tests
                 {
                     var failure = new InvalidOperationException("模拟原生写入或分配异常。");
                     var selectedStage = stage;
+
                     scene.Memory.WriteResult = (address, bytes) =>
                     {
                         var receivePatch = address == scene.Receive && bytes[0] == 0x31;
                         var cavePatch = address != scene.Receive && address != scene.Send;
                         var sendPatch = address == scene.Send && bytes[0] == 0xFF;
+
                         if ((selectedStage == 0 && receivePatch) || (selectedStage == 3 && cavePatch) ||
-                            (selectedStage == 5 && sendPatch)) return bytes.Length - 1;
-                        if ((selectedStage == 4 && cavePatch) || (selectedStage == 6 && sendPatch)) throw failure;
+                            (selectedStage == 5 && sendPatch))
+                            return bytes.Length - 1;
+
+                        if ((selectedStage == 4 && cavePatch) || (selectedStage == 6 && sendPatch))
+                            throw failure;
+
                         return null;
                     };
-                    if (stage == 1) scene.Memory.AllocateResult = () => IntPtr.Zero;
-                    if (stage == 2) scene.Memory.AllocateResult = () => throw failure;
-                    if (stage == 7) AddressStore.HeartBeatOpcodeLocatePtr = IntPtr.Zero;
+
+                    if (stage == 1)
+                        scene.Memory.AllocateResult = () => IntPtr.Zero;
+
+                    if (stage == 2)
+                        scene.Memory.AllocateResult = () => throw failure;
+
+                    if (stage == 7)
+                        AddressStore.HeartBeatOpcodeLocatePtr = IntPtr.Zero;
+
                     var error = Throws<InvalidOperationException>(scene.Service.Enable);
+
                     if (stage == 2 || stage == 4 || stage == 6)
                         Assert(ReferenceEquals(error, failure), "成功回滚后必须保留最初的原生异常。");
+
                     scene.AssertRestored();
                     Assert(!scene.Service.HasPendingCleanup && !scene.Service.HasActiveHooks && !scene.Service.IsEnabled,
                         "开启失败但回滚成功后不能留下半开启状态，阶段：" + stage);
                     Assert(scene.Memory.Freed.Count == scene.Memory.Allocated.Count,
                         "已经分配但未启用的代码洞也必须回收，阶段：" + stage);
+
                     if (stage < 5 || stage == 7)
                         Assert(!scene.Memory.Writes.Any(write => write.Address == scene.Send),
                             "发包入口尚未写入时，回滚不应触碰它。");
@@ -89,11 +134,15 @@ namespace Simulant.Tests
                 var original = new InvalidOperationException("模拟分配失败。");
                 var cleanup = new InvalidOperationException("模拟收包恢复失败。");
                 scene.Memory.AllocateResult = () => throw original;
+
                 scene.Memory.WriteResult = (address, bytes) =>
                 {
-                    if (address == scene.Receive && bytes.SequenceEqual(scene.ReceiveOriginal)) throw cleanup;
+                    if (address == scene.Receive && bytes.SequenceEqual(scene.ReceiveOriginal))
+                        throw cleanup;
+
                     return null;
                 };
+
                 scene.Host.FirewallLog = _ => throw new Exception("模拟日志异常。");
                 var error = Throws<AggregateException>(scene.Service.Enable);
                 Assert(error.InnerExceptions.Count == 2 && ReferenceEquals(error.InnerExceptions[0], original) &&
@@ -115,49 +164,77 @@ namespace Simulant.Tests
 
         public static void FirewallDisableRetriesOnlyTheFailedHook()
         {
-            foreach (var failReceive in new[] { true, false })
-            foreach (var shortWrite in new[] { true, false })
+            foreach (var failReceive in new[]
             {
-                using (var scene = new FirewallScene())
-                {
-                    scene.Service.Enable();
-                    var failedTarget = failReceive ? scene.Receive : scene.Send;
-                    var successfulTarget = failReceive ? scene.Send : scene.Receive;
-                    scene.Memory.WriteResult = (address, bytes) =>
-                    {
-                        if (address != failedTarget) return null;
-                        if (shortWrite) return bytes.Length - 1;
-                        throw new InvalidOperationException("模拟入口恢复异常。");
-                    };
-                    Throws<AggregateException>(scene.Service.Disable);
-                    Assert(scene.Service.HasPendingCleanup && scene.Service.HasActiveHooks && !scene.Service.IsEnabled,
-                        "恢复失败后必须保留失败入口，同时撤销完整启用状态。");
-                    Assert(scene.Memory.Freed.Count == (failReceive ? 1 : 0),
-                        "只有发包入口已恢复后才可释放代码洞，另一端失败不能阻止清理成功端。");
-                    var successfulWrites = scene.Memory.Writes.Count(write => write.Address == successfulTarget);
-                    scene.Memory.WriteResult = null;
-                    scene.Service.Disable();
-                    Assert(scene.Memory.Writes.Count(write => write.Address == successfulTarget) == successfulWrites,
-                        "重试关闭不能再次恢复已成功清理的入口。");
-                    scene.AssertRestored();
-                    Assert(!scene.Service.HasPendingCleanup && scene.Memory.Freed.Count == 1,
-                        "重试后应完成全部清理，代码洞只成功释放一次。");
-                }
+                true,
+                false
             }
+
+            )
+                foreach (var shortWrite in new[]
+                {
+                    true,
+                    false
+                }
+
+                )
+                {
+                    using (var scene = new FirewallScene())
+                    {
+                        scene.Service.Enable();
+                        var failedTarget = failReceive ? scene.Receive : scene.Send;
+                        var successfulTarget = failReceive ? scene.Send : scene.Receive;
+
+                        scene.Memory.WriteResult = (address, bytes) =>
+                        {
+                            if (address != failedTarget)
+                                return null;
+
+                            if (shortWrite)
+                                return bytes.Length - 1;
+
+                            throw new InvalidOperationException("模拟入口恢复异常。");
+                        };
+
+                        Throws<AggregateException>(scene.Service.Disable);
+                        Assert(scene.Service.HasPendingCleanup && scene.Service.HasActiveHooks && !scene.Service.IsEnabled,
+                        "恢复失败后必须保留失败入口，同时撤销完整启用状态。");
+                        Assert(scene.Memory.Freed.Count == (failReceive ? 1 : 0),
+                        "只有发包入口已恢复后才可释放代码洞，另一端失败不能阻止清理成功端。");
+                        var successfulWrites = scene.Memory.Writes.Count(write => write.Address == successfulTarget);
+                        scene.Memory.WriteResult = null;
+                        scene.Service.Disable();
+                        Assert(scene.Memory.Writes.Count(write => write.Address == successfulTarget) == successfulWrites,
+                        "重试关闭不能再次恢复已成功清理的入口。");
+                        scene.AssertRestored();
+                        Assert(!scene.Service.HasPendingCleanup && scene.Memory.Freed.Count == 1,
+                        "重试后应完成全部清理，代码洞只成功释放一次。");
+                    }
+                }
         }
 
         public static void FirewallFreeFailureRetriesWithoutRewritingRestoredCode()
         {
-            foreach (var throws in new[] { false, true })
+            foreach (var throws in new[]
+            {
+                false,
+                true
+            }
+
+            )
             {
                 using (var scene = new FirewallScene())
                 {
                     scene.Service.Enable();
+
                     scene.Memory.FreeResult = _ =>
                     {
-                        if (throws) throw new InvalidOperationException("模拟代码洞释放异常。");
+                        if (throws)
+                            throw new InvalidOperationException("模拟代码洞释放异常。");
+
                         return false;
                     };
+
                     Throws<AggregateException>(scene.Service.Disable);
                     scene.AssertRestored();
                     Assert(scene.Service.HasPendingCleanup && !scene.Service.HasActiveHooks && !scene.Service.IsEnabled,
@@ -175,15 +252,25 @@ namespace Simulant.Tests
 
         public static void FirewallCleanupUsesCapturedMemoryAndTargetsAfterProcessSwitch()
         {
-            foreach (var useReset in new[] { false, true })
+            foreach (var useReset in new[]
+            {
+                false,
+                true
+            }
+
+            )
             {
                 using (var scene = new FirewallScene())
                 {
                     scene.Service.Enable();
                     var nextMemory = scene.SwitchCurrentProcess();
                     Framework.BeforeResolve = () => throw new Exception("清理不能重新解析当前收包入口。");
-                    if (useReset) scene.Service.ResetProcess();
-                    else scene.Service.Disable();
+
+                    if (useReset)
+                        scene.Service.ResetProcess();
+                    else
+                        scene.Service.Disable();
+
                     scene.AssertRestored();
                     Assert(scene.Memory.Freed.Count == 1 && !scene.Service.HasPendingCleanup,
                         "旧进程仍活着时必须通过旧实例完整恢复入口与代码洞。");
@@ -218,14 +305,24 @@ namespace Simulant.Tests
 
         public static void FirewallProcessResetDiscardsOnlyUnavailableOwnership()
         {
-            foreach (var closed in new[] { true, false })
+            foreach (var closed in new[]
+            {
+                true,
+                false
+            }
+
+            )
             {
                 using (var scene = new FirewallScene())
                 {
                     scene.Service.Enable();
                     var nextMemory = scene.SwitchCurrentProcess();
-                    if (closed) scene.Memory.IsProcessOpen = false;
-                    else scene.Memory.ProcessHandle = new IntPtr(99);
+
+                    if (closed)
+                        scene.Memory.IsProcessOpen = false;
+                    else
+                        scene.Memory.ProcessHandle = new IntPtr(99);
+
                     var writes = scene.Memory.Writes.Count;
                     Throws<AggregateException>(scene.Service.Disable);
                     Assert(scene.Service.HasPendingCleanup, "普通关闭不能自行遗忘尚未证明已失效的归属。");
@@ -242,57 +339,88 @@ namespace Simulant.Tests
 
         public static void FirewallProcessResetRetryHandlesLaterExitAndResetsMode()
         {
-            foreach (var singleHookRetry in new[] { false, true })
-            foreach (var processClosed in new[] { false, true })
+            foreach (var singleHookRetry in new[]
             {
-                using (var scene = new FirewallScene())
-                {
-                    scene.Service.Enable();
-                    var nextMemory = scene.SwitchCurrentProcess();
-                    scene.Memory.WriteResult = (address, bytes) => address == scene.Receive ? (int?)0 : null;
-                    scene.Memory.FreeResult = _ => false;
-                    Throws<AggregateException>(scene.Service.ResetProcess);
-                    Assert(scene.Service.HasPendingCleanup, "第一次进程切换清理失败时应保留旧入口和代码洞。");
-
-                    var writes = scene.Memory.Writes.Count;
-                    var freeAttempts = scene.Memory.FreeAttempts.Count;
-                    if (processClosed) scene.Memory.IsProcessOpen = false;
-                    else scene.Memory.ProcessHandle = new IntPtr(99);
-                    if (singleHookRetry)
-                    {
-                        scene.Service.ReceiveHookDisable();
-                        Assert(scene.Service.HasPendingCleanup, "只清除收包归属时还需保留发包代码洞记录。");
-                        scene.Service.SendHookDisable();
-                    }
-                    else scene.Service.Disable();
-                    Assert(!scene.Service.HasPendingCleanup && !scene.Service.HasActiveHooks,
-                        "旧进程在切换清理失败后才失效时，关闭重试也必须结束旧归属。");
-                    Assert(scene.Memory.Writes.Count == writes && scene.Memory.FreeAttempts.Count == freeAttempts,
-                        "丢弃已失效归属不能继续写入旧地址或释放旧代码洞。");
-                    AssertUntouched(nextMemory);
-
-                    // 在当前 B 进程重新安装后，未收到新的进程切换就仍应使用普通关闭规则。
-                    nextMemory.Blocks[Framework.ReceiveTarget] = (byte[])scene.ReceiveOriginal.Clone();
-                    nextMemory.Blocks[AddressStore.OnSendPacketFuncPtr] = (byte[])scene.SendOriginal.Clone();
-                    nextMemory.Blocks[AddressStore.HeartBeatOpcodeLocatePtr + 4] = new byte[] { 0x34, 0x12 };
-                    scene.Service.Enable();
-                    Assert(scene.Service.IsEnabled, "旧记录全部清空后应允许在当前进程重新安装。");
-                    nextMemory.IsProcessOpen = false;
-                    if (singleHookRetry)
-                    {
-                        Throws<InvalidOperationException>(scene.Service.ReceiveHookDisable);
-                        Throws<InvalidOperationException>(scene.Service.SendHookDisable);
-                    }
-                    else Throws<AggregateException>(scene.Service.Disable);
-                    Assert(scene.Service.HasPendingCleanup,
-                        "新安装不得继承上一轮切换清理模式，普通关闭仍须保留不可用归属。");
-                }
+                false,
+                true
             }
+
+            )
+                foreach (var processClosed in new[]
+                {
+                    false,
+                    true
+                }
+
+                )
+                {
+                    using (var scene = new FirewallScene())
+                    {
+                        scene.Service.Enable();
+                        var nextMemory = scene.SwitchCurrentProcess();
+                        scene.Memory.WriteResult = (address, bytes) => address == scene.Receive ? (int?)0 : null;
+                        scene.Memory.FreeResult = _ => false;
+                        Throws<AggregateException>(scene.Service.ResetProcess);
+                        Assert(scene.Service.HasPendingCleanup, "第一次进程切换清理失败时应保留旧入口和代码洞。");
+
+                        var writes = scene.Memory.Writes.Count;
+                        var freeAttempts = scene.Memory.FreeAttempts.Count;
+
+                        if (processClosed)
+                            scene.Memory.IsProcessOpen = false;
+                        else
+                            scene.Memory.ProcessHandle = new IntPtr(99);
+
+                        if (singleHookRetry)
+                        {
+                            scene.Service.ReceiveHookDisable();
+                            Assert(scene.Service.HasPendingCleanup, "只清除收包归属时还需保留发包代码洞记录。");
+                            scene.Service.SendHookDisable();
+                        }
+                        else
+                            scene.Service.Disable();
+
+                        Assert(!scene.Service.HasPendingCleanup && !scene.Service.HasActiveHooks,
+                        "旧进程在切换清理失败后才失效时，关闭重试也必须结束旧归属。");
+                        Assert(scene.Memory.Writes.Count == writes && scene.Memory.FreeAttempts.Count == freeAttempts,
+                        "丢弃已失效归属不能继续写入旧地址或释放旧代码洞。");
+                        AssertUntouched(nextMemory);
+
+                        // 在当前 B 进程重新安装后，未收到新的进程切换就仍应使用普通关闭规则。
+                        nextMemory.Blocks[Framework.ReceiveTarget] = (byte[])scene.ReceiveOriginal.Clone();
+                        nextMemory.Blocks[AddressStore.OnSendPacketFuncPtr] = (byte[])scene.SendOriginal.Clone();
+                        nextMemory.Blocks[AddressStore.HeartBeatOpcodeLocatePtr + 4] = new byte[]
+                        {
+                            0x34,
+                            0x12
+                        };
+                        scene.Service.Enable();
+                        Assert(scene.Service.IsEnabled, "旧记录全部清空后应允许在当前进程重新安装。");
+                        nextMemory.IsProcessOpen = false;
+
+                        if (singleHookRetry)
+                        {
+                            Throws<InvalidOperationException>(scene.Service.ReceiveHookDisable);
+                            Throws<InvalidOperationException>(scene.Service.SendHookDisable);
+                        }
+                        else
+                            Throws<AggregateException>(scene.Service.Disable);
+
+                        Assert(scene.Service.HasPendingCleanup,
+                        "新安装不得继承上一轮切换清理模式，普通关闭仍须保留不可用归属。");
+                    }
+                }
         }
 
         public static void FirewallRejectsIncompleteCaptureBeforePatching()
         {
-            foreach (var failReceive in new[] { true, false })
+            foreach (var failReceive in new[]
+            {
+                true,
+                false
+            }
+
+            )
             {
                 using (var scene = new FirewallScene())
                 {
@@ -306,6 +434,7 @@ namespace Simulant.Tests
                     scene.AssertRestored();
                 }
             }
+
             using (var scene = new FirewallScene())
             {
                 GreyMagicExternalProcessMemory nextMemory = null;
@@ -322,13 +451,25 @@ namespace Simulant.Tests
             using (var scene = new FirewallScene())
             {
                 GreyMagicExternalProcessMemory nextMemory = null;
+
                 scene.Memory.AllocateResult = () =>
                 {
-                    nextMemory = new GreyMagicExternalProcessMemory { ProcessHandle = new IntPtr(2) };
-                    nextMemory.Blocks[scene.Heartbeat + 4] = new byte[] { 0x78, 0x56 };
-                    NamazuInterop.Plugin = new NamazuPlugin { Memory = nextMemory };
+                    nextMemory = new GreyMagicExternalProcessMemory
+                    {
+                        ProcessHandle = new IntPtr(2)
+                    };
+                    nextMemory.Blocks[scene.Heartbeat + 4] = new byte[]
+                    {
+                        0x78,
+                        0x56
+                    };
+                    NamazuInterop.Plugin = new NamazuPlugin
+                    {
+                        Memory = nextMemory
+                    };
                     return new IntPtr(0x4000);
                 };
+
                 scene.Service.Enable();
                 var cave = scene.Memory.Blocks[scene.Memory.Allocated.Single()];
                 Assert(cave[3] == 0x34 && cave[4] == 0x12, "已捕获的补丁不能混入新内存实例中的心跳包编号。");
@@ -365,16 +506,25 @@ namespace Simulant.Tests
             }
         }
 
-        private static T Throws<T>(Action action) where T : Exception
+        private static T Throws<T>(Action action)
+            where T : Exception
         {
-            try { action(); }
-            catch (T error) { return error; }
+            try
+            {
+                action();
+            }
+            catch (T error)
+            {
+                return error;
+            }
+
             throw new Exception("预期抛出异常：" + typeof(T).Name);
         }
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
         private sealed class FirewallScene : IDisposable
@@ -382,9 +532,32 @@ namespace Simulant.Tests
             internal readonly IntPtr Receive = new IntPtr(0x1000);
             internal readonly IntPtr Send = new IntPtr(0x2000);
             internal readonly IntPtr Heartbeat = new IntPtr(0x3000);
-            internal readonly byte[] ReceiveOriginal = { 0x48, 0x89, 0x5C, 0x24, 0x08 };
+            internal readonly byte[] ReceiveOriginal =
+            {
+                0x48,
+                0x89,
+                0x5C,
+                0x24,
+                0x08
+            };
             internal readonly byte[] SendOriginal =
-                { 0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x4C, 0x89, 0x64, 0x24, 0x18 };
+            {
+                0x48,
+                0x89,
+                0x5C,
+                0x24,
+                0x08,
+                0x48,
+                0x89,
+                0x74,
+                0x24,
+                0x10,
+                0x4C,
+                0x89,
+                0x64,
+                0x24,
+                0x18
+            };
             internal readonly GreyMagicExternalProcessMemory Memory = new GreyMagicExternalProcessMemory();
             internal readonly PluginHost Host = new PluginHost();
             internal readonly FFXIV_ACT_Plugin.FFXIV_ACT_Plugin Parser = new FFXIV_ACT_Plugin.FFXIV_ACT_Plugin();
@@ -394,8 +567,15 @@ namespace Simulant.Tests
             {
                 Memory.Blocks[Receive] = (byte[])ReceiveOriginal.Clone();
                 Memory.Blocks[Send] = (byte[])SendOriginal.Clone();
-                Memory.Blocks[Heartbeat + 4] = new byte[] { 0x34, 0x12 };
-                NamazuInterop.Plugin = new NamazuPlugin { Memory = Memory };
+                Memory.Blocks[Heartbeat + 4] = new byte[]
+                {
+                    0x34,
+                    0x12
+                };
+                NamazuInterop.Plugin = new NamazuPlugin
+                {
+                    Memory = Memory
+                };
                 AddressStore.OnSendPacketFuncPtr = Send;
                 AddressStore.HeartBeatOpcodeLocatePtr = Heartbeat;
                 Framework.ReceiveTarget = Receive;
@@ -406,8 +586,14 @@ namespace Simulant.Tests
 
             internal GreyMagicExternalProcessMemory SwitchCurrentProcess()
             {
-                var next = new GreyMagicExternalProcessMemory { ProcessHandle = new IntPtr(2) };
-                NamazuInterop.Plugin = new NamazuPlugin { Memory = next };
+                var next = new GreyMagicExternalProcessMemory
+                {
+                    ProcessHandle = new IntPtr(2)
+                };
+                NamazuInterop.Plugin = new NamazuPlugin
+                {
+                    Memory = next
+                };
                 AddressStore.OnSendPacketFuncPtr = new IntPtr(0x9000);
                 AddressStore.HeartBeatOpcodeLocatePtr = new IntPtr(0xA000);
                 Framework.ReceiveTarget = new IntPtr(0xB000);

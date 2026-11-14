@@ -5,7 +5,14 @@ using System.Linq;
 
 namespace Simulant.Core
 {
-    public enum LogType { Error, Warning, Runtime, Sim, Verbose }
+    public enum LogType
+    {
+        Error,
+        Warning,
+        Runtime,
+        Sim,
+        Verbose
+    }
 
     internal sealed class PluginLog
     {
@@ -40,9 +47,11 @@ namespace Simulant.Core
             };
 
             var queue = _log[type];
+
             lock (queue)
             {
                 queue.Enqueue(item);
+
                 if (queue.Count > MaxCountPerLevel)
                 {
                     queue.Dequeue();
@@ -88,6 +97,7 @@ namespace Simulant.Core
             foreach (var pair in _log)
             {
                 var queue = pair.Value;
+
                 lock (queue)
                 {
                     result[pair.Key] = queue.ToList();
@@ -107,11 +117,26 @@ namespace Simulant.Core
 
         private static readonly Dictionary<LogType, string> _typeToDesc = new Dictionary<LogType, string>
         {
-            { LogType.Error,    "错误" },
-            { LogType.Warning,  "警告" },
-            { LogType.Runtime,  "运行" },
-            { LogType.Sim,      "模拟" },
-            { LogType.Verbose,  "详细" },
+            {
+                LogType.Error,
+                "错误"
+            },
+            {
+                LogType.Warning,
+                "警告"
+            },
+            {
+                LogType.Runtime,
+                "运行"
+            },
+            {
+                LogType.Sim,
+                "模拟"
+            },
+            {
+                LogType.Verbose,
+                "详细"
+            },
         };
     }
 }

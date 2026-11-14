@@ -37,17 +37,27 @@ namespace Simulant.Simulation.Runtime
 
         public void Cast(SimActor actor, uint actionId, float? omenDelay = 0, SimActor target = null)
         {
-            if (actor == null) throw new ArgumentNullException(nameof(actor));
+            if (actor == null)
+                throw new ArgumentNullException(nameof(actor));
+
             if (omenDelay.HasValue && (float.IsNaN(omenDelay.Value) || float.IsInfinity(omenDelay.Value)))
                 throw new ArgumentOutOfRangeException(nameof(omenDelay));
+
             lock (_gate)
             {
-                if (_disposed || !actor.IsActive) return;
-                if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action)) return;
+                if (_disposed || !actor.IsActive)
+                    return;
+
+                if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action))
+                    return;
+
                 var castTime = action.Cast100ms / 10f;
                 CancelCore(actor);
+
                 // 移除预兆会调用外部代码；它可能已清理角色或开始更新的读条。
-                if (_disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
+                if (_disposed || !actor.IsActive || _casts.ContainsKey(actor))
+                    return;
+
                 var state = new CastState
                 {
                     ActionId = actionId,
@@ -56,26 +66,35 @@ namespace Simulant.Simulation.Runtime
                     Target = target
                 };
                 _casts.Add(actor, state);
+
                 try
                 {
                     actor.Entity.SetCastInfo(actionId, castTime);
-                    if (target != null) actor.Entity.SetCastTarget(target.Entity);
+
+                    if (target != null)
+                        actor.Entity.SetCastTarget(target.Entity);
+
                     state.Completion = _scheduler.ScheduleAfter(castTime,
                         () => Complete(actor, state, action), "技能 " + actionId + " 读条完成");
+
                     if (action.Omen.RowId > 0 && omenDelay.HasValue)
                     {
                         var delay = Math.Max(0, omenDelay.Value);
+
                         if (delay == 0)
                             ShowOmen(actor, state, action);
                         else if (delay < castTime - 0.3)
                             state.PendingOmen = _scheduler.ScheduleAfter(delay,
                                 () => ShowOmen(actor, state, action), "技能 " + actionId + " 预兆");
                     }
+
                     _log?.Invoke($"开始读条：技能 {actionId}（{castTime:0.0} 秒）");
                 }
                 catch
                 {
-                    if (IsCurrent(actor, state)) CancelCore(actor);
+                    if (IsCurrent(actor, state))
+                        CancelCore(actor);
+
                     throw;
                 }
             }
@@ -83,13 +102,22 @@ namespace Simulant.Simulation.Runtime
 
         public void Execute(SimActor actor, uint actionId, SimActor target = null)
         {
-            if (actor == null) throw new ArgumentNullException(nameof(actor));
+            if (actor == null)
+                throw new ArgumentNullException(nameof(actor));
+
             lock (_gate)
             {
-                if (_disposed || !actor.IsActive) return;
-                if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action)) return;
+                if (_disposed || !actor.IsActive)
+                    return;
+
+                if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action))
+                    return;
+
                 CancelCore(actor);
-                if (_disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
+
+                if (_disposed || !actor.IsActive || _casts.ContainsKey(actor))
+                    return;
+
                 ExecuteCore(actor, action, target);
             }
         }
@@ -104,26 +132,34 @@ namespace Simulant.Simulation.Runtime
         internal void CancelVisual(SimActor actor)
         {
             lock (_gate)
-                if (_casts.TryGetValue(actor, out var state) && state.Target != null) CancelCore(actor);
+                if (_casts.TryGetValue(actor, out var state) && state.Target != null)
+                    CancelCore(actor);
         }
 
         public void Cancel(SimActor actor)
         {
-            if (actor == null) return;
-            lock (_gate) CancelCore(actor);
+            if (actor == null)
+                return;
+
+            lock (_gate)
+                CancelCore(actor);
         }
 
         private void ShowOmen(SimActor actor, CastState state, ActionRow action)
         {
             lock (_gate)
             {
-                if (!IsCurrent(actor, state)) return;
+                if (!IsCurrent(actor, state))
+                    return;
+
                 state.PendingOmen = null;
+
                 if (!actor.IsActive)
                 {
                     CancelCore(actor);
                     return;
                 }
+
                 // 外部回调接收预兆后即使抛出异常，取消时仍会移除对应的唯一标签。
                 state.OmenVisible = true;
                 state.OmenVisible = _omens.Show(actor, action, state.EndsAt - _scheduler.ElapsedSeconds - 0.3, state.OmenTag);
@@ -134,9 +170,12 @@ namespace Simulant.Simulation.Runtime
         {
             lock (_gate)
             {
-                if (!IsCurrent(actor, state)) return;
+                if (!IsCurrent(actor, state))
+                    return;
+
                 _casts.Remove(actor);
                 var execute = false;
+
                 try
                 {
                     if (actor.IsActive)
@@ -146,11 +185,19 @@ namespace Simulant.Simulation.Runtime
                         execute = currentActionId == 0 || currentActionId == state.ActionId;
                     }
                 }
-                finally { CancelState(actor, state); }
-                if (!execute || _disposed || !actor.IsActive || _casts.ContainsKey(actor)) return;
+                finally
+                {
+                    CancelState(actor, state);
+                }
+
+                if (!execute || _disposed || !actor.IsActive || _casts.ContainsKey(actor))
+                    return;
+
                 // 清理预兆期间也可能有外部原生读条接管动画，必须重新读取当前技能。
                 var actionAfterCleanup = actor.Entity.CastingActionId;
-                if (actionAfterCleanup == 0 || actionAfterCleanup == state.ActionId) ExecuteCore(actor, action, state.Target);
+
+                if (actionAfterCleanup == 0 || actionAfterCleanup == state.ActionId)
+                    ExecuteCore(actor, action, state.Target);
             }
         }
 
@@ -163,20 +210,26 @@ namespace Simulant.Simulation.Runtime
             {
                 if (target.IsActive && target.Entity.IsTargetable && target.Entity.HP != 0)
                     actor.Entity.ExecuteActionEffect(action.RowId, target.Entity);
+
                 return;
             }
+
             var timeline = unchecked((int)action.AnimationEnd.RowId);
+
             if (timeline >= 0)
             {
                 actor.Entity.ResetBaseTimeline();
                 actor.Entity.PlayBlendTimeline((ushort)timeline);
             }
+
             _log?.Invoke($"已执行技能：{action.RowId}；结束动画：{timeline}");
         }
 
         private void CancelCore(SimActor actor)
         {
-            if (!_casts.TryGetValue(actor, out var state)) return;
+            if (!_casts.TryGetValue(actor, out var state))
+                return;
+
             _casts.Remove(actor);
             CancelState(actor, state);
         }
@@ -185,14 +238,17 @@ namespace Simulant.Simulation.Runtime
         {
             state.Completion?.Cancel();
             state.PendingOmen?.Cancel();
+
             try
             {
                 // 不清除借用角色上无关的读条，也不访问已失效的原生实体。
-                if (actor.Entity.IsAlive) actor.Entity.FinalizeCast(state.ActionId);
+                if (actor.Entity.IsAlive)
+                    actor.Entity.FinalizeCast(state.ActionId);
             }
             finally
             {
-                if (state.OmenVisible) _omens.Remove(state.OmenTag);
+                if (state.OmenVisible)
+                    _omens.Remove(state.OmenTag);
             }
         }
 
@@ -200,21 +256,31 @@ namespace Simulant.Simulation.Runtime
         {
             lock (_gate)
             {
-                if (_disposed) return;
+                if (_disposed)
+                    return;
+
                 _disposed = true;
                 var states = new List<KeyValuePair<SimActor, CastState>>(_casts);
                 _casts.Clear();
                 List<Exception> errors = null;
+
                 foreach (var entry in states)
                 {
-                    try { CancelState(entry.Key, entry.Value); }
+                    try
+                    {
+                        CancelState(entry.Key, entry.Value);
+                    }
                     catch (Exception ex)
                     {
-                        if (errors == null) errors = new List<Exception>();
+                        if (errors == null)
+                            errors = new List<Exception>();
+
                         errors.Add(ex);
                     }
                 }
-                if (errors != null) throw new AggregateException("清理模拟读条失败。", errors);
+
+                if (errors != null)
+                    throw new AggregateException("清理模拟读条失败。", errors);
             }
         }
     }

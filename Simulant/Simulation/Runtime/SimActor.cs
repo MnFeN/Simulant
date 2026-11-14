@@ -31,39 +31,85 @@ namespace Simulant.Simulation.Runtime
 
         public Vector2 Pos
         {
-            get { EnsureActive(); return Entity.Pos; }
-            set { EnsureActive(); Entity.Pos = value; }
+            get
+            {
+                EnsureActive();
+                return Entity.Pos;
+            }
+
+            set
+            {
+                EnsureActive();
+                Entity.Pos = value;
+            }
         }
 
         public Vector3 Pos3D
         {
-            get { EnsureActive(); return Entity.Pos3D; }
-            set { EnsureActive(); Entity.Pos3D = value; }
+            get
+            {
+                EnsureActive();
+                return Entity.Pos3D;
+            }
+
+            set
+            {
+                EnsureActive();
+                Entity.Pos3D = value;
+            }
         }
 
         /// <summary>直接读取或初始化朝向；网络角色在机制中转向应使用 FaceNetwork，由客户端更新模型。</summary>
         public float Heading
         {
-            get { EnsureActive(); return Entity.Heading; }
-            set { EnsureActive(); Entity.Heading = value; }
+            get
+            {
+                EnsureActive();
+                return Entity.Heading;
+            }
+
+            set
+            {
+                EnsureActive();
+                Entity.Heading = value;
+            }
         }
 
         public Job Job
         {
-            get { EnsureActive(); return Entity.Job; }
-            set { EnsureActive(); Entity.Job = value; }
+            get
+            {
+                EnsureActive();
+                return Entity.Job;
+            }
+
+            set
+            {
+                EnsureActive();
+                Entity.Job = value;
+            }
         }
 
         /// <summary>读条并播放技能；指定目标时沿用原生带目标演出，不产生实际伤害。</summary>
         public void Cast(uint actionId, float? omenDelay = 0, SimActor target = null)
-        { BehaviorController?.ManualAction(this); _casts.Cast(this, actionId, omenDelay, target); }
+        {
+            BehaviorController?.ManualAction(this);
+            _casts.Cast(this, actionId, omenDelay, target);
+        }
+
         public void Execute(uint actionId)
-        { BehaviorController?.ManualAction(this); _casts.Execute(this, actionId); }
+        {
+            BehaviorController?.ManualAction(this);
+            _casts.Execute(this, actionId);
+        }
 
         public void ConfigureBehavior(SimActorBehaviorOptions options)
         {
             EnsureActive();
-            if (BehaviorController == null) throw new InvalidOperationException("该角色不是本会话生成的网络假玩家。");
+
+            if (BehaviorController == null)
+                throw new InvalidOperationException("该角色不是本会话生成的网络假玩家。");
+
             BehaviorController.Configure(this, options);
         }
 
@@ -77,7 +123,10 @@ namespace Simulant.Simulation.Runtime
             bool urgent = false, double northHeading = Math.PI)
         {
             EnsureActive();
-            if (BehaviorController == null) throw new InvalidOperationException("机制走位只支持本会话生成的网络假玩家。");
+
+            if (BehaviorController == null)
+                throw new InvalidOperationException("机制走位只支持本会话生成的网络假玩家。");
+
             BehaviorController.MoveForMechanic(this, destination, arriveBy, holdUntil ?? arriveBy, urgent, northHeading);
         }
 
@@ -88,8 +137,10 @@ namespace Simulant.Simulation.Runtime
         public void SuspendBehavior(double seconds)
         {
             EnsureActive();
+
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0)
                 throw new ArgumentOutOfRangeException(nameof(seconds), "行为暂停时间必须为非负有限数。");
+
             BehaviorController?.Suspend(this, seconds);
             _casts.Cancel(this);
             _movement.Stop(this);
@@ -109,7 +160,10 @@ namespace Simulant.Simulation.Runtime
         /// </summary>
         public void MoveTo(Vector2 target, float speed = 6, bool faceMovement = true,
             ushort? animationId = null, Action onArrived = null)
-        { BehaviorController?.ManualMove(this); _movement.MoveTo(this, target, speed, faceMovement, animationId, onArrived); }
+        {
+            BehaviorController?.ManualMove(this);
+            _movement.MoveTo(this, target, speed, faceMovement, animationId, onArrived);
+        }
 
         /// <summary>
         /// 控制网络角色表中的角色向 ACT 的 X/Y 目标移动，沿用当前高度；原生客户端管理移动动画。
@@ -117,40 +171,74 @@ namespace Simulant.Simulation.Runtime
         /// speedParam 是每秒距离乘以 10 后的包内速度参数，默认 30；替换或停止会取消旧的同步到达回调。
         /// </summary>
         public void MoveNetworkTo(Vector2 target, byte speedParam = 30, Action onArrived = null)
-        { BehaviorController?.ManualMove(this); _movement.MoveNetworkTo(this, target, speedParam, onArrived); }
+        {
+            BehaviorController?.ManualMove(this);
+            _movement.MoveNetworkTo(this, target, speedParam, onArrived);
+        }
 
         /// <summary>停止本会话的移动，再通过 ActorMove 在当前位置转向，同时更新模型与目标圈。</summary>
         public void FaceNetwork(float heading)
         {
             EnsureActive();
+
             if (float.IsNaN(heading) || float.IsInfinity(heading))
                 throw new ArgumentOutOfRangeException(nameof(heading), "朝向必须为有限数。");
+
             var slot = Entity.Identity.Slot;
+
             if (slot < 2 || slot >= 200 || (slot & 1) != 0)
                 throw new InvalidOperationException("网络转向只支持网络角色，不能用于自身玩家或本地备用实体。");
+
             StopMoving();
             Entity.ActorMove(Entity.Pos3D, heading);
         }
 
         /// <summary>停止本会话的本地或网络移动；不会接管直接调用 Entity.ActorMove 产生的移动。</summary>
-        public void StopMoving() { BehaviorController?.ManualMove(this); _movement.Stop(this); }
-        public void SetReadyToDraw() { if (IsActive) Entity.SetReadyToDraw(); }
-        public void EnableDraw() { if (IsActive) Entity.EnableDraw(); }
-        public void Redraw() { if (IsActive) Entity.Redraw(); }
+        public void StopMoving()
+        {
+            BehaviorController?.ManualMove(this);
+            _movement.Stop(this);
+        }
+
+        public void SetReadyToDraw()
+        {
+            if (IsActive)
+                Entity.SetReadyToDraw();
+        }
+
+        public void EnableDraw()
+        {
+            if (IsActive)
+                Entity.EnableDraw();
+        }
+
+        public void Redraw()
+        {
+            if (IsActive)
+                Entity.Redraw();
+        }
 
         /// <summary>解除关联并停止本会话的读条、本地及网络移动；保留实体及直接 ActorMove 产生的移动。</summary>
         internal void Detach()
         {
             BehaviorController?.Remove(this);
+
             if (Interlocked.Exchange(ref _detached, 1) != 0)
             {
                 // 首次解除关联时原生停止可能失败，仍允许重试本次移动的清理。
                 _movement.Stop(this);
                 return;
             }
+
             // 外部预兆回调失败时，也必须停止移动。
-            try { _casts.Cancel(this); }
-            finally { _movement.Stop(this); }
+            try
+            {
+                _casts.Cancel(this);
+            }
+            finally
+            {
+                _movement.Stop(this);
+            }
         }
 
         /// <summary>解除关联并停止本会话的行为；不回收实体，也不接管直接调用 Entity.ActorMove 产生的移动。</summary>
@@ -158,7 +246,8 @@ namespace Simulant.Simulation.Runtime
 
         private void EnsureActive()
         {
-            if (!IsActive) throw new InvalidOperationException("该角色已不再参与本次模拟。");
+            if (!IsActive)
+                throw new InvalidOperationException("该角色已不再参与本次模拟。");
         }
     }
 }

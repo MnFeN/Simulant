@@ -25,7 +25,10 @@ namespace Lumina.Excel.Sheets
         public byte Unknown1 => page.ReadUInt8(offset + 46);
         public bool Unknown2 => page.ReadPackedBool(offset + 47, 0);
 
-        private static global::Lumina.Excel.RowRef ShopCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4 + i * 4), new System.Type[] { typeof(SpecialShop), typeof(GilShop), typeof(PreHandler) }, 1185944190, page.Language);
+        private static global::Lumina.Excel.RowRef ShopCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4 + i * 4), new System.Type[]
+        {
+            typeof(SpecialShop), typeof(GilShop), typeof(PreHandler)
+        }, 1185944190, page.Language);
         static public TopicSelect Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row) => new TopicSelect(page, offset, row);
     }
 }

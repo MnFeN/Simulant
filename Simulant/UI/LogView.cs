@@ -30,7 +30,10 @@ namespace Simulant.UI
                 BlinkStyle = ErrorBlinkStyle.NeverBlink,
             };
             // The component container stops and disposes the timer with this control.
-            _refreshTimer = new System.Windows.Forms.Timer(components) { Interval = 100 };
+            _refreshTimer = new System.Windows.Forms.Timer(components)
+            {
+                Interval = 100
+            };
             _refreshTimer.Tick += (sender, e) => RefreshPendingLogs();
             _refreshTimer.Start();
         }
@@ -89,12 +92,14 @@ namespace Simulant.UI
         private void ApplyLogFilter()
         {
             var pattern = txtLogRegex.Text ?? string.Empty;
+
             if (!string.Equals(pattern, _regexPattern, StringComparison.Ordinal))
             {
                 _regexPattern = pattern;
                 _regex = null;
                 _invalidRegex = false;
                 _filterErrors.SetError(txtLogRegex, string.Empty);
+
                 try
                 {
                     if (pattern.Length > 0)
@@ -108,18 +113,21 @@ namespace Simulant.UI
             }
 
             txtLogRegex.BackColor = _invalidRegex ? Color.MistyRose : SystemColors.Window;
+
             if (_invalidRegex)
                 return;
 
             // 单条匹配和整批筛选都限时，避免日志增加时反复阻塞界面。
             var filtered = new List<LogItem>();
             var timer = Stopwatch.StartNew();
+
             try
             {
                 foreach (var pair in _logSnapshot)
                 {
                     if (!IsLogTypeEnabled(pair.Key))
                         continue;
+
                     foreach (var log in pair.Value)
                     {
                         if (_regex != null)
@@ -129,9 +137,11 @@ namespace Simulant.UI
                                 RejectLogFilter("正则筛选耗时过长，已暂停筛选并保留原列表。请简化或清空表达式后重试。");
                                 return;
                             }
+
                             if (!_regex.IsMatch(log.Message ?? string.Empty))
                                 continue;
                         }
+
                         filtered.Add(log);
                     }
                 }
@@ -164,18 +174,29 @@ namespace Simulant.UI
             var restoredFirstRow = -1;
             var restoredCurrentRow = -1;
             var selectedRows = new List<int>(selected.Count);
+
             for (var index = 0; index < logs.Count; index++)
             {
-                if (restoredFirstRow < 0 && visibleItems.Contains(logs[index])) restoredFirstRow = index;
-                if (ReferenceEquals(logs[index], currentItem)) restoredCurrentRow = index;
-                if (selected.Contains(logs[index])) selectedRows.Add(index);
+                if (restoredFirstRow < 0 && visibleItems.Contains(logs[index]))
+                    restoredFirstRow = index;
+
+                if (ReferenceEquals(logs[index], currentItem))
+                    restoredCurrentRow = index;
+
+                if (selected.Contains(logs[index]))
+                    selectedRows.Add(index);
             }
+
             if (restoredCurrentRow >= 0)
                 dgvLog.CurrentCell = dgvLog.Rows[restoredCurrentRow].Cells[currentColumn];
             else
                 dgvLog.CurrentCell = null;
+
             dgvLog.ClearSelection();
-            foreach (var row in selectedRows) dgvLog.Rows[row].Selected = true;
+
+            foreach (var row in selectedRows)
+                dgvLog.Rows[row].Selected = true;
+
             dgvLog.Invalidate();
 
             if (logs.Count > 0)
@@ -248,6 +269,7 @@ namespace Simulant.UI
                     e.CellStyle.BackColor = Color.White;
                     break;
             }
+
             e.CellStyle.ForeColor = Color.Black;
             e.FormattingApplied = true;
         }
@@ -395,10 +417,10 @@ namespace Simulant.UI
                 .OrderBy(r => r.Index)
                 .Where(r => r.Index >= 0 && r.Index < _virtualData.Count)
                 .Select(r =>
-                {
-                    var item = _virtualData[r.Index];
-                    return $"{item.Timestamp:HH:mm:ss.fff} {item.TypeDescription} {item.Message}";
-                });
+            {
+                var item = _virtualData[r.Index];
+                return $"{item.Timestamp:HH:mm:ss.fff} {item.TypeDescription} {item.Message}";
+            });
 
             var text = string.Join(Environment.NewLine, lines);
 

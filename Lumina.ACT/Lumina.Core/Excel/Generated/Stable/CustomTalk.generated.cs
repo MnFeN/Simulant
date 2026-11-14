@@ -25,7 +25,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Text.ReadOnly.ReadOnlySeString Name => page.ReadString(offset + 248, offset);
         public uint IconActor => page.ReadUInt32(offset + 252);
         public uint IconMap => page.ReadUInt32(offset + 256);
-        public global::Lumina.Excel.RowRef SpecialLinks => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 260), new System.Type[] { typeof(CollectablesShop), typeof(ContentEntry), typeof(SpecialShop), typeof(CustomTalkNestHandlers) }, -1160536742, page.Language);
+        public global::Lumina.Excel.RowRef SpecialLinks => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 260), new System.Type[]
+        {
+            typeof(CollectablesShop), typeof(ContentEntry), typeof(SpecialShop), typeof(CustomTalkNestHandlers)
+        }, -1160536742, page.Language);
         public byte Unknown0 => page.ReadUInt8(offset + 264);
         public byte Unknown1 => page.ReadUInt8(offset + 265);
         public bool Unknown2 => page.ReadPackedBool(offset + 266, 0);

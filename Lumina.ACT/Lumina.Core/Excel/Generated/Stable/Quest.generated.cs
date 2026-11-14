@@ -59,9 +59,15 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<Quest>> PreviousQuest => new global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<Quest>>(page, offset, offset, PreviousQuestCtor, 3);
         public global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<Quest>> QuestLock => new global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<Quest>>(page, offset, offset, QuestLockCtor, 2);
         public global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<InstanceContent>> InstanceContent => new global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<InstanceContent>>(page, offset, offset, InstanceContentCtor, 3);
-        public global::Lumina.Excel.RowRef IssuerStart => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 2712), new System.Type[] { typeof(EObjName), typeof(ENpcResident) }, -572735930, page.Language);
+        public global::Lumina.Excel.RowRef IssuerStart => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 2712), new System.Type[]
+        {
+            typeof(EObjName), typeof(ENpcResident)
+        }, -572735930, page.Language);
         public global::Lumina.Excel.RowRef<Level> IssuerLocation => new global::Lumina.Excel.RowRef<Level>(page.Module, page.ReadUInt32(offset + 2716), page.Language);
-        public global::Lumina.Excel.RowRef TargetEnd => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 2720), new System.Type[] { typeof(EObjName), typeof(ENpcResident) }, -572735930, page.Language);
+        public global::Lumina.Excel.RowRef TargetEnd => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 2720), new System.Type[]
+        {
+            typeof(EObjName), typeof(ENpcResident)
+        }, -572735930, page.Language);
         public global::Lumina.Excel.RowRef<JournalGenre> JournalGenre => new global::Lumina.Excel.RowRef<JournalGenre>(page.Module, page.ReadUInt32(offset + 2724), page.Language);
         public uint Icon => page.ReadUInt32(offset + 2728);
         public uint IconSpecial => page.ReadUInt32(offset + 2732);

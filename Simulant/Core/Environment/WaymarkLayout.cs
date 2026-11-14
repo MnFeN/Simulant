@@ -9,7 +9,17 @@ namespace Simulant.Core.Environment
     public sealed class WaymarkLayout
     {
         private const string Marks = "ABCD1234";
-        private static readonly string[] PlaceNames = { "A", "B", "C", "D", "One", "Two", "Three", "Four" };
+        private static readonly string[] PlaceNames =
+        {
+            "A",
+            "B",
+            "C",
+            "D",
+            "One",
+            "Two",
+            "Three",
+            "Four"
+        };
         private readonly Vector3 _origin;
         private readonly Vector3?[] _positions = new Vector3?[8];
         private double _northHeading = Math.PI;
@@ -29,8 +39,11 @@ namespace Simulant.Core.Environment
         public WaymarkLayout Rotate(double northHeading)
         {
             ValidateAngle(northHeading);
+
             foreach (var position in _positions)
-                if (position.HasValue) ToWorld(position.Value, northHeading);
+                if (position.HasValue)
+                    ToWorld(position.Value, northHeading);
+
             _northHeading = northHeading;
             return this;
         }
@@ -57,20 +70,29 @@ namespace Simulant.Core.Environment
         {
             if (string.IsNullOrEmpty(order) || order.Length > 8)
                 throw new ArgumentException("圆周排列需要提供 1～8 个标点名。", nameof(order));
+
             if (radii == null || radii.Length == 0)
                 throw new ArgumentException("圆周排列需要提供至少一个半径。", nameof(radii));
-            foreach (var radius in radii) ValidateRadius(radius);
+
+            foreach (var radius in radii)
+                ValidateRadius(radius);
+
             var used = 0;
+
             for (var i = 0; i < order.Length; i++)
             {
                 var index = Marks.IndexOf(char.ToUpperInvariant(order[i]));
+
                 if (index < 0 || (used & (1 << index)) != 0)
                     throw new ArgumentException("标点名必须为 ABCD1234，且不能重复。", nameof(order));
+
                 used |= 1 << index;
             }
+
             for (var i = 0; i < order.Length; i++)
                 Polar(order[i].ToString(), radii[i % radii.Length],
                     Math.PI + 2 * Math.PI * (i + (startFromNorth ? 0 : 0.5)) / order.Length);
+
             return this;
         }
 
@@ -78,9 +100,11 @@ namespace Simulant.Core.Environment
         public string ToPlaceJson()
         {
             var json = new StringBuilder("{\"LocalOnly\":true,\"Log\":false");
+
             for (var i = 0; i < _positions.Length; i++)
             {
                 json.Append(",\"").Append(PlaceNames[i]).Append("\":{");
+
                 if (Position(i) is Vector3 position)
                 {
                     json.Append("\"X\":").Append(position.X.ToString("R", CultureInfo.InvariantCulture))
@@ -88,9 +112,12 @@ namespace Simulant.Core.Environment
                         .Append(",\"Z\":").Append(position.Y.ToString("R", CultureInfo.InvariantCulture))
                         .Append(",\"Active\":true");
                 }
-                else json.Append("\"Active\":false");
+                else
+                    json.Append("\"Active\":false");
+
                 json.Append('}');
             }
+
             return json.Append('}').ToString();
         }
 
@@ -113,7 +140,10 @@ namespace Simulant.Core.Environment
         private static int Index(string mark)
         {
             var index = mark != null && mark.Length == 1 ? Marks.IndexOf(char.ToUpperInvariant(mark[0])) : -1;
-            if (index < 0) throw new ArgumentException("标点名必须为单个 A～D 或 1～4。", nameof(mark));
+
+            if (index < 0)
+                throw new ArgumentException("标点名必须为单个 A～D 或 1～4。", nameof(mark));
+
             return index;
         }
 

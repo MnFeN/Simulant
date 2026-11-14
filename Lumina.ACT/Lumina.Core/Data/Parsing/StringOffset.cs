@@ -23,6 +23,6 @@ namespace Lumina.Data.Parsing
             Data = br.ReadStringOffsetData(start + offset);
         }
 
-        public static implicit operator string (StringOffset obj) => obj.Data;
+        public static implicit operator string(StringOffset obj) => obj.Data;
     }
 }

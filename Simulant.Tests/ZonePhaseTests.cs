@@ -19,8 +19,10 @@ namespace Simulant.Tests
             Assert(pending.Wait(1000) && !pending.Result,
                 "退出或世界失效应立即结束阶段等待，并返回取消结果。");
             Assert(prepared == 1 && applied == 0, "取消后的阶段不能写入新世界的环境。");
+
             Assert(application.ApplyAsync(_ => { }, _ => applied++, _ => true).GetAwaiter().GetResult(),
                 "取消结束后应允许应用新阶段。");
+
             Assert(applied == 1, "新阶段应只应用一次。");
         }
 
@@ -31,7 +33,11 @@ namespace Simulant.Tests
             var oldWrites = 0;
             var newWrites = 0;
             var probes = 0;
-            var old = application.ApplyAsync(_ => { }, _ => oldWrites++, _ => { probes++; return false; });
+            var old = application.ApplyAsync(_ => { }, _ => oldWrites++, _ =>
+            {
+                probes++;
+                return false;
+            });
             var replacement = application.ApplyAsync(_ => { }, _ => newWrites++, _ => true);
             delay.Complete(0); // 模拟旧延迟已经完成、恢复执行晚于取消的情况。
             Assert(!old.GetAwaiter().GetResult() && replacement.GetAwaiter().GetResult(),
@@ -57,7 +63,10 @@ namespace Simulant.Tests
 
         public static void ReadyPhaseDoesNotWait()
         {
-            var application = new PhaseApplication((_, token) => { throw new Exception("就绪后不应等待。"); });
+            var application = new PhaseApplication((_, token) =>
+            {
+                throw new Exception("就绪后不应等待。");
+            });
             var prepared = false;
             var applied = 0;
             var pending = application.ApplyAsync(_ => prepared = true, _ => applied++, _ =>
@@ -87,6 +96,7 @@ namespace Simulant.Tests
             var previousContext = SynchronizationContext.Current;
             var context = new PumpContext();
             SynchronizationContext.SetSynchronizationContext(context);
+
             try
             {
                 var callerThread = Thread.CurrentThread.ManagedThreadId;
@@ -107,7 +117,11 @@ namespace Simulant.Tests
                     "正常阶段应在同一上下文完成一次环境应用。");
 
                 var expected = new InvalidOperationException("模拟环境写入失败");
-                var failed = application.ApplyAsync(_ => { }, _ => { throw expected; }, _ => true);
+                var failed = application.ApplyAsync(_ => { }, _ =>
+                {
+                    throw expected;
+                }, _ => true);
+
                 try
                 {
                     failed.GetAwaiter().GetResult();
@@ -117,7 +131,9 @@ namespace Simulant.Tests
                 {
                     Assert(ReferenceEquals(actual, expected), "应保留原始环境写入错误。");
                 }
+
                 application.Cancel();
+
                 Assert(application.ApplyAsync(_ => { }, _ => { }, _ => true).GetAwaiter().GetResult(),
                     "失败的阶段不应阻止后续重试。");
             }
@@ -129,7 +145,8 @@ namespace Simulant.Tests
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
         private sealed class ControlledDelay

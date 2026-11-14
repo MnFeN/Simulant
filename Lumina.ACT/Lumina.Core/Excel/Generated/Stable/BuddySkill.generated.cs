@@ -19,9 +19,18 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Excel.ExcelPage ExcelPage => page;
         public uint RowOffset => offset;
         public uint RowId => row;
-        public global::Lumina.Excel.RowRef Defender => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset), new System.Type[] { typeof(Trait), typeof(Action) }, -1264047387, page.Language);
-        public global::Lumina.Excel.RowRef Attacker => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 2), new System.Type[] { typeof(Trait), typeof(Action) }, -1264047387, page.Language);
-        public global::Lumina.Excel.RowRef Healer => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 4), new System.Type[] { typeof(Trait), typeof(Action) }, -1264047387, page.Language);
+        public global::Lumina.Excel.RowRef Defender => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset), new System.Type[]
+        {
+            typeof(Trait), typeof(Action)
+        }, -1264047387, page.Language);
+        public global::Lumina.Excel.RowRef Attacker => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 2), new System.Type[]
+        {
+            typeof(Trait), typeof(Action)
+        }, -1264047387, page.Language);
+        public global::Lumina.Excel.RowRef Healer => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 4), new System.Type[]
+        {
+            typeof(Trait), typeof(Action)
+        }, -1264047387, page.Language);
         public byte BuddyLevel => page.ReadUInt8(offset + 6);
         public bool IsActive => page.ReadPackedBool(offset + 7, 0);
 

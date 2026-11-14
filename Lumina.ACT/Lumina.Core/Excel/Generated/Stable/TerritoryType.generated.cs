@@ -31,7 +31,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Excel.RowRef<PlaceName> PlaceName => new global::Lumina.Excel.RowRef<PlaceName>(page.Module, (uint)page.ReadUInt16(offset + 32), page.Language);
         public global::Lumina.Excel.RowRef<Map> Map => new global::Lumina.Excel.RowRef<Map>(page.Module, (uint)page.ReadUInt16(offset + 34), page.Language);
         public global::Lumina.Excel.RowRef<ContentFinderCondition> ContentFinderCondition => new global::Lumina.Excel.RowRef<ContentFinderCondition>(page.Module, (uint)page.ReadUInt16(offset + 36), page.Language);
-        public global::Lumina.Excel.RowRef BGM => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 38), new System.Type[] { typeof(BGM), typeof(BGMSituation) }, -1048018041, page.Language);
+        public global::Lumina.Excel.RowRef BGM => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 38), new System.Type[]
+        {
+            typeof(BGM), typeof(BGMSituation)
+        }, -1048018041, page.Language);
         public global::Lumina.Excel.RowRef<QuestBattle> QuestBattle => new global::Lumina.Excel.RowRef<QuestBattle>(page.Module, (uint)page.ReadUInt16(offset + 40), page.Language);
         public ushort Resident => page.ReadUInt16(offset + 42);
         public global::Lumina.Excel.RowRef<NotoriousMonsterTerritory> NotoriousMonsterTerritory => new global::Lumina.Excel.RowRef<NotoriousMonsterTerritory>(page.Module, (uint)page.ReadUInt16(offset + 44), page.Language);

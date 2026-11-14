@@ -18,6 +18,7 @@ namespace Simulant.Game.FFCS.Client.Game.UI
         {
             if ((uint)index >= Capacity)
                 throw new ArgumentOutOfRangeException(nameof(index), "仇恨条目索引必须为 0-31。");
+
             return Ptr.Field<HateEntry>(index * HateEntry.Size);
         }
 
@@ -29,7 +30,9 @@ namespace Simulant.Game.FFCS.Client.Game.UI
     public struct HateEntry
     {
         public const int Size = 8;
-        [FieldOffset(0)] public uint EntityId;
-        [FieldOffset(4)] public int Enmity;
+        [FieldOffset(0)]
+        public uint EntityId;
+        [FieldOffset(4)]
+        public int Enmity;
     }
 }

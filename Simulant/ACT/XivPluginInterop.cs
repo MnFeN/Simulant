@@ -22,11 +22,13 @@ namespace Simulant.ACT
             var collection = current?.GetType().GetField("_dataCollection", flags)?.GetValue(current);
             var monitor = collection?.GetType().GetField("_monitor", flags)?.GetValue(collection);
             var timeout = monitor?.GetType().GetField("<Timeout>k__BackingField", flags);
+
             if (timeout?.FieldType != typeof(int))
                 throw new InvalidOperationException("未找到解析插件的收包计时器阈值。");
 
             var original = (int)timeout.GetValue(monitor);
             timeout.SetValue(monitor, int.MaxValue);
+
             // 捕获原实例，避免插件重新绑定后把旧阈值写入新实例。
             return () => timeout.SetValue(monitor, original);
         }
@@ -63,9 +65,12 @@ namespace Simulant.ACT
         {
             if (ffxiv_plugin == null)
             {
-                if (plugin == null) return 0;
+                if (plugin == null)
+                    return 0;
+
                 ffxiv_plugin = plugin;
             }
+
             try
             {
                 return (int)ffxiv_plugin.DataRepository.GetSelectedLanguageID();

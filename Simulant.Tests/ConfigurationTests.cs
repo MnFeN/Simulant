@@ -33,14 +33,29 @@ namespace Simulant.Tests
                 Directory.CreateDirectory(directory);
                 var executable = Path.Combine(directory, "ffxiv_dx11.exe");
                 File.WriteAllText(executable, string.Empty);
-                Assert(FfxivInstallation.Resolve(executable, () => { throw new Exception("已配置时不能枚举进程。"); }) == executable,
+
+                Assert(FfxivInstallation.Resolve(executable, () =>
+                {
+                    throw new Exception("已配置时不能枚举进程。");
+                }) == executable,
                     "已配置时即使游戏未运行也应使用指定路径。");
+
                 Assert(FfxivInstallation.Resolve("", () => new string[0]) == null, "没有进程时应返回未找到。");
-                Assert(FfxivInstallation.Resolve("", () => new[] { executable, executable.ToUpperInvariant() }) == executable,
+                Assert(FfxivInstallation.Resolve("", () => new[]
+                {
+                    executable, executable.ToUpperInvariant()
+                }) == executable,
                     "相同安装目录多开应视为一个客户端。");
-                Reject(() => FfxivInstallation.Resolve("", () => new[] { executable, Path.Combine(directory, "另一个客户端", "ffxiv_dx11.exe") }));
+                Reject(() => FfxivInstallation.Resolve("", () => new[]
+                {
+                    executable, Path.Combine(directory, "另一个客户端", "ffxiv_dx11.exe")
+                }));
                 File.Delete(executable);
-                Reject(() => FfxivInstallation.Resolve(executable, () => { throw new Exception("无效配置不能退回自动检测。"); }));
+
+                Reject(() => FfxivInstallation.Resolve(executable, () =>
+                {
+                    throw new Exception("无效配置不能退回自动检测。");
+                }));
             });
         }
 
@@ -72,12 +87,17 @@ namespace Simulant.Tests
                 config.SimulatedParty.IdleRadius = 1.3;
                 config.SimulatedParty.RouteAngleDegrees = 27;
                 var culture = Thread.CurrentThread.CurrentCulture;
+
                 try
                 {
                     Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
                     config.Save(path);
                 }
-                finally { Thread.CurrentThread.CurrentCulture = culture; }
+                finally
+                {
+                    Thread.CurrentThread.CurrentCulture = culture;
+                }
+
                 var restored = Configuration.Load(path).SimulatedParty;
                 Assert(!restored.AttackTarget && !restored.DelayArrival && restored.IdleRadius == 1.3 && restored.RouteAngleDegrees == 27,
                     "所有模拟队员设置应跨区域格式完整保存和读取。");
@@ -89,7 +109,10 @@ namespace Simulant.Tests
                 restored = Configuration.Load(path).SimulatedParty;
                 Assert(!restored.AttackTarget && restored.IdleRadius == 0.6 && restored.DelayArrival && restored.RouteAngleDegrees == 30,
                     "旧配置应保留仍有效的设置，新选项使用默认值，不能把旧绕路米数当成角度。");
-                new Configuration { SimulatedParty = restored }.Save(path);
+                new Configuration
+                {
+                    SimulatedParty = restored
+                }.Save(path);
                 var saved = new System.Xml.XmlDocument();
                 saved.Load(path);
                 Assert(saved.SelectSingleNode("/Simulant/SimulatedParty").ChildNodes.Count == 4 &&
@@ -109,8 +132,10 @@ namespace Simulant.Tests
                 Reject(() => config.Save(path));
                 Assert(File.ReadAllText(path) == original, "无效设置不得破坏已保存的配置。");
                 config.SimulatedParty.RouteAngleDegrees = 30;
+
                 using (var locked = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None))
                     Reject(() => config.Save(path));
+
                 Assert(File.ReadAllText(path) == original && Directory.GetFiles(Path.GetDirectoryName(path)).Length == 1,
                     "替换文件失败时应保留旧文件并回收临时文件。");
                 File.WriteAllText(path, "<Simulant><SimulatedParty><IdleRadius>-1</IdleRadius></SimulatedParty></Simulant>");
@@ -126,30 +151,52 @@ namespace Simulant.Tests
         {
             var root = Path.Combine(Path.GetDirectoryName(typeof(ConfigurationTests).Assembly.Location), "config-test-" + Guid.NewGuid().ToString("N"));
             var directory = Path.Combine(root, "Config");
-            try { action(Path.Combine(directory, "Simulant.config.xml")); }
+
+            try
+            {
+                action(Path.Combine(directory, "Simulant.config.xml"));
+            }
             finally
             {
                 if (Directory.Exists(directory))
                 {
-                    foreach (var file in Directory.GetFiles(directory)) File.Delete(file);
+                    foreach (var file in Directory.GetFiles(directory))
+                        File.Delete(file);
+
                     Directory.Delete(directory);
                 }
-                if (Directory.Exists(root)) Directory.Delete(root);
+
+                if (Directory.Exists(root))
+                    Directory.Delete(root);
             }
         }
 
         private static void Reject(Action action)
         {
-            try { action(); }
-            catch (ArgumentException) { return; }
-            catch (InvalidOperationException) { return; }
-            catch (IOException) { return; }
+            try
+            {
+                action();
+            }
+            catch (ArgumentException)
+            {
+                return;
+            }
+            catch (InvalidOperationException)
+            {
+                return;
+            }
+            catch (IOException)
+            {
+                return;
+            }
+
             throw new Exception("无效配置或不可写文件应明确报告失败。");
         }
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
     }
 }

@@ -21,8 +21,10 @@ namespace Lumina.Data.Parsing.Layer
             int layerOffsetsStart = br.ReadInt32();
             int layerOffsetsCount = br.ReadInt32();
             ret.Layers = new LayerCommon.Layer[layerOffsetsCount];
+
             // reset stream to end of current struct once done reading layers
             long end = br.BaseStream.Position;
+
             for (int i = 0; i < layerOffsetsCount; ++i)
             {
                 br.Seek(start + layerOffsetsStart + (i * 4));

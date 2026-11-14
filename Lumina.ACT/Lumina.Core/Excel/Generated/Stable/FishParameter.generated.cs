@@ -24,7 +24,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Text.ReadOnly.ReadOnlySeString Unknown_70_2 => page.ReadString(offset + 8, offset);
         public global::Lumina.Text.ReadOnly.ReadOnlySeString Unknown_70_3 => page.ReadString(offset + 12, offset);
         public uint AchievementCredit => page.ReadUInt32(offset + 16);
-        public global::Lumina.Excel.RowRef Item => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 20), new System.Type[] { typeof(EventItem), typeof(Item) }, 262363557, page.Language);
+        public global::Lumina.Excel.RowRef Item => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 20), new System.Type[]
+        {
+            typeof(EventItem), typeof(Item)
+        }, 262363557, page.Language);
         public global::Lumina.Excel.RowRef<GatheringItemLevelConvertTable> GatheringItemLevel => new global::Lumina.Excel.RowRef<GatheringItemLevelConvertTable>(page.Module, (uint)page.ReadUInt16(offset + 24), page.Language);
         public ushort Unknown1 => page.ReadUInt16(offset + 26);
         public global::Lumina.Excel.RowRef<FishingSpot> FishingSpot => new global::Lumina.Excel.RowRef<FishingSpot>(page.Module, (uint)page.ReadUInt16(offset + 28), page.Language);

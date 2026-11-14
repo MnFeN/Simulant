@@ -30,6 +30,7 @@ namespace Lumina.Models.Models
         {
             if ((uint)lod > mdlFile.FileHeader.LodCount)
                 throw new ArgumentException("The given model does not have the requested LoD.", nameof(lod));
+
             File = mdlFile;
             Lod = lod;
             VariantId = variantId;
@@ -39,8 +40,10 @@ namespace Lumina.Models.Models
         public Model(GameData data, string path, ModelLod lod = ModelLod.High, int variantId = 1)
         {
             var mdlFile = data.GetFile<MdlFile>(path);
+
             if ((uint)lod > mdlFile?.FileHeader.LodCount)
                 throw new ArgumentException("The given model does not have the requested LoD.", nameof(lod));
+
             File = mdlFile;
             Lod = lod;
             VariantId = variantId;
@@ -67,6 +70,7 @@ namespace Lumina.Models.Models
         {
             foreach (var mat in Materials)
                 mat.Update(data);
+
             return this;
         }
 
@@ -78,6 +82,7 @@ namespace Lumina.Models.Models
             }
 
             Materials = new Material[File.FileHeader.MaterialCount];
+
             for (int i = 0; i < File.FileHeader.MaterialCount; i++)
             {
                 var pathOffset = File.MaterialNameOffsets[i];
@@ -95,6 +100,7 @@ namespace Lumina.Models.Models
 
             var shapeMeshes = ShapeMesh.ConstructList(File, meshes);
             Shapes = new Dictionary<string, Shape>();
+
             for (int i = 0; i < File?.Shapes.Length; i++)
             {
                 var shape = new Shape(this, Lod, shapeMeshes, i);
@@ -106,6 +112,7 @@ namespace Lumina.Models.Models
         {
             StringOffsetToStringMap = new Dictionary<int, string>();
             var br = new LuminaBinaryReader(File.Strings);
+
             for (int i = 0; i < File.StringCount; i++)
             {
                 long startOffset = br.BaseStream.Position;
@@ -126,6 +133,7 @@ namespace Lumina.Models.Models
             ranges.Add((currentLod.ShadowMeshIndex, currentLod.ShadowMeshIndex + currentLod.ShadowMeshCount));
             ranges.Add((currentLod.TerrainShadowMeshIndex, currentLod.TerrainShadowMeshIndex + currentLod.TerrainShadowMeshCount));
             ranges.Add((currentLod.VerticalFogMeshIndex, currentLod.VerticalFogMeshIndex + currentLod.VerticalFogMeshCount));
+
             if (File.ModelHeader.ExtraLodEnabled)
             {
                 MdlStructs.ExtraLodStruct extraLod = File.ExtraLods[(int)Lod];
@@ -137,9 +145,11 @@ namespace Lumina.Models.Models
 
             int totalMeshes = 0;
             bool atIndex = true;
+
             while (atIndex)
             {
                 atIndex = false;
+
                 foreach (var range in ranges)
                 {
                     if (range.s <= totalMeshes && totalMeshes < range.e)
@@ -152,6 +162,7 @@ namespace Lumina.Models.Models
             }
 
             Meshes = new Mesh[totalMeshes];
+
             for (int i = 0; i < Meshes.Length; i++)
             {
                 Meshes[i] = new Mesh(this, i, GetMeshTypes(i));
@@ -162,26 +173,37 @@ namespace Lumina.Models.Models
         {
             // I could create arrays for the ranges for cleaner code, but all this is doing is checking ranges
             var types = new List<Mesh.MeshType>();
+
             if (index >= File.Lods[(int)Lod].MeshIndex && index < File.Lods[(int)Lod].MeshIndex + File.Lods[(int)Lod].MeshCount && File.Lods[(int)Lod].MeshCount > 0)
                 types.Add(Mesh.MeshType.Main);
+
             if (index >= File.Lods[(int)Lod].WaterMeshIndex && index < File.Lods[(int)Lod].WaterMeshIndex + File.Lods[(int)Lod].WaterMeshCount && File.Lods[(int)Lod].WaterMeshCount > 0)
                 types.Add(Mesh.MeshType.Water);
+
             if (index >= File.Lods[(int)Lod].ShadowMeshIndex && index < File.Lods[(int)Lod].ShadowMeshIndex + File.Lods[(int)Lod].ShadowMeshCount && File.Lods[(int)Lod].ShadowMeshCount > 0)
                 types.Add(Mesh.MeshType.Shadow);
+
             if (index >= File.Lods[(int)Lod].TerrainShadowMeshIndex && index < File.Lods[(int)Lod].TerrainShadowMeshIndex + File.Lods[(int)Lod].TerrainShadowMeshCount && File.Lods[(int)Lod].TerrainShadowMeshCount > 0)
                 types.Add(Mesh.MeshType.TerrainShadow);
+
             if (index >= File.Lods[(int)Lod].VerticalFogMeshIndex && index < File.Lods[(int)Lod].VerticalFogMeshIndex + File.Lods[(int)Lod].VerticalFogMeshCount && File.Lods[(int)Lod].VerticalFogMeshCount > 0)
                 types.Add(Mesh.MeshType.VerticalFog);
+
             if (!File.ModelHeader.ExtraLodEnabled)
                 return types.ToArray();
+
             if (index >= File.ExtraLods[(int)Lod].LightShaftMeshIndex && index < File.ExtraLods[(int)Lod].LightShaftMeshIndex + File.ExtraLods[(int)Lod].LightShaftMeshCount && File.ExtraLods[(int)Lod].LightShaftMeshCount > 0)
                 types.Add(Mesh.MeshType.LightShaft);
+
             if (index >= File.ExtraLods[(int)Lod].GlassMeshIndex && index < File.ExtraLods[(int)Lod].GlassMeshIndex + File.ExtraLods[(int)Lod].GlassMeshCount && File.ExtraLods[(int)Lod].GlassMeshCount > 0)
                 types.Add(Mesh.MeshType.Glass);
+
             if (index >= File.ExtraLods[(int)Lod].MaterialChangeMeshIndex && index < File.ExtraLods[(int)Lod].MaterialChangeMeshIndex + File.ExtraLods[(int)Lod].MaterialChangeMeshCount && File.ExtraLods[(int)Lod].MaterialChangeMeshCount > 0)
                 types.Add(Mesh.MeshType.MaterialChange);
+
             if (index >= File.ExtraLods[(int)Lod].CrestChangeMeshIndex && index < File.ExtraLods[(int)Lod].CrestChangeMeshIndex + File.ExtraLods[(int)Lod].CrestChangeMeshCount && File.ExtraLods[(int)Lod].CrestChangeMeshCount > 0)
                 types.Add(Mesh.MeshType.CrestChange);
+
             return types.ToArray();
         }
 

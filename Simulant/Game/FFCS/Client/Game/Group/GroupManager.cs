@@ -32,6 +32,7 @@ namespace Simulant.Game.FFCS.Client.Game.Group
             {
                 if ((uint)index >= Capacity)
                     throw new ArgumentOutOfRangeException(nameof(index), "小队成员索引必须为 0-7。");
+
                 return Ptr.As<PartyMember>(index * PartyMember.Size);
             }
         }

@@ -13,9 +13,12 @@ namespace Simulant.Simulation.Mechanics
 
         public MechanicGroup(params SimMechanic[] children)
         {
-            if (children == null) throw new ArgumentNullException(nameof(children));
+            if (children == null)
+                throw new ArgumentNullException(nameof(children));
+
             if (children.Length == 0 || children.Any(child => child == null) || children.Distinct().Count() != children.Length)
                 throw new ArgumentException("机制组必须包含至少一个不重复的有效子机制。", nameof(children));
+
             _children = Array.AsReadOnly((SimMechanic[])children.Clone());
             Name = "机制组";
         }
@@ -25,11 +28,15 @@ namespace Simulant.Simulation.Mechanics
             // 全部子机制先登记生命周期，再进入任何可能生成实体或显示特效的开始回调。
             foreach (var child in _children)
             {
-                if (child.ResolveAfter != 0) throw new InvalidOperationException("子机制的判定延迟必须为零，由机制组统一指定延迟。");
+                if (child.ResolveAfter != 0)
+                    throw new InvalidOperationException("子机制的判定延迟必须为零，由机制组统一指定延迟。");
+
                 child.Claim(Context);
                 _claimedChildren.Add(child);
             }
-            foreach (var child in _children) child.Begin(false);
+
+            foreach (var child in _children)
+                child.Begin(false);
         }
 
         protected override MechanicResult Evaluate(PartySnapshot snapshot)
@@ -46,13 +53,17 @@ namespace Simulant.Simulation.Mechanics
 
         internal override void PresentForGroup(MechanicResult result)
         {
-            for (var i = 0; i < _children.Count; i++) _children[i].PresentForGroup(result.Children[i]);
+            for (var i = 0; i < _children.Count; i++)
+                _children[i].PresentForGroup(result.Children[i]);
+
             base.PresentForGroup(result);
         }
 
         internal override void PublishForGroup(MechanicResult result)
         {
-            for (var i = 0; i < _children.Count; i++) _children[i].PublishForGroup(result.Children[i]);
+            for (var i = 0; i < _children.Count; i++)
+                _children[i].PublishForGroup(result.Children[i]);
+
             base.PublishForGroup(result);
         }
     }

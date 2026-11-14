@@ -29,25 +29,39 @@ namespace Simulant.Core.Entity
 
         internal unsafe SpawnPlayerPacket ToPacket(byte spawnIndex, PlayerAppearanceSnapshot appearance)
         {
-            if (appearance == null) throw new ArgumentNullException(nameof(appearance));
+            if (appearance == null)
+                throw new ArgumentNullException(nameof(appearance));
+
             if ((byte)Job < (byte)Job.GLA || (byte)Job > (byte)Job.PCT)
                 throw new ArgumentOutOfRangeException(nameof(Job), "请选择有效职业，不能使用冒险者或未实现的职业编号。");
+
             var level = Level ?? appearance.Level;
-            if (level == 0) throw new ArgumentOutOfRangeException(nameof(Level), "网络玩家等级必须大于零。");
+
+            if (level == 0)
+                throw new ArgumentOutOfRangeException(nameof(Level), "网络玩家等级必须大于零。");
+
             if (!IsFinite(Pos.X) || !IsFinite(Pos.Y) || !IsFinite(Pos.Z))
                 throw new ArgumentOutOfRangeException(nameof(Pos), "位置的各坐标分量必须为有限数。");
-            if (!IsFinite(Heading)) throw new ArgumentOutOfRangeException(nameof(Heading), "朝向必须为有限数。");
+
+            if (!IsFinite(Heading))
+                throw new ArgumentOutOfRangeException(nameof(Heading), "朝向必须为有限数。");
+
             var health = HealthPoints ?? MaxHealthPoints;
+
             if (MaxHealthPoints == 0 || health == 0 || health > MaxHealthPoints)
                 throw new ArgumentOutOfRangeException(nameof(HealthPoints), "当前生命值和最大生命值必须为正数，且当前值不能超过最大值。");
+
             var resource = ResourcePoints ?? MaxResourcePoints;
+
             if (resource > MaxResourcePoints)
                 throw new ArgumentOutOfRangeException(nameof(ResourcePoints), "当前资源值不能超过最大资源值。");
+
             if (appearance.Customize == null || appearance.Customize.Length != 26 ||
                 appearance.Equipment == null || appearance.Equipment.Length != 10 ||
                 appearance.Stain2 == null || appearance.Stain2.Length != 10 ||
                 appearance.Glasses == null || appearance.Glasses.Length != 2)
                 throw new ArgumentException("玩家外观快照的数据长度不完整。", nameof(appearance));
+
             var name = PacketCodec.EncodeActorName(Name ?? appearance.Name ?? "模拟玩家");
             var packet = new SpawnPlayerPacket
             {
@@ -76,15 +90,25 @@ namespace Simulant.Core.Entity
                     OffhandWeaponModel = appearance.OffhandWeaponModel
                 }
             };
-            for (var i = 0; i < name.Length; i++) packet.Common.Name[i] = name[i];
-            for (var i = 0; i < 26; i++) packet.Common.Customize[i] = appearance.Customize[i];
+
+            for (var i = 0; i < name.Length; i++)
+                packet.Common.Name[i] = name[i];
+
+            for (var i = 0; i < 26; i++)
+                packet.Common.Customize[i] = appearance.Customize[i];
+
             for (var i = 0; i < 10; i++)
             {
                 packet.Common.Equipment[i] = appearance.Equipment[i];
                 packet.Common.ModelStain2[i] = appearance.Stain2[i];
             }
-            for (var i = 0; i < 2; i++) packet.Common.Glasses[i] = appearance.Glasses[i];
-            if (UseJobEquipment) JobEquipment.TryApply(Job, ref packet.Common);
+
+            for (var i = 0; i < 2; i++)
+                packet.Common.Glasses[i] = appearance.Glasses[i];
+
+            if (UseJobEquipment)
+                JobEquipment.TryApply(Job, ref packet.Common);
+
             return packet;
         }
 

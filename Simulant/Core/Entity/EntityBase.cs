@@ -29,7 +29,9 @@ namespace Simulant.Core.Entity
         {
             get
             {
-                if (!IsAlive) throw new InvalidOperationException($"实体 {Identity} 已失效。");
+                if (!IsAlive)
+                    throw new InvalidOperationException($"实体 {Identity} 已失效。");
+
                 return Address.As<GameObject>();
             }
         }
@@ -78,6 +80,7 @@ namespace Simulant.Core.Entity
                 Vector3 position = Native.Position;
                 return new Vector2(position.X, position.Z);
             }
+
             set
             {
                 var native = Native;
@@ -93,6 +96,7 @@ namespace Simulant.Core.Entity
                 Vector3 position = Native.Position;
                 return new Vector3(position.X, position.Z, position.Y);
             }
+
             set
             {
                 var native = Native;
@@ -104,9 +108,12 @@ namespace Simulant.Core.Entity
         {
             native.Position.Set(position);
             native.PositionModified();
+
             // 本地角色不会收到服务器移动包，需同步已经存在的显示对象。
             var drawObject = native.DrawObject;
-            if (!drawObject.IsNull()) drawObject.Position.Set(position);
+
+            if (!drawObject.IsNull())
+                drawObject.Position.Set(position);
         }
 
         public float Heading
@@ -117,12 +124,15 @@ namespace Simulant.Core.Entity
                 var native = Native;
                 native.Rotation.Set(value);
                 native.RotationModified();
+
                 // 初始化或本地备用实体直接设置朝向时，目标圈与模型必须同步。
                 var drawObject = native.DrawObject;
+
                 if (!drawObject.IsNull())
                     drawObject.Rotation.Set(Quaternion.CreateFromAxisAngle(Vector3.UnitY, value));
             }
         }
+
         public float Scale
         {
             get => Native.Scale;
@@ -132,6 +142,7 @@ namespace Simulant.Core.Entity
         public float HitboxRadius => Native.HitboxRadius;
         /// <summary>客户端综合标志、加载状态等条件得出的可选中结果。</summary>
         public bool IsTargetable => Native.GetIsTargetable();
+
         public void SetTargetable(bool targetable) => ActorControl(ActorControlCategory.Targetable, targetable ? 1u : 0u);
         public void EnableDraw() => Native.EnableDraw();
         public void DisableDraw() => Native.DisableDraw();

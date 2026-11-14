@@ -39,8 +39,10 @@ namespace Lumina.Data.Files
             FileHeader = MdlStructs.ModelFileHeader.Read(Reader);
             Reader.IsLittleEndian = isLittleEndian;
             VertexDeclarations = new MdlStructs.VertexDeclarationStruct[FileHeader.VertexDeclarationCount];
+
             for (int i = 0; i < FileHeader.VertexDeclarationCount; i++)
                 VertexDeclarations[i] = MdlStructs.VertexDeclarationStruct.Read(Reader);
+
             StringCount = Reader.ReadUInt16();
             Reader.ReadUInt16();
             uint stringSize = Reader.ReadUInt32();
@@ -51,23 +53,31 @@ namespace Lumina.Data.Files
             BoneTables = new MdlStructs.BoneTableStruct[ModelHeader.BoneTableCount];
             Shapes = new MdlStructs.ShapeStruct[ModelHeader.ShapeCount];
             BoneBoundingBoxes = new MdlStructs.BoundingBoxStruct[ModelHeader.BoneCount];
+
             for (int i = 0; i < ModelHeader.ElementIdCount; i++)
                 ElementIds[i] = MdlStructs.ElementIdStruct.Read(Reader);
+
             Lods = Reader.ReadStructuresAsArray<MdlStructs.LodStruct>(3);
+
             if (ModelHeader.ExtraLodEnabled)
                 ExtraLods = Reader.ReadStructuresAsArray<MdlStructs.ExtraLodStruct>(3);
+
             for (int i = 0; i < ModelHeader.MeshCount; i++)
                 Meshes[i] = MdlStructs.MeshStruct.Read(Reader);
+
             AttributeNameOffsets = Reader.ReadUInt32Array(ModelHeader.AttributeCount);
             TerrainShadowMeshes = Reader.ReadStructuresAsArray<MdlStructs.TerrainShadowMeshStruct>(ModelHeader.TerrainShadowMeshCount);
             Submeshes = Reader.ReadStructuresAsArray<MdlStructs.SubmeshStruct>(ModelHeader.SubmeshCount);
             TerrainShadowSubmeshes = Reader.ReadStructuresAsArray<MdlStructs.TerrainShadowSubmeshStruct>(ModelHeader.TerrainShadowSubmeshCount);
             MaterialNameOffsets = Reader.ReadUInt32Array(ModelHeader.MaterialCount);
             BoneNameOffsets = Reader.ReadUInt32Array(ModelHeader.BoneCount);
+
             for (int i = 0; i < ModelHeader.BoneTableCount; i++)
                 BoneTables[i] = MdlStructs.BoneTableStruct.Read(Reader);
+
             for (int i = 0; i < ModelHeader.ShapeCount; i++)
                 Shapes[i] = MdlStructs.ShapeStruct.Read(Reader);
+
             ShapeMeshes = Reader.ReadStructuresAsArray<MdlStructs.ShapeMeshStruct>(ModelHeader.ShapeMeshCount);
             ShapeValues = Reader.ReadStructuresAsArray<MdlStructs.ShapeValueStruct>(ModelHeader.ShapeValueCount);
             uint submeshBoneMapSize = Reader.ReadUInt32();
@@ -79,6 +89,7 @@ namespace Lumina.Data.Files
             ModelBoundingBoxes = MdlStructs.BoundingBoxStruct.Read(Reader);
             WaterBoundingBoxes = MdlStructs.BoundingBoxStruct.Read(Reader);
             VerticalFogBoundingBoxes = MdlStructs.BoundingBoxStruct.Read(Reader);
+
             for (int i = 0; i < ModelHeader.BoneCount; i++)
                 BoneBoundingBoxes[i] = MdlStructs.BoundingBoxStruct.Read(Reader);
         }

@@ -21,7 +21,10 @@ namespace Lumina.Excel.Sheets
         public uint RowId => row;
         public global::Lumina.Excel.RowRef<Item> Item => new global::Lumina.Excel.RowRef<Item>(page.Module, (uint)page.ReadInt32(offset), page.Language);
         public global::Lumina.Excel.RowRef<GatheringItem> GatheringLog => new global::Lumina.Excel.RowRef<GatheringItem>(page.Module, (uint)page.ReadInt16(offset + 4), page.Language);
-        public global::Lumina.Excel.RowRef FishingLog => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt16(offset + 6), new System.Type[] { typeof(SpearfishingItem), typeof(FishParameter) }, -1514027604, page.Language);
+        public global::Lumina.Excel.RowRef FishingLog => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt16(offset + 6), new System.Type[]
+        {
+            typeof(SpearfishingItem), typeof(FishParameter)
+        }, -1514027604, page.Language);
         public global::Lumina.Excel.Collection<byte> Quantity => new global::Lumina.Excel.Collection<byte>(page, offset, offset, QuantityCtor, 5);
 
         private static byte QuantityCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => page.ReadUInt8(offset + 8 + i);

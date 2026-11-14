@@ -22,7 +22,9 @@ namespace Simulant.Simulation.Mechanics
         /// <summary>相对当前节点的计划时间排入同步动作；机制停止时一并取消。</summary>
         public void ScheduleAfter(double seconds, Action action, string name = null)
         {
-            if (_schedule == null) throw new InvalidOperationException("机制尚未绑定生命周期，不能添加节点。");
+            if (_schedule == null)
+                throw new InvalidOperationException("机制尚未绑定生命周期，不能添加节点。");
+
             _schedule(seconds, action, name);
         }
 
@@ -33,6 +35,7 @@ namespace Simulant.Simulation.Mechanics
             var actors = candidates.ToArray();
             Candidates = Array.AsReadOnly(actors);
             _worldAnchors = actors.Where(actor => actor != null && actor.IsActive).Select(actor => actor.Entity).ToArray();
+
             if (_worldAnchors.Length == 0)
                 throw new InvalidOperationException("机制至少需要一名有效候选角色作为世界身份依据。");
         }

@@ -27,8 +27,8 @@ namespace Simulant.Content.U7a
 
         static U7a()
         {
-            // 电网属于天气
 
+            // 电网属于天气
             var mapEffects = Enumerable.Repeat<ushort?>(0x4, 0x35).ToList();
 
             var p1Effects = mapEffects.ToList();
@@ -48,8 +48,8 @@ namespace Simulant.Content.U7a
             p3Effects[0x28] = 0x2; // 紫色地板（阶段中会变绿）
             p3Effects[0x29] = 0x2; // 六重对称魔法阵花纹（阶段中会变化）
             P3 = new PhaseData("P3", 105, 20105, p3Effects);
-            // 天气没有实测，可能是 105 106 12 141 142，下同
 
+            // 天气没有实测，可能是 105 106 12 141 142，下同
             var p4Effects = mapEffects.ToList();
             p4Effects[0x28] = 0x2; // 紫色地板（阶段中会变绿）
             p4Effects[0x29] = 0x2; // 六重对称魔法阵花纹（阶段中会变化）

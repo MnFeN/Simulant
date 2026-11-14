@@ -14,7 +14,10 @@ namespace Simulant.ACT
 
         public object RawMemory
         {
-            get { return _externalMem; }
+            get
+            {
+                return _externalMem;
+            }
         }
 
         public GreyMagicExternalProcessMemory(object memory)
@@ -26,12 +29,12 @@ namespace Simulant.ACT
         public dynamic Patches => _externalMem.Patches;
         public bool CacheEnabled => _externalMem.CacheEnabled;
         public bool IsThreadOpen => _externalMem.IsThreadOpen;
+
         public object GetLock() => _externalMem.GetLock();
         public void ClearCache() => _externalMem.ClearCache();
         public void DisableCache() => _externalMem.DisableCache();
         public void EnableCache() => _externalMem.EnableCache();
         public void ClearCallCache() => _externalMem.ClearCallCache();
-
         /*
         public T CallInjected64<T>(IntPtr address, params object[] args) where T : struct
         {
@@ -109,10 +112,10 @@ namespace Simulant.ACT
             }
         }
         */
-
         public void WithAllocatedString(string text, Encoding encoding, Action<IntPtr> action)
         {
             IntPtr stringPtr = IntPtr.Zero;
+
             try
             {
                 int byteCount = encoding.GetByteCount(text) + encoding.GetByteCount("\0") + 10;
@@ -130,6 +133,7 @@ namespace Simulant.ACT
         public T WithAllocatedString<T>(string text, Encoding encoding, Func<IntPtr, T> func)
         {
             IntPtr stringPtr = IntPtr.Zero;
+
             try
             {
                 int byteCount = encoding.GetByteCount(text) + encoding.GetByteCount("\0") + 10;
@@ -148,6 +152,7 @@ namespace Simulant.ACT
         {
             IntPtr stringPtr1 = IntPtr.Zero;
             IntPtr stringPtr2 = IntPtr.Zero;
+
             try
             {
                 int byteCount1 = encoding.GetByteCount(text1) + encoding.GetByteCount("\0") + 10;
@@ -162,6 +167,7 @@ namespace Simulant.ACT
             {
                 if (stringPtr1 != IntPtr.Zero)
                     FreeMemory(stringPtr1);
+
                 if (stringPtr2 != IntPtr.Zero)
                     FreeMemory(stringPtr2);
             }
@@ -171,6 +177,7 @@ namespace Simulant.ACT
         {
             IntPtr stringPtr1 = IntPtr.Zero;
             IntPtr stringPtr2 = IntPtr.Zero;
+
             try
             {
                 int byteCount1 = encoding.GetByteCount(text1) + encoding.GetByteCount("\0") + 10;
@@ -185,6 +192,7 @@ namespace Simulant.ACT
             {
                 if (stringPtr1 != IntPtr.Zero)
                     FreeMemory(stringPtr1);
+
                 if (stringPtr2 != IntPtr.Zero)
                     FreeMemory(stringPtr2);
             }
@@ -193,6 +201,7 @@ namespace Simulant.ACT
         public void WithAllocatedStrings(Encoding encoding, Action<IntPtr[]> action, params string[] texts)
         {
             var ptrs = new IntPtr[texts.Length];
+
             try
             {
                 for (int i = 0; i < texts.Length; i++)
@@ -201,6 +210,7 @@ namespace Simulant.ACT
                     ptrs[i] = AllocateMemory(byteCount);
                     WriteString(ptrs[i], texts[i], encoding);
                 }
+
                 action(ptrs);
             }
             finally
@@ -216,6 +226,7 @@ namespace Simulant.ACT
         public T WithAllocatedStrings<T>(Encoding encoding, Func<IntPtr[], T> func, params string[] texts)
         {
             var ptrs = new IntPtr[texts.Length];
+
             try
             {
                 for (int i = 0; i < texts.Length; i++)
@@ -224,6 +235,7 @@ namespace Simulant.ACT
                     ptrs[i] = AllocateMemory(byteCount);
                     WriteString(ptrs[i], texts[i], encoding);
                 }
+
                 return func(ptrs);
             }
             finally

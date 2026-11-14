@@ -31,37 +31,37 @@ namespace Simulant.Content.U7a.Presets
                 "地火安全点相对于中心的方向",
                 CenterDir4.Random,
                 new Map<CenterDir4>
-                {
-                    [CenterDir4.Random] = "随机",
+            {
+                [CenterDir4.Random] = "随机",
                     [CenterDir4.N] = "北 (0)",
                     [CenterDir4.W] = "西 (1)",
                     [CenterDir4.S] = "南 (2)",
                     [CenterDir4.E] = "东 (3)",
-                }),
+            }),
 
             new ComboBoxOption<FirstLineDir4>(
                 nameof(P5地火Logic.FirstLineDir4),
                 "地火第一根线相对于安全点的方向",
                 FirstLineDir4.Random,
                 new Map<FirstLineDir4>
-                {
-                    [FirstLineDir4.Random] = "随机",
+            {
+                [FirstLineDir4.Random] = "随机",
                     [FirstLineDir4.N] = "北 (0)",
                     [FirstLineDir4.W] = "西 (1)",
                     [FirstLineDir4.S] = "南 (2)",
                     [FirstLineDir4.E] = "东 (3)",
-                }),
+            }),
 
             new ComboBoxOption<RotateDirection>(
                 nameof(P5地火Logic.RotateDirection),
                 "地火旋转方向",
                 RotateDirection.Random,
                 new Map<RotateDirection>
-                {
-                    [RotateDirection.Random] = "随机",
+            {
+                [RotateDirection.Random] = "随机",
                     [RotateDirection.ClockWise] = "顺时针",
                     [RotateDirection.CounterClockwise] = "逆时针",
-                }),
+            }),
         };
 
     }
@@ -70,14 +70,20 @@ namespace Simulant.Content.U7a.Presets
     {
         [RandomEnum(N, W, S, E)]
         Random = -1,
-        N = 0, W = 1, S = 2, E = 3
+        N = 0,
+        W = 1,
+        S = 2,
+        E = 3
     }
 
     internal enum FirstLineDir4
     {
         [RandomEnum(N, W, S, E)]
         Random = -1,
-        N = 0, W = 1, S = 2, E = 3
+        N = 0,
+        W = 1,
+        S = 2,
+        E = 3
     }
 
     internal enum RotateDirection
@@ -117,38 +123,44 @@ namespace Simulant.Content.U7a.Presets
                 Pos = new Vector3(100, 100, 0),
                 Heading = (float)PI,
             }, boss =>
-            {
-                var mechanic = new SimTimeline();
-                var lines = new List<Simulant.Core.Entity.EventObject>();
-                mechanic.At(0, () =>
-                {
-                    boss.Cast(0x9D72);
-                    // 读条的同时生成 EObj，但不播放动画。
-                    var eObjsPose = CalculateEObjsPose();
-                    for (int i = 0; i < 6; i++)
-                    {
-                        var (pos, heading) = eObjsPose[i];
-                        lines.Add(EntityManager.SpawnEObj((ushort)i, 2014199, pos, heading));
-                    }
-                }, "地火读条与生成直线");
-                mechanic.At(8, () => lines.ForEach(e => e.PlayAnimation(0x2)), "地火细线出现");
-                mechanic.Repeat(10, 4, 3, group =>
-                {
-                    Play(SingleTimelineStartFromGlowing(lines[group * 2]));
-                    Play(SingleTimelineStartFromGlowing(lines[group * 2 + 1]));
-                }, "地火分组发光");
-                mechanic.At(20, () => boss.FaceNetwork((float)((int)CenterDir4 / 2.0 * PI - PI)), "本体转向安全点");
-                mechanic.At(25, () => boss.Cast(0x9D76), "双分摊读条");
-                mechanic.At(42, () => EntityManager.Delete(boss), "回收本体");
-                Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体就绪后开始地火");
-            }), "生成地火本体");
+                       {
+                           var mechanic = new SimTimeline();
+                           var lines = new List<Simulant.Core.Entity.EventObject>();
+
+                           mechanic.At(0, () =>
+                           {
+                               boss.Cast(0x9D72);
+
+                               // 读条的同时生成 EObj，但不播放动画。
+                               var eObjsPose = CalculateEObjsPose();
+
+                               for (int i = 0; i < 6; i++)
+                               {
+                                   var (pos, heading) = eObjsPose[i];
+                                   lines.Add(EntityManager.SpawnEObj((ushort)i, 2014199, pos, heading));
+                               }
+                           }, "地火读条与生成直线");
+
+                           mechanic.At(8, () => lines.ForEach(e => e.PlayAnimation(0x2)), "地火细线出现");
+
+                           mechanic.Repeat(10, 4, 3, group =>
+                           {
+                               Play(SingleTimelineStartFromGlowing(lines[group * 2]));
+                               Play(SingleTimelineStartFromGlowing(lines[group * 2 + 1]));
+                           }, "地火分组发光");
+
+                           mechanic.At(20, () => boss.FaceNetwork((float)((int)CenterDir4 / 2.0 * PI - PI)), "本体转向安全点");
+                           mechanic.At(25, () => boss.Cast(0x9D76), "双分摊读条");
+                           mechanic.At(42, () => EntityManager.Delete(boss), "回收本体");
+                           Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体就绪后开始地火");
+                       }), "生成地火本体");
         }
 
         /// <summary> 每条地火直线从细线扩大开始的完整时间轴。 </summary>
         private SimTimeline SingleTimelineStartFromGlowing(Simulant.Core.Entity.EventObject lineEObj)
         {
-            // 实体面向与直线垂直，面向光侧
 
+            // 实体面向与直线垂直，面向光侧
             var timeline = new SimTimeline();
             var pos = lineEObj.Pos3D;
             var heading = lineEObj.Heading;
@@ -162,6 +174,7 @@ namespace Simulant.Content.U7a.Presets
                 DummyCast(pos, heading, 0x9D73, 10, 5); // 光
                 DummyCast(pos, oppositeHeading, 0x9CB6, 10, 5); // 暗
             }, "地火光暗预兆");
+
             timeline.At(7, () => lineEObj.PlayAnimation(0x8), "地火箭头出现");
             timeline.At(7, StepsTimeline(pos, heading, isLight: true));
             timeline.At(7, StepsTimeline(pos, oppositeHeading, isLight: false));
@@ -178,22 +191,24 @@ namespace Simulant.Content.U7a.Presets
             for (int i = 1; i < 10; i++)
             {
                 var currentPos = pos + step * i;
+
                 if (Vector3.Distance(currentPos, center) > 21)
                     break;
 
                 timeline.At(2 * i, () => DummyExecute(currentPos, heading, abilityId, 3),
                     $"{(isLight ? "光" : "暗")}地火第 {i} 步");
             }
+
             return timeline;
         }
 
         /// <summary>
-        /// 计算绝伊甸地火八角星的 6 条边的地火实体相对于场中心的位姿。 
+        /// 计算绝伊甸地火八角星的 6 条边的地火实体相对于场中心的位姿。
         /// </summary>
         /// <returns>
         /// 返回一个长度为 6 的数组。<br />
         /// 每个元素表示一条边的中心点及其方向角度。<br />
-        /// 发光顺序为 01 - 23 - 45，间隔 4 秒。  
+        /// 发光顺序为 01 - 23 - 45，间隔 4 秒。
         /// </returns>
         (Vector3 pos, float heading)[] CalculateEObjsPose()
         {
@@ -206,6 +221,7 @@ namespace Simulant.Content.U7a.Presets
             Vector2 octagonCenter = 7.0711f * new Vector2((float)Sin(theta4), (float)Cos(theta4)); // 八角星中心距离场地中心 5√2
 
             var result = new (Vector3 pos, float heading)[6];
+
             for (int i = 0; i < 6; i++)
             {
                 // 当前方向（未取余至 0-7）
@@ -238,7 +254,6 @@ namespace Simulant.Content.U7a.Presets
 
             return result;
         }
-
 
     }
 

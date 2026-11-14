@@ -30,17 +30,21 @@ namespace Simulant.Replay
         /// <summary>创建读取器。流必须可读、可定位；读取总是从文件起点开始。</summary>
         public ReplayReader(Stream stream, bool leaveOpen = false)
         {
-            if (stream == null) throw new ArgumentNullException(nameof(stream), "回放输入流不能为空。");
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream), "回放输入流不能为空。");
+
             if (!stream.CanRead || !stream.CanSeek)
                 throw new ArgumentException("回放输入流必须支持读取和定位。", nameof(stream));
 
             _stream = stream;
             _leaveOpen = leaveOpen;
+
             try
             {
                 Length = stream.Length;
                 stream.Position = 0;
                 var prefix = ReadExactly(PacketDataOffset, 0, "回放文件头或章节区");
+
                 for (var i = 0; i < Magic.Length; i++)
                 {
                     if (prefix[i] != Magic[i])
@@ -48,15 +52,18 @@ namespace Simulant.Replay
                 }
 
                 var version = UInt16(prefix, 0x0C);
+
                 if (version != 5)
                     throw InvalidAt(0x0C, $"暂不支持回放格式 {version}，当前仅支持格式 5。");
 
                 Header = new ReplayHeader(prefix);
                 var chapterCount = unchecked((int)UInt32(prefix, HeaderSize));
+
                 if (chapterCount < 0 || chapterCount > ChapterCapacity)
                     throw InvalidAt(HeaderSize, $"章节数量 {chapterCount} 超出 0 至 {ChapterCapacity} 的范围。");
 
                 var chapters = new ReplayChapter[chapterCount];
+
                 for (var i = 0; i < chapterCount; i++)
                 {
                     var offset = HeaderSize + 4 + i * ChapterSize;
@@ -64,11 +71,14 @@ namespace Simulant.Replay
                         UInt32(prefix, offset + 4), UInt32(prefix, offset + 8));
                     chapters[i] = chapter;
                 }
+
                 Chapters = Array.AsReadOnly(chapters);
             }
             catch
             {
-                if (!leaveOpen) stream.Dispose();
+                if (!leaveOpen)
+                    stream.Dispose();
+
                 throw;
             }
         }
@@ -99,6 +109,7 @@ namespace Simulant.Replay
         private IEnumerable<ReplayPacket> EnumeratePackets()
         {
             ThrowIfDisposed();
+
             if (Interlocked.CompareExchange(ref _enumerating, 1, 0) != 0)
                 throw new InvalidOperationException("同一回放读取器不能同时枚举多份记录。");
 
@@ -106,6 +117,7 @@ namespace Simulant.Replay
             {
                 _stream.Position = PacketDataOffset;
                 long index = 0;
+
                 while (_stream.Position < Length)
                 {
                     ThrowIfDisposed();
@@ -130,13 +142,17 @@ namespace Simulant.Replay
 
             var bytes = new byte[count];
             var read = 0;
+
             while (read < count)
             {
                 var length = _stream.Read(bytes, read, count - read);
+
                 if (length == 0)
                     throw InvalidAt(offset + read, $"{part}被截断：需要 {count} 字节，实际读到 {read} 字节。");
+
                 read += length;
             }
+
             return bytes;
         }
 
@@ -157,14 +173,19 @@ namespace Simulant.Replay
 
         private void ThrowIfDisposed()
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(ReplayReader), "回放读取器已释放。");
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(ReplayReader), "回放读取器已释放。");
         }
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (_disposed)
+                return;
+
             _disposed = true;
-            if (!_leaveOpen) _stream.Dispose();
+
+            if (!_leaveOpen)
+                _stream.Dispose();
         }
     }
 
@@ -189,7 +210,10 @@ namespace Simulant.Replay
             PlayerIndex = bytes[0x40];
             DeclaredDataLength = ReplayReader.UInt32(bytes, 0x48);
             var names = new ushort[7];
-            for (var i = 0; i < names.Length; i++) names[i] = ReplayReader.UInt16(bytes, 0x4E + i * 2);
+
+            for (var i = 0; i < names.Length; i++)
+                names[i] = ReplayReader.UInt16(bytes, 0x4E + i * 2);
+
             BnpcNameIds = Array.AsReadOnly(names);
         }
 

@@ -5,7 +5,7 @@ using Lumina.Data.Attributes;
 // ReSharper disable InconsistentNaming
 namespace Lumina.Data.Files
 {
-    //TODO: add gear-specific functionality, hopefully when we get 
+    //TODO: add gear-specific functionality, hopefully when we get
     //useful enums like GearSlot.Mainhand or something
     [FileExtension(".imc")]
     public class ImcFile : FileResource
@@ -31,6 +31,7 @@ namespace Lumina.Data.Files
                 imc._AttributeAndSound = br.ReadUInt16();
                 imc.VfxId = br.ReadByte();
                 imc._MaterialAnimationIdMask = br.ReadByte();
+
                 if (br.PlatformId == Structs.PlatformId.PS3)
                 {
                     imc._AttributeAndSound = (ushort)((imc._AttributeAndSound << 10) | (imc._AttributeAndSound >> 6));
@@ -51,8 +52,10 @@ namespace Lumina.Data.Files
                 var parts = new ImageChangeParts();
                 parts.DefaultVariant = ImageChangeData.Read(br);
                 parts.Variants = new ImageChangeData[variantCount];
+
                 for (var i = 0; i < variantCount; i++)
                     parts.Variants[i] = ImageChangeData.Read(br);
+
                 return parts;
             }
 
@@ -80,6 +83,7 @@ namespace Lumina.Data.Files
         {
             if (Parts.Length > 1)
                 throw new NotImplementedException("This file has more than one Part. Please specify the part with" + "the GetDefaultVariant( int partIndex ) signature.");
+
             return Parts[0].DefaultVariant;
         }
 
@@ -92,6 +96,7 @@ namespace Lumina.Data.Files
         {
             if (Parts.Length > 1)
                 throw new NotImplementedException("This file has more than one Part. Please specify the part with" + "the GetVariant( int partIndex, int variantIndex ) signature.");
+
             return Parts[0].Variants[index];
         }
 
@@ -106,10 +111,12 @@ namespace Lumina.Data.Files
             PartMask = Reader.ReadUInt16();
             var partList = new List<ImageChangeParts>();
             var parts = 0;
+
             // Initialize the parts we have
             for (var i = 0; i < 8; i++)
             {
                 var val = 1 << i;
+
                 if ((PartMask & val) == val)
                     parts++;
             }
@@ -129,7 +136,9 @@ namespace Lumina.Data.Files
             for (var i = 0; i < Count; i++)
                 foreach (var imageChangeParts in partList)
                     imageChangeParts.VariantList.Add(ImageChangeData.Read(Reader));
+
             Parts = new ImageChangeParts[parts];
+
             for (var i = 0; i < parts; i++)
             {
                 var imcParts = partList[i];

@@ -26,11 +26,13 @@ namespace Lumina.Data.Parsing.Tex.Buffers
         protected override void ConvertToB8G8R8A8(byte[] buffer, int destOffset, int sourceOffset, int width, int height, int depth)
         {
             var cbPlane = CalculateNumBytesPerPlane(width, height);
+
             for (var i = 0; i < depth; i++)
             {
                 var decoder = new BcDecoder();
                 var stream = new MemoryStream(RawData, sourceOffset + cbPlane * i, cbPlane);
                 var rgbaData = decoder.DecodeRaw(stream, width, height, ((_version == 1) ? CompressionFormat.Bc1 : ((_version == 2) ? CompressionFormat.Bc2 : ((_version == 3) ? CompressionFormat.Bc3 : ((_version == 5) ? CompressionFormat.Bc5 : ((_version == 7) ? CompressionFormat.Bc7 : throw new NotSupportedException("Unknown block compression version.")))))));
+
                 // Write ColorRgba32[] to output byte[]
                 for (var j = 0; j < rgbaData.Length; j++)
                 {

@@ -18,10 +18,16 @@ namespace Simulant.Core.Entity
         public Character GetMyself()
         {
             var playerId = _currentPlayerId();
-            if (playerId == 0 || playerId == 0xE0000000) return null;
+
+            if (playerId == 0 || playerId == 0xE0000000)
+                return null;
+
             // 常见槽位走快路径，但始终以宿主提供的本地玩家 ID 确认身份。
             var character = _registry.Get(0) as Character;
-            if (character?.ObjectKind == ObjectKind.Pc && character.Id == playerId) return character;
+
+            if (character?.ObjectKind == ObjectKind.Pc && character.Id == playerId)
+                return character;
+
             return GetCharacters().FirstOrDefault(e => e.ObjectKind == ObjectKind.Pc && e.Id == playerId);
         }
 

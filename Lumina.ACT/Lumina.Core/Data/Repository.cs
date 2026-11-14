@@ -114,6 +114,7 @@ namespace Lumina.Data
             foreach (var category in categories)
             {
                 var file = category.GetFile<T>(path);
+
                 if (file != null)
                 {
                     return file;
@@ -143,6 +144,7 @@ namespace Lumina.Data
             foreach (var category in categories)
             {
                 var file = category.GetFileMetadata(path);
+
                 if (file != null)
                 {
                     return file;
@@ -172,6 +174,7 @@ namespace Lumina.Data
         private void ParseVersion()
         {
             string versionPath;
+
             // haha what the fuck?
             if (Name == "ffxiv")
             {
@@ -193,15 +196,18 @@ namespace Lumina.Data
         private Dictionary<byte, List<Category>> SetupIndexes(bool multithread)
         {
             Dictionary<byte, Task<Category[]>> tasks = new global::System.Collections.Generic.Dictionary<byte, global::System.Threading.Tasks.Task<global::Lumina.Data.Category[]>>();
+
             foreach (var cat in CategoryNameToIdMap)
             {
                 var taskList = new List<Task<Category>>();
+
                 // discover indexes first
                 // once we find an index, that index will have an associated dat (or dats) too
                 // so we don't need to discover those here
                 for (int chunk = 0; chunk < 255; chunk++)
                 {
                     var indexFiles = FindIndexes(cat.Value, ExpansionId, chunk);
+
                     if (indexFiles.Count == 0)
                     {
                         continue;
@@ -210,6 +216,7 @@ namespace Lumina.Data
                     // grab first index from the discovered indexes, this should be index if you have both
                     // otherwise it _should_ be index2
                     var file = indexFiles.FirstOrDefault();
+
                     if (file == null)
                     {
                         continue;
@@ -241,6 +248,7 @@ namespace Lumina.Data
         public List<FileInfo> FindIndexes(byte cat, int ex, int chunk)
         {
             var files = new List<FileInfo>();
+
             foreach (var type in new[]
             {
                 "index",
@@ -252,6 +260,7 @@ namespace Lumina.Data
                 var index = BuildDatStr(cat, ex, chunk, _gameData.Options.CurrentPlatform, type);
                 var path = Path.Combine(RootDir.FullName, index);
                 var fileInfo = new FileInfo(path);
+
                 if (fileInfo.Exists)
                 {
                     files.Add(fileInfo);
@@ -269,10 +278,12 @@ namespace Lumina.Data
             }
 
             var categories = Categories[catId];
+
             foreach (var cat in categories)
             {
                 if (!cat.Index.IsIndex2 && cat.FileExists(path.IndexHash))
                     return true;
+
                 if (cat.Index.IsIndex2 && cat.FileExists(path.Index2Hash))
                     return true;
             }

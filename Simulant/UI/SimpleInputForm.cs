@@ -8,6 +8,7 @@ namespace Simulant.UI
         public SimpleInputForm()
         {
             InitializeComponent();
+
             Shown += (_, __) =>
             {
                 TopMost = true;
@@ -22,6 +23,7 @@ namespace Simulant.UI
             Text = title;
 
             lblDesc.Text = description;
+
             if (string.IsNullOrWhiteSpace(description))
                 lblDesc.Visible = false;
 

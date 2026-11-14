@@ -20,9 +20,15 @@ namespace Simulant.Core.Zone
         {
             var bg = territory.Bg.ExtractText();
             var separator = bg.LastIndexOf('/');
-            if (separator < 0) return Array.Empty<EventObjectSpawnSpec>();
+
+            if (separator < 0)
+                return Array.Empty<EventObjectSpawnSpec>();
+
             var file = data.GetFile<LgbFile>("bg/" + bg.Substring(0, separator + 1) + "planmap.lgb");
-            if (file == null) return Array.Empty<EventObjectSpawnSpec>();
+
+            if (file == null)
+                return Array.Empty<EventObjectSpawnSpec>();
+
             using (file.Reader)
                 return Find(file.Layers.SelectMany(layer => layer.InstanceObjects));
         }
@@ -35,9 +41,12 @@ namespace Simulant.Core.Zone
                 string.Equals(group.AssetPath, BarrierPath, StringComparison.OrdinalIgnoreCase))
                 .Select(instance => instance.InstanceId));
             var result = new List<EventObjectSpawnSpec>();
+
             foreach (var instance in objects)
             {
-                if (!(instance.Object is LayerCommon.EventInstanceObject obj) || !walls.Contains(obj.BoundInstanceId)) continue;
+                if (!(instance.Object is LayerCommon.EventInstanceObject obj) || !walls.Contains(obj.BoundInstanceId))
+                    continue;
+
                 var position = instance.Transform.Translation;
                 result.Add(new EventObjectSpawnSpec
                 {
@@ -48,6 +57,7 @@ namespace Simulant.Core.Zone
                     Heading = instance.Transform.Rotation.Y
                 });
             }
+
             return result.ToArray();
         }
     }

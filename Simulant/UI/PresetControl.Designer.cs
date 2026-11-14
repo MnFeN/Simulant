@@ -2,12 +2,12 @@
 {
     partial class PresetControl
     {
-        /// <summary> 
+        /// <summary>
         /// 必需的设计器变量。
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
+        /// <summary>
         /// 清理所有正在使用的资源。
         /// </summary>
         /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
@@ -17,12 +17,12 @@
             {
                 components.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
         #region 组件设计器生成的代码
-
-        /// <summary> 
+        /// <summary>
         /// 设计器支持所需的方法 - 不要修改
         /// 使用代码编辑器修改此方法的内容。
         /// </summary>
@@ -58,22 +58,22 @@
             this.tableOptions.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dummyNud)).BeginInit();
             this.SuspendLayout();
-            // 
+            //
             // splitContainer
-            // 
+            //
             this.splitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitContainer.Font = new System.Drawing.Font("等距更纱黑体 SC", 10.2F);
             this.splitContainer.Location = new System.Drawing.Point(0, 0);
             this.splitContainer.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.splitContainer.Name = "splitContainer";
-            // 
+            //
             // splitContainer.Panel1
-            // 
+            //
             this.splitContainer.Panel1.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.splitContainer.Panel1.Controls.Add(this.tableMetaData);
-            // 
+            //
             // splitContainer.Panel2
-            // 
+            //
             this.splitContainer.Panel2.AutoScroll = true;
             this.splitContainer.Panel2.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.splitContainer.Panel2.Controls.Add(this.tableOptions);
@@ -81,9 +81,9 @@
             this.splitContainer.Size = new System.Drawing.Size(926, 427);
             this.splitContainer.SplitterDistance = 316;
             this.splitContainer.TabIndex = 0;
-            // 
+            //
             // tableMetaData
-            // 
+            //
             this.tableMetaData.ColumnCount = 2;
             this.tableMetaData.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableMetaData.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
@@ -108,9 +108,9 @@
             this.tableMetaData.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableMetaData.Size = new System.Drawing.Size(316, 427);
             this.tableMetaData.TabIndex = 0;
-            // 
+            //
             // lblInfo
-            // 
+            //
             this.lblInfo.AutoSize = true;
             this.tableMetaData.SetColumnSpan(this.lblInfo, 2);
             this.lblInfo.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -121,9 +121,9 @@
             this.lblInfo.Size = new System.Drawing.Size(316, 32);
             this.lblInfo.TabIndex = 10;
             this.lblInfo.Text = "说明：";
-            // 
+            //
             // lblPreset
-            // 
+            //
             this.lblPreset.AutoSize = true;
             this.tableMetaData.SetColumnSpan(this.lblPreset, 2);
             this.lblPreset.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -134,9 +134,9 @@
             this.lblPreset.Size = new System.Drawing.Size(316, 32);
             this.lblPreset.TabIndex = 0;
             this.lblPreset.Text = "预设：";
-            // 
+            //
             // lblAuthor
-            // 
+            //
             this.lblAuthor.AutoSize = true;
             this.tableMetaData.SetColumnSpan(this.lblAuthor, 2);
             this.lblAuthor.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -147,9 +147,9 @@
             this.lblAuthor.Size = new System.Drawing.Size(316, 32);
             this.lblAuthor.TabIndex = 1;
             this.lblAuthor.Text = "作者：";
-            // 
+            //
             // btnStart
-            // 
+            //
             this.btnStart.AutoSize = true;
             this.btnStart.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnStart.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(220)))), ((int)(((byte)(255)))), ((int)(((byte)(235)))));
@@ -164,9 +164,9 @@
             this.btnStart.Text = "开始模拟";
             this.btnStart.UseVisualStyleBackColor = false;
             this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
-            // 
+            //
             // btnEnd
-            // 
+            //
             this.btnEnd.AutoSize = true;
             this.btnEnd.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnEnd.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(230)))), ((int)(((byte)(230)))));
@@ -181,9 +181,9 @@
             this.btnEnd.Text = "停止模拟";
             this.btnEnd.UseVisualStyleBackColor = false;
             this.btnEnd.Click += new System.EventHandler(this.btnEnd_Click);
-            // 
+            //
             // lblLastChanged
-            // 
+            //
             this.lblLastChanged.AutoSize = true;
             this.tableMetaData.SetColumnSpan(this.lblLastChanged, 2);
             this.lblLastChanged.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -194,9 +194,9 @@
             this.lblLastChanged.Size = new System.Drawing.Size(316, 32);
             this.lblLastChanged.TabIndex = 2;
             this.lblLastChanged.Text = "更新时间：";
-            // 
+            //
             // rtbInfo
-            // 
+            //
             this.tableMetaData.SetColumnSpan(this.rtbInfo, 2);
             this.rtbInfo.Cursor = System.Windows.Forms.Cursors.Arrow;
             this.rtbInfo.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -209,9 +209,9 @@
             this.rtbInfo.TabIndex = 11;
             this.rtbInfo.Text = resources.GetString("rtbInfo.Text");
             this.rtbInfo.ZoomFactor = 1.05F;
-            // 
+            //
             // tableOptions
-            // 
+            //
             this.tableOptions.ColumnCount = 2;
             this.tableOptions.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
             this.tableOptions.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
@@ -236,9 +236,9 @@
             this.tableOptions.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableOptions.Size = new System.Drawing.Size(606, 427);
             this.tableOptions.TabIndex = 2;
-            // 
+            //
             // dummyLbl
-            // 
+            //
             this.dummyLbl.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.dummyLbl.AutoSize = true;
             this.tableOptions.SetColumnSpan(this.dummyLbl, 2);
@@ -249,9 +249,9 @@
             this.dummyLbl.Size = new System.Drawing.Size(461, 64);
             this.dummyLbl.TabIndex = 11;
             this.dummyLbl.Text = "跨两列的完整 Label 示例，用于显示说明文本，文本可换行\r\n跨两列的完整 Label 示例，用于显示说明文本，文本可换行";
-            // 
+            //
             // label6
-            // 
+            //
             this.label6.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.label6.AutoSize = true;
             this.label6.Location = new System.Drawing.Point(0, 208);
@@ -261,9 +261,9 @@
             this.label6.Size = new System.Drawing.Size(190, 42);
             this.label6.TabIndex = 6;
             this.label6.Text = "数值文本框的标签说明";
-            // 
+            //
             // dummyLblTxt
-            // 
+            //
             this.dummyLblTxt.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.dummyLblTxt.AutoSize = true;
             this.dummyLblTxt.Location = new System.Drawing.Point(0, 109);
@@ -273,9 +273,9 @@
             this.dummyLblTxt.Size = new System.Drawing.Size(158, 42);
             this.dummyLblTxt.TabIndex = 2;
             this.dummyLblTxt.Text = "文本框的标签说明";
-            // 
+            //
             // dummyLblChk
-            // 
+            //
             this.dummyLblChk.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.dummyLblChk.AutoSize = true;
             this.dummyLblChk.Location = new System.Drawing.Point(0, 64);
@@ -285,9 +285,9 @@
             this.dummyLblChk.Size = new System.Drawing.Size(158, 42);
             this.dummyLblChk.TabIndex = 0;
             this.dummyLblChk.Text = "选项框的标签说明";
-            // 
+            //
             // dummyChk
-            // 
+            //
             this.dummyChk.AutoSize = true;
             this.dummyChk.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dummyChk.Location = new System.Drawing.Point(190, 64);
@@ -298,9 +298,9 @@
             this.dummyChk.TabIndex = 7;
             this.dummyChk.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.dummyChk.UseVisualStyleBackColor = true;
-            // 
+            //
             // dummyTxt
-            // 
+            //
             this.dummyTxt.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dummyTxt.Location = new System.Drawing.Point(220, 116);
             this.dummyTxt.Margin = new System.Windows.Forms.Padding(30, 10, 20, 10);
@@ -308,36 +308,38 @@
             this.dummyTxt.Size = new System.Drawing.Size(366, 29);
             this.dummyTxt.TabIndex = 8;
             this.dummyTxt.Text = "示例文本";
-            // 
+            //
             // dummyCbx
-            // 
+            //
             this.dummyCbx.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dummyCbx.DropDownHeight = 200;
             this.dummyCbx.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.dummyCbx.FormattingEnabled = true;
             this.dummyCbx.IntegralHeight = false;
-            this.dummyCbx.Items.AddRange(new object[] {
-            "测试选项1",
-            "测试选项2",
-            "测试选项3"});
+            this.dummyCbx.Items.AddRange(new object[]
+            {
+                "测试选项1",
+                "测试选项2",
+                "测试选项3"
+            });
             this.dummyCbx.Location = new System.Drawing.Point(220, 165);
             this.dummyCbx.Margin = new System.Windows.Forms.Padding(30, 10, 20, 10);
             this.dummyCbx.Name = "dummyCbx";
             this.dummyCbx.Size = new System.Drawing.Size(366, 30);
             this.dummyCbx.TabIndex = 0;
             this.dummyCbx.TabStop = false;
-            // 
+            //
             // dummyNud
-            // 
+            //
             this.dummyNud.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dummyNud.Location = new System.Drawing.Point(220, 215);
             this.dummyNud.Margin = new System.Windows.Forms.Padding(30, 10, 20, 10);
             this.dummyNud.Name = "dummyNud";
             this.dummyNud.Size = new System.Drawing.Size(366, 29);
             this.dummyNud.TabIndex = 10;
-            // 
+            //
             // dummyLblCbx
-            // 
+            //
             this.dummyLblCbx.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.dummyLblCbx.AutoSize = true;
             this.dummyLblCbx.Location = new System.Drawing.Point(0, 159);
@@ -347,18 +349,18 @@
             this.dummyLblCbx.Size = new System.Drawing.Size(190, 42);
             this.dummyLblCbx.TabIndex = 4;
             this.dummyLblCbx.Text = "下拉选项框的标签说明";
-            // 
+            //
             // toolTip
-            // 
+            //
             this.toolTip.AutoPopDelay = 60000;
             this.toolTip.InitialDelay = 500;
             this.toolTip.IsBalloon = true;
             this.toolTip.ReshowDelay = 100;
             this.toolTip.ToolTipIcon = System.Windows.Forms.ToolTipIcon.Info;
             this.toolTip.ToolTipTitle = "说明";
-            // 
+            //
             // PresetControl
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 22F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.splitContainer);
@@ -380,7 +382,6 @@
         }
 
         #endregion
-
         private System.Windows.Forms.SplitContainer splitContainer;
         private System.Windows.Forms.TableLayoutPanel tableMetaData;
         private System.Windows.Forms.Label lblPreset;

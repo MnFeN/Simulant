@@ -39,6 +39,7 @@ namespace Lumina.Data
             {
                 var hash = sha256.ComputeHash(Data);
                 var sb = new StringBuilder();
+
                 foreach (var b in hash)
                 {
                     sb.Append($"{b:x2}");

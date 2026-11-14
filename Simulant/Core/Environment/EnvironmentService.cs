@@ -27,20 +27,24 @@ namespace Simulant.Core.Environment
         public bool PlayMapEffect(uint slot, ushort flag)
         {
             var contentDirector = EventFramework.Instance.ContentDirector;
+
             if (contentDirector.IsNull())
             {
                 _host.LogWarning($"当前地图中不存在 ContentDirector，无法调用 MapEffect ({slot}, {flag})");
                 return false;
-                
+
             }
+
             bool success = contentDirector.MapEffect(slot, flag);
+
             if (!success)
             {
                 _host.LogWarning($"当前地图中 MapEffect ({slot}, {flag}) 调用失败。");
             }
+
             return success;
         }
-        
+
         public void SetBgm(ushort songId) // 参考 perchbirdd/OrchestrionPlugin
         {
             // bgm.Scenes 相当于连续布局的 BGMScene[12]，播放 bgm 的优先级高到低排列

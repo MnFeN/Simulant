@@ -6,7 +6,7 @@ namespace Lumina.Data
     /// <summary>Bounded pool with deterministic handle disposal on Framework 4.8.1.</summary>
     public sealed class SqPackStreamPool : IDisposable
     {
-        private readonly object gate = new object ();
+        private readonly object gate = new object();
         private readonly Dictionary<SqPack, Stack<SqPackStream>> streams = new Dictionary<SqPack, Stack<SqPackStream>>();
         private readonly int maximumRetained;
         private bool disposed;
@@ -20,6 +20,7 @@ namespace Lumina.Data
             lock (gate)
             {
                 Stack<SqPackStream> pool;
+
                 if (!disposed && streams.TryGetValue(dat, out pool) && pool.Count != 0)
                     return new StreamHolder(this, dat, pool.Pop());
             }
@@ -32,10 +33,12 @@ namespace Lumina.Data
             lock (gate)
             {
                 Stack<SqPackStream> pool;
+
                 if (!disposed)
                 {
                     if (!streams.TryGetValue(key, out pool))
                         streams.Add(key, pool = new Stack<SqPackStream>());
+
                     if (pool.Count < maximumRetained && stream.BaseStream.CanRead)
                     {
                         pool.Push(stream);
@@ -53,10 +56,13 @@ namespace Lumina.Data
             {
                 if (disposed)
                     return;
+
                 disposed = true;
+
                 foreach (var pool in streams.Values)
                     foreach (var stream in pool)
                         stream.Dispose();
+
                 streams.Clear();
             }
         }
@@ -89,9 +95,12 @@ namespace Lumina.Data
             public void Dispose()
             {
                 var value = stream;
+
                 if (value == null)
                     return;
+
                 stream = null;
+
                 if (owner == null)
                     value.Dispose();
                 else

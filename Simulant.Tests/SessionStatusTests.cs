@@ -41,15 +41,22 @@ namespace Simulant.Tests
                 Throws<ArgumentOutOfRangeException>(() => scene.Manager.SetStatus(scene.Player, 0, 30, 0, scene.Source));
                 Throws<ArgumentOutOfRangeException>(() => scene.Manager.SetStatus(scene.Player, 200, float.NaN, 0, scene.Source));
                 var outsider = scene.Spawner.World.CreateCharacter(3);
+
                 using (var anotherScheduler = new SimScheduler())
                 {
-                    var another = new SimEntityManager(scene.Spawner) { Scheduler = anotherScheduler };
+                    var another = new SimEntityManager(scene.Spawner)
+                    {
+                        Scheduler = anotherScheduler
+                    };
                     var foreign = another.Attach(outsider);
                     Throws<InvalidOperationException>(() => scene.Manager.SetStatus(foreign, 200, 30, 0, scene.Source));
                     Throws<InvalidOperationException>(() => scene.Manager.SetStatus(scene.Player, 200, 30, 0, foreign));
                     another.Clear();
                 }
-                for (var i = 0; i < 30; i++) scene.Statuses.GetStatus(i).StatusId.Value = (ushort)(1000 + i);
+
+                for (var i = 0; i < 30; i++)
+                    scene.Statuses.GetStatus(i).StatusId.Value = (ushort)(1000 + i);
+
                 Throws<InvalidOperationException>(() => scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source));
                 Assert(scene.Statuses.SetCalls == 0 && scene.Statuses.GetStatus(30).StatusId.Get() == 0,
                     "参数、所有者或前 30 槽容量不符时不得原生写入或使用后半区。");
@@ -60,7 +67,11 @@ namespace Simulant.Tests
         {
             using (var scene = new Scene())
             {
-                scene.Statuses.AfterSet = _ => { throw new InvalidOperationException("状态写入后调用失败。"); };
+                scene.Statuses.AfterSet = _ =>
+                {
+                    throw new InvalidOperationException("状态写入后调用失败。");
+                };
+
                 Throws<InvalidOperationException>(() => scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source));
                 scene.Manager.Clear();
                 Assert(scene.Statuses.GetStatus(0).StatusId.Get() == 0 && scene.Statuses.RemoveCalls == 1 &&
@@ -81,6 +92,7 @@ namespace Simulant.Tests
                 Assert(scene.Statuses.RemoveCalls == 1 && scene.Statuses.GetStatus(0).StatusId.Get() == 0,
                     "读回参数不符也必须保留清理责任。");
             }
+
             using (var scene = new Scene())
             {
                 scene.Statuses.AfterSet = slot => scene.Statuses.GetStatus(slot).StatusId.Value = 0;
@@ -89,6 +101,7 @@ namespace Simulant.Tests
                 Assert(scene.Statuses.RemoveCalls == 0 && !scene.Manager.HasPendingCleanup,
                     "即使原生返回 true，首次写入未读到状态也须报错；清理不得删除空槽或猜测已自然到期。");
             }
+
             using (var scene = new Scene())
             {
                 scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source);
@@ -106,7 +119,12 @@ namespace Simulant.Tests
             using (var restart = new SimScheduler())
             {
                 scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source);
-                scene.Statuses.BeforeRemove = _ => { throw new InvalidOperationException("状态移除失败。"); };
+
+                scene.Statuses.BeforeRemove = _ =>
+                {
+                    throw new InvalidOperationException("状态移除失败。");
+                };
+
                 scene.Manager.Clear();
                 Assert(scene.Manager.HasPendingCleanup && scene.Source.Entity.IsAlive && scene.Spawner.Deleted.Count == 0,
                     "借用玩家的点名清理失败时，来源实体不得回收。");
@@ -124,7 +142,10 @@ namespace Simulant.Tests
             using (var scene = new Scene())
             {
                 scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source);
-                scene.Statuses.GetStatus(0).SourceObject.Value = new GameObjectId { ObjectId = 777 };
+                scene.Statuses.GetStatus(0).SourceObject.Value = new GameObjectId
+                {
+                    ObjectId = 777
+                };
                 Throws<InvalidOperationException>(() => scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source));
                 scene.Manager.SetStatus(scene.Player, 201, 30, 0, scene.Source);
                 scene.Statuses.GetStatus(1).StatusId.Value = 0;
@@ -140,7 +161,12 @@ namespace Simulant.Tests
             {
                 scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source);
                 scene.Spawner.World.Registry.Reset();
-                scene.Statuses.BeforeRemove = _ => { throw new Exception("不可访问旧世界状态。"); };
+
+                scene.Statuses.BeforeRemove = _ =>
+                {
+                    throw new Exception("不可访问旧世界状态。");
+                };
+
                 scene.Manager.Clear();
                 Assert(scene.Statuses.RemoveCalls == 0 && !scene.Manager.HasPendingCleanup,
                     "世界失效后应丢弃旧记录，而不是写回复用地址。");
@@ -152,7 +178,12 @@ namespace Simulant.Tests
             using (var scene = new Scene())
             {
                 scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source);
-                scene.Statuses.BeforeRemove = _ => { throw new InvalidOperationException("状态移除失败。"); };
+
+                scene.Statuses.BeforeRemove = _ =>
+                {
+                    throw new InvalidOperationException("状态移除失败。");
+                };
+
                 Throws<AggregateException>(() => scene.Manager.Delete(scene.Source));
                 Assert(scene.Source.IsActive && scene.Spawner.DeleteAttempts.Count == 0,
                     "直接删除来源前也必须成功移除其点名。");
@@ -170,7 +201,13 @@ namespace Simulant.Tests
             {
                 scene.Manager.SetStatus(scene.Player, 200, 30, 0, scene.Source);
                 scene.Manager.SetStatus(scene.Player, 201, 30, 0, scene.Source);
-                scene.Statuses.AfterRemove = slot => { if (slot == 0) throw new InvalidOperationException("状态清空后返回失败。"); };
+
+                scene.Statuses.AfterRemove = slot =>
+                {
+                    if (slot == 0)
+                        throw new InvalidOperationException("状态清空后返回失败。");
+                };
+
                 scene.Manager.Clear();
                 Assert(scene.Manager.HasPendingCleanup && scene.Statuses.GetStatus(1).StatusId.Get() == 0 &&
                     scene.Statuses.RemoveCalls == 2, "一项失败不得阻止其他状态清理，部分成功仍保留重试责任。");
@@ -190,11 +227,15 @@ namespace Simulant.Tests
             internal readonly StatusManager Statuses;
             internal Scene()
             {
-                Manager = new SimEntityManager(Spawner) { Scheduler = _scheduler };
+                Manager = new SimEntityManager(Spawner)
+                {
+                    Scheduler = _scheduler
+                };
                 Player = Manager.Attach(Spawner.World.CreateCharacter(0));
                 Source = Manager.SpawnBNpc(1);
                 Statuses = Player.Entity.Native.StatusManager;
             }
+
             public void Dispose()
             {
                 Statuses.BeforeRemove = null;
@@ -204,11 +245,24 @@ namespace Simulant.Tests
             }
         }
 
-        private static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
-        private static T Throws<T>(Action action) where T : Exception
+        private static void Assert(bool condition, string message)
         {
-            try { action(); }
-            catch (T error) { return error; }
+            if (!condition)
+                throw new Exception(message);
+        }
+
+        private static T Throws<T>(Action action)
+            where T : Exception
+        {
+            try
+            {
+                action();
+            }
+            catch (T error)
+            {
+                return error;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
     }

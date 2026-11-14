@@ -28,9 +28,12 @@ namespace Simulant.Simulation.Mechanics
         private MechanicError(string description, IEnumerable<int> expected, IEnumerable<int> actual,
             string reason, int? source = null, bool isBait = false, int? expectedTarget = null, int? actualTarget = null)
         {
-            if (string.IsNullOrWhiteSpace(description)) throw new ArgumentException("机制描述不能为空。", nameof(description));
+            if (string.IsNullOrWhiteSpace(description))
+                throw new ArgumentException("机制描述不能为空。", nameof(description));
+
             if (source < 0 || expectedTarget < 0 || actualTarget < 0)
                 throw new ArgumentOutOfRangeException(nameof(source), "点名或引导目标下标不能为负数。");
+
             Description = description.TrimEnd('：', '。', ' ');
             Reason = reason;
             Expected = expected == null ? null : Freeze(expected);
@@ -73,28 +76,46 @@ namespace Simulant.Simulation.Mechanics
         {
             if (!string.IsNullOrWhiteSpace(detail))
                 _detail = string.IsNullOrEmpty(_detail) ? detail : _detail.TrimEnd('。', '；') + "；" + detail;
+
             return this;
         }
 
         /// <summary>按小队下标去重、排序，名字由调用方提供；日志与聊天应复用同一份输出。</summary>
         public string Format(int? selfSlot, Func<int, string> name)
         {
-            if (name == null) throw new ArgumentNullException(nameof(name));
-            var lines = new List<string> { Description + "处理错误：" };
+            if (name == null)
+                throw new ArgumentNullException(nameof(name));
+
+            var lines = new List<string>
+            {
+                Description + "处理错误："
+            };
+
             if (Expected != null)
             {
                 lines.Add($"· 应有 {Expected.Count} 人：" + Names(Expected, ExpectedTarget, name));
                 lines.Add($"· 实际 {Actual.Count} 人：" + Names(Actual, ActualTarget, name));
-                if (Missing.Count != 0) lines.Add("· 缺少：" + Names(Missing, null, name));
-                if (Extra.Count != 0) lines.Add("· 多余：" + Names(Extra, null, name));
+
+                if (Missing.Count != 0)
+                    lines.Add("· 缺少：" + Names(Missing, null, name));
+
+                if (Extra.Count != 0)
+                    lines.Add("· 多余：" + Names(Extra, null, name));
             }
-            else lines.Add($"· 涉及 {Actual.Count} 人：" + Names(Actual, null, name));
+            else
+                lines.Add($"· 涉及 {Actual.Count} 人：" + Names(Actual, null, name));
+
             if (_isBait && ExpectedTarget != ActualTarget)
                 lines.Add($"· 引导目标：应为 {name(ExpectedTarget.Value)}，实际 " + (ActualTarget.HasValue ? name(ActualTarget.Value) : "无"));
             else if (!_isBait && Source.HasValue && (!Expected.Contains(Source.Value) || !Actual.Contains(Source.Value)))
                 lines.Add("· 点名：" + name(Source.Value));
-            if (!string.IsNullOrWhiteSpace(Reason)) lines.Add("· 判定：" + Reason.TrimEnd('。'));
-            if (!string.IsNullOrEmpty(_detail)) lines.Add("· 说明：" + _detail.TrimEnd('。'));
+
+            if (!string.IsNullOrWhiteSpace(Reason))
+                lines.Add("· 判定：" + Reason.TrimEnd('。'));
+
+            if (!string.IsNullOrEmpty(_detail))
+                lines.Add("· 说明：" + _detail.TrimEnd('。'));
+
             lines.Add("· 推测：" + InferSelf(selfSlot));
             return string.Join("\n", lines);
         }
@@ -102,18 +123,33 @@ namespace Simulant.Simulation.Mechanics
         private string InferSelf(int? selfSlot)
         {
             // 默认推测只用于文字提示；画叉名单必须由机制另行提供。
-            if (!selfSlot.HasValue || (_hasAttribution && !Offenders.Contains(selfSlot.Value))) return "未知";
-            if (!string.IsNullOrWhiteSpace(_selfHint)) return _selfHint.TrimEnd('。');
+            if (!selfSlot.HasValue || (_hasAttribution && !Offenders.Contains(selfSlot.Value)))
+                return "未知";
+
+            if (!string.IsNullOrWhiteSpace(_selfHint))
+                return _selfHint.TrimEnd('。');
+
             if (_isBait && ExpectedTarget != ActualTarget)
             {
-                if (ExpectedTarget == selfSlot) return "自身未去引导";
-                if (ActualTarget == selfSlot) return "自身不应引导";
+                if (ExpectedTarget == selfSlot)
+                    return "自身未去引导";
+
+                if (ActualTarget == selfSlot)
+                    return "自身不应引导";
             }
-            if (Missing.Contains(selfSlot.Value)) return "自身未参与";
-            if (Extra.Contains(selfSlot.Value)) return "自身不应参与";
+
+            if (Missing.Contains(selfSlot.Value))
+                return "自身未参与";
+
+            if (Extra.Contains(selfSlot.Value))
+                return "自身不应参与";
+
             if (_isBait && ExpectedTarget == selfSlot && ActualTarget == selfSlot)
                 return "可能是自身站歪了";
-            if (Source == selfSlot) return "自身被点名且站位错误";
+
+            if (Source == selfSlot)
+                return "自身被点名且站位错误";
+
             return "未知";
         }
 
@@ -122,9 +158,14 @@ namespace Simulant.Simulation.Mechanics
 
         private static IReadOnlyList<int> Freeze(IEnumerable<int> slots)
         {
-            if (slots == null) throw new ArgumentNullException(nameof(slots));
+            if (slots == null)
+                throw new ArgumentNullException(nameof(slots));
+
             var values = slots.Distinct().OrderBy(slot => slot).ToArray();
-            if (values.Any(slot => slot < 0)) throw new ArgumentOutOfRangeException(nameof(slots), "队员下标不能为负数。");
+
+            if (values.Any(slot => slot < 0))
+                throw new ArgumentOutOfRangeException(nameof(slots), "队员下标不能为负数。");
+
             return Array.AsReadOnly(values);
         }
     }

@@ -27,7 +27,10 @@ namespace Lumina.Excel.Sheets
         public ushort RequiredItemLevel => page.ReadUInt16(offset + 12);
         public ushort RequiredGathering => page.ReadUInt16(offset + 14);
         public ushort Unknown1 => page.ReadUInt16(offset + 16);
-        public global::Lumina.Excel.RowRef Task => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 18), new System.Type[] { typeof(RetainerTaskNormal), typeof(RetainerTaskRandom) }, 1580478543, page.Language);
+        public global::Lumina.Excel.RowRef Task => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadUInt16(offset + 18), new System.Type[]
+        {
+            typeof(RetainerTaskNormal), typeof(RetainerTaskRandom)
+        }, 1580478543, page.Language);
         public global::Lumina.Excel.RowRef<ClassJobCategory> ClassJobCategory => new global::Lumina.Excel.RowRef<ClassJobCategory>(page.Module, (uint)page.ReadUInt8(offset + 20), page.Language);
         public byte RetainerLevel => page.ReadUInt8(offset + 21);
         public byte ConditionParam0 => page.ReadUInt8(offset + 22);

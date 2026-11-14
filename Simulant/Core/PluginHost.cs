@@ -20,7 +20,11 @@ namespace Simulant.Core
 {
     public sealed class PluginHost
     {
-        public static PluginHost Instance { get; set; } // 仅为了调试方便
+        public static PluginHost Instance
+        {
+            get;
+            set;
+        } // 仅为了调试方便
 
         public GreyMagicExternalProcessMemory Memory => NamazuInterop.Plugin.Memory;
 
@@ -42,6 +46,7 @@ namespace Simulant.Core
 
         internal bool GameDataReady { get; private set; }
         internal bool GameDataLoading { get; private set; }
+
         private GameDataService _gameData;
         private Task _gameDataLoadTask = Task.CompletedTask;
         private int _gameDataGeneration;
@@ -59,6 +64,7 @@ namespace Simulant.Core
         internal Party.SimPartyService PartyService;
         internal EntityRegistry EntityRegistry;
         internal Test DebugTest { get; }
+
         private readonly object _debugGate = new object();
         private SimScheduler _debugScheduler;
         private SimEntityManager _debugEntities;
@@ -74,8 +80,10 @@ namespace Simulant.Core
             get
             {
                 bool pending;
+
                 lock (_debugGate)
                     pending = _debugStopping || (_debugEntities?.HasPendingCleanup ?? false);
+
                 return pending || (DebugTest?.HasPendingEntityTestCleanup ?? false);
             }
         }
@@ -87,36 +95,60 @@ namespace Simulant.Core
             {
                 lock (_debugGate)
                 {
-                    if (Disposed) throw new ObjectDisposedException(nameof(PluginHost));
+                    if (Disposed)
+                        throw new ObjectDisposedException(nameof(PluginHost));
+
                     if (_debugStopping)
                         throw new InvalidOperationException("正在清理调试实体，请等待清理结束。");
+
                     if (_debugScheduler == null)
                     {
                         if (_debugEntities?.HasPendingCleanup ?? false)
                             throw new InvalidOperationException("上次调试实体尚未清理完成，请再次清除后重试。");
+
                         SimScheduler debugScheduler = null;
+
                         debugScheduler = new SimScheduler((ex, node) =>
                         {
-                            try { LogError($"调试节点「{node}」失败：{ex}"); }
-                            finally { StopDebugEntities(debugScheduler); }
+                            try
+                            {
+                                LogError($"调试节点「{node}」失败：{ex}");
+                            }
+                            finally
+                            {
+                                StopDebugEntities(debugScheduler);
+                            }
                         });
+
                         SimEntityManager debugEntities = null;
+
                         try
                         {
                             debugEntities = new SimEntityManager(EntitySpawner, ex => LogError("调试实体清理失败：" + ex))
-                            { PlayerBehavior = Configuration.SimulatedParty.Copy() };
+                            {
+                                PlayerBehavior = Configuration.SimulatedParty.Copy()
+                            };
                             debugEntities.Scheduler = debugScheduler;
                             debugScheduler.Start();
                         }
                         catch
                         {
-                            try { debugScheduler.Dispose(); }
-                            finally { debugEntities?.Clear(); }
+                            try
+                            {
+                                debugScheduler.Dispose();
+                            }
+                            finally
+                            {
+                                debugEntities?.Clear();
+                            }
+
                             throw;
                         }
+
                         _debugScheduler = debugScheduler;
                         _debugEntities = debugEntities;
                     }
+
                     return _debugEntities;
                 }
             }
@@ -124,8 +156,14 @@ namespace Simulant.Core
 
         internal void StopDebugEntities()
         {
-            try { DebugTest?.StopEntityBehaviorTest(); }
-            finally { StopDebugEntities(null); }
+            try
+            {
+                DebugTest?.StopEntityBehaviorTest();
+            }
+            finally
+            {
+                StopDebugEntities(null);
+            }
         }
 
         private void StopDebugEntities(SimScheduler expectedScheduler)
@@ -133,18 +171,25 @@ namespace Simulant.Core
             SimScheduler scheduler;
             SimEntityManager entities;
             var waitedForStop = false;
+
             lock (_debugGate)
             {
-                if (expectedScheduler != null && !ReferenceEquals(_debugScheduler, expectedScheduler)) return;
+                if (expectedScheduler != null && !ReferenceEquals(_debugScheduler, expectedScheduler))
+                    return;
+
                 if (_debugStopping)
                 {
                     // 外部停止可能正在等待调度线程；调度线程和同线程重入不能反向等待。
                     if ((_stoppingDebugScheduler?.IsSchedulerThread ?? false) ||
                         _debugStoppingThreadId == Thread.CurrentThread.ManagedThreadId)
                         return;
+
                     scheduler = _stoppingDebugScheduler;
                     entities = null;
-                    while (_debugStopping) Monitor.Wait(_debugGate);
+
+                    while (_debugStopping)
+                        Monitor.Wait(_debugGate);
+
                     waitedForStop = true;
                 }
                 else
@@ -157,16 +202,24 @@ namespace Simulant.Core
                     _stoppingDebugScheduler = scheduler;
                 }
             }
+
             if (waitedForStop)
             {
                 // 若停止由调度线程发起，清理完成时该回调仍可能尚未返回。
                 scheduler?.Dispose();
                 return;
             }
+
             try
             {
-                try { scheduler?.Dispose(); }
-                finally { entities?.Clear(); }
+                try
+                {
+                    scheduler?.Dispose();
+                }
+                finally
+                {
+                    entities?.Clear();
+                }
             }
             finally
             {
@@ -175,6 +228,7 @@ namespace Simulant.Core
                     // 失败记录继续留在原 manager，下一次手动清理只重试这一批资源。
                     if (ReferenceEquals(_debugEntities, entities) && !(entities?.HasPendingCleanup ?? false))
                         _debugEntities = null;
+
                     _debugStopping = false;
                     _debugStoppingThreadId = 0;
                     _stoppingDebugScheduler = null;
@@ -198,7 +252,8 @@ namespace Simulant.Core
         {
             lock (_initLock)
             {
-                if (PluginReady && !IsInitializing && !Disposed) EntitySpawner.ResumeWorld();
+                if (PluginReady && !IsInitializing && !Disposed)
+                    EntitySpawner.ResumeWorld();
             }
         }
 
@@ -210,7 +265,9 @@ namespace Simulant.Core
             try
             {
                 Configuration = Simulant.Configuration.Load(ConfigurationPath);
-                if (!File.Exists(ConfigurationPath)) Configuration.Save(ConfigurationPath);
+
+                if (!File.Exists(ConfigurationPath))
+                    Configuration.Save(ConfigurationPath);
             }
             catch (Exception error)
             {
@@ -220,7 +277,10 @@ namespace Simulant.Core
             Updater = new PluginUpdater(
                 () => ActGlobals.oFormActMain?.ActPlugins.FirstOrDefault(x => x.pluginObj?.GetType() == typeof(PluginMain))?.pluginFile?.FullName,
                 typeof(PluginMain).Assembly.GetName().Version, () => Configuration.AutoInstallUpdates, LogWarning, LogRuntime);
-            _ui = new SimulantUI(this) { Dock = DockStyle.Fill };
+            _ui = new SimulantUI(this)
+            {
+                Dock = DockStyle.Fill
+            };
             pluginScreenSpace.Controls.Add(_ui);
 
             FirewallService = new Firewall.FirewallService(this);
@@ -248,9 +308,12 @@ namespace Simulant.Core
             {
                 Task task;
                 int generation;
+
                 lock (_initLock)
                 {
-                    if (Disposed) return;
+                    if (Disposed)
+                        return;
+
                     if (!GameDataLoading)
                     {
                         GameDataLoading = true;
@@ -258,12 +321,16 @@ namespace Simulant.Core
                         _gameDataLoadGeneration = _gameDataGeneration;
                         _gameDataLoadTask = LoadGameDataCoreAsync(Configuration.FfxivPath, _gameDataLoadGeneration);
                     }
+
                     task = _gameDataLoadTask;
                     generation = _gameDataLoadGeneration;
                 }
+
                 await task;
+
                 lock (_initLock)
-                    if (Disposed || generation == _gameDataGeneration) return;
+                    if (Disposed || generation == _gameDataGeneration)
+                        return;
                 // 读取期间用户修改了路径，完成旧任务后按最新配置重试。
             }
         }
@@ -273,18 +340,23 @@ namespace Simulant.Core
             // 先让调用方登记任务，避免同步失败时留下错误的加载状态。
             await Task.Yield();
             GameDataService candidate = null;
+
             try
             {
                 _ui?.UpdateControlStates();
                 var path = await Task.Run(() => FfxivInstallation.Resolve(configuredPath));
+
                 lock (_initLock)
                 {
-                    if (Disposed || generation != _gameDataGeneration) return;
+                    if (Disposed || generation != _gameDataGeneration)
+                        return;
+
                     if (path == null)
                     {
                         LogWarning("尚未设置过 ffxiv_dx11.exe 文件路径，请开启游戏后重新初始化，或在配置菜单中手动设置。");
                         return;
                     }
+
                     if (string.IsNullOrWhiteSpace(configuredPath))
                     {
                         var snapshot = Configuration.Copy();
@@ -294,28 +366,42 @@ namespace Simulant.Core
                         LogRuntime("已自动检测游戏路径：" + path);
                     }
                 }
+
                 var sqpack = GameDataService.ResolveSqPackPath(path);
+
                 if (_gameData != null && string.Equals(_gameData.SqPackPath, sqpack, StringComparison.OrdinalIgnoreCase))
                 {
                     lock (_initLock)
                     {
-                        if (Disposed || generation != _gameDataGeneration) return;
+                        if (Disposed || generation != _gameDataGeneration)
+                            return;
+
                         GameDataReady = true;
                     }
-                    if (!string.IsNullOrWhiteSpace(configuredPath)) LogRuntime("已从配置读取游戏路径：" + path);
+
+                    if (!string.IsNullOrWhiteSpace(configuredPath))
+                        LogRuntime("已从配置读取游戏路径：" + path);
+
                     return;
                 }
+
                 LogRuntime("正在读取游戏客户端数据……");
                 candidate = await Task.Run(() => new GameDataService(path));
+
                 lock (_initLock)
                 {
-                    if (Disposed || generation != _gameDataGeneration) return;
+                    if (Disposed || generation != _gameDataGeneration)
+                        return;
+
                     candidate.Activate();
                     _gameData = candidate;
                     candidate = null;
                     GameDataReady = true;
                 }
-                if (!string.IsNullOrWhiteSpace(configuredPath)) LogRuntime("已从配置读取游戏路径：" + path);
+
+                if (!string.IsNullOrWhiteSpace(configuredPath))
+                    LogRuntime("已从配置读取游戏路径：" + path);
+
                 LogRuntime("游戏数据加载完成（Lumina.ACT，当前客户端）。");
                 LogRuntime("如需启用模拟，请先在左侧初始化插件，然后启用防火墙。");
             }
@@ -327,29 +413,38 @@ namespace Simulant.Core
             finally
             {
                 candidate?.Dispose();
+
                 lock (_initLock)
                     GameDataLoading = false;
-                if (!Disposed) _ui?.UpdateControlStates();
+
+                if (!Disposed)
+                    _ui?.UpdateControlStates();
             }
         }
 
         internal void SaveConfiguration(Configuration configuration)
         {
-            if (Disposed) throw new InvalidOperationException("插件已卸载，不能保存配置。");
+            if (Disposed)
+                throw new InvalidOperationException("插件已卸载，不能保存配置。");
+
             lock (_initLock)
             {
                 var snapshot = configuration.Copy();
                 snapshot.Save(ConfigurationPath);
+
                 if (!string.Equals(Configuration.FfxivPath, snapshot.FfxivPath, StringComparison.OrdinalIgnoreCase))
                     _gameDataGeneration++;
+
                 Configuration = snapshot;
             }
+
             LogRuntime("全局配置已保存；游戏路径在下次初始化时读取，模拟队员设置从下一次模拟开始生效。");
         }
 
         internal async Task InitAsync()
         {
             int processGeneration;
+
             lock (_initLock)
             {
                 if (Disposed)
@@ -357,11 +452,13 @@ namespace Simulant.Core
                     LogWarning("插件正在卸载，不能重新初始化；请先重试完成卸载。");
                     return;
                 }
+
                 if (IsInitializing)
                 {
                     LogWarning("插件正在初始化，跳过重复请求。");
                     return;
                 }
+
                 if (FirewallService.HasPendingCleanup)
                 {
                     LogWarning("防火墙尚未完全关闭，请先关闭防火墙并完成清理，再重新初始化插件。");
@@ -380,7 +477,9 @@ namespace Simulant.Core
                 ZoneService.CancelPendingPhase();
                 PrepareEntityWorldChange();
                 await LoadGameDataAsync();
-                if (!GameDataReady) return;
+
+                if (!GameDataReady)
+                    return;
 
                 LogRuntime("正在绑定鲶鱼精邮差……");
                 await Task.Run(() => NamazuInterop.Init());
@@ -407,9 +506,11 @@ namespace Simulant.Core
                 {
                     if (Disposed || processGeneration != _entityProcessGeneration)
                         throw new InvalidOperationException("初始化期间游戏进程发生变化，请重新初始化插件。");
+
                     EntitySpawner.ResumeWorld();
                     PluginReady = true;
                 }
+
                 LogRuntime("插件初始化完成。");
             }
             catch (Exception ex)
@@ -434,13 +535,18 @@ namespace Simulant.Core
         {
             lock (_disposeGate)
             {
-                if (_disposeCompleted) return;
+                if (_disposeCompleted)
+                    return;
+
                 if (_disposing)
                     throw new InvalidOperationException("插件正在卸载，请等待本轮清理结束后重试。");
+
                 _disposing = true;
+
                 try
                 {
                     bool initializationPending;
+
                     lock (_initLock)
                     {
                         Disposed = true;
@@ -448,21 +554,35 @@ namespace Simulant.Core
                         _gameDataGeneration++;
                         initializationPending = IsInitializing;
                     }
-                    if (_ui != null && !_ui.IsDisposed) _ui.Enabled = false;
+
+                    if (_ui != null && !_ui.IsDisposed)
+                        _ui.Enabled = false;
+
                     Updater?.Dispose();
 
                     List<Exception> failures = null;
+
                     void TryCleanup(string message, Action cleanup)
                     {
-                        try { cleanup(); }
+                        try
+                        {
+                            cleanup();
+                        }
                         catch (Exception error)
                         {
                             (failures ?? (failures = new List<Exception>())).Add(
                                 new InvalidOperationException(message, error));
-                            try { LogError(message + "：" + error); }
-                            catch { /* 日志失败不能遮蔽清理错误或中断其余资源回收。 */ }
+
+                            try
+                            {
+                                LogError(message + "：" + error);
+                            }
+                            catch
+                            { /* 日志失败不能遮蔽清理错误或中断其余资源回收。 */
+                            }
                         }
                     }
+
                     void ThrowIfFailed()
                     {
                         if (failures != null)
@@ -471,8 +591,10 @@ namespace Simulant.Core
 
                     // 保留真实地图记录，只有资源回收完成后才返回并恢复通信。
                     TryCleanup("卸载时取消阶段等待失败", () => ZoneService?.CancelPendingPhase());
+
                     if (initializationPending)
                         throw new InvalidOperationException("初始化尚未结束，旧宿主已停止接受操作；请稍后重试卸载或重新启用。");
+
                     TryCleanup("卸载时停止模拟失败", () => _ui?.StopCurrentSession());
                     TryCleanup("卸载时停止调试失败", StopDebugEntities);
                     TryCleanup("卸载时恢复小队失败", () => PartyService?.RestoreAll());
@@ -485,12 +607,15 @@ namespace Simulant.Core
                         if (ZoneService?.HasPendingReturn == true && !ZoneService.ExitToInitialTerritory())
                             throw new InvalidOperationException("尚未返回真实区域，防火墙保持原状。");
                     });
+
                     ThrowIfFailed();
 
                     TryCleanup("卸载时关闭防火墙失败", () =>
                     {
-                        if (FirewallService?.HasPendingCleanup == true) FirewallService.Disable();
+                        if (FirewallService?.HasPendingCleanup == true)
+                            FirewallService.Disable();
                     });
+
                     ThrowIfFailed();
 
                     lock (_subscriptionGate)
@@ -498,34 +623,48 @@ namespace Simulant.Core
                         // 失败期间继续接收世界失效；全部原生资源清理完成后才取消订阅。
                         _subscriptionsStopped = true;
                         var subscribedPlugin = _subscribedXivPlugin;
+
                         if (subscribedPlugin != null)
                         {
                             TryCleanup("卸载时取消进程订阅失败", () =>
                                 subscribedPlugin.DataSubscription.ProcessChanged -= OnFFXIVProcessChanged);
                             TryCleanup("卸载时取消区域订阅失败", () =>
                                 subscribedPlugin.DataSubscription.ZoneChanged -= OnFFXIVZoneChanged);
-                            if (failures == null) _subscribedXivPlugin = null;
+
+                            if (failures == null)
+                                _subscribedXivPlugin = null;
                         }
                     }
+
                     ThrowIfFailed();
 
                     _gameData?.Dispose();
                     _gameData = null;
                     GameDataReady = false;
                     _ui?.Dispose();
-                    if (!_statusLabel.IsDisposed) _statusLabel.Text = "插件已卸载";
+
+                    if (!_statusLabel.IsDisposed)
+                        _statusLabel.Text = "插件已卸载";
+
                     _disposeCompleted = true;
                 }
                 catch
                 {
                     try
                     {
-                        if (!_statusLabel.IsDisposed) _statusLabel.Text = "插件卸载未完成，请再次卸载或重新启用以重试。";
+                        if (!_statusLabel.IsDisposed)
+                            _statusLabel.Text = "插件卸载未完成，请再次卸载或重新启用以重试。";
                     }
-                    catch { /* 状态栏失效时仍须向调用方报告原始清理失败。 */ }
+                    catch
+                    { /* 状态栏失效时仍须向调用方报告原始清理失败。 */
+                    }
+
                     throw;
                 }
-                finally { _disposing = false; }
+                finally
+                {
+                    _disposing = false;
+                }
             }
         }
 
@@ -569,6 +708,7 @@ namespace Simulant.Core
                                 plugin.DataSubscription.ProcessChanged += OnFFXIVProcessChanged;
                                 plugin.DataSubscription.ZoneChanged += OnFFXIVZoneChanged;
                             }
+
                             OnFFXIVProcessChanged(plugin.DataRepository.GetCurrentFFXIVProcess());
                             return;
                         }
@@ -588,12 +728,17 @@ namespace Simulant.Core
 
         private void OnFFXIVProcessChanged(Process process)
         {
-            if (_disposeCompleted) return;
+            if (_disposeCompleted)
+                return;
+
             var processId = process?.Id;
             Exception firewallCleanupError = null;
+
             lock (_initLock)
             {
-                if (_disposeCompleted || _entityProcessId == processId) return;
+                if (_disposeCompleted || _entityProcessId == processId)
+                    return;
+
                 _entityProcessId = processId;
                 _entityProcessGeneration++;
                 _entityZoneId = XivPluginInterop.plugin?.DataRepository.GetCurrentTerritoryID();
@@ -602,10 +747,18 @@ namespace Simulant.Core
                 ZoneService?.InvalidateWorld();
                 PartyService?.InvalidateWorld();
                 EntitySpawner?.ResetWorld();
+
                 // 旧进程的补丁恢复失败也不能阻止新世界使实体引用失效。
-                try { FirewallService?.ResetProcess(); }
-                catch (Exception error) { firewallCleanupError = error; }
+                try
+                {
+                    FirewallService?.ResetProcess();
+                }
+                catch (Exception error)
+                {
+                    firewallCleanupError = error;
+                }
             }
+
             try
             {
                 if (firewallCleanupError != null)
@@ -621,13 +774,16 @@ namespace Simulant.Core
         {
             lock (_initLock)
             {
-                if (_disposeCompleted || _entityZoneId == zoneId) return;
+                if (_disposeCompleted || _entityZoneId == zoneId)
+                    return;
+
                 _entityZoneId = zoneId;
                 ZoneService?.InvalidateWorld();
                 PartyService?.InvalidateWorld();
                 // 外部换图发生后只能失效旧引用，不能再尝试释放上一场景的内存。
                 EntitySpawner?.ResetWorld();
             }
+
             _ui?.OnEntityWorldChanged();
         }
 

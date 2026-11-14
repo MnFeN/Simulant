@@ -13,7 +13,9 @@ namespace Simulant.Utils
     {
         public static string ToDataString(this object prop)
         {
-            if (prop == null) return "";
+            if (prop == null)
+                return "";
+
             switch (prop)
             {
                 case string s:
@@ -35,6 +37,7 @@ namespace Simulant.Utils
                     {
                         return f.ToString();
                     }
+
                 case double d:
                     try
                     {
@@ -44,6 +47,7 @@ namespace Simulant.Utils
                     {
                         return d.ToString();
                     }
+
                 case IFormattable formattable:
                     return formattable.ToString(null, CultureInfo.InvariantCulture);
                 case IEnumerable data:
@@ -79,6 +83,7 @@ namespace Simulant.Utils
             {
                 // Nullable<T>
                 Type underlyingType = Nullable.GetUnderlyingType(targetType);
+
                 if (underlyingType != null)
                 {
                     if (string.IsNullOrEmpty(input))
@@ -86,6 +91,7 @@ namespace Simulant.Utils
                         result = null;
                         return true;
                     }
+
                     targetType = underlyingType;
                 }
 
@@ -133,6 +139,7 @@ namespace Simulant.Utils
                         result = g;
                         return true;
                     }
+
                     return false;
                 }
 
@@ -162,6 +169,7 @@ namespace Simulant.Utils
         public static bool IsNumericType(this Type type)
         {
             var underlyingType = Nullable.GetUnderlyingType(type);
+
             if (underlyingType != null)
                 type = underlyingType;
 
@@ -192,6 +200,7 @@ namespace Simulant.Utils
             ParameterInfo[] paramsInfo = _delegate.Method.GetParameters();
 
             rawArgs = rawArgs ?? new string[0];
+
             if (rawArgs.Length > paramsInfo.Length)
                 throw new ArgumentException($"参数数量过多：期望最多 {paramsInfo.Length} 个参数，但提供了 {rawArgs.Length} 个");
 
@@ -202,6 +211,7 @@ namespace Simulant.Utils
                 if (i < rawArgs.Length)
                 {
                     Type paramType = paramsInfo[i].ParameterType;
+
                     try
                     {
                         parameters[i] = rawArgs[i].ParseData(paramType);
@@ -238,6 +248,7 @@ namespace Simulant.Utils
             public HexOrDecId(string input)
             {
                 input = input.Trim();
+
                 if (string.IsNullOrWhiteSpace(input))
                     Value = Default;
                 else if (HexRegex.IsMatch(input))

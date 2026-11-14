@@ -19,7 +19,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Excel.ExcelPage ExcelPage => page;
         public uint RowOffset => offset;
         public uint RowId => row;
-        public global::Lumina.Excel.RowRef Item => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset), new System.Type[] { typeof(EventItem), typeof(Item) }, 262363557, page.Language);
+        public global::Lumina.Excel.RowRef Item => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset), new System.Type[]
+        {
+            typeof(EventItem), typeof(Item)
+        }, 262363557, page.Language);
         public byte Size => page.ReadUInt8(offset + 4);
         public global::Lumina.Excel.RowRef<AquariumWater> AquariumWater => new global::Lumina.Excel.RowRef<AquariumWater>(page.Module, (uint)page.ReadUInt8(offset + 5), page.Language);
         public byte WeatherRestriction => page.ReadUInt8(offset + 6);

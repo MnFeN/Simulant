@@ -29,7 +29,7 @@ namespace Simulant.Simulation.Options
                 Maximum = (decimal)_max,
                 DecimalPlaces = _decimalPlaces,
                 Value = (decimal)_default,
-            }; 
+            };
             editor.ApplyStyle(numericUpDown);
             return numericUpDown;
         }

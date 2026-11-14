@@ -22,6 +22,7 @@ namespace Lumina.Data.Parsing.Scd
             SubType = binaryReader.ReadBytes(4);
             Version = binaryReader.ReadUInt32();
             EndianType = binaryReader.ReadByte();
+
             if (binaryReader.IsLittleEndian != (EndianType == 0))
             {
                 Version = BinaryPrimitives.ReverseEndianness(Version);

@@ -99,7 +99,10 @@ namespace Lumina.Excel.Sheets
         public bool NotRewriteHeight => page.ReadPackedBool(offset + 256, 2);
         public bool Unknown2 => page.ReadPackedBool(offset + 256, 3);
 
-        private static global::Lumina.Excel.RowRef ENpcDataCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + i * 4), new System.Type[] { typeof(ChocoboTaxiStand), typeof(CollectablesShop), typeof(ContentNpc), typeof(CraftLeve), typeof(CustomTalk), typeof(DefaultTalk), typeof(DisposalShop), typeof(DpsChallengeOfficer), typeof(EventPathMove), typeof(FccShop), typeof(GCShop), typeof(GilShop), typeof(GuildOrderGuide), typeof(GuildOrderOfficer), typeof(GuildleveAssignment), typeof(InclusionShop), typeof(LotteryExchangeShop), typeof(PreHandler), typeof(Quest), typeof(SpecialShop), typeof(Story), typeof(SwitchTalk), typeof(TopicSelect), typeof(TripleTriad), typeof(Warp) }, 323632169, page.Language);
+        private static global::Lumina.Excel.RowRef ENpcDataCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + i * 4), new System.Type[]
+        {
+            typeof(ChocoboTaxiStand), typeof(CollectablesShop), typeof(ContentNpc), typeof(CraftLeve), typeof(CustomTalk), typeof(DefaultTalk), typeof(DisposalShop), typeof(DpsChallengeOfficer), typeof(EventPathMove), typeof(FccShop), typeof(GCShop), typeof(GilShop), typeof(GuildOrderGuide), typeof(GuildOrderOfficer), typeof(GuildleveAssignment), typeof(InclusionShop), typeof(LotteryExchangeShop), typeof(PreHandler), typeof(Quest), typeof(SpecialShop), typeof(Story), typeof(SwitchTalk), typeof(TopicSelect), typeof(TripleTriad), typeof(Warp)
+        }, 323632169, page.Language);
         static public ENpcBase Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row) => new ENpcBase(page, offset, row);
     }
 }

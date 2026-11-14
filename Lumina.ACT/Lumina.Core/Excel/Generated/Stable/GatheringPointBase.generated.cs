@@ -23,7 +23,10 @@ namespace Lumina.Excel.Sheets
         public global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef> Item => new global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef>(page, offset, offset, ItemCtor, 8);
         public byte GatheringLevel => page.ReadUInt8(offset + 36);
 
-        private static global::Lumina.Excel.RowRef ItemCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 4 + i * 4), new System.Type[] { typeof(GatheringItem), typeof(SpearfishingItem) }, 1267931519, page.Language);
+        private static global::Lumina.Excel.RowRef ItemCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 4 + i * 4), new System.Type[]
+        {
+            typeof(GatheringItem), typeof(SpearfishingItem)
+        }, 1267931519, page.Language);
         static public GatheringPointBase Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row) => new GatheringPointBase(page, offset, row);
     }
 }

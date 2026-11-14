@@ -17,11 +17,11 @@
             {
                 components.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
         #region Windows Form Designer generated code
-
         /// <summary>
         /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
@@ -42,9 +42,9 @@
             this.tableLeft.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvTerritory)).BeginInit();
             this.SuspendLayout();
-            // 
+            //
             // tableLeft
-            // 
+            //
             this.tableLeft.AutoSize = true;
             this.tableLeft.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.tableLeft.BackColor = System.Drawing.SystemColors.Control;
@@ -66,9 +66,9 @@
             this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLeft.Size = new System.Drawing.Size(1059, 811);
             this.tableLeft.TabIndex = 1;
-            // 
+            //
             // btnOk
-            // 
+            //
             this.btnOk.AutoSize = true;
             this.btnOk.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnOk.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -80,9 +80,9 @@
             this.btnOk.Text = "读取预设";
             this.btnOk.UseVisualStyleBackColor = true;
             this.btnOk.Click += new System.EventHandler(this.btnOk_Click);
-            // 
+            //
             // txtFilter
-            // 
+            //
             this.txtFilter.Dock = System.Windows.Forms.DockStyle.Fill;
             this.txtFilter.Location = new System.Drawing.Point(85, 7);
             this.txtFilter.Margin = new System.Windows.Forms.Padding(5, 7, 20, 5);
@@ -90,20 +90,22 @@
             this.txtFilter.Size = new System.Drawing.Size(658, 29);
             this.txtFilter.TabIndex = 6;
             this.txtFilter.TextChanged += new System.EventHandler(this.txtFilter_TextChanged);
-            // 
+            //
             // dgvTerritory
-            // 
+            //
             this.dgvTerritory.AllowUserToAddRows = false;
             this.dgvTerritory.AllowUserToDeleteRows = false;
             this.dgvTerritory.AllowUserToResizeRows = false;
             this.dgvTerritory.BackgroundColor = System.Drawing.SystemColors.Control;
             this.dgvTerritory.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvTerritory.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.colId,
-            this.colPlace,
-            this.colInstance,
-            this.colRegion,
-            this.colType});
+            this.dgvTerritory.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[]
+            {
+                this.colId,
+                this.colPlace,
+                this.colInstance,
+                this.colRegion,
+                this.colType
+            });
             this.tableLeft.SetColumnSpan(this.dgvTerritory, 4);
             this.dgvTerritory.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dgvTerritory.Location = new System.Drawing.Point(3, 45);
@@ -122,53 +124,53 @@
             this.dgvTerritory.CellFormatting += new System.Windows.Forms.DataGridViewCellFormattingEventHandler(this.dgvTerritory_CellFormatting);
             this.dgvTerritory.CellValueNeeded += new System.Windows.Forms.DataGridViewCellValueEventHandler(this.dgvTerritory_CellValueNeeded);
             this.dgvTerritory.SelectionChanged += new System.EventHandler(this.dgvTerritory_SelectionChanged);
-            // 
+            //
             // colId
-            // 
+            //
             this.colId.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.colId.FillWeight = 30F;
             this.colId.HeaderText = "ID";
             this.colId.MinimumWidth = 6;
             this.colId.Name = "colId";
             this.colId.ReadOnly = true;
-            // 
+            //
             // colPlace
-            // 
+            //
             this.colPlace.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.colPlace.HeaderText = "地点";
             this.colPlace.MinimumWidth = 6;
             this.colPlace.Name = "colPlace";
             this.colPlace.ReadOnly = true;
-            // 
+            //
             // colInstance
-            // 
+            //
             this.colInstance.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.colInstance.FillWeight = 120F;
             this.colInstance.HeaderText = "副本";
             this.colInstance.MinimumWidth = 6;
             this.colInstance.Name = "colInstance";
             this.colInstance.ReadOnly = true;
-            // 
+            //
             // colRegion
-            // 
+            //
             this.colRegion.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.colRegion.FillWeight = 70F;
             this.colRegion.HeaderText = "区域";
             this.colRegion.MinimumWidth = 6;
             this.colRegion.Name = "colRegion";
             this.colRegion.ReadOnly = true;
-            // 
+            //
             // colType
-            // 
+            //
             this.colType.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.colType.FillWeight = 70F;
             this.colType.HeaderText = "类型";
             this.colType.MinimumWidth = 6;
             this.colType.Name = "colType";
             this.colType.ReadOnly = true;
-            // 
+            //
             // lblFilter
-            // 
+            //
             this.lblFilter.AutoSize = true;
             this.lblFilter.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblFilter.Location = new System.Drawing.Point(3, 3);
@@ -179,9 +181,9 @@
             this.lblFilter.TabIndex = 3;
             this.lblFilter.Text = "正则搜索";
             this.lblFilter.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
+            //
             // chkPresetOnly
-            // 
+            //
             this.chkPresetOnly.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.chkPresetOnly.AutoSize = true;
             this.chkPresetOnly.Location = new System.Drawing.Point(766, 8);
@@ -191,9 +193,9 @@
             this.chkPresetOnly.Text = "仅显示含预设区域";
             this.chkPresetOnly.UseVisualStyleBackColor = true;
             this.chkPresetOnly.CheckedChanged += new System.EventHandler(this.chkPresetOnly_CheckedChanged);
-            // 
+            //
             // TerritoryForm
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 22F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1059, 811);
@@ -212,7 +214,6 @@
         }
 
         #endregion
-
         private System.Windows.Forms.TableLayoutPanel tableLeft;
         private System.Windows.Forms.Button btnOk;
         private System.Windows.Forms.TextBox txtFilter;

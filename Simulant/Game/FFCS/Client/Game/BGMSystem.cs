@@ -10,6 +10,7 @@ namespace Simulant.Game.FFCS.Client.Game
         [SigPattern("4C 8B 15 * * * * 4D 85 D2 74 77 41 83 7A",
                     "48 8B 05 * * * * 48 85 C0 74 51 83 78 08 0B")]
         public static IntPtr InstancePtr { get; set; }
+
         public static BGMSystem Instance()
             => InstancePtr.ReadPtr().As<BGMSystem>();
 
@@ -22,6 +23,7 @@ namespace Simulant.Game.FFCS.Client.Game
 
         [SigPattern("4C 8B 1D ? ? ? ? 4D 85 DB 0F 84 ? ? ? ? 41 3B 53")]
         public static IntPtr SetBGMFuncPtr { get; set; }
+
         public static void SetBGM(
             ushort bgmId,
             uint sceneId,
@@ -37,12 +39,14 @@ namespace Simulant.Game.FFCS.Client.Game
 
         [SigPattern("4C 8B 05 * * * * 4D 85 C0 74 3D")]
         public static IntPtr ResetBGMFuncPtr { get; set; }
+
         public void ResetBGM(uint sceneId)
             => ResetBGMFuncPtr.Call(Ptr, sceneId);
 
         public struct SceneList : IMemoryObject
         {
             public IntPtr Ptr { get; set; }
+
             public Scene this[int index] => Ptr.As<Scene>(index * Scene.Size);
         }
 
@@ -50,6 +54,7 @@ namespace Simulant.Game.FFCS.Client.Game
         public struct Scene : IMemoryObject
         {
             public IntPtr Ptr { get; set; }
+
             public const int Size = 0xA0;
 
             /// <summary> The index of <see cref="Scenes"/> and the RowId in the BGMScene sheet. </summary>

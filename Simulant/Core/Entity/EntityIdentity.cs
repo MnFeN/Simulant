@@ -22,8 +22,12 @@ namespace Simulant.Core.Entity
         public override bool Equals(object obj) => obj is EntityIdentity other && Equals(other);
         public override int GetHashCode()
         {
-            unchecked { return ((WorldEpoch.GetHashCode() * 397) ^ Generation.GetHashCode()) * 397 ^ Slot; }
+            unchecked
+            {
+                return ((WorldEpoch.GetHashCode() * 397) ^ Generation.GetHashCode()) * 397 ^ Slot;
+            }
         }
+
         public static bool operator ==(EntityIdentity left, EntityIdentity right) => left.Equals(right);
         public static bool operator !=(EntityIdentity left, EntityIdentity right) => !left.Equals(right);
         public override string ToString() => $"{WorldEpoch}:{Slot}:{Generation}";
@@ -48,7 +52,10 @@ namespace Simulant.Core.Entity
         public override bool Equals(object obj) => obj is EntityObservation other && Equals(other);
         public override int GetHashCode()
         {
-            unchecked { return ((Address.GetHashCode() * 397) ^ (int)EntityId) * 397 ^ (int)ObjectKind; }
+            unchecked
+            {
+                return ((Address.GetHashCode() * 397) ^ (int)EntityId) * 397 ^ (int)ObjectKind;
+            }
         }
     }
 }

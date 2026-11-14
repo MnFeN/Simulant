@@ -26,9 +26,21 @@ namespace Simulant.Tests
             Near(U6b.Waymarks["1"], 109.19239f, 90.80761f);
             Near(U6b.Waymarks["4"], 90.80761f, 90.80761f);
 
-            var expected = new[] { new Vector2(100, 88), new Vector2(112, 100), new Vector2(100, 112),
-                new Vector2(88, 100), new Vector2(88, 88), new Vector2(112, 88), new Vector2(112, 112), new Vector2(88, 112) };
-            for (var i = 0; i < expected.Length; i++) Near(U7b.Waymarks["ABCD1234"[i].ToString()], expected[i].X, expected[i].Y);
+            var expected = new[]
+            {
+                new Vector2(100, 88),
+                new Vector2(112, 100),
+                new Vector2(100, 112),
+                new Vector2(88, 100),
+                new Vector2(88, 88),
+                new Vector2(112, 88),
+                new Vector2(112, 112),
+                new Vector2(88, 112)
+            };
+
+            for (var i = 0; i < expected.Length; i++)
+                Near(U7b.Waymarks["ABCD1234"[i].ToString()], expected[i].X, expected[i].Y);
+
             Near(U5a.Waymarks["A"], 100, 86.25f);
             Near(U5a.Waymarks["B"], 118, 100);
             Near(U5a.Waymarks["3"], 115.5f, 98);
@@ -53,10 +65,22 @@ namespace Simulant.Tests
             Near(between["D"], 11, 21, 3);
 
             var cycling = WaymarkLayout.Center(0, 0).Circle("ABCD1234", true, 2, 3, 4);
-            var radii = new[] { 2f, 3f, 4f, 2f, 3f, 4f, 2f, 3f };
+            var radii = new[]
+            {
+                2f,
+                3f,
+                4f,
+                2f,
+                3f,
+                4f,
+                2f,
+                3f
+            };
+
             for (var i = 0; i < radii.Length; i++)
                 Assert(Math.Abs(cycling["ABCD1234"[i].ToString()].Value.Length() - radii[i]) < 0.0001f,
                     "半径应按给定顺序循环，末尾不足一轮时也必须正确分配。");
+
             Throws<ArgumentException>(() => WaymarkLayout.Center(0, 0).Circle("ABCD", true));
             Throws<ArgumentOutOfRangeException>(() => WaymarkLayout.Center(0, 0).Circle("ABCD", true, 2, -1));
         }
@@ -64,6 +88,7 @@ namespace Simulant.Tests
         public static void PlaceJsonUsesGameAxesAndInvariantNumbers()
         {
             var culture = Thread.CurrentThread.CurrentCulture;
+
             try
             {
                 Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
@@ -73,25 +98,47 @@ namespace Simulant.Tests
                 var marker = (Dictionary<string, object>)data["One"];
                 Assert(Convert.ToDouble(marker["X"]) == 101.5 && Convert.ToDouble(marker["Y"]) == 4 &&
                     Convert.ToDouble(marker["Z"]) == 197.75, "place 必须使用 X、垂直高度 Y、水平坐标 Z，且不受系统小数分隔符影响。");
-                var names = new[] { "A", "B", "C", "D", "One", "Two", "Three", "Four" };
+                var names = new[]
+                {
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "One",
+                    "Two",
+                    "Three",
+                    "Four"
+                };
+
                 foreach (var name in names)
                 {
                     var mark = (Dictionary<string, object>)data[name];
                     Assert((bool)mark["Active"] == (name == "One"), "完整布局必须明确关闭未使用的标点。");
                 }
+
                 var clear = Parse(WaymarkLayout.ClearJson);
+
                 foreach (var name in names)
                     Assert(!(bool)((Dictionary<string, object>)clear[name])["Active"], "清理参数必须关闭全部八个标点。");
             }
-            finally { Thread.CurrentThread.CurrentCulture = culture; }
+            finally
+            {
+                Thread.CurrentThread.CurrentCulture = culture;
+            }
         }
 
         public static void SessionOwnsPlacementAndIdempotentCleanup()
         {
             TriggernometryInterop.Reset();
+
             try
             {
-                using (var probe = new SessionProbe { Waymarks = U7a.Waymarks })
+                using (var probe = new SessionProbe
+                {
+                    Waymarks = U7a.Waymarks
+                }
+
+                )
                 using (var session = new SimSession(new PluginHost(), new SessionTestPreset(probe)))
                 {
                     probe.StartAction = () => Assert(TriggernometryInterop.WaymarkCommands.Count == 1,
@@ -110,6 +157,7 @@ namespace Simulant.Tests
                     Assert(TriggernometryInterop.WaymarkCommands.Count == 4 && !session.HasPendingCleanup,
                         "再次开始应重新放置，立即取消也必须清除标点。");
                 }
+
                 using (var probe = new SessionProbe())
                 using (var session = new SimSession(new PluginHost(), new SessionTestPreset(probe)))
                 {
@@ -118,18 +166,31 @@ namespace Simulant.Tests
                     Assert(TriggernometryInterop.WaymarkCommands.Count == 4, "没有布局的预设不能修改或删除场地标点。");
                 }
             }
-            finally { TriggernometryInterop.Reset(); }
+            finally
+            {
+                TriggernometryInterop.Reset();
+            }
         }
 
         public static void FailedPlacementAndCleanupRetainRetryResponsibility()
         {
             TriggernometryInterop.Reset();
+
             try
             {
-                using (var probe = new SessionProbe { Waymarks = U7b.Waymarks })
+                using (var probe = new SessionProbe
+                {
+                    Waymarks = U7b.Waymarks
+                }
+
+                )
                 using (var session = new SimSession(new PluginHost(), new SessionTestPreset(probe)))
                 {
-                    TriggernometryInterop.OnWaymarkCommand = _ => { throw new InvalidOperationException("模拟标点回调失败。"); };
+                    TriggernometryInterop.OnWaymarkCommand = _ =>
+                    {
+                        throw new InvalidOperationException("模拟标点回调失败。");
+                    };
+
                     Throws<InvalidOperationException>(session.Start);
                     Assert(probe.StartCount == 0 && probe.StopCount == 1 && session.HasPendingCleanup &&
                         TriggernometryInterop.WaymarkCommands.Count == 2,
@@ -141,19 +202,32 @@ namespace Simulant.Tests
                     Assert(!session.HasPendingCleanup && probe.StopCount == 1, "再次停止应只重试剩余标点清理。");
                 }
             }
-            finally { TriggernometryInterop.Reset(); }
+            finally
+            {
+                TriggernometryInterop.Reset();
+            }
         }
 
         public static void InterruptedSceneKeepsWaymarksUntilExplicitStop()
         {
             TriggernometryInterop.Reset();
+
             try
             {
                 using (var reported = new ManualResetEventSlim())
-                using (var probe = new SessionProbe { Waymarks = U6b.Waymarks })
+                using (var probe = new SessionProbe
+                {
+                    Waymarks = U6b.Waymarks
+                }
+
+                )
                 using (var session = new SimSession(new PluginHost(), new SessionTestPreset(probe)))
                 {
-                    probe.StartAction = () => { throw new InvalidOperationException("模拟机制异常。"); };
+                    probe.StartAction = () =>
+                    {
+                        throw new InvalidOperationException("模拟机制异常。");
+                    };
+
                     TriggernometryInterop.OnChatCommand = _ => reported.Set();
                     session.Start();
                     SessionTests.Wait(reported, "机制异常后保留现场");
@@ -164,7 +238,10 @@ namespace Simulant.Tests
                         "显式停止时必须清理保留的场地标点。");
                 }
             }
-            finally { TriggernometryInterop.Reset(); }
+            finally
+            {
+                TriggernometryInterop.Reset();
+            }
         }
 
         private static Dictionary<string, object> Parse(string json)
@@ -174,16 +251,25 @@ namespace Simulant.Tests
             => Assert(actual.HasValue && Vector3.Distance(actual.Value, new Vector3(x, y, z)) < 0.0001f,
                 $"标点坐标不符：预期 ({x}, {y}, {z})，实际 {actual}。");
 
-        private static void Throws<T>(Action action) where T : Exception
+        private static void Throws<T>(Action action)
+            where T : Exception
         {
-            try { action(); }
-            catch (T) { return; }
+            try
+            {
+                action();
+            }
+            catch (T)
+            {
+                return;
+            }
+
             throw new Exception("预期抛出异常：" + typeof(T).Name);
         }
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
     }
 }

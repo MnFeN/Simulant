@@ -23,7 +23,10 @@ namespace Lumina.Excel.Sheets
         public uint RowId => row;
         public ushort SubrowId => subrow;
         public global::Lumina.Text.ReadOnly.ReadOnlySeString Text => page.ReadString(offset, offset);
-        public global::Lumina.Excel.RowRef DefineVaue => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4), new System.Type[] { typeof(Item), typeof(Quest), typeof(ENpcBase), typeof(EObjName), typeof(Level) }, -635953115, page.Language);
+        public global::Lumina.Excel.RowRef DefineVaue => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4), new System.Type[]
+        {
+            typeof(Item), typeof(Quest), typeof(ENpcBase), typeof(EObjName), typeof(Level)
+        }, -635953115, page.Language);
 
         static public QuestDefineClient Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row, ushort subrow) => new QuestDefineClient(page, offset, row, subrow);
     }

@@ -20,11 +20,27 @@ namespace Simulant.Tests
                 sizeof(DespawnCharacterPacket) == 1, "网络生成或删除包的大小发生了变化。");
             Assert((int)Marshal.OffsetOf(typeof(SpawnNpcPacket), nameof(SpawnNpcPacket.Common)) == 0x10,
                 "NPC 生成包的共用数据偏移不正确。");
-            var fields = new[] { "MainhandWeaponModel", "OffhandWeaponModel", "Equipment", "Name", "Customize" };
-            var offsets = new[] { 0x10, 0x18, 0x1FC, 0x232, 0x252 };
+            var fields = new[]
+            {
+                "MainhandWeaponModel",
+                "OffhandWeaponModel",
+                "Equipment",
+                "Name",
+                "Customize"
+            };
+            var offsets = new[]
+            {
+                0x10,
+                0x18,
+                0x1FC,
+                0x232,
+                0x252
+            };
+
             for (var i = 0; i < fields.Length; i++)
                 Assert((int)Marshal.OffsetOf(typeof(CommonSpawnData), fields[i]) == offsets[i],
                     "网络包字段偏移不正确：" + fields[i]);
+
             Assert((int)Marshal.OffsetOf(typeof(DespawnCharacterPacket), nameof(DespawnCharacterPacket.Index)) == 0,
                 "删除包必须以网络槽位编号开头。");
         }
@@ -33,11 +49,21 @@ namespace Simulant.Tests
         {
             GameDataService.Instance.GetSheet<BNpcBase>().Clear();
             GameDataService.Instance.GetSheet<BNpcName>().Clear();
-            GameDataService.Instance.GetSheet<BNpcBase>()[42] = new BNpcBase { ModelChara = 321, Battalion = 4 };
-            GameDataService.Instance.GetSheet<BNpcName>()[84] = new BNpcName { Singular = "测试魔物" };
+            GameDataService.Instance.GetSheet<BNpcBase>()[42] = new BNpcBase
+            {
+                ModelChara = 321,
+                Battalion = 4
+            };
+            GameDataService.Instance.GetSheet<BNpcName>()[84] = new BNpcName
+            {
+                Singular = "测试魔物"
+            };
             var spec = new NetworkNpcSpawnSpec
             {
-                BNpcBaseId = 42, BNpcNameId = 84, Level = 90, Pos = new Vector3(1, 2, 3)
+                BNpcBaseId = 42,
+                BNpcNameId = 84,
+                Level = 90,
+                Pos = new Vector3(1, 2, 3)
             };
             var packet = spec.ToPacket(7);
             var common = packet.Common;
@@ -66,9 +92,22 @@ namespace Simulant.Tests
         public static unsafe void NetworkNpcDefaultEquipmentPreservesBodyWeaponsAndOverrides()
         {
             var data = GameDataService.Instance;
-            data.GetSheet<BNpcBase>()[17835] = new BNpcBase { ModelChara = 3057, Battalion = 4, NpcEquip = 2106 };
-            data.GetSheet<NpcEquip>()[2106] = new NpcEquip { ModelBody = 0x10001, ModelMainHand = 0x100041F53 };
-            var spec = new NetworkNpcSpawnSpec { BNpcBaseId = 17835, Name = "暗之巫女" };
+            data.GetSheet<BNpcBase>()[17835] = new BNpcBase
+            {
+                ModelChara = 3057,
+                Battalion = 4,
+                NpcEquip = 2106
+            };
+            data.GetSheet<NpcEquip>()[2106] = new NpcEquip
+            {
+                ModelBody = 0x10001,
+                ModelMainHand = 0x100041F53
+            };
+            var spec = new NetworkNpcSpawnSpec
+            {
+                BNpcBaseId = 17835,
+                Name = "暗之巫女"
+            };
             var packet = spec.ToPacket(1);
             Assert(packet.Common.ModelChara == 3057 && packet.Common.Equipment[1] == 0x10001 &&
                 packet.Common.MainhandWeaponModel == 0x100041F53,
@@ -77,8 +116,14 @@ namespace Simulant.Tests
                 "读取 NPC 默认装备不得改写调用者的生成参数。");
             data.GetSheet<NpcEquip>()[2106] = new NpcEquip
             {
-                ModelBody = 0x10001, ModelRightRing = 8, ModelLeftRing = 9, ModelMainHand = 0x100041F53,
-                DyeBody = 3, Dye2Body = 4, DyeMainHand = 5, Dye2MainHand = 6
+                ModelBody = 0x10001,
+                ModelRightRing = 8,
+                ModelLeftRing = 9,
+                ModelMainHand = 0x100041F53,
+                DyeBody = 3,
+                Dye2Body = 4,
+                DyeMainHand = 5,
+                Dye2MainHand = 6
             };
             packet = spec.ToPacket(2);
             Assert(packet.Common.Equipment[1] == 0x03010001 && packet.Common.ModelStain2[1] == 4 &&
@@ -194,39 +239,82 @@ namespace Simulant.Tests
         public static void NetworkSpawnRejectsInvalidValuesBeforeUsingGameData()
         {
             var spec = CreateSpec();
-            foreach (var value in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+
+            foreach (var value in new[]
             {
-                foreach (var position in new[] { new Vector3(value, 0, 0), new Vector3(0, value, 0), new Vector3(0, 0, value) })
+                float.NaN,
+                float.PositiveInfinity,
+                float.NegativeInfinity
+            }
+
+            )
+            {
+                foreach (var position in new[]
+                {
+                    new Vector3(value, 0, 0),
+                    new Vector3(0, value, 0),
+                    new Vector3(0, 0, value)
+                }
+
+                )
                 {
                     spec.Pos = position;
                     Throws<ArgumentOutOfRangeException>(() => spec.ToPacket(1));
                 }
+
                 spec.Pos = Vector3.Zero;
                 spec.Heading = value;
                 Throws<ArgumentOutOfRangeException>(() => spec.ToPacket(1));
             }
-            spec = CreateSpec(); spec.Level = 0;
+
+            spec = CreateSpec();
+            spec.Level = 0;
             Throws<ArgumentOutOfRangeException>(() => spec.ToPacket(1));
-            spec = CreateSpec(); spec.BNpcBaseId = 0;
+            spec = CreateSpec();
+            spec.BNpcBaseId = 0;
             Throws<ArgumentOutOfRangeException>(() => spec.ToPacket(1));
-            spec = CreateSpec(); spec.MaxHealthPoints = 0;
+            spec = CreateSpec();
+            spec.MaxHealthPoints = 0;
             Throws<ArgumentOutOfRangeException>(() => spec.ToPacket(1));
-            spec = CreateSpec(); spec.HealthPoints = 0;
+            spec = CreateSpec();
+            spec.HealthPoints = 0;
             Throws<ArgumentOutOfRangeException>(() => spec.ToPacket(1));
-            spec = CreateSpec(); spec.HealthPoints = spec.MaxHealthPoints + 1;
+            spec = CreateSpec();
+            spec.HealthPoints = spec.MaxHealthPoints + 1;
             Throws<ArgumentOutOfRangeException>(() => spec.ToPacket(1));
-            spec = CreateSpec(); spec.MaxResourcePoints = 0; spec.ResourcePoints = 1;
+            spec = CreateSpec();
+            spec.MaxResourcePoints = 0;
+            spec.ResourcePoints = 1;
             Throws<ArgumentOutOfRangeException>(() => spec.ToPacket(1));
-            spec = CreateSpec(); spec.MaxResourcePoints = 0;
+            spec = CreateSpec();
+            spec.MaxResourcePoints = 0;
             Assert(spec.ToPacket(1).Common.ResourcePoints == 0, "无资源条的实体应允许当前值和最大值同时为零。");
-            foreach (var length in new[] { 0, 9, 11 })
+
+            foreach (var length in new[]
             {
-                spec = CreateSpec(); spec.Equipment = new uint[length];
+                0,
+                9,
+                11
+            }
+
+            )
+            {
+                spec = CreateSpec();
+                spec.Equipment = new uint[length];
                 Throws<ArgumentException>(() => spec.ToPacket(1));
             }
-            foreach (var length in new[] { 0, 25, 27 })
+
+            foreach (var length in new[]
             {
-                spec = CreateSpec(); spec.Customize = new byte[length];
+                0,
+                25,
+                27
+            }
+
+            )
+            {
+                spec = CreateSpec();
+                spec.Customize = new byte[length];
                 Throws<ArgumentException>(() => spec.ToPacket(1));
             }
         }
@@ -238,7 +326,11 @@ namespace Simulant.Tests
             var spec = CreateSpec();
             spec.ModelCharaId = null;
             Throws<InvalidOperationException>(() => spec.ToPacket(1));
-            GameDataService.Instance.GetSheet<BNpcBase>()[42] = new BNpcBase { ModelChara = 456, Battalion = 6 };
+            GameDataService.Instance.GetSheet<BNpcBase>()[42] = new BNpcBase
+            {
+                ModelChara = 456,
+                Battalion = 6
+            };
             Assert(spec.ToPacket(1).Common.ModelChara == 456 && spec.ToPacket(1).Common.Battalion == 4,
                 "只覆盖阵营时，模型仍应来自 客户端表，阵营不能被表值覆盖。");
             spec.Name = null;
@@ -250,27 +342,47 @@ namespace Simulant.Tests
 
         private static NetworkNpcSpawnSpec CreateSpec() => new NetworkNpcSpawnSpec
         {
-            BNpcBaseId = 42, BNpcNameId = 84, Level = 90, ModelCharaId = 321, Battalion = 4, Name = "测试单位"
+            BNpcBaseId = 42,
+            BNpcNameId = 84,
+            Level = 90,
+            ModelCharaId = 321,
+            Battalion = 4,
+            Name = "测试单位"
         };
 
         private static unsafe string ReadName(SpawnNpcPacket packet)
         {
             var length = 0;
-            while (length < 32 && packet.Common.Name[length] != 0) length++;
+
+            while (length < 32 && packet.Common.Name[length] != 0)
+                length++;
+
             var bytes = new byte[length];
-            for (var i = 0; i < length; i++) bytes[i] = packet.Common.Name[i];
+
+            for (var i = 0; i < length; i++)
+                bytes[i] = packet.Common.Name[i];
+
             return new UTF8Encoding(false, true).GetString(bytes);
         }
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
-        private static void Throws<T>(System.Action action) where T : Exception
+        private static void Throws<T>(System.Action action)
+            where T : Exception
         {
-            try { action(); }
-            catch (T) { return; }
+            try
+            {
+                action();
+            }
+            catch (T)
+            {
+                return;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
     }

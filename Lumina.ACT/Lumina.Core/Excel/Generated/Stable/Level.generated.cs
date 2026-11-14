@@ -25,7 +25,10 @@ namespace Lumina.Excel.Sheets
         public float Yaw => page.ReadFloat32(offset + 12);
         public float Radius => page.ReadFloat32(offset + 16);
         public global::Lumina.Excel.RowRef Object => (((( /* Type */page.ReadUInt8(offset + 32))) == 8) ? global::Lumina.Excel.RowRef.Create<ENpcBase>(page.Module, page.ReadUInt32(offset + 20), page.Language) : (((( /* Type */page.ReadUInt8(offset + 32))) == 9) ? global::Lumina.Excel.RowRef.Create<BNpcBase>(page.Module, page.ReadUInt32(offset + 20), page.Language) : (((( /* Type */page.ReadUInt8(offset + 32))) == 12) ? global::Lumina.Excel.RowRef.Create<Aetheryte>(page.Module, page.ReadUInt32(offset + 20), page.Language) : (((( /* Type */page.ReadUInt8(offset + 32))) == 14) ? global::Lumina.Excel.RowRef.Create<GatheringPoint>(page.Module, page.ReadUInt32(offset + 20), page.Language) : (((( /* Type */page.ReadUInt8(offset + 32))) == 45) ? global::Lumina.Excel.RowRef.Create<EObj>(page.Module, page.ReadUInt32(offset + 20), page.Language) : (global::Lumina.Excel.RowRef.CreateUntyped(page.ReadUInt32(offset + 20), page.Language)))))));
-        public global::Lumina.Excel.RowRef EventId => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 24), new System.Type[] { typeof(TripleTriad), typeof(Adventure), typeof(Opening), typeof(Quest) }, -43299377, page.Language);
+        public global::Lumina.Excel.RowRef EventId => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 24), new System.Type[]
+        {
+            typeof(TripleTriad), typeof(Adventure), typeof(Opening), typeof(Quest)
+        }, -43299377, page.Language);
         public global::Lumina.Excel.RowRef<Map> Map => new global::Lumina.Excel.RowRef<Map>(page.Module, (uint)page.ReadUInt16(offset + 28), page.Language);
         public global::Lumina.Excel.RowRef<TerritoryType> Territory => new global::Lumina.Excel.RowRef<TerritoryType>(page.Module, (uint)page.ReadUInt16(offset + 30), page.Language);
         public byte Type => page.ReadUInt8(offset + 32);

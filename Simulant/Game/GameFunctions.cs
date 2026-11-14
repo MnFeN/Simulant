@@ -9,9 +9,7 @@ namespace Simulant.Game
     public static class GameFunctions
     {
 
-
         #region Common
-
         internal static void CheckStatus([CallerMemberName] string callerNameAuto = null)
             => CheckStatusCore(callerNameAuto);
         internal static void CheckStatus(IntPtr ptr1, [CallerMemberName] string callerNameAuto = null)

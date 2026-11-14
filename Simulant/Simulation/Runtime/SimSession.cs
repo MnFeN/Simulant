@@ -45,19 +45,25 @@ namespace Simulant.Simulation.Runtime
         {
             if (Monitor.IsEntered(_lifecycleLock) || _scheduler?.IsSchedulerThread == true)
                 throw new InvalidOperationException("不能在本会话的启动、停止或时间轴节点内重启会话，请等待当前调用退出后再开始。");
+
             lock (_lifecycleLock)
             {
                 if (_disposed)
                     throw new ObjectDisposedException(nameof(SimSession));
+
                 if (IsRunning)
                     throw new InvalidOperationException("SimSession 已在运行中。");
 
                 StopCore();
+
                 if (_disposed)
                     throw new ObjectDisposedException(nameof(SimSession));
+
                 if (HasPendingCleanup)
                     throw new InvalidOperationException("上次模拟的实体或场地标点尚未完全清理，请先停止并重试清理。");
+
                 _scheduler = new SimScheduler(HandleFailure);
+
                 try
                 {
                     _entityManager.Scheduler = _scheduler;
@@ -67,6 +73,7 @@ namespace Simulant.Simulation.Runtime
                     _entityManager.PlayerBehavior = _host.Configuration.SimulatedParty.Copy();
                     _logic.Prepare();
                     var waymarks = _preset.Waymarks;
+
                     if (waymarks != null)
                     {
                         var payload = waymarks.ToPlaceJson();
@@ -74,6 +81,7 @@ namespace Simulant.Simulation.Runtime
                         _waymarksPendingCleanup = true;
                         TriggernometryInterop.InvokeNamedCallback("place", payload);
                     }
+
                     _scheduler.Schedule(0, _logic.Start, "初始化模拟");
                     _scheduler.Start();
                 }
@@ -90,25 +98,42 @@ namespace Simulant.Simulation.Runtime
             Interlocked.Exchange(ref _failureRetained, 1);
             var reason = error is SimMechanicFailedException ? error.Message :
                 $"节点「{node ?? "未命名"}」执行失败：{error.Message}";
+
             try
             {
-                if (error is SimMechanicFailedException) _host.LogWarning(reason);
-                else _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{error}");
+                if (error is SimMechanicFailedException)
+                    _host.LogWarning(reason);
+                else
+                    _host.LogError($"时间轴节点「{node ?? "未命名"}」执行失败：{error}");
             }
             finally
             {
                 try
                 {
-                    try { TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + reason); }
-                    catch (Exception chatError) { _host.LogWarning("模拟错误的聊天提示发送失败：" + chatError.Message); }
+                    try
+                    {
+                        TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + reason);
+                    }
+                    catch (Exception chatError)
+                    {
+                        _host.LogWarning("模拟错误的聊天提示发送失败：" + chatError.Message);
+                    }
                 }
                 finally
                 {
                     // 当前判定的演出已提交；取消后续机制后留出两秒，再停止角色行为。
                     // 普通执行异常仍立即中断，手动停止可提前结束等待。
-                    if (error is SimMechanicFailedException) _scheduler.WaitForFailureDisplay(2);
-                    try { _entityManager.Interrupt(); }
-                    catch (Exception interruptError) { _host.LogError("中断模拟行为失败，已保留清理责任：" + interruptError); }
+                    if (error is SimMechanicFailedException)
+                        _scheduler.WaitForFailureDisplay(2);
+
+                    try
+                    {
+                        _entityManager.Interrupt();
+                    }
+                    catch (Exception interruptError)
+                    {
+                        _host.LogError("中断模拟行为失败，已保留清理责任：" + interruptError);
+                    }
                 }
             }
         }
@@ -121,6 +146,7 @@ namespace Simulant.Simulation.Runtime
                 StopCore();
                 return;
             }
+
             lock (_lifecycleLock)
                 StopCore();
         }
@@ -135,6 +161,7 @@ namespace Simulant.Simulation.Runtime
         private void Cleanup()
         {
             Interlocked.Exchange(ref _failureRetained, 0);
+
             try
             {
                 if (Interlocked.Exchange(ref _cleanupRequired, 0) != 0)
@@ -167,6 +194,7 @@ namespace Simulant.Simulation.Runtime
                 StopCore();
                 return;
             }
+
             lock (_lifecycleLock)
             {
                 _disposed = true;

@@ -13,13 +13,15 @@ namespace Simulant.Game
         {
             if (ptr == IntPtr.Zero)
                 throw new InvalidOperationException($"{callerName} 在 0x{offset:X} 处{opDesc}时指针为空。");
+
             return ptr;
         }
 
         public static string Hex(this IntPtr ptr) => $"{(ulong)ptr:X}";
 
-        public static T Read<T>(this IntPtr ptr, int offset = 0, 
-            [CallerMemberName] string callerName = "") where T : struct
+        public static T Read<T>(this IntPtr ptr, int offset = 0,
+            [CallerMemberName] string callerName = "")
+            where T : struct
         {
             ptr.ThrowIfZero(callerName, offset, "读取");
             return NamazuInterop.Plugin.Memory.Read<T>(ptr + offset);
@@ -39,23 +41,30 @@ namespace Simulant.Game
             return NamazuInterop.Plugin.Memory.ReadBytes(ptr + offset, count);
         }
 
-        public static MemoryField<T> Field<T>(this IntPtr ptr, int offset) where T : struct
+        public static MemoryField<T> Field<T>(this IntPtr ptr, int offset)
+            where T : struct
             => new MemoryField<T>(ptr, offset);
 
         public static MemoryBitField BitField(this IntPtr ptr, int offset, int bit)
             => new MemoryBitField(ptr, offset, bit);
 
-        public static TMemoryObject As<TMemoryObject>(this IntPtr ptr, int offset = 0, 
-            [CallerMemberName] string callerName = "") where TMemoryObject : struct, IMemoryObject
+        public static TMemoryObject As<TMemoryObject>(this IntPtr ptr, int offset = 0,
+            [CallerMemberName] string callerName = "")
+            where TMemoryObject : struct, IMemoryObject
         {
             // when the base pointer is null, always return a TMemoryObject which Ptr is 0.
             if (ptr.IsZero())
                 return new TMemoryObject();
-            return new TMemoryObject { Ptr = ptr + offset };
+
+            return new TMemoryObject
+            {
+                Ptr = ptr + offset
+            };
         }
 
-        public static void Write<T>(this IntPtr ptr, T value, int offset = 0, 
-            [CallerMemberName] string callerName = "") where T : struct
+        public static void Write<T>(this IntPtr ptr, T value, int offset = 0,
+            [CallerMemberName] string callerName = "")
+            where T : struct
         {
             ptr.ThrowIfZero(callerName, offset, "写入");
             NamazuInterop.Plugin.Memory.Write<T>(ptr + offset, value);
@@ -77,9 +86,11 @@ namespace Simulant.Game
         }
 
         /// <summary> 直接通过 GreyMagic 在指定的函数地址调用 CallInjected64。</summary>
-        public static T DirectCall<T>(this IntPtr ptr, params object[] args) where T : struct
+        public static T DirectCall<T>(this IntPtr ptr, params object[] args)
+            where T : struct
         {
             ptr.ThrowIfZero("Call", 0, "调用函数");
+
             // return NamazuInterop.Plugin.Memory.CallInjected64<T>(ptr, args);
             return NamazuInterop.Plugin.DirectCall<T>(ptr, args);
         }
@@ -95,7 +106,8 @@ namespace Simulant.Game
         }
 
         /// <summary> 使用自动复用的 FrameLock 窗口，在指定的函数地址调用 CallInjected64。</summary>
-        public static T Call<T>(this IntPtr ptr, params object[] args) where T : struct
+        public static T Call<T>(this IntPtr ptr, params object[] args)
+            where T : struct
         {
             ptr.ThrowIfZero("Call", 0, "调用函数");
 
@@ -114,13 +126,20 @@ namespace Simulant.Game
         public static void CallVFunc(this IntPtr objectPtr, int idx, params object[] args)
         {
             var vFuncPtr = GetVFuncPtr(objectPtr, idx);
-            vFuncPtr.Call(new object[] { objectPtr }.Concat(args).ToArray());
+            vFuncPtr.Call(new object[]
+            {
+                objectPtr
+            }.Concat(args).ToArray());
         }
 
-        public static T CallVFunc<T>(this IntPtr objectPtr, int idx, params object[] args) where T : struct
+        public static T CallVFunc<T>(this IntPtr objectPtr, int idx, params object[] args)
+            where T : struct
         {
             var vFuncPtr = GetVFuncPtr(objectPtr, idx);
-            return vFuncPtr.Call<T>(new object[] { objectPtr }.Concat(args).ToArray());
+            return vFuncPtr.Call<T>(new object[]
+            {
+                objectPtr
+            }.Concat(args).ToArray());
         }
     }
 }

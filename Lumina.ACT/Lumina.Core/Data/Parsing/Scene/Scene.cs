@@ -52,6 +52,7 @@ namespace Lumina.Data.Parsing.Scene
             // read layer groups
             br.Seek(start + layerGroupOffset);
             ret.LayerGroups = new LayerGroup[layerGroupCount];
+
             for (int i = 0; i < layerGroupCount; ++i)
             {
                 br.Seek(rewind + layerGroupOffset + (i * 4));

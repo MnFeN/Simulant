@@ -20,6 +20,7 @@ namespace Simulant.Simulation.Options
                 throw new ArgumentException("RandomEnum 选项不能为空。", nameof(enumChoices));
 
             Type enumType = enumChoices[0]?.GetType();
+
             if (enumType?.IsEnum != true)
                 throw new ArgumentException($"RandomEnum 选项类型 {enumType?.Name ?? "(null)"} 必须是 enum 枚举值。", nameof(enumChoices));
 
@@ -27,6 +28,7 @@ namespace Simulant.Simulation.Options
             {
                 var choice = enumChoices[i] ?? throw new ArgumentException("RandomEnum 选项不能包含 null。", nameof(enumChoices));
                 var type = choice.GetType();
+
                 if (type != enumType)
                 {
                     throw new ArgumentException($"RandomEnum 选项包含不同的枚举类型：{type.FullName}, {enumType.FullName}。", nameof(enumChoices));
@@ -67,10 +69,12 @@ namespace Simulant.Simulation.Options
                 throw new InvalidOperationException($"RandomEnum 存在循环引用：{typeof(T).FullName}.{@enum}。");
 
             T next;
+
             lock (_lock)
             {
                 next = choices[_rnd.Next(choices.Count)];
             }
+
             return ResolveRandom(next, visited);
         }
 

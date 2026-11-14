@@ -34,10 +34,16 @@ namespace Simulant.Core
             _autoInstall = autoInstall;
             _warning = warning;
             _runtime = runtime;
-            _http = new HttpClient(handler ?? new HttpClientHandler { SslProtocols = System.Security.Authentication.SslProtocols.Tls12 });
+            _http = new HttpClient(handler ?? new HttpClientHandler
+            {
+                SslProtocols = System.Security.Authentication.SslProtocols.Tls12
+            });
             _http.Timeout = Timeout.InfiniteTimeSpan;
             _http.DefaultRequestHeaders.UserAgent.ParseAdd("Simulant/" + currentVersion);
-            _http.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+            _http.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
+            {
+                NoCache = true
+            };
         }
 
         internal Task CheckAsync() => RunAsync(false);
@@ -47,23 +53,29 @@ namespace Simulant.Core
         {
             lock (_gate)
             {
-                if (_disposed) return;
+                if (_disposed)
+                    return;
+
                 if (_running)
                 {
                     _runtime("正在检查或安装更新，请稍候。");
                     return;
                 }
+
                 _running = true;
             }
 
             Version available = null;
             var source = "GitHub";
+
             string Source() => $"（数据源：{source}）";
+
             try
             {
                 // 在调用线程取得 ACT 登记的原始路径；从字节加载的程序集没有 Location。
                 var path = _pluginPath();
                 string tag = null;
+
                 try
                 {
                     tag = ParseReleaseTag(await GetTextAsync(ReleasesUrl).ConfigureAwait(false));
@@ -76,16 +88,19 @@ namespace Simulant.Core
                 }
 
                 _stop.Token.ThrowIfCancellationRequested();
+
                 if (_installedVersion != null && available <= _installedVersion)
                 {
                     _warning($"已从 {_currentVersion} 版本更新至 {_installedVersion} 版本，请重启 ACT{Source()}");
                     return;
                 }
+
                 if (available < _currentVersion || (!install && available == _currentVersion))
                 {
                     _runtime($"当前版本 {_currentVersion}，暂无更新。{Source()}");
                     return;
                 }
+
                 if (!install && !_autoInstall())
                 {
                     _warning($"当前版本 {_currentVersion}，检查到新版本 {available}，请在左侧菜单中下载更新{Source()}");
@@ -97,17 +112,25 @@ namespace Simulant.Core
                 {
                     tag = ParseReleaseTag(await GetTextAsync(ReleasesUrl).ConfigureAwait(false));
                     var githubVersion = ParseVersion(Uri.UnescapeDataString(tag));
-                    if (githubVersion < available) throw new InvalidDataException("GitHub 尚未提供检查到的新版本。");
+
+                    if (githubVersion < available)
+                        throw new InvalidDataException("GitHub 尚未提供检查到的新版本。");
+
                     available = githubVersion;
                     source = "GitHub";
                 }
+
                 await DownloadAndReplaceAsync(tag, available, path).ConfigureAwait(false);
                 _warning($"已从 {_currentVersion} 版本更新至 {available} 版本，请重启 ACT{Source()}");
             }
-            catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
+            catch (OperationCanceledException) when (_stop.IsCancellationRequested)
+            {
+            }
             catch (Exception error)
             {
-                if (_stop.IsCancellationRequested) return;
+                if (_stop.IsCancellationRequested)
+                    return;
+
                 if (available != null)
                     _warning($"当前版本 {_currentVersion}，检查到新版本 {available}，但访问 GitHub 下载失败，请在左侧菜单中手动安装更新{Source()}");
                 else if (install)
@@ -117,6 +140,7 @@ namespace Simulant.Core
                     source = "GitHub、123 网盘";
                     _warning($"从 GitHub 及 123 网盘尝试获取更新均失败。{Source()}");
                 }
+
                 _runtime("更新失败原因：" + error.Message);
             }
             finally
@@ -124,7 +148,9 @@ namespace Simulant.Core
                 lock (_gate)
                 {
                     _running = false;
-                    if (_disposed) ReleaseResources();
+
+                    if (_disposed)
+                        ReleaseResources();
                 }
             }
         }
@@ -134,6 +160,7 @@ namespace Simulant.Core
             using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token))
             {
                 timeout.CancelAfter(TimeSpan.FromSeconds(15));
+
                 using (var response = await _http.GetAsync(url, timeout.Token).ConfigureAwait(false))
                 {
                     response.EnsureSuccessStatusCode();
@@ -146,19 +173,24 @@ namespace Simulant.Core
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
                 throw new IOException("未找到 ACT 登记的插件文件，无法确定更新位置。");
+
             var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+
             try
             {
                 using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token))
                 {
                     timeout.CancelAfter(TimeSpan.FromMinutes(3));
                     var url = ReleasesUrl + "/download/" + tag + "/Simulant.dll";
+
                     using (var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false))
                     {
                         response.EnsureSuccessStatusCode();
+
                         using (var input = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                         using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, true))
                             await input.CopyToAsync(output, 81920, timeout.Token).ConfigureAwait(false);
+
                         if (response.Content.Headers.ContentLength.HasValue &&
                             new FileInfo(temporary).Length != response.Content.Headers.ContentLength.Value)
                             throw new InvalidDataException("下载的 DLL 长度不完整。");
@@ -166,8 +198,10 @@ namespace Simulant.Core
                 }
 
                 var assembly = AssemblyName.GetAssemblyName(temporary);
+
                 if (assembly.Name != "Simulant" || assembly.Version != version)
                     throw new InvalidDataException("下载的 DLL 名称或版本与发布版本不符。");
+
                 lock (_gate)
                 {
                     _stop.Token.ThrowIfCancellationRequested();
@@ -178,7 +212,8 @@ namespace Simulant.Core
             }
             finally
             {
-                if (File.Exists(temporary)) File.Delete(temporary);
+                if (File.Exists(temporary))
+                    File.Delete(temporary);
             }
         }
 
@@ -186,7 +221,10 @@ namespace Simulant.Core
         {
             var match = Regex.Match(html, "href=[\"'](?:https://github\\.com)?/MnFeN/Simulant/releases/tag/([^\"'#?]+)[\"']",
                 RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
-            if (!match.Success) throw new InvalidDataException("GitHub 发布页面没有可识别的版本。");
+
+            if (!match.Success)
+                throw new InvalidDataException("GitHub 发布页面没有可识别的版本。");
+
             var tag = WebUtility.HtmlDecode(match.Groups[1].Value);
             ParseVersion(Uri.UnescapeDataString(tag));
             return tag;
@@ -195,8 +233,13 @@ namespace Simulant.Core
         internal static Version ParseVersion(string text)
         {
             var value = text.Trim().TrimStart('\uFEFF').Trim();
-            if (value.StartsWith("v", StringComparison.OrdinalIgnoreCase)) value = value.Substring(1);
-            if (!Version.TryParse(value, out var version)) throw new InvalidDataException("更新版本号格式无效。");
+
+            if (value.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+                value = value.Substring(1);
+
+            if (!Version.TryParse(value, out var version))
+                throw new InvalidDataException("更新版本号格式无效。");
+
             return new Version(version.Major, version.Minor, Math.Max(0, version.Build), Math.Max(0, version.Revision));
         }
 
@@ -204,10 +247,14 @@ namespace Simulant.Core
         {
             lock (_gate)
             {
-                if (_disposed) return;
+                if (_disposed)
+                    return;
+
                 _stop.Cancel();
                 _disposed = true;
-                if (!_running) ReleaseResources();
+
+                if (!_running)
+                    ReleaseResources();
             }
         }
 

@@ -12,7 +12,12 @@ namespace Simulant.Simulation.Runtime
             public readonly uint Id;
             public readonly bool Instant;
 
-            public Step(uint id, bool instant = false) { Id = id; Instant = instant; }
+            public Step(uint id, bool instant = false)
+            {
+                Id = id;
+                Instant = instant;
+            }
+
             public static implicit operator Step(uint id) => new Step(id);
         }
 
@@ -23,7 +28,12 @@ namespace Simulant.Simulation.Runtime
         public bool Caster => MovingAction != 0;
 
         private SimJobActions(bool melee, uint movingAction, uint distantAction, params Step[] loop)
-        { Melee = melee; MovingAction = movingAction; DistantAction = distantAction; Loop = loop; }
+        {
+            Melee = melee;
+            MovingAction = movingAction;
+            DistantAction = distantAction;
+            Loop = loop;
+        }
 
         private static readonly Dictionary<Job, SimJobActions> Jobs = new Dictionary<Job, SimJobActions>
         {
@@ -56,16 +66,35 @@ namespace Simulant.Simulation.Runtime
         {
             switch (job)
             {
-                case Job.GLA: job = Job.PLD; break;
-                case Job.MRD: job = Job.WAR; break;
-                case Job.PGL: job = Job.MNK; break;
-                case Job.LNC: job = Job.DRG; break;
-                case Job.ROG: job = Job.NIN; break;
-                case Job.ARC: job = Job.BRD; break;
-                case Job.CNJ: job = Job.WHM; break;
-                case Job.THM: job = Job.BLM; break;
-                case Job.ACN: job = Job.SMN; break;
+                case Job.GLA:
+                    job = Job.PLD;
+                    break;
+                case Job.MRD:
+                    job = Job.WAR;
+                    break;
+                case Job.PGL:
+                    job = Job.MNK;
+                    break;
+                case Job.LNC:
+                    job = Job.DRG;
+                    break;
+                case Job.ROG:
+                    job = Job.NIN;
+                    break;
+                case Job.ARC:
+                    job = Job.BRD;
+                    break;
+                case Job.CNJ:
+                    job = Job.WHM;
+                    break;
+                case Job.THM:
+                    job = Job.BLM;
+                    break;
+                case Job.ACN:
+                    job = Job.SMN;
+                    break;
             }
+
             return Jobs.TryGetValue(job, out var actions) ? actions : null;
         }
     }

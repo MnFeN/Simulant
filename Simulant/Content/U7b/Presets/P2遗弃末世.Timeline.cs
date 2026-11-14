@@ -15,39 +15,53 @@ namespace Simulant.Content.U7b.Presets
         {
             _origin = Scheduler.ElapsedSeconds;
             var timeline = new SimTimeline();
+
             timeline.At(0, () =>
             {
                 MapEffect(0x11, 8);
                 _casters[0].Cast(0xBABC);
             }, "遗弃末世读条");
+
             timeline.At(6.961, () => MapEffect(0x11, 2), "遗弃末世全屏效果");
             timeline.At(7.9, () => _host.EnvironmentService.SetWeather(89, 2), "遗弃末世天气变化");
+
             timeline.At(8.568, () =>
             {
                 MapEffect(0x12, 4);
-                for (var slot = 0; slot < 8; slot++) { SetTrouble(slot); ApplyMarker(slot, _markers[slot]); }
+
+                for (var slot = 0; slot < 8; slot++)
+                {
+                    SetTrouble(slot);
+                    ApplyMarker(slot, _markers[slot]);
+                }
             }, "四层咏唱危机与初始钢扇分摊点名");
 
             for (var round = 0; round < 8; round++)
                 AddTowerRound(timeline, round);
+
             for (var pair = 0; pair < 4; pair++)
                 AddEndAttacks(timeline, pair);
 
             timeline.At(108.043, () => _casters[0].Cast(0xBABD), "制裁之光读条");
+
             timeline.At(113.043, () =>
             {
                 var remaining = Enumerable.Range(0, 8).Where(slot => _stacks[slot] != 0).ToArray();
+
                 if (remaining.Length != 0)
                     Fail(MechanicError.Rule("制裁之光", remaining, "结算时仍有咏唱危机层数。")
                         .WithAttribution(remaining, "自身未完成规定的踩塔消层"));
+
                 CompleteMechanic();
             }, "制裁之光检查剩余层数");
+
             timeline.At(116.043, () =>
             {
                 OnStop();
                 EntityManager.Clear();
                 Scheduler.Cancel();
             }, "回收遗弃末世实体与状态");
+
             // 使用显式原点，使移动的绝对截止时刻与整条机制轴一致。
             Scheduler.Schedule(_origin, () => Play(timeline), "播放遗弃末世时间轴");
         }
@@ -71,12 +85,14 @@ namespace Simulant.Content.U7b.Presets
             var round = _plan.Rounds[pair * 2 + 1];
             // 集合按下一轮塔的相对北布置；最后一轮集合与穿背使用场地正北。
             var northHeading = pair < 3 ? _plan.Rounds[pair * 2 + 2].NorthHeading : Math.PI;
+
             timeline.At(EndCast[pair], () =>
             {
                 // 上轮跳跃已改变实际落点；新一轮通过收包恢复中心与朝北面向。
                 _casters[0].Entity.ActorMove(new Vector3(ForsakenPlan.Center, _casters[0].Pos3D.Z), (float)Math.PI);
                 _casters[0].Cast(round.FutureEnd ? 0xBAD2u : 0xBAD3u);
             }, $"第 {pair + 1} 次{(round.FutureEnd ? "未来" : "过去")}终结读条");
+
             timeline.At(RowMin(JumpHit, pair) - 0.09, () =>
             {
                 for (var caster = 1; caster < 4; caster++)
@@ -87,21 +103,26 @@ namespace Simulant.Content.U7b.Presets
                     _casters[caster].SetReadyToDraw();
                 }
             }, $"第 {pair + 1} 次复制体出现");
+
             timeline.At(RowMin(JumpHit, pair), SelectJumpTargets, $"第 {pair + 1} 次选取最近四人");
+
             foreach (var moment in Enumerable.Range(0, 4).GroupBy(source => JumpHit[pair, source]))
             {
                 var sources = moment.ToArray();
                 timeline.At(moment.Key, () => ResolveJumps(round, sources), $"第 {pair + 1} 次近点圆判定");
             }
+
             foreach (var moment in Enumerable.Range(0, 4).GroupBy(source => CleaveHit[pair, source]))
             {
                 var sources = moment.ToArray();
                 timeline.At(moment.Key, () => ResolveCleaves(round, sources), $"第 {pair + 1} 次消灭之脚判定");
             }
+
             for (var caster = 0; caster < 4; caster++)
             {
                 var source = caster;
                 timeline.At(CleaveLock[pair, caster], () => LockCleave(round, source), $"第 {pair + 1} 次消灭之脚锁朝向 {caster + 1}");
+
                 if (caster != 0)
                 {
                     timeline.At(CleaveHit[pair, caster] + 3, () => _casters[source].Entity.PlayBlendTimeline(0x1E39),
@@ -110,10 +131,12 @@ namespace Simulant.Content.U7b.Presets
                         $"第 {pair + 1} 次隐藏复制体 {caster}");
                 }
             }
+
             timeline.At(SpellHit[pair * 2 + 1] + 0.15, () =>
                 PlanPartyMovement(Party.Select(actor => round.GatheringPosition(SimJobActions.For(actor.Job)?.Melee == true)).ToArray(),
                     GatheringArrival(pair), RowMax(CleaveLock, pair), northHeading),
                 $"安排第 {pair + 1} 次前后刀集合");
+
             if (pair == 3 && round.FutureEnd)
             {
                 var firstHit = RowMin(CleaveHit, pair);
@@ -128,7 +151,9 @@ namespace Simulant.Content.U7b.Presets
         {
             for (var slot = 0; slot < 8; slot++)
             {
-                if (slot == _selfSlot) continue;
+                if (slot == _selfSlot)
+                    continue;
+
                 // 解法只提供安全目的地和时间约束，出发、绕路、滑步与近战贪刀均由角色决定。
                 Party[slot].MoveForMechanic(destinations[slot], _origin + arriveAt, _origin + holdUntil, urgent, northHeading);
             }

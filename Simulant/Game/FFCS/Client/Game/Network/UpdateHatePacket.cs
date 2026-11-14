@@ -11,8 +11,10 @@ namespace Simulant.Game.FFCS.Client.Game.Network
         public const int Size = 0x48;
         public const int Capacity = 8;
 
-        [FieldOffset(0)] public byte MemberCount;
-        [FieldOffset(4)] public fixed byte Members[Capacity * UpdateHatePacketMember.Size];
+        [FieldOffset(0)]
+        public byte MemberCount;
+        [FieldOffset(4)]
+        public fixed byte Members[Capacity * UpdateHatePacketMember.Size];
 
         public UpdateHatePacketMember GetMember(int index)
         {
@@ -24,8 +26,10 @@ namespace Simulant.Game.FFCS.Client.Game.Network
         public void SetMember(int index, UpdateHatePacketMember member)
         {
             ValidateIndex(index);
+
             if (member.Enmity > 100)
                 throw new ArgumentOutOfRangeException(nameof(member), "仇恨百分比必须为 0-100。");
+
             fixed (byte* members = Members)
                 ((UpdateHatePacketMember*)members)[index] = member;
         }
@@ -41,7 +45,9 @@ namespace Simulant.Game.FFCS.Client.Game.Network
     public struct UpdateHatePacketMember
     {
         public const int Size = 8;
-        [FieldOffset(0)] public uint EntityId;
-        [FieldOffset(4)] public byte Enmity;
+        [FieldOffset(0)]
+        public uint EntityId;
+        [FieldOffset(4)]
+        public byte Enmity;
     }
 }

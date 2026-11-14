@@ -66,8 +66,10 @@ namespace Lumina.Data.Parsing
                 ret.EnableIndexBufferStreaming = br.ReadBoolean();
                 ret.EnableEdgeGeometry = br.ReadBoolean();
                 ret.Padding = br.ReadByte();
+
                 if (ret.EnableEdgeGeometry)
                     Console.WriteLine("Win32 file with EdgeGeometry enabled?");
+
                 return ret;
             }
         }
@@ -82,12 +84,14 @@ namespace Lumina.Data.Parsing
                 var elems = new List<VertexElement>();
                 // Read the vertex elements that we need
                 var thisElem = br.ReadStructure<VertexElement>();
+
                 do
                 {
                     elems.Add(thisElem);
                     thisElem = br.ReadStructure<VertexElement>();
                 }
                 while (thisElem.Stream != 255);
+
                 // Skip the number of bytes that we don't need to read
                 // We skip elems.Count * 9 because we had to read the invalid element
                 int toSeek = 17 * 8 - (elems.Count + 1) * 8;

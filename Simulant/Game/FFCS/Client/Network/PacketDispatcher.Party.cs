@@ -14,19 +14,25 @@ namespace Simulant.Game.FFCS.Client.Network
         {
             if (packet.MemberCount > UpdatePartyPacket.Capacity)
                 throw new ArgumentOutOfRangeException(nameof(packet), "小队更新包最多包含 8 名成员。");
+
             if (packet.MemberCount != 0 && packet.LeaderIndex >= packet.MemberCount)
                 throw new ArgumentOutOfRangeException(nameof(packet), "队长索引必须指向小队中的成员。");
+
             var function = HandleUpdatePartyPacketFuncPtr;
+
             if (function == IntPtr.Zero)
                 throw new InvalidOperationException("原生小队更新函数尚未定位。");
 
             var memory = Memory;
             var packetPtr = IntPtr.Zero;
+
             try
             {
                 packetPtr = memory.AllocateMemory(UpdatePartyPacket.Size);
+
                 if (packetPtr == IntPtr.Zero)
                     throw new InvalidOperationException("无法分配小队更新包的内存。");
+
                 memory.Write(packetPtr, packet);
                 function.Call(0u, packetPtr, (byte)0);
             }

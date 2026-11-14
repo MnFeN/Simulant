@@ -36,30 +36,30 @@ namespace Simulant.Content.U7b.Presets
                 "左上方三轮地火出现顺序（视角面向左上）",
                 ExaFlareOrder.Random,
                 new Map<ExaFlareOrder>
-                {
-                    [ExaFlareOrder.Random] = "随机",
+            {
+                [ExaFlareOrder.Random] = "随机",
                     [ExaFlareOrder.Line14_25_36] = "1/4列 - 2/5列 - 3/6列",
                     [ExaFlareOrder.Line14_36_25] = "1/4列 - 3/6列 - 2/5列",
                     [ExaFlareOrder.Line25_14_36] = "2/5列 - 1/4列 - 3/6列",
                     [ExaFlareOrder.Line25_36_14] = "2/5列 - 3/6列 - 1/4列",
                     [ExaFlareOrder.Line36_14_25] = "3/6列 - 1/4列 - 2/5列",
                     [ExaFlareOrder.Line36_25_14] = "3/6列 - 2/5列 - 1/4列",
-                }),
+            }),
 
             new ComboBoxOption<ExaFlareOrder>(
                 nameof(P5地火Logic.RightExaFlareOrder),
                 "右上方三轮地火出现顺序（视角面向右上）",
                 ExaFlareOrder.Random,
                 new Map<ExaFlareOrder>
-                {
-                    [ExaFlareOrder.Random] = "随机",
+            {
+                [ExaFlareOrder.Random] = "随机",
                     [ExaFlareOrder.Line14_25_36] = "1/4列 - 2/5列 - 3/6列",
                     [ExaFlareOrder.Line14_36_25] = "1/4列 - 3/6列 - 2/5列",
                     [ExaFlareOrder.Line25_14_36] = "2/5列 - 1/4列 - 3/6列",
                     [ExaFlareOrder.Line25_36_14] = "2/5列 - 3/6列 - 1/4列",
                     [ExaFlareOrder.Line36_14_25] = "3/6列 - 1/4列 - 2/5列",
                     [ExaFlareOrder.Line36_25_14] = "3/6列 - 2/5列 - 1/4列",
-                }),
+            }),
 
             new CheckBoxOption(
                 nameof(P5地火Logic.EnableAuxiliaryLines),
@@ -78,9 +78,12 @@ namespace Simulant.Content.U7b.Presets
     {
         [RandomEnum(Line14_25_36, Line14_36_25, Line25_14_36, Line25_36_14, Line36_14_25, Line36_25_14)]
         Random,
-        Line14_25_36, Line14_36_25, 
-        Line25_14_36, Line25_36_14, 
-        Line36_14_25, Line36_25_14
+        Line14_25_36,
+        Line14_36_25,
+        Line25_14_36,
+        Line25_36_14,
+        Line36_14_25,
+        Line36_25_14
     }
 
     internal partial class P5地火Logic : SimLogicBase
@@ -126,8 +129,10 @@ namespace Simulant.Content.U7b.Presets
             var rightOrder = ResolveExaFlareOrder(RightExaFlareOrder);
 
             var me = _host.EntityProvider.GetMyself();
+
             if (me == null || !me.IsAlive)
                 throw new InvalidOperationException("未找到有效的自身玩家，无法准备地火模拟。");
+
             var myIdx = GetFakePartyIndex(me);
 
             timeline.At(0, () => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
@@ -138,21 +143,22 @@ namespace Simulant.Content.U7b.Presets
                 Pos = new Vector3(100, 100, 0),
                 Heading = (float)PI,
             }, boss =>
-            {
-                if (UseSpreadDummies)
-                    GeneratePartyMembers(myIdx, () =>
-                    {
-                        SpreadPartyMembers(me, 3f);
-                        StartMechanic(boss, me, leftOrder, rightOrder);
-                    });
-                else
-                    StartMechanic(boss, me, leftOrder, rightOrder);
-            }), "生成地火本体与模拟小队");
+                       {
+                           if (UseSpreadDummies)
+                               GeneratePartyMembers(myIdx, () =>
+                               {
+                                   SpreadPartyMembers(me, 3f);
+                                   StartMechanic(boss, me, leftOrder, rightOrder);
+                               });
+                           else
+                               StartMechanic(boss, me, leftOrder, rightOrder);
+                       }), "生成地火本体与模拟小队");
         }
 
         private void StartMechanic(SimActor boss, Character me, List<int> leftOrder, List<int> rightOrder)
         {
             EntityManager.SetCombatTarget(boss);
+
             if (EnableAuxiliaryLines)
             {
                 CreateAuxiliaryLines();
@@ -161,6 +167,7 @@ namespace Simulant.Content.U7b.Presets
             LogExecute(boss, 0xC654);
 
             var mechanic = new SimTimeline();
+
             mechanic.At(0, () =>
             {
                 boss.Cast(0xBB3B); // 混沌末世 本体读条
@@ -172,6 +179,7 @@ namespace Simulant.Content.U7b.Presets
             {
                 var leftTime = ExaFlareGroupDelay * group * 2;
                 var rightTime = leftTime + ExaFlareGroupDelay;
+
                 for (int line = group * 2; line < group * 2 + 2; line++)
                 {
                     mechanic.At(leftTime, SingleExaFlare(boss, leftOrder[line], true));
@@ -215,6 +223,7 @@ namespace Simulant.Content.U7b.Presets
                 EntityManager.Delete(boss);
                 EntityManager.Clear();
             }, "回收模拟实体");
+
             Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体与小队就绪后开始地火");
         }
 
@@ -223,17 +232,65 @@ namespace Simulant.Content.U7b.Presets
             switch (order)
             {
                 case ExaFlareOrder.Line14_25_36:
-                    return new List<int> { 1, 4, 2, 5, 3, 6 };
+                    return new List<int>
+                    {
+                        1,
+                        4,
+                        2,
+                        5,
+                        3,
+                        6
+                    };
                 case ExaFlareOrder.Line14_36_25:
-                    return new List<int> { 1, 4, 3, 6, 2, 5 };
+                    return new List<int>
+                    {
+                        1,
+                        4,
+                        3,
+                        6,
+                        2,
+                        5
+                    };
                 case ExaFlareOrder.Line25_14_36:
-                    return new List<int> { 2, 5, 1, 4, 3, 6 };
+                    return new List<int>
+                    {
+                        2,
+                        5,
+                        1,
+                        4,
+                        3,
+                        6
+                    };
                 case ExaFlareOrder.Line25_36_14:
-                    return new List<int> { 2, 5, 3, 6, 1, 4 };
+                    return new List<int>
+                    {
+                        2,
+                        5,
+                        3,
+                        6,
+                        1,
+                        4
+                    };
                 case ExaFlareOrder.Line36_14_25:
-                    return new List<int> { 3, 6, 1, 4, 2, 5 };
+                    return new List<int>
+                    {
+                        3,
+                        6,
+                        1,
+                        4,
+                        2,
+                        5
+                    };
                 case ExaFlareOrder.Line36_25_14:
-                    return new List<int> { 3, 6, 2, 5, 1, 4 };
+                    return new List<int>
+                    {
+                        3,
+                        6,
+                        2,
+                        5,
+                        1,
+                        4
+                    };
                 default:
                     throw new ArgumentException("Invalid ExaFlareOrder: " + order);
             }
@@ -260,11 +317,13 @@ namespace Simulant.Content.U7b.Presets
                 i => ExecuteAndValidateExaFlare(initPos + dPos * (i + 1), heading),
                 "地火前进判定");
             var timeline = new SimTimeline();
+
             timeline.At(0, () => DummyCast(initPos, heading, 0xBB3C, 6f, onCast: () =>
             {
                 LogCast(boss, 0xBB3C, initPos, heading);
                 Play(steps);
             }), "地火初始预兆");
+
             return timeline;
         }
 
@@ -273,11 +332,13 @@ namespace Simulant.Content.U7b.Presets
             DummyExecute(pos, heading, 0xBB3D, 3f, () =>
             {
                 var player = _host.EntityProvider.GetMyself();
+
                 if (_exaArea.Contains(player.Pos, new Vector2(pos.X, pos.Y), heading))
                 {
                     _isPerfect = false;
                     throw new Simulant.Simulation.Mechanics.SimMechanicFailedException("地火判定失败：自身进入地火伤害范围。");
                 }
+
                 CompleteJudgement();
             });
         }
@@ -289,12 +350,14 @@ namespace Simulant.Content.U7b.Presets
                 if (!isSelf)
                 {
                     var player = _host.EntityProvider.GetMyself();
+
                     if (_spreadArea.Contains(player.Pos, new Vector2(pos.X, pos.Y), 0))
                     {
                         _isPerfect = false;
                         throw new Simulant.Simulation.Mechanics.SimMechanicFailedException("分散判定失败：自身进入其他队员的分散范围。");
                     }
                 }
+
                 CompleteJudgement();
             });
         }
@@ -308,7 +371,9 @@ namespace Simulant.Content.U7b.Presets
         private void TryReportPerfect()
         {
             // 网络生成可能延后实际判定；未完成或已取消的判定不能算作无伤完成。
-            if (!_feedbackDue || _remainingJudgements != 0 || !_isPerfect) return;
+            if (!_feedbackDue || _remainingJudgements != 0 || !_isPerfect)
+                return;
+
             _feedbackDue = false;
             TriggernometryInterop.InvokeNamedCallback("LockOn",
                 $"{_host.EntityProvider.GetMyself().Address}, m0489trg_a0c");
@@ -344,6 +409,7 @@ Color: 1, 1, 1, 0.5";
         {
             var myJob = me.Job;
             var role = JobsByRole.FirstOrDefault(pair => pair.Value.Contains(myJob)).Key;
+
             switch (role)
             {
                 case JobRole.Tank:
@@ -365,20 +431,25 @@ Color: 1, 1, 1, 0.5";
         {
             var myPos = me.Pos;
             var members = new List<SimActor>();
+
             for (int i = 1; i <= 8; i++)
             {
                 var member = EntityManager.GetPartyMember(i)
                     ?? throw new Exception($"无法获取队伍成员 {i}");
-                if (member.Address != me.Address) members.Add(member);
+
+                if (member.Address != me.Address)
+                    members.Add(member);
             }
 
             // 整组位置全部通过校验后再移动队友，布置失败时由会话统一清理。
             var positions = PlanSpreadPositions(myPos, members.Count, minDistance, new Random(),
                 moving ? members.Select(member => member.Pos).ToArray() : null, maxTravel: 28.5f);
+
             for (var i = 0; i < members.Count; i++)
             {
                 var member = members[i];
                 var pos = positions[i];
+
                 if (moving)
                     member.MoveForMechanic(pos, Scheduler.ElapsedSeconds + 5.3,
                         Scheduler.ElapsedSeconds + 6, urgent: true);

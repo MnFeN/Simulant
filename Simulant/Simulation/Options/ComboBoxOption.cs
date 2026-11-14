@@ -26,7 +26,7 @@ namespace Simulant.Simulation.Options
 
             if (_options.TryGetIndex((T)_default, out int index))
                 comboBox.SelectedIndex = index;
-            else 
+            else
                 throw new KeyNotFoundException("Default value not found in options: " + _default);
 
             return comboBox;
@@ -38,6 +38,7 @@ namespace Simulant.Simulation.Options
             {
                 return key;
             }
+
             return _default;
         }
     }

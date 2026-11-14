@@ -30,24 +30,28 @@ namespace Simulant.Utils
             string rawExpression = null, Func<int, bool> validatorOverride = null)
         {
             var validator = validatorOverride ?? GetArgCountValidator(expectedCount);
+
             if (!validator(givenCount))
                 throw new ArgumentException($"{funcName} 提供的参数数量 {givenCount} 不符合预期 ({expectedCount})。原始表达式：{rawExpression}");
         }
 
-        /// <summary> Get or build the argument count validator function from the required count expression. </summary> 
+        /// <summary> Get or build the argument count validator function from the required count expression. </summary>
         private static Func<int, bool> GetArgCountValidator(string requiredCount)
         {
             Func<int, bool> validator;
+
             lock (_lockValidators)
             {
                 if (_validators.TryGetValue(requiredCount, out validator))
                     return validator;
             }
+
             // "0, 1, 3-5, >=7"  "1, 2, 4, 6, 8, 10, ..."
             var parts = requiredCount.Replace(" ", "").Split(',').ToList();
             List<Func<int, bool>> checks = new List<Func<int, bool>>();
             int? last1 = null;
             int? last2 = null;
+
             foreach (var part in parts)
             {
                 // "1"
@@ -79,19 +83,24 @@ namespace Simulant.Utils
                 {
                     var d = last1 - last2
                         ?? throw new ArgumentException($"Invalid argument count expression: '...' \nIn:{requiredCount}");
+
                     if (d <= 0)
                         throw new ArgumentException($"Invalid argument count expression: {last2}, {last1}, ... \nIn:{requiredCount}");
+
                     checks.Add(i => i > last1 && (i - last1) % d == 0);
                     last1 = null;
                 }
                 else
                     throw new ArgumentException($"Invalid argument count expression: {part} \nIn:{requiredCount}");
             }
+
             validator = i => checks.Any(f => f(i));
+
             lock (_lockValidators)
             {
                 _validators[requiredCount] = validator;
             }
+
             return validator;
         }
 
@@ -99,13 +108,12 @@ namespace Simulant.Utils
         {
             string s = Regex.Escape(separator);
             char lb = '⏎';
-            return new Regex(
-            //   (?<=^|{s}): after a separator or start-of-line
+            return new Regex(//   (?<=^|{s}): after a separator or start-of-line
             //               (?:\\s|{lb})*\"[^\"]*\"(?:\\s|{lb})*: spaces? + " + text? + " + spaces?
             //                                                    (?:\\s|{lb})*'[^']*'(?:\\s|{lb})*: spaces? + ' + text? + ' + spaces?
             //                                                                                      [^{s}]*: any unquoted text
             //                                                                                              (?=$|{s}): before a separator or end-of-line
-                $"(?<=^|{s})((?:\\s|{lb})*\"[^\"]*\"(?:\\s|{lb})*|(?:\\s|{lb})*'[^']*'(?:\\s|{lb})*|[^{s}]*)(?=$|{s})",
+            $"(?<=^|{s})((?:\\s|{lb})*\"[^\"]*\"(?:\\s|{lb})*|(?:\\s|{lb})*'[^']*'(?:\\s|{lb})*|[^{s}]*)(?=$|{s})",
                 isCompiled ? RegexOptions.Compiled : RegexOptions.None
             );
         }
@@ -114,7 +122,7 @@ namespace Simulant.Utils
         internal static Regex reSplitArgEqual = BuildSplitArgRegex("=", true);
         internal static Regex reSplitArgPipe = BuildSplitArgRegex("|", true);
 
-        /// <summary> 
+        /// <summary>
         /// Split an expression with commas or other specified separators to a list of arguments. <br />
         /// If the argument contains separator, single/double quotes, it should be quoted like "xx,xx", 'xx,xx', 'xx"xx', "xx'xx".
         /// </summary>
@@ -125,6 +133,7 @@ namespace Simulant.Utils
             {
                 return Array.Empty<string>();
             }
+
             var reSingleArg = separator == "," ? reSplitArgComma
                             : separator == "=" ? reSplitArgEqual
                             : separator == "|" ? reSplitArgPipe
@@ -132,23 +141,27 @@ namespace Simulant.Utils
 
             var matches = reSingleArg.Matches(args);
             var result = new List<string>();
+
             foreach (Match match in matches)
             {
                 string currentMatch = match.Value.Trim();
                 int length = currentMatch.Length;
+
                 if (length >= 2
                     && currentMatch[0] == currentMatch[length - 1]
-                    && (currentMatch[0] == '\"' || currentMatch[0] == '\'')  // quoted string: "..." '...'
-                    )
+                    && (currentMatch[0] == '\"' || currentMatch[0] == '\'') // quoted string: "..." '...'
+                )
                 {
                     currentMatch = currentMatch.Substring(1, length - 2); // remove " / '
                 }
+
                 result.Add(currentMatch);
             }
+
             return result.ToArray();
         }
 
-        /// <summary> 
+        /// <summary>
         /// Pick the argument with the given index from a <see cref="string[]" />. <br />
         /// · <paramref name="args"/>: The source <see cref="string[]" />. <br />
         /// · <paramref name="index"/>: The selected index (0-based). <br />
@@ -397,30 +410,43 @@ namespace Simulant.Utils
             {
                 return rawArgs[index].ParseData<T>();
             }
+
             for (int i = 0; i < defaults.Length; i++)
             {
-                if (defaults[i].idx != index) continue;
+                if (defaults[i].idx != index)
+                    continue;
+
                 var value = defaults[i].val;
+
                 if (value == null)
                 {
                     if (!typeof(T).IsValueType || Nullable.GetUnderlyingType(typeof(T)) != null)
                         return default;
+
                     throw new ArgumentException($"默认参数 #{index} 的类型 {typeof(T).Name} 不可为 null。");
                 }
+
                 try
                 {
                     return (T)value;
                 }
-                catch { }
+                catch
+                {
+                }
+
                 // int 0 => uint/byte
                 try
                 {
                     return (T)Convert.ChangeType(value, typeof(T), CultureInfo.InvariantCulture);
                 }
-                catch { }
+                catch
+                {
+                }
+
                 // fallback
                 return value.ToDataString().ParseData<T>();
             }
+
             throw new ArgumentException($"缺少 {typeof(T).Name} 参数 #{index} 且未提供默认值。提供的参数：{string.Join(", ", rawArgs)}");
         }
 

@@ -19,12 +19,13 @@ namespace Lumina.Data.Files.Excel
         public ExcelDataHeader Header { get; protected set; }
         public Dictionary<uint, ExcelDataOffset> RowData { get; protected set; } = null;
 
-        internal readonly object ReaderLock = new object ();
+        internal readonly object ReaderLock = new object();
         public override unsafe void LoadFile()
         {
             // exd data is always in big endian
             Reader.IsLittleEndian = false;
             Header = ExcelDataHeader.Read(Reader);
+
             if (Header.Magic[0] != 'E' || Header.Magic[1] != 'X' || Header.Magic[2] != 'D' || Header.Magic[3] != 'F')
             {
                 throw new InvalidDataException("fucked exd file :(((((");
@@ -34,8 +35,10 @@ namespace Lumina.Data.Files.Excel
             var offsetSize = Unsafe.SizeOf<ExcelDataOffset>();
             var count = Header.IndexSize / offsetSize;
             var rowDataTmp = new ExcelDataOffset[count];
+
             for (int i = 0; i < count; i++)
                 rowDataTmp[i] = ExcelDataOffset.Read(Reader);
+
             RowData = rowDataTmp.ToDictionary(id => id.RowId, row => row);
         }
 

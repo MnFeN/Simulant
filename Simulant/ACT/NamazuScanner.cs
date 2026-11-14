@@ -12,7 +12,10 @@ namespace Simulant.ACT
 
         public object RawScanner
         {
-            get { return _scanner; }
+            get
+            {
+                return _scanner;
+            }
         }
 
         public NamazuScanner(object scanner)
@@ -23,59 +26,92 @@ namespace Simulant.ACT
         // Underlying fields
         public uint SizeOfCode
         {
-            get { return _scanner.SizeOfCode; }
+            get
+            {
+                return _scanner.SizeOfCode;
+            }
         }
 
         public uint CodeBase
         {
-            get { return _scanner.CodeBase; }
+            get
+            {
+                return _scanner.CodeBase;
+            }
         }
 
         public uint DataLength
         {
-            get { return _scanner._dataLength; }
+            get
+            {
+                return _scanner._dataLength;
+            }
         }
 
         public byte[] Data
         {
-            get { return _scanner._data; }
+            get
+            {
+                return _scanner._data;
+            }
         }
 
         public IntPtr BaseAddress
         {
-            get { return _scanner._baseAddress; }
+            get
+            {
+                return _scanner._baseAddress;
+            }
         }
 
         // Text section info
         public IntPtr TextSectionBase
         {
-            get { return _scanner.TextSectionBase; }
+            get
+            {
+                return _scanner.TextSectionBase;
+            }
         }
 
         public long TextSectionOffset
         {
-            get { return _scanner.TextSectionOffset; }
+            get
+            {
+                return _scanner.TextSectionOffset;
+            }
         }
 
         public int TextSectionSize
         {
-            get { return _scanner.TextSectionSize; }
+            get
+            {
+                return _scanner.TextSectionSize;
+            }
         }
 
         // Data section info
         public IntPtr DataSectionBase
         {
-            get { return _scanner.DataSectionBase; }
+            get
+            {
+                return _scanner.DataSectionBase;
+            }
         }
 
         public long DataSectionOffset
         {
-            get { return _scanner.DataSectionOffset; }
+            get
+            {
+                return _scanner.DataSectionOffset;
+            }
         }
 
         public int DataSectionSize
         {
-            get { return _scanner.DataSectionSize; }
+            get
+            {
+                return _scanner.DataSectionSize;
+            }
         }
 
         // Scanning methods
@@ -129,6 +165,7 @@ namespace Simulant.ACT
                 {
                 }
             }
+
             return IntPtr.Zero;
         }
     }

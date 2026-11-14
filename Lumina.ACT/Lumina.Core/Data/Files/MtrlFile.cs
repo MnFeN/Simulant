@@ -23,6 +23,7 @@ namespace Lumina.Data.Files
             FileHeader = MaterialFileHeader.Read(Reader);
             TextureOffsets = new TextureOffset[FileHeader.TextureCount];
             uint[] offsets = Reader.ReadUInt32Array(FileHeader.TextureCount);
+
             for (int i = 0; i < offsets.Length; i++)
             {
                 TextureOffsets[i].Offset = (ushort)offsets[i];
@@ -34,9 +35,11 @@ namespace Lumina.Data.Files
             Strings = Reader.ReadBytes(FileHeader.StringTableSize);
             // This seems to be a struct - do not know what it is
             Reader.Seek(Reader.BaseStream.Position + FileHeader.AdditionalDataSize);
+
             if (FileHeader.DataSetSize > 0)
             {
                 ColorSetInfo = Reader.ReadStructure<ColorSetInfo>();
+
                 if (FileHeader.DataSetSize > 512)
                     ColorSetDyeInfo = Reader.ReadStructure<ColorSetDyeInfo>();
             }

@@ -11,6 +11,7 @@ namespace Simulant.Game.FFCS.Client.Game.Object
 
         [SigPattern("48 8D 35 * * * * 81 FA")]
         public static IntPtr InstancePtr { get; set; }
+
         public static GameObjectManager Instance()
             => InstancePtr.As<GameObjectManager>();
 
@@ -29,24 +30,22 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         // 489-628: 140 objects from StandObjectManager (Lively Actors (Named/Unnamed ENPCs))
         // 629-728: 100 objects from ReactionEventObjectManager (Gatherables/Farm in Island Sanctuary)
         // 729-818:  90 objects from MJIManager and WKSManager (more Lively Actors)
-
         /// <summary> Pointers to GameObjects, sorted by ObjectIndex. Contains null pointers for inactive indexes. </summary>
-        public GameObjectPtrs IndexSorted 
+        public GameObjectPtrs IndexSorted
             => Ptr.As<GameObjectPtrs>(0);
 
         /// <summary> Pointers to active GameObjects, sorted by GameObject.GetGameObjectId(). </summary>
-        public GameObjectPtrs GameObjectIdSorted 
+        public GameObjectPtrs GameObjectIdSorted
             => Ptr.As<GameObjectPtrs>(GameObjectPtrs.Size); // 0x1998
 
         /// <summary> Pointers to active GameObjects with a valid GameObject.EntityId (!= E0000000), sorted by EntityId.  </summary>
-        public GameObjectPtrs EntityIdSorted 
+        public GameObjectPtrs EntityIdSorted
             => Ptr.As<GameObjectPtrs>(GameObjectPtrs.Size * 2); // 0x3330
 
-        public MemoryField<int> GameObjectIdSortedCount 
+        public MemoryField<int> GameObjectIdSortedCount
             => Ptr.Field<int>(GameObjectPtrs.Size * 3); // 0x4CC8
-        public MemoryField<int> EntityIdSortedCount 
+        public MemoryField<int> EntityIdSortedCount
             => Ptr.Field<int>(GameObjectPtrs.Size * 3 + sizeof(int)); // 0x4CCC
-
         /*
         /// <summary>
         /// Binary search for an object by GameObjectId, using the GameObjectId sorted list.
@@ -79,7 +78,9 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         {
             get
             {
-                if ((uint)index >= Count) throw new ArgumentOutOfRangeException(nameof(index));
+                if ((uint)index >= Count)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+
                 return Ptr.ReadPtr(index * IntPtr.Size).As<GameObject>();
             }
         }

@@ -168,6 +168,7 @@ namespace Lumina.Data.Parsing.Tex
             // Compute the centroid.
             var total = 0f;
             var centroid = new Vector3(0f);
+
             for (int i = 0; i < n; ++i)
             {
                 total += weights[i];
@@ -175,8 +176,10 @@ namespace Lumina.Data.Parsing.Tex
             }
 
             centroid /= total;
+
             // Accumulate the covariance matrix.
             var covariance = new Sym3x3(0f);
+
             for (int i = 0; i < n; ++i)
             {
                 var a = points[i] - centroid;
@@ -202,6 +205,7 @@ namespace Lumina.Data.Parsing.Tex
             m[3] = matrix[3] - evalue;
             m[4] = matrix[4];
             m[5] = matrix[5] - evalue;
+
             // Compute U
             var u = new Sym3x3();
             u[0] = (m[3] * m[5]) - (m[4] * m[4]);
@@ -210,12 +214,15 @@ namespace Lumina.Data.Parsing.Tex
             u[3] = (m[0] * m[5]) - (m[2] * m[2]);
             u[4] = (m[1] * m[2]) - (m[4] * m[0]);
             u[5] = (m[0] * m[3]) - (m[1] * m[1]);
+
             // Find the largest component.
             var mc = Math.Abs(u[0]);
             var mi = 0;
+
             for (int i = 1; i < 6; ++i)
             {
                 var c = Math.Abs(u[i]);
+
                 if (c > mc)
                 {
                     mc = c;
@@ -246,12 +253,15 @@ namespace Lumina.Data.Parsing.Tex
             m[3] = matrix[3] - evalue;
             m[4] = matrix[4];
             m[5] = matrix[5] - evalue;
+
             // Find the largest component.
             var mc = Math.Abs(m[0]);
             var mi = 0;
+
             for (int i = 1; i < 6; ++i)
             {
                 var c = Math.Abs(m[i]);
+
                 if (c > mc)
                 {
                     mc = c;
@@ -286,6 +296,7 @@ namespace Lumina.Data.Parsing.Tex
             var b = ((-2f / 27f) * c2 * c2 * c2) + ((1f / 3f) * c1 * c2) - c0;
             // Compute the root count check;
             var Q = (.25f * b * b) + ((1f / 27f) * a * a * a);
+
             // Test the multiplicity.
             if (float.Epsilon < Q)
                 return new Vector3(1f); // Only one root, which implies we have a multiple of the identity.
@@ -300,11 +311,14 @@ namespace Lumina.Data.Parsing.Tex
                 var l1 = ((1f / 3f) * c2) + (2f * rt * ct);
                 var l2 = ((1f / 3f) * c2) - (rt * (ct + (Math.Sqrt(3f) * st)));
                 var l3 = ((1f / 3f) * c2) - (rt * (ct - (Math.Sqrt(3f) * st)));
+
                 // Pick the larger.
                 if (Math.Abs(l2) > Math.Abs(l1))
                     l1 = l2;
+
                 if (Math.Abs(l3) > Math.Abs(l1))
                     l1 = l3;
+
                 // Get the eigenvector
                 return GetMultiplicity1Evector(matrix, (float)l1);
             }
@@ -313,12 +327,15 @@ namespace Lumina.Data.Parsing.Tex
                 // Q very close to 0
                 // Two roots
                 double rt;
+
                 if (b < 0.0f)
                     rt = -Math.Pow(-.5f * b, 1f / 3f);
                 else
                     rt = Math.Pow(.5f * b, 1f / 3f);
+
                 var l1 = ((1f / 3f) * c2) + rt;
                 var l2 = ((1f / 3f) * c2) - (2f * rt);
+
                 // Get the eigenvector
                 if (Math.Abs(l1) > Math.Abs(l2))
                     return GetMultiplicity2Evector(matrix, (float)l1);

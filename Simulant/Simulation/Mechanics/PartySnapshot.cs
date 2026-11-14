@@ -16,7 +16,9 @@ namespace Simulant.Simulation.Mechanics
 
         public PartyMemberSnapshot(SimActor actor, Vector2 position, int slot)
         {
-            if (slot < 0) throw new ArgumentOutOfRangeException(nameof(slot), "候选下标不能为负数。");
+            if (slot < 0)
+                throw new ArgumentOutOfRangeException(nameof(slot), "候选下标不能为负数。");
+
             ValidatePosition(position);
             Actor = actor;
             Position = position;
@@ -38,25 +40,41 @@ namespace Simulant.Simulation.Mechanics
         /// <summary>可直接传入纯坐标用于离线测试；此时成员的 Actor 可以为空。</summary>
         public PartySnapshot(IEnumerable<PartyMemberSnapshot> members)
         {
-            if (members == null) throw new ArgumentNullException(nameof(members));
+            if (members == null)
+                throw new ArgumentNullException(nameof(members));
+
             var values = members.ToArray();
+
             if (values.Select(member => member.Slot).Distinct().Count() != values.Length)
                 throw new ArgumentException("站位快照不能包含重复的候选下标。", nameof(members));
+
             Members = Array.AsReadOnly(values);
         }
 
         public static PartySnapshot Capture(IEnumerable<SimActor> candidates)
         {
-            if (candidates == null) throw new ArgumentNullException(nameof(candidates));
+            if (candidates == null)
+                throw new ArgumentNullException(nameof(candidates));
+
             var actors = candidates.ToArray();
             var members = new List<PartyMemberSnapshot>(actors.Length);
+
             for (var slot = 0; slot < actors.Length; slot++)
             {
                 var actor = actors[slot];
-                if (actor == null || !actor.IsActive) continue;
-                try { members.Add(new PartyMemberSnapshot(actor, actor.Pos, slot)); }
-                catch (InvalidOperationException) when (!actor.IsActive) { }
+
+                if (actor == null || !actor.IsActive)
+                    continue;
+
+                try
+                {
+                    members.Add(new PartyMemberSnapshot(actor, actor.Pos, slot));
+                }
+                catch (InvalidOperationException) when (!actor.IsActive)
+                {
+                }
             }
+
             return new PartySnapshot(members);
         }
 
@@ -75,7 +93,9 @@ namespace Simulant.Simulation.Mechanics
         public PartyMemberSnapshot Get(int slot)
         {
             foreach (var member in Members)
-                if (member.Slot == slot) return member;
+                if (member.Slot == slot)
+                    return member;
+
             throw new InvalidOperationException($"站位快照中没有候选下标为 {slot} 的有效角色。");
         }
 
@@ -88,7 +108,10 @@ namespace Simulant.Simulation.Mechanics
         public IReadOnlyList<PartyMemberSnapshot> Nearest(Vector2 center, int count, SimActor exclude = null)
         {
             PartyMemberSnapshot.ValidatePosition(center);
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count), "最近成员数量不能为负数。");
+
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count), "最近成员数量不能为负数。");
+
             return Array.AsReadOnly(Members.Where(member => !IsExcluded(member, exclude))
                 .OrderBy(member => Vector2.DistanceSquared(member.Position, center)).ThenBy(member => member.Slot).Take(count).ToArray());
         }

@@ -72,9 +72,23 @@ namespace Simulant.Tests.Native
                 Marshal.OffsetOf(typeof(UpdatePartyPacketMember), "Statuses").ToInt32() == 0x60 &&
                 Marshal.OffsetOf(typeof(UpdatePartyPacketMember), "EntityId").ToInt32() == 0x38,
                 "关键字段偏移不匹配。");
-            var packet = new UpdatePartyPacket { MemberCount = 8, LeaderIndex = 7, PartyId = 123 };
-            var member = new UpdatePartyPacketMember { EntityId = 0x10FF1234, CurrentHP = 300 };
-            member.SetStatus(29, new UpdatePartyPacketStatus { StatusId = 777, RemainingTime = 12.5f, SourceEntityId = 456 });
+            var packet = new UpdatePartyPacket
+            {
+                MemberCount = 8,
+                LeaderIndex = 7,
+                PartyId = 123
+            };
+            var member = new UpdatePartyPacketMember
+            {
+                EntityId = 0x10FF1234,
+                CurrentHP = 300
+            };
+            member.SetStatus(29, new UpdatePartyPacketStatus
+            {
+                StatusId = 777,
+                RemainingTime = 12.5f,
+                SourceEntityId = 456
+            });
             packet.SetMember(7, member);
             Assert(packet.GetMember(7).EntityId == member.EntityId && packet.GetMember(7).GetStatus(29).StatusId == 777 &&
                 packet.PartyId == 123, "末尾成员与末尾状态写入不得越界覆盖包尾元数据。");
@@ -87,11 +101,19 @@ namespace Simulant.Tests.Native
             using (var scene = new Scene())
             {
                 var previous = StatusManager.SetStatusFuncPtr;
+
                 try
                 {
                     StatusManager.SetStatusFuncPtr = PartyPlugin.StatusFunction;
-                    var manager = new StatusManager { Ptr = new IntPtr(0x700000) };
-                    var source = new GameObjectId { ObjectId = 0x40FF1234, Type = 2 };
+                    var manager = new StatusManager
+                    {
+                        Ptr = new IntPtr(0x700000)
+                    };
+                    var source = new GameObjectId
+                    {
+                        ObjectId = 0x40FF1234,
+                        Type = 2
+                    };
                     Assert(Marshal.SizeOf(typeof(GameObjectId)) == sizeof(ulong), "来源身份必须为 8 字节。");
                     Throws<ArgumentException>(() => scene.Plugin.Call<bool>(PartyPlugin.StatusFunction,
                         manager.Ptr, 29, (ushort)43, 12.5f, (ushort)3, source, true));
@@ -104,12 +126,18 @@ namespace Simulant.Tests.Native
                     Assert(!manager.SetStatus(29, 43, 1.96f, 4, source, true) &&
                         manager.GetStatus(29).Param.Get() == 4 && manager.GetStatus(29).RemainingTime.Get() == 1.96f,
                         "编号、来源不变时，原生返回 false 仍应正常更新参数和持续时间。");
-                    Assert(manager.SetStatus(0, 158, 30, 0, new GameObjectId { ObjectId = Scene.SelfId }, false),
+                    Assert(manager.SetStatus(0, 158, 30, 0, new GameObjectId
+                    {
+                        ObjectId = Scene.SelfId
+                    }, false),
                         "普通玩家来源也应能够设置状态。");
                     Assert((ulong)scene.Plugin.LastStatusArguments[5] == Scene.SelfId &&
                         !(bool)scene.Plugin.LastStatusArguments[6], "普通来源及刷新标志应保持原值。");
                 }
-                finally { StatusManager.SetStatusFuncPtr = previous; }
+                finally
+                {
+                    StatusManager.SetStatusFuncPtr = previous;
+                }
             }
         }
 
@@ -119,10 +147,12 @@ namespace Simulant.Tests.Native
                 Marshal.OffsetOf(typeof(StatusEffectListDoublePacket), "CurrentHP").ToInt32() == 0x16C &&
                 Marshal.OffsetOf(typeof(StatusEffectListDoublePacket), "Statuses").ToInt32() == 0x17C,
                 "完整状态包必须保持两组 30 槽与血量头部的原生布局。");
+
             using (var scene = new Scene())
             {
                 var actor = scene.Actors[0].Entity;
                 scene.Memory.Put(actor.Address + 0x1CE, (byte)37);
+
                 for (var i = 0; i < 60; i++)
                 {
                     var status = actor.Address + 0x23B8 + i * 16;
@@ -131,12 +161,14 @@ namespace Simulant.Tests.Native
                     scene.Memory.Put(status + 4, 10.5f + i);
                     scene.Memory.Put(status + 8, 0x100000000UL + (uint)(3000 + i));
                 }
+
                 actor.SetNetworkVitals(25000);
                 var packet = scene.Plugin.VitalsPackets.Single();
                 Assert(scene.Plugin.VitalsTargets.Single() == actor.Id && packet.CurrentHP == 25000 &&
                     packet.MaxHP == 60000 && packet.CurrentMP == 10000 && packet.MaxMP == 10000 &&
                     packet.ClassJob == 19 && packet.Level == 100 && packet.Level_2 == 100 && packet.DamageShield == 37,
                     "收包必须保留血蓝上限、默认魔力、职业、等级与护盾，且发送给所选网络实体。");
+
                 for (var i = 0; i < 60; i++)
                 {
                     var status = packet.GetStatus(i);
@@ -144,6 +176,7 @@ namespace Simulant.Tests.Native
                         status.RemainingTime == 10.5f + i && status.SourceEntityId == 3000 + i,
                         "更新血量不得清空或调换状态槽：" + i);
                 }
+
                 Assert(packet.GetStatus(0).StatusId == 1000 && packet.GetStatus(29).StatusId == 1029 &&
                     packet.GetStatus(30).StatusId == 1030 && packet.GetStatus(59).StatusId == 1059,
                     "前后半区交界和末尾状态必须保持对应关系。");
@@ -291,23 +324,46 @@ namespace Simulant.Tests.Native
 
         private static void VerifyChangedContext()
         {
-            foreach (var change in new[] { "进程句柄", "进程关闭", "内存实例", "小队地址", "界面地址" })
+            foreach (var change in new[]
+            {
+                "进程句柄",
+                "进程关闭",
+                "内存实例",
+                "小队地址",
+                "界面地址"
+            }
+
+            )
             {
                 using (var scene = new Scene())
                 {
                     scene.Show();
                     var writes = scene.Memory.WriteCount;
                     var packets = scene.Plugin.Packets.Count;
-                    if (change == "进程句柄") scene.Memory.ProcessHandle = new IntPtr(202);
-                    if (change == "进程关闭") scene.Memory.IsProcessOpen = false;
-                    if (change == "内存实例") scene.Plugin.Memory = new PartyMemory();
-                    if (change == "小队地址") GroupManager.InstancePtr += 0x1000;
-                    if (change == "界面地址") UIState.InstancePtr += 0x1000;
+
+                    if (change == "进程句柄")
+                        scene.Memory.ProcessHandle = new IntPtr(202);
+
+                    if (change == "进程关闭")
+                        scene.Memory.IsProcessOpen = false;
+
+                    if (change == "内存实例")
+                        scene.Plugin.Memory = new PartyMemory();
+
+                    if (change == "小队地址")
+                        GroupManager.InstancePtr += 0x1000;
+
+                    if (change == "界面地址")
+                        UIState.InstancePtr += 0x1000;
+
                     Throws<InvalidOperationException>(() => scene.Invoke("Restore", scene.Owner));
                     Assert(scene.Owned && scene.Memory.WriteCount == writes && scene.Plugin.Packets.Count == packets,
                         change + "变化时不得向旧世界恢复名单或状态。");
-                    if (change == "内存实例") Assert(scene.Plugin.Memory.WriteCount == 0,
+
+                    if (change == "内存实例")
+                        Assert(scene.Plugin.Memory.WriteCount == 0,
                         "更换内存实例后也不能把旧快照写入新进程。");
+
                     scene.Invoke("InvalidateWorld");
                     scene.Invoke("RestoreAll");
                     Assert(!scene.Owned && scene.Memory.WriteCount == writes && scene.Plugin.Packets.Count == packets,
@@ -327,19 +383,34 @@ namespace Simulant.Tests.Native
                 Thread invalidator = null;
                 var versionField = scene.Service.GetType().GetField("_worldVersion", Members);
                 var originalVersion = Convert.ToInt64(versionField.GetValue(scene.Service));
+
                 scene.Plugin.BeforeUpdateReturn = () =>
                 {
                     invalidator = new Thread(() =>
                     {
-                        try { scene.Invoke("InvalidateWorld"); }
-                        catch (Exception error) { invalidateFailure = error; }
-                        finally { invalidated.Set(); }
-                    }) { IsBackground = true };
+                        try
+                        {
+                            scene.Invoke("InvalidateWorld");
+                        }
+                        catch (Exception error)
+                        {
+                            invalidateFailure = error;
+                        }
+                        finally
+                        {
+                            invalidated.Set();
+                        }
+                    })
+                    {
+                        IsBackground = true
+                    };
+
                     invalidator.Start();
                     Assert(SpinWait.SpinUntil(() => Convert.ToInt64(versionField.GetValue(scene.Service)) != originalVersion, 5000),
                         "世界失效没有先发布新代次。");
                     Assert(!invalidated.IsSet, "世界失效应仍在等待当前恢复释放小队锁。");
                 };
+
                 Throws<InvalidOperationException>(() => scene.Invoke("Restore", scene.Owner));
                 Assert(invalidated.Wait(5000) && invalidator.Join(5000) && invalidateFailure == null,
                     "恢复退出后世界失效必须完成，不能互相死锁。");
@@ -359,20 +430,52 @@ namespace Simulant.Tests.Native
                 var writes = scene.Memory.WriteCount;
                 var invalid = new Action[]
                 {
-                    () => scene.Invoke("SetEnmity", scene.Owner, 123u, scene.Actors, new[] { 1, 2, 3 }),
-                    () => scene.Invoke("SetEnmity", scene.Owner, 0x40FF9999u, scene.Actors, new[] { 1, 2, 3 }),
-                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 1 }),
-                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 1, 2, 101 }),
-                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 1, 2, -1 }),
-                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, new[] { scene.Actors[0], scene.Actors[0] }, new[] { 1, 2 }),
-                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, new[] { scene.Outsider }, new[] { 1 })
+                    () => scene.Invoke("SetEnmity", scene.Owner, 123u, scene.Actors, new[]
+                    {
+                        1, 2, 3
+                    }),
+                    () => scene.Invoke("SetEnmity", scene.Owner, 0x40FF9999u, scene.Actors, new[]
+                    {
+                        1, 2, 3
+                    }),
+                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                    {
+                        1
+                    }),
+                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                    {
+                        1, 2, 101
+                    }),
+                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                    {
+                        1, 2, -1
+                    }),
+                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, new[]
+                    {
+                        scene.Actors[0], scene.Actors[0]
+                    }, new[]
+                    {
+                        1, 2
+                    }),
+                    () => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, new[]
+                    {
+                        scene.Outsider
+                    }, new[]
+                    {
+                        1
+                    })
                 };
+
                 foreach (var action in invalid)
                 {
                     Throws<ArgumentException>(action);
                     Assert(scene.Memory.WriteCount == writes, "任何仇恨参数不合法时，都必须在首个原生写入前拒绝。");
                 }
-                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 10, 100, 50 });
+
+                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                {
+                    10, 100, 50
+                });
                 Assert(scene.Memory.Read<int>(Scene.HateAddress + 0x100) == 3 &&
                     scene.Memory.Read<uint>(Scene.HateAddress + 0x104) == Scene.EnemyId &&
                     scene.Memory.Read<uint>(Scene.HateAddress) == scene.Actors[1].Id &&
@@ -396,7 +499,10 @@ namespace Simulant.Tests.Native
                 scene.Show();
                 scene.Plugin.FailHate = true;
                 Throws<InvalidOperationException>(() => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId,
-                    scene.Actors, new[] { 100, 50, 10 }));
+                    scene.Actors, new[]
+                {
+                    100, 50, 10
+                }));
                 Assert(scene.Owned && scene.InCombat && scene.Plugin.HatePackets.Count == 1,
                     "仇恨收包部分成功后抛错必须保留原始快照和临时入战恢复责任。");
                 Assert(scene.Memory.Allocations.SequenceEqual(scene.Memory.Freed), "失败的仇恨包也必须释放远程内存。");
@@ -405,12 +511,16 @@ namespace Simulant.Tests.Native
                 scene.AssertRestored();
                 Assert(!scene.InCombat, "仇恨发送失败后的整体清理仍必须恢复原先未入战状态。");
             }
+
             using (var scene = new Scene())
             {
                 scene.Show();
                 scene.Plugin.FailActorControl = true;
                 Throws<InvalidOperationException>(() => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId,
-                    scene.Actors, new[] { 100, 50, 10 }));
+                    scene.Actors, new[]
+                {
+                    100, 50, 10
+                }));
                 Assert(scene.Owned && scene.InCombat, "入战控制部分成功后抛错也必须保留恢复责任。");
                 scene.Plugin.FailActorControl = false;
                 scene.Invoke("RestoreAll");
@@ -425,7 +535,10 @@ namespace Simulant.Tests.Native
             {
                 scene.Memory.Put(scene.Actors[1].Entity.Address + 0x1D4, (byte)0x82);
                 scene.Show();
-                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 100, 50, 10 });
+                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                {
+                    100, 50, 10
+                });
                 scene.Invoke("RestoreAll");
                 scene.AssertRestored();
                 Assert(scene.InCombat && scene.Memory.Read<byte>(scene.Actors[1].Entity.Address + 0x1D4) == 0x82,
@@ -439,7 +552,10 @@ namespace Simulant.Tests.Native
             {
                 scene.Show();
                 scene.SelectTarget(IntPtr.Zero);
-                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 100, 50, 10 });
+                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                {
+                    100, 50, 10
+                });
                 Assert(scene.Plugin.HatePackets.Count == 0, "未选中对应目标时不应发送该目标的仇恨。");
                 scene.SelectTarget(scene.Plugin.Entities[Scene.EnemyId]);
                 scene.Invoke("RefreshEnmity", scene.Owner);
@@ -474,7 +590,10 @@ namespace Simulant.Tests.Native
             using (var scene = new Scene())
             {
                 scene.Show();
-                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 100, 50, 10 });
+                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                {
+                    100, 50, 10
+                });
                 scene.Plugin.FailActorControl = true;
                 Throws<InvalidOperationException>(() => scene.Invoke("RestoreAll"));
                 Assert(scene.Owned && !scene.InCombat, "退战控制部分成功后抛错时不能提前解除小队恢复责任。");
@@ -490,12 +609,17 @@ namespace Simulant.Tests.Native
             using (var scene = new Scene())
             {
                 scene.Show();
+
                 scene.Plugin.BeforeHateReturn = () =>
                 {
                     scene.SelectTarget(scene.Actors[0].Entity.Address);
                     scene.Memory.PutBytes(Scene.HateAddress, new byte[Hate.Size]);
                 };
-                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 100, 50, 10 });
+
+                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                {
+                    100, 50, 10
+                });
                 Assert(scene.Owned && scene.Plugin.HatePackets.Count == 1 &&
                     scene.Memory.Read<int>(Scene.HateAddress + 0x100) == 0,
                     "收包中途切到队友并清空仇恨不应被当作原生布局错误，也不能恢复旧目标的数据。");
@@ -509,12 +633,16 @@ namespace Simulant.Tests.Native
                 scene.Invoke("RestoreAll");
                 scene.AssertRestored();
             }
+
             using (var scene = new Scene())
             {
                 scene.Show();
                 scene.Plugin.BeforeHateReturn = () => scene.Memory.PutBytes(Scene.HateAddress, new byte[Hate.Size]);
                 Throws<InvalidOperationException>(() => scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId,
-                    scene.Actors, new[] { 100, 50, 10 }));
+                    scene.Actors, new[]
+                {
+                    100, 50, 10
+                }));
                 Assert(scene.Owned, "仍选中 Boss 但原生读回不符时，应继续报错并保留恢复责任。");
                 scene.Invoke("RestoreAll");
                 scene.AssertRestored();
@@ -526,7 +654,10 @@ namespace Simulant.Tests.Native
             using (var scene = new Scene())
             {
                 scene.Show();
-                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 100, 50, 10 });
+                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[]
+                {
+                    100, 50, 10
+                });
                 scene.Invoke("RemoveMember", scene.Owner, scene.Actors[0].Id);
                 Assert(scene.Owned && scene.Memory.Read<byte>(Scene.MainGroup + 0x7FDC) == 2,
                     "移除一个模拟队员后必须保留其余两人及原始恢复责任。");
@@ -545,12 +676,20 @@ namespace Simulant.Tests.Native
             using (var scene = new Scene())
             {
                 scene.Show();
+
                 for (var i = 1; i <= 2; i++)
                 {
                     var actor = scene.Actors[i].Entity;
                     actor.HP = (uint)(12000 + i);
                     actor.MP = (uint)(2300 + i);
-                    foreach (var slot in new[] { 0, 29 })
+
+                    foreach (var slot in new[]
+                    {
+                        0,
+                        29
+                    }
+
+                    )
                     {
                         var status = actor.Address + 0x23B8 + slot * 16;
                         scene.Memory.Put(status, (ushort)(1000 + i * 100 + slot));
@@ -559,16 +698,25 @@ namespace Simulant.Tests.Native
                         scene.Memory.Put(status + 8, (ulong)Scene.EnemyId);
                     }
                 }
+
                 scene.Invoke("RemoveMember", scene.Owner, scene.Actors[0].Id);
                 var packet = scene.Plugin.Packets.Last();
                 Assert(packet.MemberCount == 2, "移除一个成员后应只发送留下的两名队员。");
+
                 for (var i = 1; i <= 2; i++)
                 {
                     var member = packet.GetMember(i - 1);
                     Assert(member.EntityId == scene.Actors[i].Id && member.CurrentHP == 12000 + i &&
                         member.CurrentMP == 2300 + i && member.MaxHP == 60000 && member.MaxMP == 10000,
                         "更新名单必须读取当前血蓝量，不能重放初次入队时的数值。");
-                    foreach (var slot in new[] { 0, 29 })
+
+                    foreach (var slot in new[]
+                    {
+                        0,
+                        29
+                    }
+
+                    )
                     {
                         var status = member.GetStatus(slot);
                         Assert(status.StatusId == 1000 + i * 100 + slot && status.Param == i + slot &&
@@ -576,19 +724,40 @@ namespace Simulant.Tests.Native
                             "名单中的状态内容必须跟随留下队员的当前状态。");
                     }
                 }
+
                 scene.Invoke("RestoreAll");
                 scene.AssertRestored();
             }
         }
 
-        private static void Check(string name, Action action) { action(); _passed++; Console.WriteLine("通过：" + name); }
-        internal static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
-        private static void Throws<T>(Action action) where T : Exception
+        private static void Check(string name, Action action)
         {
-            try { action(); }
-            catch (T) { return; }
+            action();
+            _passed++;
+            Console.WriteLine("通过：" + name);
+        }
+
+        internal static void Assert(bool condition, string message)
+        {
+            if (!condition)
+                throw new Exception(message);
+        }
+
+        private static void Throws<T>(Action action)
+            where T : Exception
+        {
+            try
+            {
+                action();
+            }
+            catch (T)
+            {
+                return;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
+
         internal static void Set(object target, string name, object value)
             => target.GetType().GetField(name, Members).SetValue(target, value);
 
@@ -615,7 +784,10 @@ namespace Simulant.Tests.Native
             internal Scene()
             {
                 Plugin = new PartyPlugin(Memory, MainGroup);
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[] { new NamazuPlugin(Plugin) });
+                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
+                {
+                    new NamazuPlugin(Plugin)
+                });
                 GroupManager.InstancePtr = GroupAddress;
                 UIState.InstancePtr = UIAddress;
                 TargetSystem.InstancePtr = TargetAddress;
@@ -627,11 +799,13 @@ namespace Simulant.Tests.Native
                 Memory.Put(MainGroup + 0x7FD0, 654L);
                 Memory.Put(MainGroup + 0x7FD8, 1u);
                 Memory.Put(MainGroup + 0x7FDC, (byte)2);
+
                 for (var i = 0; i < 2; i++)
                 {
                     var member = MainGroup + i * PartyMember.Size;
                     OriginalOwners[i] = new IntPtr(0xD00000 + i * 0x100);
                     Memory.Put(member, OriginalOwners[i]);
+
                     for (var j = 0; j < PartyMember.StatusCount; j++)
                     {
                         var status = member + 8 + j * 16;
@@ -640,6 +814,7 @@ namespace Simulant.Tests.Native
                         Memory.Put(status + 4, j + 0.25f);
                         Memory.Put(status + 8, 0x200000000UL + (uint)j);
                     }
+
                     Memory.PutBytes(member + 0x3C8, Enumerable.Range(0, 24).Select(value => (byte)(value + i)).ToArray());
                     OriginalStatuses[i] = Memory.ReadBytes(member + 8, 0x3D8);
                     Memory.Put(member + 0x400, SelfId + (uint)i);
@@ -659,11 +834,22 @@ namespace Simulant.Tests.Native
                     Array.Copy(fullName, OriginalNames[i], fullName.Length);
                     Memory.PutBytes(member + 0x41C, OriginalNames[i]);
                 }
+
                 OriginalHate = Enumerable.Range(0, Hate.Size).Select(i => (byte)(i % 251)).ToArray();
                 Memory.PutBytes(HateAddress, OriginalHate);
 
                 var observations = new EntityObservation?[10];
-                foreach (var slot in new ushort[] { 0, 2, 4, 6, 8 })
+
+                foreach (var slot in new ushort[]
+                {
+                    0,
+                    2,
+                    4,
+                    6,
+                    8
+                }
+
+                )
                 {
                     var address = new IntPtr(0x300000 + slot * 0x10000);
                     var id = slot == 0 ? SelfId : slot == 6 ? EnemyId : 0x10FF0000u + slot;
@@ -683,35 +869,61 @@ namespace Simulant.Tests.Native
                     Memory.Put(address + 0x1CA, (byte)19);
                     Memory.Put(address + 0x1CB, (byte)100);
                 }
+
                 var registry = new EntityRegistry(slot => observations[slot], observations.Length);
                 var provider = new EntityProvider(registry, () => SelfId);
                 _manager = new SimEntityManager(new EntitySpawner(registry, provider));
                 typeof(SimEntityManager).GetProperty("Scheduler", Members).SetValue(_manager, _scheduler, null);
-                Actors = new[] { _manager.Attach((Character)registry.Get(2)), _manager.Attach((Character)registry.Get(0)),
-                    _manager.Attach((Character)registry.Get(4)) };
+                Actors = new[]
+                {
+                    _manager.Attach((Character)registry.Get(2)),
+                    _manager.Attach((Character)registry.Get(0)),
+                    _manager.Attach((Character)registry.Get(4))
+                };
                 Outsider = _manager.Attach((Character)registry.Get(8));
                 SelectTarget(Plugin.Entities[EnemyId]);
                 var host = (PluginHost)FormatterServices.GetUninitializedObject(typeof(PluginHost));
                 Set(host, "<PluginReady>k__BackingField", true);
                 Set(host, "EntityProvider", provider);
                 var firewallType = typeof(PluginHost).Assembly.GetType("Simulant.Core.Firewall.FirewallService", true);
-                var firewall = Activator.CreateInstance(firewallType, Members, null, new object[] { host }, null);
-                foreach (var name in new[] { "_receive", "_send" })
+                var firewall = Activator.CreateInstance(firewallType, Members, null, new object[]
+                {
+                    host
+                }, null);
+
+                foreach (var name in new[]
+                {
+                    "_receive",
+                    "_send"
+                }
+
+                )
                 {
                     var hook = Activator.CreateInstance(firewallType.GetNestedType("HookState", BindingFlags.NonPublic), true);
                     Set(hook, "Enabled", true);
                     Set(firewall, name, hook);
                 }
+
                 Set(host, "FirewallService", firewall);
                 Service = Activator.CreateInstance(typeof(PluginHost).Assembly.GetType("Simulant.Core.Party.SimPartyService", true),
-                    Members, null, new object[] { host }, null);
+                    Members, null, new object[]
+                {
+                    host
+                }, null);
             }
 
             internal object Invoke(string name, params object[] args)
             {
-                try { return Service.GetType().GetMethod(name, Members).Invoke(Service, args); }
-                catch (TargetInvocationException error) { throw error.InnerException; }
+                try
+                {
+                    return Service.GetType().GetMethod(name, Members).Invoke(Service, args);
+                }
+                catch (TargetInvocationException error)
+                {
+                    throw error.InnerException;
+                }
             }
+
             internal void Show() => Invoke("Show", Owner, Actors);
             internal void SelectTarget(IntPtr address) => Memory.Put(TargetAddress + 0x80, address);
             internal void AssertRestored()
@@ -719,6 +931,7 @@ namespace Simulant.Tests.Native
                 Assert(Memory.Read<byte>(MainGroup + 0x7FDC) == 2 && Memory.Read<uint>(MainGroup + 0x7FD8) == 1 &&
                     Memory.Read<long>(MainGroup + 0x7FC8) == 321 && Memory.Read<long>(MainGroup + 0x7FD0) == 654,
                     "原始人数、队长和小队编号必须恢复。");
+
                 for (var i = 0; i < 2; i++)
                 {
                     var pointer = MainGroup + i * PartyMember.Size;
@@ -733,8 +946,10 @@ namespace Simulant.Tests.Native
                         Memory.Read<byte>(pointer + 0x484) == 9 && Memory.Read<byte>(pointer + 0x46B) == 37 + i,
                         "名单包只能表达短名字，恢复还必须保留原64字节名字、位置、同步标志与护盾值。");
                 }
+
                 Assert(Memory.ReadBytes(HateAddress, Hate.Size).SequenceEqual(OriginalHate), "仇恨快照必须完整恢复。");
             }
+
             public void Dispose()
             {
                 Invoke("InvalidateWorld");
@@ -760,34 +975,51 @@ namespace Simulant.Tests.Native
 
         public void PutBytes(IntPtr address, byte[] data)
         {
-            for (var i = 0; i < data.Length; i++) _bytes[address.ToInt64() + i] = data[i];
+            for (var i = 0; i < data.Length; i++)
+                _bytes[address.ToInt64() + i] = data[i];
         }
+
         public byte[] ReadBytes(IntPtr address, int count)
         {
             var data = new byte[address == ShortReadAddress ? count - 1 : count];
-            for (var i = 0; i < data.Length; i++) _bytes.TryGetValue(address.ToInt64() + i, out data[i]);
+
+            for (var i = 0; i < data.Length; i++)
+                _bytes.TryGetValue(address.ToInt64() + i, out data[i]);
+
             return data;
         }
-        public T Read<T>(IntPtr address) where T : struct
+
+        public T Read<T>(IntPtr address)
+            where T : struct
         {
             var type = typeof(T);
             var valueType = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
             var size = Marshal.SizeOf(valueType);
             var pointer = Marshal.AllocHGlobal(size);
+
             try
             {
                 Marshal.Copy(ReadBytes(address, size), 0, pointer, size);
                 var value = Marshal.PtrToStructure(pointer, valueType);
                 return type.IsEnum ? (T)Enum.ToObject(type, value) : (T)value;
             }
-            finally { Marshal.FreeHGlobal(pointer); }
+            finally
+            {
+                Marshal.FreeHGlobal(pointer);
+            }
         }
-        public void Put<T>(IntPtr address, T value) where T : struct
+
+        public void Put<T>(IntPtr address, T value)
+            where T : struct
         {
             object data = value;
-            if (typeof(T).IsEnum) data = Convert.ChangeType(value, Enum.GetUnderlyingType(typeof(T)));
+
+            if (typeof(T).IsEnum)
+                data = Convert.ChangeType(value, Enum.GetUnderlyingType(typeof(T)));
+
             var size = Marshal.SizeOf(data);
             var pointer = Marshal.AllocHGlobal(size);
+
             try
             {
                 Marshal.StructureToPtr(data, pointer, false);
@@ -795,9 +1027,19 @@ namespace Simulant.Tests.Native
                 Marshal.Copy(pointer, bytes, 0, size);
                 PutBytes(address, bytes);
             }
-            finally { Marshal.FreeHGlobal(pointer); }
+            finally
+            {
+                Marshal.FreeHGlobal(pointer);
+            }
         }
-        public void Write<T>(IntPtr address, T value) where T : struct { WriteCount++; Put(address, value); }
+
+        public void Write<T>(IntPtr address, T value)
+            where T : struct
+        {
+            WriteCount++;
+            Put(address, value);
+        }
+
         public int WriteBytes(IntPtr address, byte[] data)
         {
             WriteCount++;
@@ -806,18 +1048,25 @@ namespace Simulant.Tests.Native
             PutBytes(address, bytes);
             return bytes.Length;
         }
+
         public IntPtr AllocateMemory(int size)
         {
             var address = new IntPtr(0x900000 + ++_allocations * 0x10000);
             Allocations.Add(address);
             return address;
         }
-        public bool FreeMemory(IntPtr address) { Freed.Add(address); return true; }
+
+        public bool FreeMemory(IntPtr address)
+        {
+            Freed.Add(address);
+            return true;
+        }
     }
 
     public sealed class PartyPlugin
     {
         public string State => "Ready";
+
         public readonly object CallScheduler = new object();
         private readonly object PluginUi = new object();
         public static readonly IntPtr NameFunction = new IntPtr(0x101), UpdateFunction = new IntPtr(0x102),
@@ -840,11 +1089,20 @@ namespace Simulant.Tests.Native
         public readonly List<object[]> ActorControls = new List<object[]>();
         public readonly Dictionary<uint, IntPtr> Entities = new Dictionary<uint, IntPtr>();
         public readonly IntPtr[] LastOwners = new IntPtr[8];
-        public PartyPlugin(PartyMemory memory, IntPtr group) { Memory = memory; _group = group; }
-        public T Call<T>(IntPtr function, params object[] args) where T : struct
+        public PartyPlugin(PartyMemory memory, IntPtr group)
+        {
+            Memory = memory;
+            _group = group;
+        }
+
+        public T Call<T>(IntPtr function, params object[] args)
+            where T : struct
         {
             ValidateArguments(args);
-            if (function == NameFunction) return (T)(object)((IntPtr)args[0] + 0x30);
+
+            if (function == NameFunction)
+                return (T)(object)((IntPtr)args[0] + 0x30);
+
             if (function == StatusFunction)
             {
                 LastStatusArguments = args;
@@ -858,6 +1116,7 @@ namespace Simulant.Tests.Native
                 Memory.Put(slot + 8, source);
                 return (T)(object)identityChanged;
             }
+
             if (function == HateFunction)
             {
                 PartyServiceTests.Assert(args.Length == 2 && args[0] is uint && args[1] is IntPtr,
@@ -870,20 +1129,26 @@ namespace Simulant.Tests.Native
                 HateTargets.Add((uint)args[0]);
                 var hate = UIState.InstancePtr + 8;
                 Memory.PutBytes(hate, new byte[Hate.Size]);
+
                 for (var i = 0; i < packet.MemberCount; i++)
                 {
                     var member = packet.GetMember(i);
                     Memory.Put(hate + i * 8, member.EntityId);
                     Memory.Put(hate + i * 8 + 4, (int)member.Enmity);
                 }
+
                 Memory.Put(hate + 0x100, (int)packet.MemberCount);
                 Memory.Put(hate + 0x104, (uint)args[0]);
                 var beforeReturn = BeforeHateReturn;
                 BeforeHateReturn = null;
                 beforeReturn?.Invoke();
-                if (FailHate) throw new InvalidOperationException("模拟仇恨收包部分成功后失败。");
+
+                if (FailHate)
+                    throw new InvalidOperationException("模拟仇恨收包部分成功后失败。");
+
                 return (T)(object)0L;
             }
+
             if (function == ControlFunction)
             {
                 ActorControls.Add(args);
@@ -891,14 +1156,20 @@ namespace Simulant.Tests.Native
                 var address = Entities[Convert.ToUInt32(args[0])] + 0x1D4;
                 var flags = Memory.Read<byte>(address);
                 Memory.Put(address, (byte)(Convert.ToUInt32(args[2]) == 0 ? flags & ~2 : flags | 2));
-                if (FailActorControl) throw new InvalidOperationException("模拟入战控制部分成功后失败。");
+
+                if (FailActorControl)
+                    throw new InvalidOperationException("模拟入战控制部分成功后失败。");
+
                 return (T)(object)IntPtr.Zero;
             }
+
             throw new InvalidOperationException("未知的小队测试原生返回值调用。");
         }
+
         public void Call(IntPtr function, params object[] args)
         {
             ValidateArguments(args);
+
             if (function == VitalsFunction)
             {
                 PartyServiceTests.Assert(args.Length == 3 && args[0] is uint && args[1] is IntPtr &&
@@ -914,6 +1185,7 @@ namespace Simulant.Tests.Native
                 Memory.Put(actor + 0x1B0, vitalsPacket.MaxHP);
                 Memory.Put(actor + 0x1B4, (uint)vitalsPacket.CurrentMP);
                 Memory.Put(actor + 0x1B8, (uint)vitalsPacket.MaxMP);
+
                 for (var i = 0; i < 60; i++)
                 {
                     var status = vitalsPacket.GetStatus(i);
@@ -923,10 +1195,16 @@ namespace Simulant.Tests.Native
                     Memory.Put(address + 4, status.RemainingTime);
                     Memory.Put(address + 8, (ulong)status.SourceEntityId);
                 }
-                if (FailVitals) throw new InvalidOperationException("模拟角色状态收包失败。");
+
+                if (FailVitals)
+                    throw new InvalidOperationException("模拟角色状态收包失败。");
+
                 return;
             }
-            if (function != UpdateFunction) throw new InvalidOperationException("未知的小队测试原生调用。");
+
+            if (function != UpdateFunction)
+                throw new InvalidOperationException("未知的小队测试原生调用。");
+
             PartyServiceTests.Assert(Convert.ToByte(args[2]) == 0, "更新必须作用于主小队。");
             var packet = Memory.Read<UpdatePartyPacket>((IntPtr)args[1]);
             Packets.Add(packet);
@@ -934,6 +1212,7 @@ namespace Simulant.Tests.Native
             Memory.Put(_group + 0x7FD0, packet.PartyId_2);
             Memory.Put(_group + 0x7FD8, (uint)packet.LeaderIndex);
             Memory.Put(_group + 0x7FDC, packet.MemberCount);
+
             for (var i = 0; i < 8; i++)
             {
                 var pointer = _group + i * PartyMember.Size;
@@ -946,6 +1225,7 @@ namespace Simulant.Tests.Native
                 Memory.Put(pointer + 0x3E0, Vector3.Zero);
                 Memory.Put(pointer + 0x484, (byte)1);
                 Memory.Put(pointer + 0x46B, (byte)0);
+
                 for (var j = 0; j < UpdatePartyPacketMember.StatusCount; j++)
                 {
                     var status = member.GetStatus(j);
@@ -955,8 +1235,11 @@ namespace Simulant.Tests.Native
                     Memory.Put(pointer + 16 + j * 16, (ulong)status.SourceEntityId);
                 }
             }
+
             BeforeUpdateReturn?.Invoke();
-            if (FailUpdate) throw new InvalidOperationException("模拟原生小队更新部分成功后失败。");
+
+            if (FailUpdate)
+                throw new InvalidOperationException("模拟原生小队更新部分成功后失败。");
         }
 
         private static void ValidateArguments(object[] args)
@@ -966,7 +1249,9 @@ namespace Simulant.Tests.Native
             {
                 if (arg != null && (arg.GetType().IsEnum || arg is bool || arg is UIntPtr || arg is IntPtr ||
                     arg is sbyte || arg is byte || arg is short || arg is ushort || arg is char ||
-                    arg is int || arg is uint || arg is long || arg is ulong || arg is float || arg is double)) continue;
+                    arg is int || arg is uint || arg is long || arg is ulong || arg is float || arg is double))
+                    continue;
+
                 throw new ArgumentException("原生调用不接受此参数类型：" + (arg?.GetType().Name ?? "空值"), nameof(args));
             }
         }

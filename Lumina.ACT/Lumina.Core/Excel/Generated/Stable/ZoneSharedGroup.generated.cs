@@ -44,7 +44,10 @@ namespace Lumina.Excel.Sheets
         public bool Unknown14 => page.ReadBool(offset + 72);
         public bool Unknown15 => page.ReadBool(offset + 73);
 
-        private static global::Lumina.Excel.RowRef RequirementRowCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4 + i * 4), new System.Type[] { typeof(Quest), typeof(AetherCurrent), typeof(EurekaStoryProgress), typeof(DomaStoryProgress) }, 1609364385, page.Language);
+        private static global::Lumina.Excel.RowRef RequirementRowCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4 + i * 4), new System.Type[]
+        {
+            typeof(Quest), typeof(AetherCurrent), typeof(EurekaStoryProgress), typeof(DomaStoryProgress)
+        }, 1609364385, page.Language);
         private static uint RequirementQuestSequenceCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => page.ReadUInt32(offset + 32 + i * 4);
         private static byte RequirementTypeCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => page.ReadUInt8(offset + 60 + i);
         static public ZoneSharedGroup Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row, ushort subrow) => new ZoneSharedGroup(page, offset, row, subrow);

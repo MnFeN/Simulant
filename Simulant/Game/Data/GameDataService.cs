@@ -27,7 +27,11 @@ namespace Simulant.Game.Data
         {
             SqPackPath = ResolveSqPackPath(gamePath);
             Language = language;
-            _data = new GameData(SqPackPath, new LuminaOptions { DefaultExcelLanguage = language });
+            _data = new GameData(SqPackPath, new LuminaOptions
+            {
+                DefaultExcelLanguage = language
+            });
+
             try
             {
                 // 先验证模拟所需的表结构，避免运行到机制中途才发现客户端布局不匹配。
@@ -46,20 +50,26 @@ namespace Simulant.Game.Data
             }
         }
 
-        public ExcelSheet<T> GetSheet<T>() where T : struct, IExcelRow<T>
+        public ExcelSheet<T> GetSheet<T>()
+            where T : struct, IExcelRow<T>
         {
             lock (_gate)
             {
-                if (_disposed) throw new ObjectDisposedException(nameof(GameDataService));
+                if (_disposed)
+                    throw new ObjectDisposedException(nameof(GameDataService));
+
                 return _data.GetExcelSheet<T>();
             }
         }
 
-        internal T GetFile<T>(string path) where T : FileResource
+        internal T GetFile<T>(string path)
+            where T : FileResource
         {
             lock (_gate)
             {
-                if (_disposed) throw new ObjectDisposedException(nameof(GameDataService));
+                if (_disposed)
+                    throw new ObjectDisposedException(nameof(GameDataService));
+
                 return _data.GetFile<T>(path);
             }
         }
@@ -67,22 +77,38 @@ namespace Simulant.Game.Data
         internal void Activate()
         {
             GameDataService previous;
+
             lock (_gate)
             {
-                if (_disposed) throw new ObjectDisposedException(nameof(GameDataService));
+                if (_disposed)
+                    throw new ObjectDisposedException(nameof(GameDataService));
+
                 previous = Interlocked.Exchange(ref _current, this);
             }
-            if (!ReferenceEquals(previous, this)) previous?.Dispose();
+
+            if (!ReferenceEquals(previous, this))
+                previous?.Dispose();
         }
 
         public static string ResolveSqPackPath(string path)
         {
-            if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("未提供游戏客户端路径。", nameof(path));
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("未提供游戏客户端路径。", nameof(path));
+
             var directory = Path.GetFullPath(File.Exists(path) ? Path.GetDirectoryName(path) : path);
-            foreach (var candidate in new[] { directory, Path.Combine(directory, "sqpack"), Path.Combine(directory, "game", "sqpack") })
+
+            foreach (var candidate in new[]
+            {
+                directory,
+                Path.Combine(directory, "sqpack"),
+                Path.Combine(directory, "game", "sqpack")
+            }
+
+            )
                 if (string.Equals(new DirectoryInfo(candidate).Name, "sqpack", StringComparison.OrdinalIgnoreCase)
                     && Directory.Exists(Path.Combine(candidate, "ffxiv")))
                     return candidate;
+
             throw new DirectoryNotFoundException("未找到游戏客户端的 sqpack 目录：" + path);
         }
 
@@ -90,7 +116,9 @@ namespace Simulant.Game.Data
         {
             lock (_gate)
             {
-                if (_disposed) return;
+                if (_disposed)
+                    return;
+
                 _disposed = true;
                 Interlocked.CompareExchange(ref _current, null, this);
                 _data.Dispose();

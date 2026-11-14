@@ -20,11 +20,13 @@ namespace Lumina.Data.Parsing.Tex
             // Check the compression mode.
             var isDxt1 = flags.HasFlag(SquishOptions.DXT1);
             var weightByAlpha = flags.HasFlag(SquishOptions.WeightColourByAlpha);
+
             // Create he minimal set.
             for (int i = 0; i < 16; ++i)
             {
                 // Check this pixel is enabled.
                 int bit = 1 << i;
+
                 if ((mask & bit) == 0)
                 {
                     _Remap[i] = -1;
@@ -39,7 +41,7 @@ namespace Lumina.Data.Parsing.Tex
                 }
 
                 // Loop over previous points for a match.
-                for (int j = 0;; ++j)
+                for (int j = 0; ; ++j)
                 {
                     // Allocate a new point.
                     if (j == i)
@@ -62,6 +64,7 @@ namespace Lumina.Data.Parsing.Tex
                     // Check for a match.
                     int oldBit = 1 << j;
                     var match = ((mask & oldBit) != 0) && (rgba[4 * i] == rgba[4 * j]) && (rgba[4 * i + 1] == rgba[4 * j + 1]) && (rgba[4 * i + 3] == rgba[4 * j + 2]) && (rgba[4 * j + 3] >= 128 || !isDxt1);
+
                     if (match)
                     {
                         // Get index of the match.
@@ -88,6 +91,7 @@ namespace Lumina.Data.Parsing.Tex
             for (int i = 0; i < 16; ++i)
             {
                 var j = _Remap[i];
+
                 if (j == -1)
                     target[i + targetOffset] = 3;
                 else

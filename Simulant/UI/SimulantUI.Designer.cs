@@ -2,12 +2,12 @@
 {
     partial class SimulantUI
     {
-        /// <summary> 
+        /// <summary>
         /// 必需的设计器变量。
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
+        /// <summary>
         /// 清理所有正在使用的资源。
         /// </summary>
         /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
@@ -17,12 +17,12 @@
             {
                 components.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
         #region 组件设计器生成的代码
-
-        /// <summary> 
+        /// <summary>
         /// 设计器支持所需的方法 - 不要修改
         /// 使用代码编辑器修改此方法的内容。
         /// </summary>
@@ -58,27 +58,27 @@
             this.splitMainH.Panel2.SuspendLayout();
             this.splitMainH.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // splitMainV
-            // 
+            //
             this.splitMainV.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitMainV.Font = new System.Drawing.Font("等距更纱黑体 SC", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.splitMainV.Location = new System.Drawing.Point(0, 0);
             this.splitMainV.Name = "splitMainV";
-            // 
+            //
             // splitMainV.Panel1
-            // 
+            //
             this.splitMainV.Panel1.Controls.Add(this.tableL);
-            // 
+            //
             // splitMainV.Panel2
-            // 
+            //
             this.splitMainV.Panel2.Controls.Add(this.splitMainH);
             this.splitMainV.Size = new System.Drawing.Size(1209, 892);
             this.splitMainV.SplitterDistance = 340;
             this.splitMainV.TabIndex = 0;
-            // 
+            //
             // tableL
-            // 
+            //
             this.tableL.AutoSize = true;
             this.tableL.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.tableL.BackColor = System.Drawing.SystemColors.ActiveCaption;
@@ -112,9 +112,9 @@
             this.tableL.Size = new System.Drawing.Size(340, 892);
             this.tableL.TabIndex = 0;
             this.tableL.TabStop = true;
-            // 
+            //
             // btnInitPlugin
-            // 
+            //
             this.btnInitPlugin.AutoSize = true;
             this.btnInitPlugin.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnInitPlugin.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -129,7 +129,7 @@
             this.btnInitPlugin.Text = "初始化插件";
             this.btnInitPlugin.UseVisualStyleBackColor = true;
             this.btnInitPlugin.Click += new System.EventHandler(this.btnInitPlugin_Click);
-            // 
+            //
             // btnMenu
             //
             this.btnMenu.AutoSize = true;
@@ -145,7 +145,7 @@
             this.btnMenu.Click += new System.EventHandler(this.btnMenu_Click);
             //
             // btnSelectTerritory
-            // 
+            //
             this.btnSelectTerritory.AutoSize = true;
             this.btnSelectTerritory.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnSelectTerritory.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -160,9 +160,9 @@
             this.btnSelectTerritory.Text = "选择地图";
             this.btnSelectTerritory.UseVisualStyleBackColor = true;
             this.btnSelectTerritory.Click += new System.EventHandler(this.btnSelectTerritory_Click);
-            // 
+            //
             // btnSimEnter
-            // 
+            //
             this.btnSimEnter.AutoSize = true;
             this.btnSimEnter.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.btnSimEnter.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -177,9 +177,9 @@
             this.btnSimEnter.Text = "加载区域";
             this.btnSimEnter.UseVisualStyleBackColor = true;
             this.btnSimEnter.Click += new System.EventHandler(this.btnSimEnter_Click);
-            // 
+            //
             // btnSimExit
-            // 
+            //
             this.btnSimExit.AutoSize = true;
             this.btnSimExit.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.tableL.SetColumnSpan(this.btnSimExit, 2);
@@ -195,9 +195,9 @@
             this.btnSimExit.Text = "退出模拟";
             this.btnSimExit.UseVisualStyleBackColor = true;
             this.btnSimExit.Click += new System.EventHandler(this.btnSimExit_Click);
-            // 
+            //
             // lblTerritory
-            // 
+            //
             this.lblTerritory.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.lblTerritory.AutoSize = true;
             this.tableL.SetColumnSpan(this.lblTerritory, 3);
@@ -207,9 +207,9 @@
             this.lblTerritory.Size = new System.Drawing.Size(106, 44);
             this.lblTerritory.TabIndex = 0;
             this.lblTerritory.Text = "选中区域：无\r\n选中副本：无";
-            // 
+            //
             // picLogo
-            // 
+            //
             this.tableL.SetColumnSpan(this.picLogo, 3);
             this.picLogo.Dock = System.Windows.Forms.DockStyle.Fill;
             this.picLogo.Image = ((System.Drawing.Image)(resources.GetObject("picLogo.Image")));
@@ -220,9 +220,9 @@
             this.picLogo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.picLogo.TabIndex = 2;
             this.picLogo.TabStop = false;
-            // 
+            //
             // cbxPhase
-            // 
+            //
             this.tableL.SetColumnSpan(this.cbxPhase, 3);
             this.cbxPhase.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cbxPhase.DropDownHeight = 500;
@@ -236,9 +236,9 @@
             this.cbxPhase.Size = new System.Drawing.Size(310, 30);
             this.cbxPhase.TabIndex = 8;
             this.cbxPhase.SelectedIndexChanged += new System.EventHandler(this.cbxPhase_SelectedIndexChanged);
-            // 
+            //
             // chkToggleFirewall
-            // 
+            //
             this.chkToggleFirewall.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.chkToggleFirewall.AutoSize = true;
             this.chkToggleFirewall.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -252,9 +252,9 @@
             this.chkToggleFirewall.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.chkToggleFirewall.UseVisualStyleBackColor = true;
             this.chkToggleFirewall.CheckedChanged += new System.EventHandler(this.chkToggleFirewall_CheckedChanged);
-            // 
+            //
             // lblTerritoryId
-            // 
+            //
             this.lblTerritoryId.AutoSize = true;
             this.lblTerritoryId.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblTerritoryId.Location = new System.Drawing.Point(173, 218);
@@ -264,45 +264,47 @@
             this.lblTerritoryId.TabIndex = 9;
             this.lblTerritoryId.Text = "地图 ID";
             this.lblTerritoryId.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
+            //
             // numTerritoryId
-            // 
+            //
             this.numTerritoryId.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.numTerritoryId.Location = new System.Drawing.Point(255, 234);
             this.numTerritoryId.Margin = new System.Windows.Forms.Padding(10, 10, 15, 10);
-            this.numTerritoryId.Maximum = new decimal(new int[] {
-            65535,
-            0,
-            0,
-            0});
+            this.numTerritoryId.Maximum = new decimal(new int[]
+            {
+                65535,
+                0,
+                0,
+                0
+            });
             this.numTerritoryId.Name = "numTerritoryId";
             this.numTerritoryId.Size = new System.Drawing.Size(70, 29);
             this.numTerritoryId.TabIndex = 10;
             this.numTerritoryId.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.numTerritoryId.ValueChanged += new System.EventHandler(this.numTerritoryId_ValueChanged);
-            // 
+            //
             // splitMainH
-            // 
+            //
             this.splitMainH.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitMainH.Font = new System.Drawing.Font("等距更纱黑体 SC", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.splitMainH.Location = new System.Drawing.Point(0, 0);
             this.splitMainH.Name = "splitMainH";
             this.splitMainH.Orientation = System.Windows.Forms.Orientation.Horizontal;
-            // 
+            //
             // splitMainH.Panel1
-            // 
+            //
             this.splitMainH.Panel1.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.splitMainH.Panel1.Controls.Add(this.presetControl);
-            // 
+            //
             // splitMainH.Panel2
-            // 
+            //
             this.splitMainH.Panel2.Controls.Add(this.logView);
             this.splitMainH.Size = new System.Drawing.Size(865, 892);
             this.splitMainH.SplitterDistance = 423;
             this.splitMainH.TabIndex = 0;
-            // 
+            //
             // presetControl
-            // 
+            //
             this.presetControl.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.presetControl.BackColor = System.Drawing.SystemColors.Control;
             this.presetControl.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -313,17 +315,17 @@
             this.presetControl.Size = new System.Drawing.Size(865, 423);
             this.presetControl.TabIndex = 0;
             this.presetControl.TabStop = false;
-            // 
+            //
             // logView
-            // 
+            //
             this.logView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.logView.Location = new System.Drawing.Point(0, 0);
             this.logView.Name = "logView";
             this.logView.Size = new System.Drawing.Size(865, 465);
             this.logView.TabIndex = 0;
-            // 
+            //
             // SimulantUI
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.splitMainV);
@@ -347,7 +349,6 @@
         }
 
         #endregion
-
         private System.Windows.Forms.SplitContainer splitMainV;
         private System.Windows.Forms.TableLayoutPanel tableL;
         private System.Windows.Forms.SplitContainer splitMainH;

@@ -28,27 +28,30 @@ namespace Simulant.Game.FFCS.Client.Game.Event
 
         [SigPattern("E8 * * * * 33 D2 48 8B D8 48 85 C0 0F 84")]
         public static IntPtr GetContentDirectorFuncPtr { get; set; }
+
         // 似乎会根据当前所在的内容自动返回 InstanceContentDirector/PublicContentDirector/MassivePcContentDirector 等
         public ContentDirector GetContentDirector()
             => GetContentDirectorFuncPtr.Call<IntPtr>(Ptr).As<ContentDirector>();
 
         [SigPattern("E8 * * * * 41 8B 5E 18 48 8B F8")]
         public static IntPtr GetInstanceContentDirectorFuncPtr { get; set; }
+
         // 普通副本中有效，无效时为 0
         public InstanceContentDirector GetInstanceContentDirector()
             => GetInstanceContentDirectorFuncPtr.Call<IntPtr>(Ptr).As<InstanceContentDirector>();
 
         [SigPattern("E8 * * * * 48 8B D0 48 85 C0 74 ? 80 B8")]
         public static IntPtr GetPublicContentDirectorFuncPtr { get; set; }
+
         // 优雷卡等副本中有效，无效时为 0
         public PublicContentDirector GetPublicContentDirector()
             => GetPublicContentDirectorFuncPtr.Call<IntPtr>(Ptr).As<PublicContentDirector>();
 
         [SigPattern("40 53 48 83 EC 20 48 83 3D ? ? ? ? ? 8B D9 74 1D")]
         public static IntPtr GetPublicContentDirectorByTypeFuncPtr { get; set; }
+
         public static PublicContentDirector GetPublicContentDirectorByType(PublicContentDirectorType publicContentDirectorType)
             => GetPublicContentDirectorByTypeFuncPtr.Call<IntPtr>(publicContentDirectorType).As<PublicContentDirector>();
-
         /*
         [SigPattern("E8 * * * * 44 0F B6 65 ? 4C 8B F8")]
         public static IntPtr GetEventHandlerByIdFuncPtr { get; set; }
@@ -58,40 +61,46 @@ namespace Simulant.Game.FFCS.Client.Game.Event
         public EventHandler GetEventHandlerById(ushort id)
             => GetEventHandlerById((uint)(id | 0x10000));
         */
-
         [SigPattern("48 89 5C 24 ? 48 89 7C 24 ? 41 56 48 83 EC ? 48 8B D9 48 89 6C 24")]
         public static IntPtr SetTerritoryTypeIdFuncPtr { get; set; }
+
         public void SetTerritoryTypeId(ushort territoryType)
             => SetTerritoryTypeIdFuncPtr.Call(Ptr, territoryType);
 
         [SigPattern("E8 * * * * 8B D8 3B 85")]
         public static IntPtr GetCurrentContentIdFuncPtr { get; set; }
+
         public static uint GetCurrentContentId()
             => GetCurrentContentIdFuncPtr.Call<uint>();
 
         [SigPattern("E8 * * * * 38 46 ? 75")]
         public static IntPtr GetCurrentContentTypeFuncPtr { get; set; }
+
         public static ContentType GetCurrentContentType()
             => GetCurrentContentTypeFuncPtr.Call<ContentType>();
 
         [SigPattern("E8 * * * * 8B D8 EB ? 0F B7 DF")]
         public static IntPtr GetContentFinderConditionFuncPtr { get; set; }
+
         public static ushort GetContentFinderCondition(ContentType contentType, uint contentId)
             => GetContentFinderConditionFuncPtr.Call<ushort>((byte)contentType, contentId);
 
         [SigPattern("48 83 EC 28 48 8B 05 ? ? ? ? 48 85 C0 74 2C")]
         public static IntPtr CanLeaveCurrentContentFuncPtr { get; set; }
+
         public static bool CanLeaveCurrentContent()
             => CanLeaveCurrentContentFuncPtr.Call<bool>();
 
         [SigPattern("E8 * * * * 48 8B 43 ? 41 B2")]
         public static IntPtr LeaveCurrentContentFuncPtr { get; set; }
+
         public static void LeaveCurrentContent(bool forced = false)
             => LeaveCurrentContentFuncPtr.Call(forced);
 
         // from Hyperborea
         [SigPattern("E8 * * * * E9 ? ? ? ? E8 ? ? ? ? 8B 54 24 70 48 8B C8 E8 ? ? ? ? E9 ? ? ? ? E8 ? ? ? ? 0F B6 54 24")]
         public static IntPtr SetupInstanceContentFuncPtr { get; set; }
+
         /// <summary> fullContentId: 0x8003XXXX, contentId: XXXX </summary>
         public IntPtr SetupInstanceContent(uint fullContentId, uint contentId, uint a4 = 0)
             => SetupInstanceContentFuncPtr.Call<IntPtr>(Ptr, fullContentId, contentId, a4);
@@ -99,6 +108,7 @@ namespace Simulant.Game.FFCS.Client.Game.Event
         // from Hyperborea
         [SigPattern("48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 48 83 EC 70 48 8D B1")]
         public static IntPtr FinalizeInstanceContentFuncPtr { get; set; }
+
         /// <summary> fullContentId: 0x8003XXXX, contentId: XXXX </summary>
         public byte FinalizeInstanceContent(uint fullContentId = 0)
             => FinalizeInstanceContentFuncPtr.Call<byte>(Ptr, fullContentId);

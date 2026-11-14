@@ -22,20 +22,48 @@ namespace Simulant.Simulation.Options
 
         protected override Control CreateControl(OptionEditor editor)
         {
-            var panel = new TableLayoutPanel { AutoSize = true, ColumnCount = 2, RowCount = 1 };
+            var panel = new TableLayoutPanel
+            {
+                AutoSize = true,
+                ColumnCount = 2,
+                RowCount = 1
+            };
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            _textBox = new TextBox { Text = _default, Dock = DockStyle.Fill, Margin = Padding.Empty };
-            _browse = new Button { Text = "浏览…", AutoSize = true, Margin = new Padding(5, 0, 0, 0) };
+            _textBox = new TextBox
+            {
+                Text = _default,
+                Dock = DockStyle.Fill,
+                Margin = Padding.Empty
+            };
+            _browse = new Button
+            {
+                Text = "浏览…",
+                AutoSize = true,
+                Margin = new Padding(5, 0, 0, 0)
+            };
+
             _browse.Click += (sender, e) =>
             {
-                using (var dialog = new OpenFileDialog { Title = _labelText, Filter = _filter,
-                    CheckFileExists = true, Multiselect = false, RestoreDirectory = true })
+                using (var dialog = new OpenFileDialog
                 {
-                    if (File.Exists(_textBox.Text)) dialog.FileName = _textBox.Text;
-                    if (dialog.ShowDialog(panel.FindForm()) == DialogResult.OK) _textBox.Text = dialog.FileName;
+                    Title = _labelText,
+                    Filter = _filter,
+                    CheckFileExists = true,
+                    Multiselect = false,
+                    RestoreDirectory = true
+                }
+
+                )
+                {
+                    if (File.Exists(_textBox.Text))
+                        dialog.FileName = _textBox.Text;
+
+                    if (dialog.ShowDialog(panel.FindForm()) == DialogResult.OK)
+                        _textBox.Text = dialog.FileName;
                 }
             };
+
             panel.Controls.Add(_textBox, 0, 0);
             panel.Controls.Add(_browse, 1, 0);
             editor.ApplyStyle(panel);

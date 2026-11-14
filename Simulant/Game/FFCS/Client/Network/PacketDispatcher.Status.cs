@@ -13,18 +13,23 @@ namespace Simulant.Game.FFCS.Client.Network
         public static void HandleStatusEffectListDoublePacket(uint entityId, StatusEffectListDoublePacket packet)
         {
             var function = HandleStatusEffectListDoublePacketFuncPtr;
+
             if (function == IntPtr.Zero)
                 throw new InvalidOperationException("原生角色状态更新函数尚未定位。");
+
             if (packet.CurrentHP > packet.MaxHP || packet.CurrentMP > packet.MaxMP)
                 throw new ArgumentOutOfRangeException(nameof(packet), "当前血量和魔力不能超过上限。");
 
             var memory = Memory;
             var packetPtr = IntPtr.Zero;
+
             try
             {
                 packetPtr = memory.AllocateMemory(StatusEffectListDoublePacket.Size);
+
                 if (packetPtr == IntPtr.Zero)
                     throw new InvalidOperationException("无法分配角色状态更新包的内存。");
+
                 memory.Write(packetPtr, packet);
                 function.Call(entityId, packetPtr, (byte)0);
             }

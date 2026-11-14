@@ -39,16 +39,17 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         // 检查此对象绑定的场地组，不代表整个地图已加载。
         [SigPattern("E8 * * * * 84 C0 74 ? 33 FF 48 89 B4 24")]
         public static IntPtr IsSharedGroupLoadedFuncPtr { get; set; }
+
         public bool IsSharedGroupLoaded()
         {
             if (IsSharedGroupLoadedFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("尚未定位场地组加载状态查询函数。");
+
             return IsSharedGroupLoadedFuncPtr.Call<bool>(Ptr);
         }
 
         // public GameObjectId GetGameObjectId()
         //    => Ptr.CallVFunc<GameObjectId>(1);
-
         public bool GetIsTargetable()
             => Ptr.CallVFunc<bool>(4);
 
@@ -58,6 +59,7 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         // 来源：FFXIVClientStructs 的 GameObject.SetName；原生入口同时通知名牌刷新。
         [SigPattern("E8 * * * * 48 8B 16 48 8B 4F")]
         public static IntPtr SetNameFuncPtr { get; set; }
+
         public void SetName(IntPtr name)
             => SetNameFuncPtr.Call(Ptr, name);
 
@@ -112,15 +114,21 @@ namespace Simulant.Game.FFCS.Client.Game.Object
     [StructLayout(LayoutKind.Explicit, Size = 0x08)]
     public struct GameObjectId : IEquatable<GameObjectId>, IComparable<GameObjectId>
     {
-        [FieldOffset(0x00)] public ulong Id;
-        [FieldOffset(0x00)] public uint ObjectId;
-        [FieldOffset(0x04)] public byte Type;
+        [FieldOffset(0x00)]
+        public ulong Id;
+        [FieldOffset(0x00)]
+        public uint ObjectId;
+        [FieldOffset(0x04)]
+        public byte Type;
 
         public static implicit operator ulong(GameObjectId id) => id.Id;
 
         public static implicit operator GameObjectId(ulong id)
         {
-            return new GameObjectId { Id = id };
+            return new GameObjectId
+            {
+                Id = id
+            };
         }
 
         public bool Equals(GameObjectId other) => Id == other.Id;

@@ -21,7 +21,10 @@ namespace Lumina.Excel.Sheets
         public uint RowId => row;
         public global::Lumina.Text.ReadOnly.ReadOnlySeString Unknown0 => page.ReadString(offset, offset);
         public uint Image => page.ReadUInt32(offset + 4);
-        public global::Lumina.Excel.RowRef Target => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 8), new System.Type[] { typeof(CollectablesShop), typeof(InclusionShop), typeof(GilShop), typeof(SpecialShop), typeof(Description) }, -11917848, page.Language);
+        public global::Lumina.Excel.RowRef Target => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 8), new System.Type[]
+        {
+            typeof(CollectablesShop), typeof(InclusionShop), typeof(GilShop), typeof(SpecialShop), typeof(Description)
+        }, -11917848, page.Language);
         public global::Lumina.Excel.RowRef<Quest> UnlockQuest => new global::Lumina.Excel.RowRef<Quest>(page.Module, page.ReadUInt32(offset + 12), page.Language);
         public global::Lumina.Excel.RowRef<DefaultTalk> AcceptMessage => new global::Lumina.Excel.RowRef<DefaultTalk>(page.Module, page.ReadUInt32(offset + 16), page.Language);
         public global::Lumina.Excel.RowRef<DefaultTalk> DenyMessage => new global::Lumina.Excel.RowRef<DefaultTalk>(page.Module, page.ReadUInt32(offset + 20), page.Language);

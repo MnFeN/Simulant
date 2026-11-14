@@ -23,23 +23,34 @@ namespace Simulant.Simulation.Runtime
         {
             if (!Finite(arriveBy) || !Finite(holdUntil) || holdUntil < arriveBy)
                 throw new ArgumentException("目标时间必须有效，且保持站位的结束时间不能早于目标时间。");
+
             lock (_gate)
             {
                 if (_disposed || !_states.TryGetValue(actor, out var state) || !actor.IsActive)
                     throw new InvalidOperationException("只有本会话生成的有效网络假玩家可以接收机制移动意图。");
+
                 // 取点与相对北只在接收指令时解析一次，后续滑步、转折和截止判断共用同一个终点。
                 var destination = area.Sample(_random, northHeading);
+
                 if (Math.Abs(destination.X) > 1000 || Math.Abs(destination.Y) > 1000)
                     throw new ArgumentOutOfRangeException(nameof(area), "移动目的地必须位于网络坐标范围内。");
+
                 // 暂停期间可以接收下一段走位，但只能从击退落点、暂停结束后开始规划。
                 var now = Math.Max(_scheduler.ElapsedSeconds, state.SuspendedUntil);
                 var position = _movement.PositionAfterKnockback(actor);
                 // 关闭延迟与紧急意图都直接就位，不让自动读条、滑步、贪刀或绕路推迟移动。
                 var immediate = urgent || !state.Options.DelayArrival;
-                var plan = new MovePlan { Destination = destination, Latest = arriveBy, HoldUntil = holdUntil, Immediate = immediate,
+                var plan = new MovePlan
+                {
+                    Destination = destination,
+                    Latest = arriveBy,
+                    HoldUntil = holdUntil,
+                    Immediate = immediate,
                     NotBefore = immediate ? now : arriveBy - 1,
-                    Arrival = immediate ? now : arriveBy - 0.25 - _random.NextDouble() * 0.35 };
+                    Arrival = immediate ? now : arriveBy - 0.25 - _random.NextDouble() * 0.35
+                };
                 var origin = position;
+
                 if (!immediate && state.Options.AttackTarget && state.Actions?.Melee == true &&
                     _target != null && _target.IsActive && _target.Entity.IsTargetable && _target.Entity.HP != 0)
                 {
@@ -48,42 +59,68 @@ namespace Simulant.Simulation.Runtime
                     var destinationOffset = destination - center;
                     var radius = _target.Entity.HitboxRadius + 2;
                     var outside = offset.Length() > radius + 1;
+
                     if (outside || destinationOffset.Length() > radius + 1)
                     {
                         // 远处先沿当前方向返回最近的近战边缘；圈内则提前靠近下一站位的方向。
                         var staging = center + Vector2.Normalize(outside ? offset : destinationOffset) * radius;
+
                         // 往返路程、两段更新余量之外，至少留一秒输出，避免刚回来就折返。
                         if (Vector2.Distance(origin, staging) > 0.3f &&
                             now + (Vector2.Distance(origin, staging) + Vector2.Distance(staging, destination)) / 6 + 1.6 < plan.Arrival)
-                        { plan.Points.Add(staging); plan.StageFirst = true; origin = staging; }
+                        {
+                            plan.Points.Add(staging);
+                            plan.StageFirst = true;
+                            origin = staging;
+                        }
                     }
                 }
+
                 // 即使下一次仍站在原点，只要有空闲也可先回近战，随后再回来处理机制。
                 if (plan.StageFirst || Vector2.Distance(position, destination) > SimMovementController.NetworkArrivalTolerance)
                 {
                     plan.Points.AddRange(CreateRoute(origin, destination, immediate ? 0 : state.Options.RouteAngleDegrees, _random));
+
                     if (plan.StageFirst && now + TravelTime(position, plan) + 1 > plan.Arrival)
                     {
-                        plan.Points.Clear(); plan.StageFirst = false;
+                        plan.Points.Clear();
+                        plan.StageFirst = false;
                         plan.Points.AddRange(CreateRoute(position, destination, state.Options.RouteAngleDegrees, _random));
                     }
+
                     if (now + TravelTime(position, plan) > arriveBy)
-                    { plan.Points.Clear(); plan.Points.Add(destination); plan.StageFirst = false; }
+                    {
+                        plan.Points.Clear();
+                        plan.Points.Add(destination);
+                        plan.StageFirst = false;
+                    }
+
                     TrySprint(plan, position, now);
+
                     if (now + TravelTime(position, plan) > arriveBy)
                         throw new InvalidOperationException($"假玩家 {actor.Job}（{actor.Id:X8}）的移动窗口不足，即使以 1.3 倍速冲刺也无法在截止前到达。起点（{position.X:0.00}, {position.Y:0.00}），终点（{destination.X:0.00}, {destination.Y:0.00}），剩余 {arriveBy - now:0.00} 秒，需要 {TravelTime(position, plan):0.00} 秒。");
+
                     // 延迟到达只推迟实体自己的出发安排，仍预留更新余量；关闭或紧急时尽早出发。
                     var earliest = now + TravelTime(position, plan);
                     plan.Arrival = Math.Max(earliest, plan.Arrival);
                 }
-                else plan.Arrived = true;
-                if (_scheduler.ElapsedSeconds >= state.SuspendedUntil) _movement.Stop(actor);
-                if (plan.Speed == RunSpeed || plan.Arrived) SetSprintEffect(state, false);
+                else
+                    plan.Arrived = true;
+
+                if (_scheduler.ElapsedSeconds >= state.SuspendedUntil)
+                    _movement.Stop(actor);
+
+                if (plan.Speed == RunSpeed || plan.Arrived)
+                    SetSprintEffect(state, false);
+
                 state.Move = plan;
                 state.Anchor = destination;
                 state.Initialized = true;
                 state.ManualMovement = false;
-                if (plan.Immediate) CancelOwnCast(state);
+
+                if (plan.Immediate)
+                    CancelOwnCast(state);
+
                 QueueTick();
             }
         }
@@ -91,13 +128,23 @@ namespace Simulant.Simulation.Runtime
         /// <summary>机制站位约束结束后，近战主动回到可攻击距离；不依赖空闲走动的半径与冷却。</summary>
         private void UpdateMeleeReturn(State state, double now)
         {
-            if (state.Actions?.Melee != true || state.Move != null || state.ManualMovement || state.Actor.IsMoving) return;
+            if (state.Actions?.Melee != true || state.Move != null || state.ManualMovement || state.Actor.IsMoving)
+                return;
+
             var position = state.Actor.Pos;
             var offset = position - _targetPosition;
             var radius = _targetRadius + 2;
-            if (offset.Length() <= radius + 1) return;
+
+            if (offset.Length() <= radius + 1)
+                return;
+
             var destination = _targetPosition + Vector2.Normalize(offset) * radius;
-            var plan = new MovePlan { Destination = destination, Immediate = true, HoldUntil = now };
+            var plan = new MovePlan
+            {
+                Destination = destination,
+                Immediate = true,
+                HoldUntil = now
+            };
             plan.Points.Add(destination);
             plan.Arrival = now + TravelTime(position, plan);
             plan.Latest = plan.Arrival + 1;
@@ -110,74 +157,123 @@ namespace Simulant.Simulation.Runtime
         {
             var actor = state.Actor;
             var plan = state.Move;
+
             if (plan == null)
             {
                 if (state.ManualMovement && !actor.IsMoving)
-                { state.ManualMovement = false; state.Anchor = actor.Pos; state.NextIdle = now + 4; }
+                {
+                    state.ManualMovement = false;
+                    state.Anchor = actor.Pos;
+                    state.NextIdle = now + 4;
+                }
+
                 return;
             }
+
             if (plan.Arrived)
             {
-                if (now >= plan.HoldUntil) { state.Move = null; state.NextIdle = now + 3 + _random.NextDouble() * 3; }
+                if (now >= plan.HoldUntil)
+                {
+                    state.Move = null;
+                    state.NextIdle = now + 3 + _random.NextDouble() * 3;
+                }
+
                 return;
             }
+
             var position = actor.Pos;
+
             if (!actor.IsMoving)
             {
                 while (plan.Point < plan.Points.Count && Vector2.Distance(position, plan.Points[plan.Point]) <=
-                    SimMovementController.NetworkArrivalTolerance) plan.Point++;
-                if (plan.Point == plan.Points.Count) { plan.Arrived = true; SetSprintEffect(state, false); return; }
+                    SimMovementController.NetworkArrivalTolerance)
+                    plan.Point++;
+
+                if (plan.Point == plan.Points.Count)
+                {
+                    plan.Arrived = true;
+                    SetSprintEffect(state, false);
+                    return;
+                }
             }
+
             if (now > plan.Latest + 0.25)
                 throw new InvalidOperationException($"假玩家 {actor.Job}（{actor.Id:X8}）未按时到位，距目的地 {Vector2.Distance(position, plan.Destination):0.00} 米；已停止模拟，请检查移动窗口。");
+
             // 延迟或原生插值较慢时，先删去可选绕路，再按需要开启冲刺。
             if (plan.Points.Count - plan.Point > 1 && now + TravelTime(position, plan) > plan.Latest - 0.1)
             {
                 _movement.Stop(actor);
-                plan.Points.Clear(); plan.Points.Add(plan.Destination); plan.Point = 0; plan.StageFirst = false;
+                plan.Points.Clear();
+                plan.Points.Add(plan.Destination);
+                plan.Point = 0;
+                plan.StageFirst = false;
             }
+
             if (TrySprint(plan, position, now))
             {
                 _movement.Stop(actor);
                 CancelOwnCast(state);
             }
-            if (actor.IsMoving) return;
+
+            if (actor.IsMoving)
+                return;
+
             var casting = _casts.Remaining(actor);
             var run = MustRun(state, now);
             var slide = !run && state.Actions?.Caster == true &&
                 state.OwnCast != 0 && casting > 0 && casting <= SlideSeconds;
-            if (!run && !slide) return;
+
+            if (!run && !slide)
+                return;
+
             var next = plan.Points[plan.Point];
+
             // 滑步与提前接近不能绕过延迟到达；最后一段仍由实体等待到合理时刻再完成。
             if (!plan.Immediate && plan.Point == plan.Points.Count - 1 && now + Vector2.Distance(position, next) / (plan.Speed / 10.0) < plan.NotBefore)
                 return;
+
             if (casting > 0 && !slide && casting > SlideSeconds)
                 CancelOwnCast(state);
+
             // 显式技能不由自动行为取消；急迫移动仍可出发，避免自动读条占住机制窗口。
             if (slide)
             {
                 var delta = next - position;
                 var length = delta.Length();
                 var step = Math.Min(length, (float)(6 * SlideSeconds));
-                if (step < 0.1) return;
+
+                if (step < 0.1)
+                    return;
+
                 next = position + delta / length * step;
             }
-            if (run && !(plan.StageFirst && plan.Point == 0)) plan.Running = true;
+
+            if (run && !(plan.StageFirst && plan.Point == 0))
+                plan.Running = true;
+
             _movement.MoveNetworkTo(actor, next, plan.Speed);
             SetSprintEffect(state, plan.Speed > RunSpeed);
         }
 
         private void SetSprintEffect(State state, bool enabled)
         {
-            if (state.Sprinting == enabled) return;
+            if (state.Sprinting == enabled)
+                return;
+
             state.Sprinting = enabled;
             state.SprintEffect?.Cancel();
-            if (_sprintEffect == null) return;
+
+            if (_sprintEffect == null)
+                return;
+
             // 在同一调度线程应用状态，离开行为锁后再进入实体管理，避免锁顺序反转。
             state.SprintEffect = _scheduler.ScheduleAfter(0, () =>
             {
                 lock (_gate)
-                    if (_disposed || !_states.ContainsKey(state.Actor) || state.Sprinting != enabled) return;
+                    if (_disposed || !_states.ContainsKey(state.Actor) || state.Sprinting != enabled)
+                        return;
+
                 _sprintEffect(state.Actor, enabled);
             }, enabled ? "显示模拟队员冲刺状态" : "移除模拟队员冲刺状态");
         }
@@ -185,11 +281,15 @@ namespace Simulant.Simulation.Runtime
         // 每段移动最多开启一次冲刺；下一条移动指令重新从正常跑速开始。
         private static bool TrySprint(MovePlan plan, Vector2 position, double now)
         {
-            if (plan.Speed != RunSpeed || now + TravelTime(position, plan) <= plan.Latest) return false;
+            if (plan.Speed != RunSpeed || now + TravelTime(position, plan) <= plan.Latest)
+                return false;
+
             plan.Speed = 78;
             plan.Immediate = plan.Running = true;
             plan.StageFirst = false;
-            plan.Points.Clear(); plan.Points.Add(plan.Destination); plan.Point = 0;
+            plan.Points.Clear();
+            plan.Points.Add(plan.Destination);
+            plan.Point = 0;
             return true;
         }
 
@@ -210,8 +310,13 @@ namespace Simulant.Simulation.Runtime
         private static double TravelTime(Vector2 origin, MovePlan plan)
         {
             double distance = 0;
+
             for (var i = plan.Point; i < plan.Points.Count; i++)
-            { distance += Vector2.Distance(origin, plan.Points[i]); origin = plan.Points[i]; }
+            {
+                distance += Vector2.Distance(origin, plan.Points[i]);
+                origin = plan.Points[i];
+            }
+
             // 留出共享更新节点和原生插值的时间；每增加一个转折都多留一次轮询。
             return distance / (plan.Speed / 10.0) + 0.2 * (plan.Points.Count - plan.Point) + 0.2;
         }
@@ -223,7 +328,13 @@ namespace Simulant.Simulation.Runtime
         {
             var delta = destination - origin;
             var distance = delta.Length();
-            if (angleDegrees <= 0 || distance < 0.5f) return new[] { destination };
+
+            if (angleDegrees <= 0 || distance < 0.5f)
+                return new[]
+                {
+                    destination
+                };
+
             var direction = delta / distance;
             var perpendicular = new Vector2(-direction.Y, direction.X);
             var angle = random.NextDouble() * angleDegrees * Math.PI / 180;
@@ -234,11 +345,22 @@ namespace Simulant.Simulation.Runtime
             {
                 origin + direction * (float)(lead * Math.Cos(angle)) + perpendicular * lateral,
             };
-            if (distance >= 5) points.Add(origin + direction * (distance * 0.65f) + perpendicular * (lateral * 0.75f));
-            if (distance >= 12) points.Add(origin + direction * (distance * 0.85f) + perpendicular * (lateral * 0.25f));
+
+            if (distance >= 5)
+                points.Add(origin + direction * (distance * 0.65f) + perpendicular * (lateral * 0.75f));
+
+            if (distance >= 12)
+                points.Add(origin + direction * (distance * 0.85f) + perpendicular * (lateral * 0.25f));
+
             points.Add(destination);
+
             // 场地边缘不能因为演出绕路超出网络坐标可表达的范围。
-            if (points.Exists(point => Math.Abs(point.X) > 1000 || Math.Abs(point.Y) > 1000)) return new[] { destination };
+            if (points.Exists(point => Math.Abs(point.X) > 1000 || Math.Abs(point.Y) > 1000))
+                return new[]
+                {
+                    destination
+                };
+
             return points.ToArray();
         }
     }

@@ -14,8 +14,8 @@ namespace Lumina.Data.Parsing.Layer
     {
         public interface IInstanceObject
         {
-        //TODO consider refactoring to classes for real inheritance
-        //            IInstanceObject Read();
+            //TODO consider refactoring to classes for real inheritance
+            //            IInstanceObject Read();
         }
 
         public struct LayerChunk
@@ -214,8 +214,10 @@ namespace Lumina.Data.Parsing.Layer
                 var end = br.BaseStream.Position;
                 ret.ControlPointsArray = new PathControlPoint[ret.ControlPointCount];
                 br.BaseStream.Position = start + ret.ControlPoints;
+
                 for (var i = 0; i < ret.ControlPointCount; i++)
                     ret.ControlPointsArray[i] = PathControlPoint.Read(br);
+
                 br.BaseStream.Position = end;
                 return ret;
             }
@@ -389,7 +391,7 @@ namespace Lumina.Data.Parsing.Layer
             float RenderModelClipRange;
             byte IsVisible;
             byte CollisionExist;
-        // fixed byte Padding01[2];
+            // fixed byte Padding01[2];
         }
 
         struct SGOverriddenVFX
@@ -405,7 +407,7 @@ namespace Lumina.Data.Parsing.Layer
         struct SGOverriddenSE
         {
             byte AutoPlay;
-        // fixed byte Padding00[3];
+            // fixed byte Padding00[3];
         }
 
         struct SGOverriddenLight
@@ -721,8 +723,10 @@ namespace Lumina.Data.Parsing.Layer
                 var end = br.BaseStream.Position;
                 ret.RelativePositions = new Vector3[ret._RelativePositions.PosCount];
                 br.BaseStream.Position = start + ret._RelativePositions.Pos;
+
                 for (var i = 0; i < ret._RelativePositions.PosCount; i++)
                     ret.RelativePositions[i] = Vector3.Read(br);
+
                 br.BaseStream.Position = end;
                 return ret;
             }
@@ -929,8 +933,10 @@ namespace Lumina.Data.Parsing.Layer
                 var end = br.BaseStream.Position;
                 ret.RelativePositions = new Vector3[ret._RelativePositions.PosCount];
                 br.BaseStream.Position = start + ret._RelativePositions.Pos - 48;
+
                 for (var i = 0; i < ret._RelativePositions.PosCount; i++)
                     ret.RelativePositions[i] = Vector3.Read(br);
+
                 br.BaseStream.Position = end;
                 return ret;
             }
@@ -1279,6 +1285,7 @@ namespace Lumina.Data.Parsing.Layer
                 ret.InstanceId = br.ReadUInt32();
                 ret.Name = br.ReadStringOffset(start);
                 ret.Transform = Transformation.Read(br);
+
                 switch (ret.AssetType)
                 {
                     case LayerEntryType.BG:
@@ -1496,6 +1503,7 @@ namespace Lumina.Data.Parsing.Layer
                 ret.LayerSetReferences = new LayerSetReferenced[ret.LayerSetReferencedList.LayerSetCount];
                 ret.OBSetReferencedList = new OBSetReferenced[ret.ObSetReferencedListCount];
                 ret.OBSetEnableReferencedList = new OBSetEnableReferenced[ret.ObSetEnableReferencedListCount];
+
                 for (var i = 0; i < ret.InstanceObjectCount; i++)
                 {
                     br.BaseStream.Position = start + ret._InstanceObjects + instanceOffsets[i];
@@ -1503,14 +1511,20 @@ namespace Lumina.Data.Parsing.Layer
                 }
 
                 br.BaseStream.Position = start + ret.LayerSetReferencedList.LayerSets;
+
                 for (var i = 0; i < ret.LayerSetReferencedList.LayerSetCount; i++)
                     ret.LayerSetReferences[i] = LayerSetReferenced.Read(br);
+
                 br.BaseStream.Position = start + ret.ObSetReferencedList;
+
                 for (var i = 0; i < ret.ObSetReferencedListCount; i++)
                     ret.OBSetReferencedList[i] = OBSetReferenced.Read(br);
+
                 br.BaseStream.Position = start + ret.ObSetEnableReferencedList;
+
                 for (var i = 0; i < ret.ObSetEnableReferencedListCount; i++)
                     ret.OBSetEnableReferencedList[i] = OBSetEnableReferenced.Read(br);
+
                 return ret;
             }
         }

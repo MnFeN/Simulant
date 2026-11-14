@@ -35,8 +35,12 @@ namespace Simulant.Simulation.Mechanics
         {
             if (failureSeverity != MechanicFailureSeverity.Warning && failureSeverity != MechanicFailureSeverity.Fatal)
                 throw new ArgumentOutOfRangeException(nameof(failureSeverity), "机制失败级别无效。");
+
             Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
-            if (participants == null) throw new ArgumentNullException(nameof(participants));
+
+            if (participants == null)
+                throw new ArgumentNullException(nameof(participants));
+
             Participants = Array.AsReadOnly(participants.ToArray());
             Success = success;
             FailureSeverity = failureSeverity;

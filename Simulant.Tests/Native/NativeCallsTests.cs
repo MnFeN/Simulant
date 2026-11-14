@@ -39,9 +39,14 @@ namespace Simulant.Tests.Native
                 Marshal.OffsetOf(typeof(ActionEffectHandler.Header), "RotationInt").ToInt32() == 0x1A &&
                 Marshal.OffsetOf(typeof(ActionEffectHandler.Header), "NumTargets").ToInt32() == 0x21,
                 "技能头部必须保持 FFCS 的大小和关键字段偏移。");
+
             using (var scene = new Scene())
             {
-                var target = new GameObjectId { ObjectId = 0x10FF1111, Type = 2 };
+                var target = new GameObjectId
+                {
+                    ObjectId = 0x10FF1111,
+                    Type = 2
+                };
                 var position = new Vector3(100, 7, 105);
                 ActionEffectHandler.ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD6, -1.25f, position, target);
                 var header = scene.Plugin.Headers.Single();
@@ -66,13 +71,19 @@ namespace Simulant.Tests.Native
         {
             using (var scene = new Scene())
             {
-                var target = new GameObjectId { ObjectId = 123 };
+                var target = new GameObjectId
+                {
+                    ObjectId = 123
+                };
                 Action<uint, IntPtr, uint, float, Vector3, GameObjectId> send = ActionEffectHandler.ReceiveVisual;
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 0, 0, Vector3.Zero, target));
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 65536, 0, Vector3.Zero, target));
                 Throws<ArgumentException>(() => send(0, new IntPtr(1), 1, 0, Vector3.Zero, target));
                 Throws<ArgumentException>(() => send(1, IntPtr.Zero, 1, 0, Vector3.Zero, target));
-                Throws<ArgumentException>(() => send(1, new IntPtr(1), 1, 0, Vector3.Zero, new GameObjectId { ObjectId = 0xE0000000 }));
+                Throws<ArgumentException>(() => send(1, new IntPtr(1), 1, 0, Vector3.Zero, new GameObjectId
+                {
+                    ObjectId = 0xE0000000
+                }));
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 1, float.NaN, Vector3.Zero, target));
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 1, 0, new Vector3(float.PositiveInfinity), target));
                 ActionEffectHandler.ReceiveFuncPtr = IntPtr.Zero;
@@ -84,14 +95,25 @@ namespace Simulant.Tests.Native
 
         private static void VerifyFailureCleanup()
         {
-            foreach (var failure in new[] { "分配为空", "清零短写", "头部写入", "原生调用" })
+            foreach (var failure in new[]
+            {
+                "分配为空",
+                "清零短写",
+                "头部写入",
+                "原生调用"
+            }
+
+            )
             {
                 using (var scene = new Scene())
                 {
                     scene.Memory.Failure = failure;
                     scene.Plugin.FailCall = failure == "原生调用";
                     Throws<InvalidOperationException>(() => ActionEffectHandler.ReceiveVisual(1, new IntPtr(1), 1, 0,
-                        Vector3.Zero, new GameObjectId { ObjectId = 2 }));
+                        Vector3.Zero, new GameObjectId
+                        {
+                            ObjectId = 2
+                        }));
                     Assert(scene.Memory.Bytes.Allocations.SequenceEqual(scene.Memory.Bytes.Freed),
                         "失败后必须释放已取得的全部远程分配：" + failure);
                     Assert(scene.Plugin.Headers.Count == (failure == "原生调用" ? 1 : 0),
@@ -133,11 +155,24 @@ namespace Simulant.Tests.Native
             }
         }
 
-        internal static void Assert(bool value, string message) { if (!value) throw new Exception(message); }
-        private static void Throws<T>(Action action) where T : Exception
+        internal static void Assert(bool value, string message)
         {
-            try { action(); }
-            catch (T) { return; }
+            if (!value)
+                throw new Exception(message);
+        }
+
+        private static void Throws<T>(Action action)
+            where T : Exception
+        {
+            try
+            {
+                action();
+            }
+            catch (T)
+            {
+                return;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
 
@@ -153,14 +188,20 @@ namespace Simulant.Tests.Native
                 _previousPlugin = NamazuInterop.Plugin;
                 _previousFunction = ActionEffectHandler.ReceiveFuncPtr;
                 Plugin = new ActionEffectPlugin(Memory);
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[] { new NamazuPlugin(Plugin) });
+                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
+                {
+                    new NamazuPlugin(Plugin)
+                });
                 ActionEffectHandler.ReceiveFuncPtr = ActionEffectPlugin.Function;
             }
 
             public void Dispose()
             {
                 ActionEffectHandler.ReceiveFuncPtr = _previousFunction;
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[] { _previousPlugin });
+                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
+                {
+                    _previousPlugin
+                });
             }
         }
     }
@@ -169,29 +210,38 @@ namespace Simulant.Tests.Native
     {
         public readonly PartyMemory Bytes = new PartyMemory();
         public string Failure;
-        public T Read<T>(IntPtr address) where T : struct => Bytes.Read<T>(address);
+        public T Read<T>(IntPtr address)
+            where T : struct => Bytes.Read<T>(address);
         public IntPtr AllocateMemory(int size)
         {
             NativeCallsTests.Assert(size == 0x80, "单目标演出只需一个 128 字节的远程缓冲区。");
             return Failure == "分配为空" ? IntPtr.Zero : Bytes.AllocateMemory(size);
         }
+
         public int WriteBytes(IntPtr address, byte[] data)
         {
-            if (Failure == "清零短写") Bytes.ShortWriteAddress = address;
+            if (Failure == "清零短写")
+                Bytes.ShortWriteAddress = address;
+
             return Bytes.WriteBytes(address, data);
         }
-        public void Write<T>(IntPtr address, T value) where T : struct
+
+        public void Write<T>(IntPtr address, T value)
+            where T : struct
         {
             if (Failure == "头部写入" && typeof(T) == typeof(ActionEffectHandler.Header))
                 throw new InvalidOperationException("模拟技能头部写入失败。");
+
             Bytes.Write(address, value);
         }
+
         public bool FreeMemory(IntPtr address) => Bytes.FreeMemory(address);
     }
 
     public sealed class ActionEffectPlugin
     {
         public string State => "Ready";
+
         public readonly object CallScheduler = new object();
         private readonly object PluginUi = new object();
         public static readonly IntPtr Function = new IntPtr(0x202);
@@ -200,11 +250,16 @@ namespace Simulant.Tests.Native
         public readonly List<ActionEffectHandler.Header> Headers = new List<ActionEffectHandler.Header>();
         public readonly List<Vector3> Positions = new List<Vector3>();
         public readonly List<ulong> Targets = new List<ulong>();
-        public ActionEffectPlugin(ActionEffectMemory memory) { Memory = memory; }
+        public ActionEffectPlugin(ActionEffectMemory memory)
+        {
+            Memory = memory;
+        }
+
         public void Call(IntPtr function, params object[] args)
         {
             if (args.Length != 6 || !(args[0] is uint) || args.Skip(1).Any(arg => !(arg is IntPtr)))
                 throw new ArgumentException("技能原生入口只接受施法者 ID 和五个指针。");
+
             NativeCallsTests.Assert(function == Function, "必须调用技能结算入口。");
             var buffer = (IntPtr)args[2];
             NativeCallsTests.Assert(Memory.Bytes.Allocations.Contains(buffer) && !Memory.Bytes.Freed.Contains(buffer),
@@ -216,7 +271,9 @@ namespace Simulant.Tests.Native
             Headers.Add(Memory.Read<ActionEffectHandler.Header>((IntPtr)args[3]));
             Positions.Add(Memory.Read<Vector3>(buffer));
             Targets.Add(Memory.Read<ulong>((IntPtr)args[5]));
-            if (FailCall) throw new InvalidOperationException("模拟技能原生调用失败。");
+
+            if (FailCall)
+                throw new InvalidOperationException("模拟技能原生调用失败。");
         }
     }
 }

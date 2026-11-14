@@ -11,11 +11,16 @@ namespace Simulant.Game.FFCS.Client.Game.Network
         public const int Size = 0xE58;
         public const int Capacity = 8;
 
-        [FieldOffset(0)] public fixed byte Members[Capacity * UpdatePartyPacketMember.Size];
-        [FieldOffset(0xE40)] public long PartyId;
-        [FieldOffset(0xE48)] public long PartyId_2;
-        [FieldOffset(0xE50)] public byte LeaderIndex;
-        [FieldOffset(0xE51)] public byte MemberCount;
+        [FieldOffset(0)]
+        public fixed byte Members[Capacity * UpdatePartyPacketMember.Size];
+        [FieldOffset(0xE40)]
+        public long PartyId;
+        [FieldOffset(0xE48)]
+        public long PartyId_2;
+        [FieldOffset(0xE50)]
+        public byte LeaderIndex;
+        [FieldOffset(0xE51)]
+        public byte MemberCount;
 
         public UpdatePartyPacketMember GetMember(int index)
         {
@@ -46,24 +51,42 @@ namespace Simulant.Game.FFCS.Client.Game.Network
         public const int StatusCount = 30;
         public const int StatusesOffset = 0x60;
 
-        [FieldOffset(0)] public fixed byte Name[NameLength];
-        [FieldOffset(0x28)] public ulong AccountId;
-        [FieldOffset(0x30)] public ulong ContentId;
-        [FieldOffset(0x38)] public uint EntityId;
-        [FieldOffset(0x3C)] public uint PetEntityId;
-        [FieldOffset(0x40)] public uint CompanionEntityId;
-        [FieldOffset(0x44)] public uint CurrentHP;
-        [FieldOffset(0x48)] public uint MaxHP;
-        [FieldOffset(0x4C)] public ushort CurrentMP;
-        [FieldOffset(0x4E)] public ushort MaxMP;
-        [FieldOffset(0x50)] public ushort HomeWorld;
-        [FieldOffset(0x52)] public ushort TerritoryType;
-        [FieldOffset(0x54)] public byte Valid;
-        [FieldOffset(0x55)] public byte ClassJob;
-        [FieldOffset(0x56)] public byte Sex;
-        [FieldOffset(0x57)] public byte Level;
-        [FieldOffset(0x58)] public byte SyncedLevel;
-        [FieldOffset(StatusesOffset)] public fixed byte Statuses[StatusCount * UpdatePartyPacketStatus.Size];
+        [FieldOffset(0)]
+        public fixed byte Name[NameLength];
+        [FieldOffset(0x28)]
+        public ulong AccountId;
+        [FieldOffset(0x30)]
+        public ulong ContentId;
+        [FieldOffset(0x38)]
+        public uint EntityId;
+        [FieldOffset(0x3C)]
+        public uint PetEntityId;
+        [FieldOffset(0x40)]
+        public uint CompanionEntityId;
+        [FieldOffset(0x44)]
+        public uint CurrentHP;
+        [FieldOffset(0x48)]
+        public uint MaxHP;
+        [FieldOffset(0x4C)]
+        public ushort CurrentMP;
+        [FieldOffset(0x4E)]
+        public ushort MaxMP;
+        [FieldOffset(0x50)]
+        public ushort HomeWorld;
+        [FieldOffset(0x52)]
+        public ushort TerritoryType;
+        [FieldOffset(0x54)]
+        public byte Valid;
+        [FieldOffset(0x55)]
+        public byte ClassJob;
+        [FieldOffset(0x56)]
+        public byte Sex;
+        [FieldOffset(0x57)]
+        public byte Level;
+        [FieldOffset(0x58)]
+        public byte SyncedLevel;
+        [FieldOffset(StatusesOffset)]
+        public fixed byte Statuses[StatusCount * UpdatePartyPacketStatus.Size];
 
         public UpdatePartyPacketStatus GetStatus(int index)
         {
@@ -90,10 +113,14 @@ namespace Simulant.Game.FFCS.Client.Game.Network
     public struct UpdatePartyPacketStatus
     {
         public const int Size = 0xC;
-        [FieldOffset(0)] public ushort StatusId;
-        [FieldOffset(2)] public ushort Param;
+        [FieldOffset(0)]
+        public ushort StatusId;
+        [FieldOffset(2)]
+        public ushort Param;
         // 原生小队收包函数不读取剩余时间，恢复计时需另用成员的状态记录。
-        [FieldOffset(4)] public float RemainingTime;
-        [FieldOffset(8)] public uint SourceEntityId;
+        [FieldOffset(4)]
+        public float RemainingTime;
+        [FieldOffset(8)]
+        public uint SourceEntityId;
     }
 }

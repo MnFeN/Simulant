@@ -10,8 +10,11 @@ namespace Simulant.Simulation.Runtime
     {
         public bool Show(SimActor actor, ActionRow action, double sustain, string tag)
         {
-            if (!actor.IsActive || action.Omen.RowId == 0 || sustain <= 0) return false;
+            if (!actor.IsActive || action.Omen.RowId == 0 || sustain <= 0)
+                return false;
+
             float x, y;
+
             switch (action.CastType)
             {
                 case 2:

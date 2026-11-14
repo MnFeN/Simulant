@@ -39,6 +39,7 @@ namespace Simulant.Tests
         public static void ConstantsFastPathsAndOperatorPrecedence()
         {
             var original = CultureInfo.CurrentCulture;
+
             try
             {
                 CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
@@ -55,15 +56,34 @@ namespace Simulant.Tests
                 Check("1?2:0?3:4", 2);
                 Check("unknown??5", 5);
             }
-            finally { CultureInfo.CurrentCulture = original; }
+            finally
+            {
+                CultureInfo.CurrentCulture = original;
+            }
         }
 
         public static void InvalidExpressionsAreNotPartiallyAccepted()
         {
-            foreach (var expression in new[] { "1,2", "1+", "(1+2", "1?2", "1??" })
+            foreach (var expression in new[]
             {
-                try { MathParser.Parse(expression); }
-                catch (ArithmeticException) { continue; }
+                "1,2",
+                "1+",
+                "(1+2",
+                "1?2",
+                "1??"
+            }
+
+            )
+            {
+                try
+                {
+                    MathParser.Parse(expression);
+                }
+                catch (ArithmeticException)
+                {
+                    continue;
+                }
+
                 throw new InvalidOperationException("不完整表达式不应返回部分结果：" + expression);
             }
         }
@@ -71,16 +91,29 @@ namespace Simulant.Tests
         public static void EorzeanTimeDoesNotRequireTriggernometry()
         {
             var delay = MathParser.Parse("nextETms(06:00)");
+
             if (delay < 0 || delay > 1440 * MathParser.ETmin2sec * 1000)
                 throw new InvalidOperationException("等待时间必须位于一个艾欧泽亚日以内。");
-            try { MathParser.NextETms(new[] { "25:00" }); }
-            catch (FormatException) { return; }
+
+            try
+            {
+                MathParser.NextETms(new[]
+                {
+                    "25:00"
+                });
+            }
+            catch (FormatException)
+            {
+                return;
+            }
+
             throw new InvalidOperationException("超出一天范围的时间应当报错。");
         }
 
         private static void Check(string expression, double expected)
         {
             var actual = MathParser.Parse(expression);
+
             if (double.IsNaN(actual) || Math.Abs(actual - expected) > 0.000001)
                 throw new InvalidOperationException($"表达式 {expression}：预期 {expected}，实际 {actual}。");
         }

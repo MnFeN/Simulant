@@ -18,7 +18,9 @@ namespace Simulant.Content.U7b.Presets
             var towers = Enumerable.Range(0, 2).Select(tower => new AreaMechanic
             {
                 Name = $"第 {index + 1} 轮第 {tower + 1} 座塔",
-                Area = ActionArea.FromAction(0xBABE), Center = round.TowerCenters[tower], RequiredPlayers = 2,
+                Area = ActionArea.FromAction(0xBABE),
+                Center = round.TowerCenters[tower],
+                RequiredPlayers = 2,
                 Check = players => players.Any(player => _stacks[player.Slot] == 0) ? "踩塔者已没有咏唱危机层数。" : null,
                 Started = context =>
                 {
@@ -31,18 +33,24 @@ namespace Simulant.Content.U7b.Presets
                 {
                     foreach (var player in result.Participants)
                     {
-                        if (!_triggered[index].Contains(player.Slot)) _triggered[index].Add(player.Slot);
+                        if (!_triggered[index].Contains(player.Slot))
+                        _triggered[index].Add(player.Slot);
+
                         if (round.TowerBySlot[player.Slot] != tower)
-                            _host.LogSim($"[遗弃末世] {Roles[player.Slot]} 的踩塔分工与约定解法不同，已按实际入塔者结算。");
+                        _host.LogSim($"[遗弃末世] {Roles[player.Slot]} 的踩塔分工与约定解法不同，已按实际入塔者结算。");
                     }
                 },
                 Cleanup = context =>
                 {
                     if (!_host.EnvironmentService.PlayMapEffect(round.TowerMapIndices[tower], 4))
-                        throw new InvalidOperationException("遗弃末世的塔特效清理失败。");
+                    throw new InvalidOperationException("遗弃末世的塔特效清理失败。");
                 },
             }).ToArray();
-            return new MechanicGroup(towers) { Name = $"第 {index + 1} 轮双人塔", ResolveAfter = TowerHit[index] - TowerShow[index] };
+            return new MechanicGroup(towers)
+            {
+                Name = $"第 {index + 1} 轮双人塔",
+                ResolveAfter = TowerHit[index] - TowerShow[index]
+            };
         }
 
         private void ResolveSpells(int index)
@@ -67,16 +75,25 @@ namespace Simulant.Content.U7b.Presets
                     Visual = result =>
                     {
                         Effect(source, result.Center, result.Heading, action);
-                        if (fan) directionError = CheckFanDirection(index, source, area, result);
+
+                        if (fan)
+                            directionError = CheckFanDirection(index, source, area, result);
                     },
                     Failed = result => Fail(directionError ?? DescribeMarkerFailure(index, source, marker, area, result)),
                     Resolved = result =>
                     {
-                        foreach (var player in result.Participants) hits[player.Slot]++;
+                        foreach (var player in result.Participants)
+                            hits[player.Slot]++;
                     },
                 };
             }).ToArray();
-            if (spells.Length == 0) { FinishSpells(index, hits); return; }
+
+            if (spells.Length == 0)
+            {
+                FinishSpells(index, hits);
+                return;
+            }
+
             EntityManager.RunMechanic(new MechanicGroup(spells)
             {
                 Name = $"第 {index + 1} 轮钢铁、扇形与分摊",
@@ -93,7 +110,9 @@ namespace Simulant.Content.U7b.Presets
             // 比较同一轮世界坐标中的方向，取跨越正负 π 后的最小夹角。
             var difference = (double)result.Heading - expectedHeading;
             var degrees = Math.Abs(Math.Atan2(Math.Sin(difference), Math.Cos(difference))) * 180 / Math.PI;
-            if (degrees <= 30) return null;
+
+            if (degrees <= 30)
+                return null;
 
             // 沿用伤害判定快照，不再次读取移动中的玩家，也不改变实际扇形或人数判定。
             var actualTarget = result.Snapshot.Nearest(result.Center, Party[source])
@@ -101,32 +120,48 @@ namespace Simulant.Content.U7b.Presets
             var error = DescribeMarkerFailure(index, source, ForsakenMarker.Fan, area, result)
                 .WithDetail($"扇形偏离解法方向 {degrees:0.0}°，超过 30°；" +
                     $"实际由 {Roles[actualTarget.Slot]} 引导，约定由 {Roles[expectedTarget]} 引导");
+
             // 人数也失败时，交给 Failed 统一记录并发送中断提示，保留角度说明但不重复上报。
-            if (!result.Success) return error;
+            if (!result.Success)
+                return error;
+
             var message = RecordMistake(error);
             _host.LogWarning(message);
-            try { TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + message); }
-            catch (Exception chatError) { _host.LogWarning("[遗弃末世] 扇形引导偏差的默语提示发送失败：" + chatError.Message); }
+
+            try
+            {
+                TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + message);
+            }
+            catch (Exception chatError)
+            {
+                _host.LogWarning("[遗弃末世] 扇形引导偏差的默语提示发送失败：" + chatError.Message);
+            }
+
             return error;
         }
 
         private void FinishSpells(int index, int[] hits)
         {
             ApplyMagicHits(hits, $"第 {index + 1} 轮钢扇分摊");
+
             // 只有本轮判定全部通过，才更新实际入塔者的层数与后续点名。
             foreach (var slot in _triggered[index])
             {
-                if (_stacks[slot] > 0) _stacks[slot]--;
+                if (_stacks[slot] > 0)
+                    _stacks[slot]--;
+
                 _markers[slot] = _stacks[slot] == 0 ? ForsakenMarker.None : _plan.Rounds[index].MarkersAfter[slot];
                 ApplyMarker(slot, _markers[slot]);
             }
-            for (var slot = 0; slot < 8; slot++) SetTrouble(slot);
+
+            for (var slot = 0; slot < 8; slot++)
+                SetTrouble(slot);
+
             _host.LogSim($"[遗弃末世] 第 {index + 1}/8 轮完成；剩余层数 {string.Join("、", Enumerable.Range(0, 8).Select(slot => Roles[slot] + ":" + _stacks[slot]))}。");
         }
 
-        private void SelectJumpTargets()
-            // 本体取最近者，三个分身依次取第二至第四近者，不按动作包的先后重新选人。
-            => _jumpTargets = PartySnapshot.Capture(Party).Nearest(ForsakenPlan.Center, 4).Select(player => player.Slot).ToArray();
+        private void SelectJumpTargets() // 本体取最近者，三个分身依次取第二至第四近者，不按动作包的先后重新选人。
+        => _jumpTargets = PartySnapshot.Capture(Party).Nearest(ForsakenPlan.Center, 4).Select(player => player.Slot).ToArray();
 
         private void ResolveJumps(ForsakenRoundPlan round, int[] sources)
         {
@@ -138,7 +173,9 @@ namespace Simulant.Content.U7b.Presets
                 var action = source == 0 ? (round.FutureEnd ? 0xBAD6u : 0xBAD7u) : (round.FutureEnd ? 0xBAD8u : 0xBAD9u);
                 return new AreaMechanic
                 {
-                    Name = $"第 {round.Number} 轮 {Roles[target]} 的跳跃圆形伤害", Area = ActionArea.FromAction(action), RequiredPlayers = 1,
+                    Name = $"第 {round.Number} 轮 {Roles[target]} 的跳跃圆形伤害",
+                    Area = ActionArea.FromAction(action),
+                    RequiredPlayers = 1,
                     CenterAtResolve = snapshot => snapshot.Get(target).Position,
                     Failed = result => ReportJumpFailure(round, target, result),
                     Visual = result =>
@@ -153,15 +190,18 @@ namespace Simulant.Content.U7b.Presets
                         actor.FaceNetwork(heading);
                         // 圆形伤害仍以目标为中心；施法者沿场中心到目标的方向，停在目标前四米。
                         actor.Entity.ExecuteActionEffect(action, Party[target].Entity);
+
                         // 回放在动作效果后约 0.65 秒以速度参数 90 更新落点，后续半场刀读取该实体位置。
                         Scheduler.ScheduleAfter(0.65, () =>
                         {
-                            if (actor.IsActive) actor.Entity.ActorMove(position, heading, 90);
+                            if (actor.IsActive)
+                                actor.Entity.ActorMove(position, heading, 90);
                         }, $"第 {round.Number} 轮跳跃落地 {source + 1}");
                     },
                     Resolved = result =>
                     {
-                        foreach (var player in result.Participants) hits[player.Slot]++;
+                        foreach (var player in result.Participants)
+                            hits[player.Slot]++;
                     },
                 };
             }).ToArray();
@@ -179,7 +219,10 @@ namespace Simulant.Content.U7b.Presets
             var origin = actor.Pos;
             var target = snapshot.Nearest(origin) ?? throw new InvalidOperationException("前后刀没有可引导的队员。");
             var direction = target.Position - origin;
-            if (direction.LengthSquared() < 0.0001f) direction = new Vector2(0, -1);
+
+            if (direction.LengthSquared() < 0.0001f)
+                direction = new Vector2(0, -1);
+
             var heading = Heading(origin, origin + direction);
             actor.FaceNetwork(heading);
             _cleaveOrigins[source] = origin;
@@ -195,7 +238,9 @@ namespace Simulant.Content.U7b.Presets
             {
                 Name = $"第 {round.Number} 轮{(round.FutureEnd ? "前刀" : "后刀")}",
                 Area = ActionArea.FromAction(action, coneAngleDegrees: 180),
-                Center = _cleaveOrigins[source], Heading = _cleaveHeadings[source], RequiredPlayers = 0,
+                Center = _cleaveOrigins[source],
+                Heading = _cleaveHeadings[source],
+                RequiredPlayers = 0,
                 FailureSeverity = MechanicFailureSeverity.Warning,
                 Failed = result => Warn(result.DescribeFailure($"第 {round.Number} 轮{(round.FutureEnd ? "前刀" : "后刀")}", Array.Empty<int>())
                     .WithAttribution(result.Participants.Select(player => player.Slot),
@@ -207,12 +252,19 @@ namespace Simulant.Content.U7b.Presets
         private void ApplyMagicHits(int[] hits, string description)
         {
             var now = Scheduler.ElapsedSeconds;
+
             for (var slot = 0; slot < 8; slot++)
             {
-                if (hits[slot] == 0) continue;
+                if (hits[slot] == 0)
+                    continue;
+
                 if (hits[slot] > 1 || now - _lastMagicHit[slot] < 1.96)
-                    Fail(MechanicError.Rule(description + "重复魔法伤害", new[] { slot }, "短时间内受到多次魔法伤害。")
+                    Fail(MechanicError.Rule(description + "重复魔法伤害", new[]
+                    {
+                    slot
+                    }, "短时间内受到多次魔法伤害。")
                         .WithDetail("仅凭受伤次数无法确定责任人，需结合各次伤害的位置与点名检查"));
+
                 _lastMagicHit[slot] = now;
                 EntityManager.SetStatus(Party[slot], 0xB7D, 1.96f, 0, _casters[0]);
             }

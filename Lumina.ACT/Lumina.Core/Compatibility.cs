@@ -10,11 +10,14 @@ namespace Lumina
         public static void ReadExactly(Stream stream, byte[] buffer)
         {
             int total = 0;
+
             while (total < buffer.Length)
             {
                 int read = stream.Read(buffer, total, buffer.Length - total);
+
                 if (read == 0)
                     throw new EndOfStreamException();
+
                 total += read;
             }
         }
@@ -23,9 +26,12 @@ namespace Lumina
         {
             if (value <= 0)
                 throw new ArgumentOutOfRangeException(nameof(value));
+
             int result = 0;
+
             while ((value >>= 1) != 0)
                 result++;
+
             return result;
         }
 
@@ -62,7 +68,7 @@ namespace System
             };
         }
 
-        public static implicit operator float (Half value)
+        public static implicit operator float(Half value)
         {
             return value.bits.Unpack();
         }

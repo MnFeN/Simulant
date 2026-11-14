@@ -12,15 +12,17 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         private ContainerInterface ContainerInterface => Ptr.As<ContainerInterface>();
         #region ContainerInterface
         public Character OwnerObject => ContainerInterface.OwnerObject;
-        #endregion
 
+        #endregion
         [SigPattern("E8 * * * * 8B 87 ? ? ? ? 85 C0 74 ? 83 F8")]
         public static IntPtr CopyFromCharacterFuncPtr { get; set; }
+
         public ulong CopyFromCharacter(Character source, CopyFlags flags)
             => CopyFromCharacterFuncPtr.Call<ulong>(Ptr, source.Ptr, (uint)flags);
 
         [SigPattern("E8 * * * * 45 0F B6 86 ? ? ? ? 48 8D 8F")]
         public static IntPtr SetupBNpcFuncPtr { get; set; }
+
         public void SetupBNpc(uint bNpcBaseId, uint bNpcNameId = 0)
             => SetupBNpcFuncPtr.Call(Ptr, bNpcBaseId, bNpcNameId);
 

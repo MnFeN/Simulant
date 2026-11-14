@@ -24,6 +24,7 @@ namespace Simulant.Tests.Native
                 Console.Error.WriteLine("请传入客户端根目录、game 或 sqpack 目录。");
                 return 1;
             }
+
             try
             {
                 // ACT 先从字节加载并扫描所有类型，再创建入口；这里不能提前执行模块初始化。
@@ -48,6 +49,7 @@ namespace Simulant.Tests.Native
         private static void Run(string path)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
+
             using (var data = new GameDataService(path))
             {
                 Console.WriteLine("读取并校验常用表：" + watch.ElapsedMilliseconds + " 毫秒。");
@@ -59,15 +61,33 @@ namespace Simulant.Tests.Native
                 VerifyEntranceBarriers(data);
 
                 Check(GameDataService.ResolveSqPackPath(Path.GetDirectoryName(data.SqPackPath)) == data.SqPackPath, "游戏目录解析。");
+
                 using (var raw = new GameData(data.SqPackPath))
                 {
-                    try { raw.GetExcelSheet<WrongAction>(); throw new Exception("错误布局未被拒绝。"); }
-                    catch (Lumina.Excel.Exceptions.MismatchedColumnHashException) { _checks++; }
+                    try
+                    {
+                        raw.GetExcelSheet<WrongAction>();
+                        throw new Exception("错误布局未被拒绝。");
+                    }
+                    catch (Lumina.Excel.Exceptions.MismatchedColumnHashException)
+                    {
+                        _checks++;
+                    }
                 }
+
                 data.Dispose();
-                try { data.GetSheet<ActionRow>(); throw new Exception("释放后仍能查表。"); }
-                catch (ObjectDisposedException) { _checks++; }
+
+                try
+                {
+                    data.GetSheet<ActionRow>();
+                    throw new Exception("释放后仍能查表。");
+                }
+                catch (ObjectDisposedException)
+                {
+                    _checks++;
+                }
             }
+
             using (var reopened = new GameDataService(path))
                 Check(reopened.GetSheet<ActionRow>().GetRow(3).Name.ExtractText() == "冲刺", "重新打开客户端。");
         }
@@ -79,18 +99,94 @@ namespace Simulant.Tests.Native
             // 回放的入口生成包，坐标按模拟器的 XY 地面、Z 高度表示。
             var samples = new[]
             {
-                new { Territory = 1238u, BaseId = 2007457u, Layout = 0xA58C08u, Wall = 0xA58C07u, X = 100f, Y = 115f, Z = 0f },
-                new { Territory = 887u, BaseId = 2000182u, Layout = 0x7C1907u, Wall = 0x7C190Bu, X = 100f, Y = 115f, Z = 0f },
-                new { Territory = 1363u, BaseId = 2000182u, Layout = 0xBC174Eu, Wall = 0xBC174Cu, X = 100.4117f, Y = 115.7509f, Z = 0f },
-                new { Territory = 777u, BaseId = 2007457u, Layout = 0x700D77u, Wall = 0x700D76u, X = 100f, Y = 116f, Z = 0f },
-                new { Territory = 968u, BaseId = 2007457u, Layout = 0x875BE2u, Wall = 0x875BE0u, X = 100f, Y = 118f, Z = 0f },
-                new { Territory = 1036u, BaseId = 2000182u, Layout = 0x3E82C3u, Wall = 0x3E82C2u, X = 361.8817f, Y = -225.1813f, Z = 46.09275f },
-                new { Territory = 1045u, BaseId = 2000182u, Layout = 0x3FBFCFu, Wall = 0x3FBFD2u, X = -16f, Y = 0f, Z = 0f },
-                new { Territory = 1069u, BaseId = 2000182u, Layout = 0x8E2A70u, Wall = 0x8E29C2u, X = 5f, Y = 246f, Z = -3.9955f }
+                new
+                {
+                    Territory = 1238u,
+                    BaseId = 2007457u,
+                    Layout = 0xA58C08u,
+                    Wall = 0xA58C07u,
+                    X = 100f,
+                    Y = 115f,
+                    Z = 0f
+                },
+                new
+                {
+                    Territory = 887u,
+                    BaseId = 2000182u,
+                    Layout = 0x7C1907u,
+                    Wall = 0x7C190Bu,
+                    X = 100f,
+                    Y = 115f,
+                    Z = 0f
+                },
+                new
+                {
+                    Territory = 1363u,
+                    BaseId = 2000182u,
+                    Layout = 0xBC174Eu,
+                    Wall = 0xBC174Cu,
+                    X = 100.4117f,
+                    Y = 115.7509f,
+                    Z = 0f
+                },
+                new
+                {
+                    Territory = 777u,
+                    BaseId = 2007457u,
+                    Layout = 0x700D77u,
+                    Wall = 0x700D76u,
+                    X = 100f,
+                    Y = 116f,
+                    Z = 0f
+                },
+                new
+                {
+                    Territory = 968u,
+                    BaseId = 2007457u,
+                    Layout = 0x875BE2u,
+                    Wall = 0x875BE0u,
+                    X = 100f,
+                    Y = 118f,
+                    Z = 0f
+                },
+                new
+                {
+                    Territory = 1036u,
+                    BaseId = 2000182u,
+                    Layout = 0x3E82C3u,
+                    Wall = 0x3E82C2u,
+                    X = 361.8817f,
+                    Y = -225.1813f,
+                    Z = 46.09275f
+                },
+                new
+                {
+                    Territory = 1045u,
+                    BaseId = 2000182u,
+                    Layout = 0x3FBFCFu,
+                    Wall = 0x3FBFD2u,
+                    X = -16f,
+                    Y = 0f,
+                    Z = 0f
+                },
+                new
+                {
+                    Territory = 1069u,
+                    BaseId = 2000182u,
+                    Layout = 0x8E2A70u,
+                    Wall = 0x8E29C2u,
+                    X = 5f,
+                    Y = 246f,
+                    Z = -3.9955f
+                }
             };
+
             foreach (var sample in samples)
             {
-                var specs = (EventObjectSpawnSpec[])load.Invoke(null, new object[] { data, data.GetSheet<TerritoryType>().GetRow(sample.Territory) });
+                var specs = (EventObjectSpawnSpec[])load.Invoke(null, new object[]
+                {
+                    data, data.GetSheet<TerritoryType>().GetRow(sample.Territory)
+                });
                 Check(specs.Length == 1, $"区域 {sample.Territory} 只能选中出生圈，不能选中同 ID 的其他机关。");
                 var spec = specs[0];
                 Check(spec.BaseId == sample.BaseId && spec.LayoutId == sample.Layout && spec.GimmickId == sample.Wall &&
@@ -98,14 +194,26 @@ namespace Simulant.Tests.Native
                     spec.Heading == 0 && spec.TargetableFlags == 5 && spec.EventState == 0,
                     $"区域 {sample.Territory} 的出生圈参数必须与回放一致。");
             }
-            foreach (var territory in new uint[] { 755, 1122 })
-                Check(((EventObjectSpawnSpec[])load.Invoke(null, new object[] { data, data.GetSheet<TerritoryType>().GetRow(territory) })).Length == 1,
+
+            foreach (var territory in new uint[]
+            {
+                755,
+                1122
+            }
+
+            )
+                Check(((EventObjectSpawnSpec[])load.Invoke(null, new object[]
+                {
+                data, data.GetSheet<TerritoryType>().GetRow(territory)
+                })).Length == 1,
                     $"现有预设区域 {territory} 的场地资源也应能识别出生圈。");
         }
 
         private static void Check(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException(message);
+            if (!condition)
+                throw new InvalidOperationException(message);
+
             _checks++;
         }
 
@@ -115,6 +223,7 @@ namespace Simulant.Tests.Native
             public ExcelPage ExcelPage => null;
             public uint RowOffset => 0;
             public uint RowId => 0;
+
             public static WrongAction Create(ExcelPage page, uint offset, uint row) => default(WrongAction);
         }
     }

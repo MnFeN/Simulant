@@ -2,7 +2,8 @@
 
 namespace Simulant.Game
 {
-    public readonly struct MemoryField<T> where T : struct
+    public readonly struct MemoryField<T>
+        where T : struct
     {
         private readonly IntPtr _basePtr;
         private readonly int _offset;
@@ -20,6 +21,7 @@ namespace Simulant.Game
         }
 
         public IntPtr Ptr => _basePtr + _offset;
+
         public T Get() => Value;
         public void Set(T value) => Value = value;
 

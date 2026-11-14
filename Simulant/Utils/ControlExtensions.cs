@@ -38,6 +38,7 @@ namespace Simulant.Utils
                 }
 
                 result.AsyncWaitHandle.WaitOne(100);
+
                 if (result.IsCompleted)
                 {
                     return control.EndInvoke(result);

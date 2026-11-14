@@ -35,8 +35,18 @@ namespace Simulant.Tests
         {
             var rectangle = ActionArea.Rectangle(8, 4);
             var origin = new Vector2(100, 100);
-            foreach (var corner in new[] { new Vector2(98, 100), new Vector2(102, 100), new Vector2(98, 108), new Vector2(102, 108) })
+
+            foreach (var corner in new[]
+            {
+                new Vector2(98, 100),
+                new Vector2(102, 100),
+                new Vector2(98, 108),
+                new Vector2(102, 108)
+            }
+
+            )
                 Assert(rectangle.Contains(corner, origin, 0), "矩形四角应包含在闭合边界内。");
+
             Assert(!rectangle.Contains(new Vector2(102.001f, 104), origin, 0), "矩形宽度参数是完整宽度，不能当成半宽。");
             Assert(!rectangle.Contains(new Vector2(100, 108.001f), origin, 0), "矩形长度参数是向前长度，不能翻倍。");
             Assert(!rectangle.Contains(new Vector2(100, 99.999f), origin, 0), "矩形不能延伸到原点后方。");
@@ -79,13 +89,23 @@ namespace Simulant.Tests
 
         public static void InvalidAreasAndCoordinatesFailClearly()
         {
-            foreach (var value in new[] { 0f, -1f, float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+            foreach (var value in new[]
+            {
+                0f,
+                -1f,
+                float.NaN,
+                float.PositiveInfinity,
+                float.NegativeInfinity
+            }
+
+            )
             {
                 Expect<ArgumentOutOfRangeException>(() => ActionArea.Circle(value), "无效圆形半径必须拒绝。");
                 Expect<ArgumentOutOfRangeException>(() => ActionArea.Rectangle(1, value), "无效矩形宽度必须拒绝。");
                 Expect<ArgumentOutOfRangeException>(() => ActionArea.Rectangle(value, 1), "无效矩形长度必须拒绝。");
                 Expect<ArgumentOutOfRangeException>(() => ActionArea.Cone(1, value), "无效扇形张角必须拒绝。");
             }
+
             Expect<ArgumentOutOfRangeException>(() => ActionArea.Cone(1, 360.01f), "大于一圈的扇形张角必须拒绝。");
             Expect<ArgumentOutOfRangeException>(() => ActionArea.Donut(-1, 5), "负内半径必须拒绝。");
             Expect<ArgumentOutOfRangeException>(() => ActionArea.Donut(5, 5), "相等的内外半径必须拒绝。");
@@ -102,9 +122,24 @@ namespace Simulant.Tests
 
         public static void ActionRowsUseVerifiedShapesAndCasterHitboxes()
         {
-            foreach (var shape in new byte[] { 2, 3, 4, 5, 12, 13 })
+            foreach (var shape in new byte[]
             {
-                WithAction(new ActionRow { CastType = shape, EffectRange = 10, XAxisModifier = 4 }, actionId =>
+                2,
+                3,
+                4,
+                5,
+                12,
+                13
+            }
+
+            )
+            {
+                WithAction(new ActionRow
+                {
+                    CastType = shape,
+                    EffectRange = 10,
+                    XAxisModifier = 4
+                }, actionId =>
                 {
                     var area = ActionArea.FromAction(actionId, 2, coneAngleDegrees: 90);
                     var addsHitbox = shape == 3 || shape == 4 || shape == 5;
@@ -112,6 +147,7 @@ namespace Simulant.Tests
                         "只有 CastType 3、4、5 应向技能范围加上施法者碰撞半径。");
                     Assert(area.Contains(new Vector2(0, addsHitbox ? 12 : 10), Vector2.Zero, 0), "技能表范围的前方边界应命中。");
                     Assert(!area.Contains(new Vector2(0, addsHitbox ? 12.001f : 10.001f), Vector2.Zero, 0), "技能表范围的前方边界外不得命中。");
+
                     if (shape == 4 || shape == 12)
                     {
                         Assert(area.Contains(new Vector2(2, 5), Vector2.Zero, 0), "技能表 ScaleX 为矩形半宽，边界应命中。");
@@ -120,7 +156,12 @@ namespace Simulant.Tests
                     }
                 });
             }
-            WithAction(new ActionRow { CastType = 10, EffectRange = 10 }, actionId =>
+
+            WithAction(new ActionRow
+            {
+                CastType = 10,
+                EffectRange = 10
+            }, actionId =>
             {
                 var area = ActionArea.FromAction(actionId, 2, innerRadius: 3);
                 Assert(area.Contains(new Vector2(0, 10), Vector2.Zero, 0), "圆环外半径应使用 EffectRange。");
@@ -130,22 +171,68 @@ namespace Simulant.Tests
 
         public static void ActionRowsResolveStandardOmenDimensions()
         {
-            WithAction(new ActionRow { CastType = 13, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = "vfx/omen/eff/gl_fan090_1bf.avfx" } } }, actionId =>
+            WithAction(new ActionRow
+            {
+                CastType = 13,
+                EffectRange = 10,
+                Omen = new Lumina.Excel.RowRef<Omen>
+                {
+                    RowId = 1,
+                    ValueNullable = new Omen
+                    {
+                        Path = "vfx/omen/eff/gl_fan090_1bf.avfx"
+                    }
+                }
+            }, actionId =>
             {
                 var area = ActionArea.FromAction(actionId);
                 Assert(area.Contains(new Vector2(5, 5), Vector2.Zero, 0), "fan090 表示完整张角 90 度。");
                 Assert(!area.Contains(new Vector2(5.001f, 5), Vector2.Zero, 0), "不得将 fan090 当成半张角。");
             });
-            foreach (var name in new[] { "gl_sircle_1005bf", "er_sicle_1005f", "circle_1005_test", "circle1005_test" })
+
+            foreach (var name in new[]
             {
-                WithAction(new ActionRow { CastType = 10, EffectRange = 20, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = name } } }, actionId =>
+                "gl_sircle_1005bf",
+                "er_sicle_1005f",
+                "circle_1005_test",
+                "circle1005_test"
+            }
+
+            )
+            {
+                WithAction(new ActionRow
+                {
+                    CastType = 10,
+                    EffectRange = 20,
+                    Omen = new Lumina.Excel.RowRef<Omen>
+                    {
+                        RowId = 1,
+                        ValueNullable = new Omen
+                        {
+                            Path = name
+                        }
+                    }
+                }, actionId =>
                 {
                     var area = ActionArea.FromAction(actionId);
                     Assert(!area.Contains(new Vector2(0, 9.999f), Vector2.Zero, 0), "圆环预兆中的内外半径比例必须按 EffectRange 缩放。");
                     Assert(area.Contains(new Vector2(0, 10), Vector2.Zero, 0), "缩放后的圆环内边界应命中。");
                 });
             }
-            WithAction(new ActionRow { CastType = 10, EffectRange = 40, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = "gl_sircle_1907af" } } }, actionId =>
+
+            WithAction(new ActionRow
+            {
+                CastType = 10,
+                EffectRange = 40,
+                Omen = new Lumina.Excel.RowRef<Omen>
+                {
+                    RowId = 1,
+                    ValueNullable = new Omen
+                    {
+                        Path = "gl_sircle_1907af"
+                    }
+                }
+            }, actionId =>
             {
                 var area = ActionArea.FromAction(actionId);
                 Assert(!area.Contains(new Vector2(0, 14.7f), Vector2.Zero, 0), "圆环比例计算不能将内半径截断为整数。");
@@ -155,47 +242,144 @@ namespace Simulant.Tests
 
         public static void ActionRowsRequireExplicitUnknownDimensions()
         {
-            foreach (var name in new[] { "", "custom_omen", "m0532om_fan01x", "gl_fan000_test", "gl_fan361_test", "gl_fan0900_test", "gl_fan090_fan120_test" })
+            foreach (var name in new[]
             {
-                WithAction(new ActionRow { CastType = 13, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = name } } }, actionId =>
+                "",
+                "custom_omen",
+                "m0532om_fan01x",
+                "gl_fan000_test",
+                "gl_fan361_test",
+                "gl_fan0900_test",
+                "gl_fan090_fan120_test"
+            }
+
+            )
+            {
+                WithAction(new ActionRow
+                {
+                    CastType = 13,
+                    EffectRange = 10,
+                    Omen = new Lumina.Excel.RowRef<Omen>
+                    {
+                        RowId = 1,
+                        ValueNullable = new Omen
+                        {
+                            Path = name
+                        }
+                    }
+                }, actionId =>
                 {
                     var error = Expect<InvalidOperationException>(() => ActionArea.FromAction(actionId), "未知或歧义扇形名称不能回退到猜测张角。");
                     Assert(error.Message.Contains("coneAngleDegrees"), "缺失扇形数据时应提示具体的补充参数。");
                 });
             }
-            foreach (var name in new[] { "", "custom_omen", "m0532om_don03x", "gl_sircle_1034bf", "gl_sircle_0000bf", "gl_sircle_1000bf", "gl_sircle_10050bf", "gl_sircle_1005_sircle_2010bf" })
+
+            foreach (var name in new[]
             {
-                WithAction(new ActionRow { CastType = 10, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = name } } }, actionId =>
+                "",
+                "custom_omen",
+                "m0532om_don03x",
+                "gl_sircle_1034bf",
+                "gl_sircle_0000bf",
+                "gl_sircle_1000bf",
+                "gl_sircle_10050bf",
+                "gl_sircle_1005_sircle_2010bf"
+            }
+
+            )
+            {
+                WithAction(new ActionRow
+                {
+                    CastType = 10,
+                    EffectRange = 10,
+                    Omen = new Lumina.Excel.RowRef<Omen>
+                    {
+                        RowId = 1,
+                        ValueNullable = new Omen
+                        {
+                            Path = name
+                        }
+                    }
+                }, actionId =>
                 {
                     var error = Expect<InvalidOperationException>(() => ActionArea.FromAction(actionId), "未知或歧义圆环名称不能回退为圆形。");
                     Assert(error.Message.Contains("innerRadius"), "缺失圆环数据时应提示具体的补充参数。");
                 });
             }
-            WithAction(new ActionRow { CastType = 13, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 0, ValueNullable = new Omen { Path = "gl_fan090_1bf" } } }, actionId =>
+
+            WithAction(new ActionRow
+            {
+                CastType = 13,
+                EffectRange = 10,
+                Omen = new Lumina.Excel.RowRef<Omen>
+                {
+                    RowId = 0,
+                    ValueNullable = new Omen
+                    {
+                        Path = "gl_fan090_1bf"
+                    }
+                }
+            }, actionId =>
                 Expect<InvalidOperationException>(() => ActionArea.FromAction(actionId), "没有预兆编号时不得使用无效的预兆元数据。"));
         }
 
         public static void ActionRowsValidateOverridesAndUnsupportedTypes()
         {
-            WithAction(new ActionRow { CastType = 13, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = "gl_fan090_1bf" } } }, actionId =>
+            WithAction(new ActionRow
+            {
+                CastType = 13,
+                EffectRange = 10,
+                Omen = new Lumina.Excel.RowRef<Omen>
+                {
+                    RowId = 1,
+                    ValueNullable = new Omen
+                    {
+                        Path = "gl_fan090_1bf"
+                    }
+                }
+            }, actionId =>
             {
                 var area = ActionArea.FromAction(actionId, coneAngleDegrees: 45);
                 Assert(area.Contains(new Vector2(3, 9), Vector2.Zero, 0), "显式扇形角度范围以内应命中。");
                 Assert(!area.Contains(new Vector2(4, 9), Vector2.Zero, 0), "显式扇形角度应优先于预兆名称。");
                 Expect<ArgumentOutOfRangeException>(() => ActionArea.FromAction(actionId, coneAngleDegrees: float.NaN), "显式角度也必须验证有限值。");
             });
-            WithAction(new ActionRow { CastType = 10, EffectRange = 10, Omen = new Lumina.Excel.RowRef<Omen> { RowId = 1, ValueNullable = new Omen { Path = "gl_sircle_1005bf" } } }, actionId =>
+
+            WithAction(new ActionRow
+            {
+                CastType = 10,
+                EffectRange = 10,
+                Omen = new Lumina.Excel.RowRef<Omen>
+                {
+                    RowId = 1,
+                    ValueNullable = new Omen
+                    {
+                        Path = "gl_sircle_1005bf"
+                    }
+                }
+            }, actionId =>
             {
                 Assert(ActionArea.FromAction(actionId, innerRadius: 2).Contains(new Vector2(0, 3), Vector2.Zero, 0), "显式圆环内半径应优先于预兆名称。");
                 Expect<ArgumentOutOfRangeException>(() => ActionArea.FromAction(actionId, innerRadius: 11), "显式内半径不能超过外半径。");
             });
-            WithAction(new ActionRow { CastType = 13, EffectRange = 10 }, actionId =>
+
+            WithAction(new ActionRow
+            {
+                CastType = 13,
+                EffectRange = 10
+            }, actionId =>
                 Assert(ActionArea.FromAction(actionId, coneAngleDegrees: 180).Contains(new Vector2(0, 5), Vector2.Zero, 0), "没有预兆的技能可以显式补充张角。"));
-            WithAction(new ActionRow { CastType = 8, EffectRange = 10 }, actionId =>
+
+            WithAction(new ActionRow
+            {
+                CastType = 8,
+                EffectRange = 10
+            }, actionId =>
             {
                 var error = Expect<NotSupportedException>(() => ActionArea.FromAction(actionId), "不支持的 CastType 不能自动回退为圆形。");
                 Assert(error.Message.Contains("CastType=8"), "不支持的类型应在错误中保留类型编号。");
             });
+
             Expect<InvalidOperationException>(() => ActionArea.FromAction(uint.MaxValue), "超出技能表索引范围的编号必须拒绝。");
             Expect<ArgumentOutOfRangeException>(() => ActionArea.FromAction(1, -1), "负施法者碰撞半径必须拒绝。");
             Expect<ArgumentOutOfRangeException>(() => ActionArea.FromAction(1, float.PositiveInfinity), "非有限施法者碰撞半径必须拒绝。");
@@ -207,24 +391,39 @@ namespace Simulant.Tests
             var table = GameDataService.Instance.GetSheet<ActionRow>();
             var hadPrevious = table.TryGetValue(actionId, out var previous);
             table[actionId] = row;
-            try { action(actionId); }
+
+            try
+            {
+                action(actionId);
+            }
             finally
             {
-                if (hadPrevious) table[actionId] = previous;
-                else table.Remove(actionId);
+                if (hadPrevious)
+                    table[actionId] = previous;
+                else
+                    table.Remove(actionId);
             }
         }
 
-        private static T Expect<T>(System.Action action, string message) where T : Exception
+        private static T Expect<T>(System.Action action, string message)
+            where T : Exception
         {
-            try { action(); }
-            catch (T exception) { return exception; }
+            try
+            {
+                action();
+            }
+            catch (T exception)
+            {
+                return exception;
+            }
+
             throw new Exception(message);
         }
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
     }
 }

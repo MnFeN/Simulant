@@ -83,7 +83,10 @@ namespace Lumina.Excel.Sheets
                 this.offset = offset;
             }
 
-            public global::Lumina.Excel.RowRef Listener => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[] { typeof(EObjName), typeof(ENpcResident) }, -572735930, page.Language);
+            public global::Lumina.Excel.RowRef Listener => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset), new System.Type[]
+            {
+                typeof(EObjName), typeof(ENpcResident)
+            }, -572735930, page.Language);
             public ushort SequenceBegin => page.ReadUInt16(offset + 4);
             public ushort SequenceEnd => page.ReadUInt16(offset + 6);
         }

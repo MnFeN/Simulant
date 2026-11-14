@@ -14,8 +14,13 @@ namespace Simulant.Tests
         public static void KnockbackUsesNetworkTrajectoryAndKeepsLocalPlayerNative()
         {
             Exception failure = null;
+
             using (var done = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; done.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var local = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
@@ -23,11 +28,13 @@ namespace Simulant.Tests
                 remote.Entity.Pos3D = new Vector3(100, 100, 7);
                 remote.Heading = -0.4f;
                 var sentAt = new List<double>();
+
                 remote.Entity.OnActorMove = (pos, _, __) =>
                 {
                     remote.Entity.Pos3D = pos;
                     sentAt.Add(scheduler.ElapsedSeconds);
                 };
+
                 local.Knockback((float)Math.PI / 2, 20, 0.8f);
                 remote.Knockback((float)Math.PI / 2, 20, 0.8f);
                 Assert(local.Entity.NativeKnockbackCalls == 1 && local.Entity.NetworkMoves.Count == 0,
@@ -55,15 +62,26 @@ namespace Simulant.Tests
         public static void CancelledKnockbackDoesNotContinueMoving()
         {
             Exception failure = null;
+
             using (var done = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; done.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
                 actor.Entity.OnActorMove = (pos, _, __) => actor.Entity.Pos3D = pos;
                 actor.Knockback(0, 20, 0.8f);
                 var packets = 0;
-                scheduler.Schedule(0.15, () => { actor.Dispose(); packets = actor.Entity.NetworkMoves.Count; });
+
+                scheduler.Schedule(0.15, () =>
+                {
+                    actor.Dispose();
+                    packets = actor.Entity.NetworkMoves.Count;
+                });
+
                 scheduler.Schedule(0.4, () =>
                 {
                     Assert(packets > 0 && packets == actor.Entity.NetworkMoves.Count && !actor.IsMoving,
@@ -72,6 +90,7 @@ namespace Simulant.Tests
                         "中断击退时也应清除移动包的击退标志。");
                     done.Set();
                 });
+
                 scheduler.Start();
                 Assert(done.Wait(2000) && failure == null, "击退取消检查失败：" + failure);
             }
@@ -83,6 +102,7 @@ namespace Simulant.Tests
             var firstTarget = new Vector2(1, 0);
             var secondTarget = new Vector2(0, 1);
             Exception failure = null;
+
             using (var arrived = new CountdownEvent(2))
             using (var scheduler = new SimScheduler((error, _) => failure = error))
             using (var movement = new SimMovementController(scheduler))
@@ -90,11 +110,25 @@ namespace Simulant.Tests
                 var first = CreateActor(world, movement, scheduler, 0);
                 var second = CreateActor(world, movement, scheduler, 1);
                 var workerThread = 0;
-                first.Entity.OnPositionWritten = value => { if (value == firstTarget) arrived.Signal(); };
-                second.Entity.OnPositionWritten = value => { if (value == secondTarget) arrived.Signal(); };
+
+                first.Entity.OnPositionWritten = value =>
+                {
+                    if (value == firstTarget)
+                        arrived.Signal();
+                };
+
+                second.Entity.OnPositionWritten = value =>
+                {
+                    if (value == secondTarget)
+                        arrived.Signal();
+                };
+
                 movement.MoveTo(first, firstTarget, 100);
                 movement.MoveTo(second, secondTarget, 100, faceMovement: false);
-                for (var i = 0; i < 20; i++) movement.MoveTo(first, firstTarget, 100);
+
+                for (var i = 0; i < 20; i++)
+                    movement.MoveTo(first, firstTarget, 100);
+
                 Assert(scheduler.PendingCount == 1,
                     "多个模拟角色及目标变更必须共享一个待执行的移动更新节点。");
                 Assert(first.Entity.PositionWrites.Count == 0 && second.Entity.PositionWrites.Count == 0,
@@ -120,20 +154,28 @@ namespace Simulant.Tests
             var retargeted = false;
             var retargetOrigin = Vector2.Zero;
             Exception failure = null;
+
             using (var arrived = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler((error, _) => failure = error))
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(world, movement, scheduler, 0);
+
                 actor.Entity.OnPositionWritten = position =>
                 {
-                    if (!retargeted) return;
+                    if (!retargeted)
+                        return;
+
                     Assert(position.X >= target.X && position.X <= retargetOrigin.X &&
                         position.Y >= retargetOrigin.Y && position.Y <= target.Y,
                         "更换目标后的移动必须位于当前位置与新目标之间。");
-                    if (position == target) arrived.Set();
+
+                    if (position == target)
+                        arrived.Set();
                 };
+
                 movement.MoveTo(actor, new Vector2(1000, 0), 1);
+
                 scheduler.Schedule(0.03, () =>
                 {
                     retargetOrigin = actor.Entity.Pos;
@@ -141,6 +183,7 @@ namespace Simulant.Tests
                     movement.MoveTo(actor, target, 100);
                     Assert(scheduler.PendingCount == 1, "更换目标必须替换原移动，不得增加第二个更新节点。");
                 });
+
                 scheduler.Start();
                 Assert(arrived.Wait(5000), "模拟角色未到达更换后的目标位置。");
                 scheduler.Dispose();
@@ -152,6 +195,7 @@ namespace Simulant.Tests
         public static void MovementStopAndDisposeCancelTheTick()
         {
             var world = new EntityTestWorld();
+
             using (var finished = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
             using (var movement = new SimMovementController(scheduler))
@@ -183,6 +227,7 @@ namespace Simulant.Tests
         {
             var world = new EntityTestWorld();
             Exception failure = null;
+
             using (var finished = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler((error, _) => failure = error))
             using (var movement = new SimMovementController(scheduler))
@@ -207,16 +252,26 @@ namespace Simulant.Tests
 
         public static void MovementRejectsRestartWhenItsQueuedTickWasCancelled()
         {
-            foreach (var stopFirst in new[] { false, true })
+            foreach (var stopFirst in new[]
+            {
+                false,
+                true
+            }
+
+            )
             {
                 var world = new EntityTestWorld();
+
                 using (var scheduler = new SimScheduler())
                 using (var movement = new SimMovementController(scheduler))
                 {
                     var actor = CreateActor(world, movement, scheduler, 0);
                     actor.MoveTo(Vector2.One);
                     scheduler.Cancel();
-                    if (stopFirst) actor.StopMoving();
+
+                    if (stopFirst)
+                        actor.StopMoving();
+
                     Throws<InvalidOperationException>(() => actor.MoveTo(new Vector2(2, 2)));
                     Assert(!actor.IsMoving && scheduler.PendingCount == 0 && actor.Entity.PositionWrites.Count == 0,
                         "共享更新句柄已被调度器取消后，新移动必须回滚，不能留下永远不会更新的移动状态。");
@@ -228,20 +283,46 @@ namespace Simulant.Tests
         {
             var world = new EntityTestWorld();
             var target = Vector2.One;
+
             using (var arrived = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(world, movement, scheduler, 0);
-                actor.Entity.OnPositionWritten = value => { if (value == target) arrived.Set(); };
+
+                actor.Entity.OnPositionWritten = value =>
+                {
+                    if (value == target)
+                        arrived.Set();
+                };
+
                 movement.MoveTo(actor, target, 100);
-                foreach (var speed in new[] { 0f, -1f, float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+
+                foreach (var speed in new[]
+                {
+                    0f,
+                    -1f,
+                    float.NaN,
+                    float.PositiveInfinity,
+                    float.NegativeInfinity
+                }
+
+                )
                     Throws<ArgumentOutOfRangeException>(() => movement.MoveTo(actor, new Vector2(5, 5), speed));
-                foreach (var invalid in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+
+                foreach (var invalid in new[]
+                {
+                    float.NaN,
+                    float.PositiveInfinity,
+                    float.NegativeInfinity
+                }
+
+                )
                 {
                     Throws<ArgumentOutOfRangeException>(() => movement.MoveTo(actor, new Vector2(invalid, 5)));
                     Throws<ArgumentOutOfRangeException>(() => movement.MoveTo(actor, new Vector2(5, invalid)));
                 }
+
                 Assert(movement.IsMoving(actor) && scheduler.PendingCount == 1,
                     "拒绝请求后必须保留原目标及其唯一更新节点。");
                 scheduler.Start();
@@ -270,11 +351,17 @@ namespace Simulant.Tests
             var world = new EntityTestWorld();
             Exception failure = null;
             var calls = 0;
+
             using (var finished = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                finished.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(world, movement, scheduler, 0);
+
                 actor.MoveTo(Vector2.One, 100, animationId: 13, onArrived: () =>
                 {
                     calls++;
@@ -285,13 +372,17 @@ namespace Simulant.Tests
                         "到达回调执行前必须先停止本次移动拥有的动画。");
                     scheduler.ScheduleAfter(0.04, finished.Set);
                 });
+
                 Assert(actor.Entity.PlayedBaseTimelines.Count == 0,
                     "排队移动不得提前在调用线程播放动画。");
                 scheduler.Start();
                 Assert(finished.Wait(5000), "未执行到达回调。");
                 scheduler.Dispose();
                 Assert(failure == null, "到达处理失败：" + failure);
-                Assert(calls == 1 && actor.Entity.PlayedBaseTimelines.SequenceEqual(new ushort[] { 13 }),
+                Assert(calls == 1 && actor.Entity.PlayedBaseTimelines.SequenceEqual(new ushort[]
+                {
+                    13
+                }),
                     "一次移动应只开始一次动画，并恰好调用一次到达回调。");
             }
         }
@@ -302,30 +393,49 @@ namespace Simulant.Tests
             Exception failure = null;
             var obsoleteCalls = 0;
             var newCalls = 0;
+
             using (var finished = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
             {
-                var manager = new SimEntityManager(spawner) { Scheduler = scheduler };
+                failure = error;
+                finished.Set();
+            }))
+            {
+                var manager = new SimEntityManager(spawner)
+                {
+                    Scheduler = scheduler
+                };
+
                 try
                 {
                     var stopped = manager.SpawnBNpc(1);
                     var replaced = manager.SpawnBNpc(2);
                     var deleted = manager.SpawnBNpc(3);
                     var detached = manager.Attach(spawner.World.CreateCharacter(0));
-                    var actors = new[] { stopped, replaced, deleted, detached };
+                    var actors = new[]
+                    {
+                        stopped,
+                        replaced,
+                        deleted,
+                        detached
+                    };
+
                     foreach (var actor in actors)
                         actor.MoveTo(new Vector2(100, 0), animationId: 13,
                             onArrived: () => obsoleteCalls++);
+
                     scheduler.Schedule(0.04, () =>
                     {
                         Assert(actors.All(actor => actor.Entity.PlayedBaseTimelines.Count == 1),
                             "取消测试必须先让所有角色真正开始移动动画。");
                         stopped.StopMoving();
+
                         replaced.MoveTo(Vector2.One, 100, animationId: 14, onArrived: () =>
                         {
                             newCalls++;
                             scheduler.ScheduleAfter(0.04, finished.Set);
                         });
+
                         manager.Delete(deleted);
                         manager.Detach(detached);
                         Assert(!stopped.IsMoving && stopped.Entity.BaseTimelineId == 0,
@@ -334,6 +444,7 @@ namespace Simulant.Tests
                             !detached.IsActive && detached.Entity.IsAlive,
                             "删除应释放实体，解除关联应保留实体，二者都应停止移动。");
                     });
+
                     scheduler.Start();
                     Assert(finished.Wait(5000), "更换后的移动未完成。");
                     scheduler.Dispose();
@@ -341,7 +452,10 @@ namespace Simulant.Tests
                     Assert(obsoleteCalls == 0 && newCalls == 1 && replaced.Pos == Vector2.One,
                         "停止、更换目标、删除和解除关联不得触发旧到达回调，新移动必须正常完成。");
                 }
-                finally { manager.Clear(); }
+                finally
+                {
+                    manager.Clear();
+                }
             }
         }
 
@@ -352,28 +466,36 @@ namespace Simulant.Tests
             var firstCalls = 0;
             var nextCalls = 0;
             var peerCalls = 0;
+
             using (var finished = new CountdownEvent(2))
             using (var scheduler = new SimScheduler((error, _) => failure = error))
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(world, movement, scheduler, 0);
                 var peer = CreateActor(world, movement, scheduler, 1);
+
                 peer.MoveTo(new Vector2(100, 0), onArrived: () =>
-                    { throw new Exception("被替换的另一角色移动不得触发旧到达回调。"); });
+                {
+                    throw new Exception("被替换的另一角色移动不得触发旧到达回调。");
+                });
+
                 actor.MoveTo(Vector2.One, 100, animationId: 13, onArrived: () =>
                 {
                     firstCalls++;
+
                     actor.MoveTo(new Vector2(-1, 0), 100, animationId: 14, onArrived: () =>
                     {
                         nextCalls++;
                         finished.Signal();
                     });
+
                     peer.MoveTo(new Vector2(0, -1), 100, animationId: 15, onArrived: () =>
                     {
                         peerCalls++;
                         finished.Signal();
                     });
                 });
+
                 scheduler.Start();
                 Assert(finished.Wait(5000), "到达回调中新建的自身移动或另一角色移动没有完成：" + failure);
                 scheduler.Dispose();
@@ -389,30 +511,51 @@ namespace Simulant.Tests
 
         public static void ArrivalCallbackCanCancelOtherCompletedArrivals()
         {
-            foreach (var cancellation in new[] { 0, 1, 2 })
+            foreach (var cancellation in new[]
+            {
+                0,
+                1,
+                2
+            }
+
+            )
             {
                 var world = new EntityTestWorld();
                 var calls = 0;
                 Exception failure = null;
+
                 using (var finished = new ManualResetEventSlim())
-                using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+                using (var scheduler = new SimScheduler((error, _) =>
+                {
+                    failure = error;
+                    finished.Set();
+                }))
                 using (var movement = new SimMovementController(scheduler))
                 {
                     var actors = Enumerable.Range(0, 3)
                         .Select(index => CreateActor(world, movement, scheduler, (ushort)index)).ToArray();
+
                     foreach (var actor in actors)
                         actor.MoveTo(Vector2.Zero, onArrived: () =>
                         {
                             calls++;
+
                             foreach (var other in actors)
                             {
-                                if (ReferenceEquals(actor, other)) continue;
-                                if (cancellation == 0) other.StopMoving();
-                                else if (cancellation == 1) other.MoveTo(new Vector2(100, 0));
-                                else other.Dispose();
+                                if (ReferenceEquals(actor, other))
+                                    continue;
+
+                                if (cancellation == 0)
+                                    other.StopMoving();
+                                else if (cancellation == 1)
+                                    other.MoveTo(new Vector2(100, 0));
+                                else
+                                    other.Dispose();
                             }
+
                             scheduler.ScheduleAfter(0.04, finished.Set);
                         });
+
                     scheduler.Start();
                     Assert(finished.Wait(5000), "同批到达回调取消测试未结束。");
                     scheduler.Dispose();
@@ -427,8 +570,13 @@ namespace Simulant.Tests
             var world = new EntityTestWorld();
             var calls = 0;
             Exception failure = null;
+
             using (var finished = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                finished.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 for (ushort index = 0; index < 3; index++)
@@ -438,6 +586,7 @@ namespace Simulant.Tests
                         scheduler.Cancel();
                         finished.Set();
                     });
+
                 scheduler.Start();
                 Assert(finished.Wait(5000), "到达回调没有执行调度器取消。");
                 scheduler.Dispose();
@@ -450,6 +599,7 @@ namespace Simulant.Tests
         {
             var world = new EntityTestWorld();
             Exception failure = null;
+
             using (var entered = new ManualResetEventSlim())
             using (var release = new ManualResetEventSlim())
             using (var stopped = new ManualResetEventSlim())
@@ -459,26 +609,45 @@ namespace Simulant.Tests
                 var peer = CreateActor(world, movement, scheduler, 0);
                 var actor = CreateActor(world, movement, scheduler, 1);
                 peer.MoveTo(new Vector2(100, 0));
+
                 actor.MoveTo(Vector2.Zero, onArrived: () =>
                 {
                     entered.Set();
                     Assert(release.Wait(5000), "未释放到达回调等待屏障。");
                 });
+
                 var stopThread = new Thread(() =>
                 {
-                    try { peer.StopMoving(); }
-                    catch (Exception error) { failure = error; }
-                    finally { stopped.Set(); }
-                }) { IsBackground = true };
+                    try
+                    {
+                        peer.StopMoving();
+                    }
+                    catch (Exception error)
+                    {
+                        failure = error;
+                    }
+                    finally
+                    {
+                        stopped.Set();
+                    }
+                })
+                {
+                    IsBackground = true
+                };
                 scheduler.Start();
                 Assert(entered.Wait(5000), "到达回调没有进入等待屏障。");
                 var stoppedBeforeRelease = false;
+
                 try
                 {
                     stopThread.Start();
                     stoppedBeforeRelease = stopped.Wait(1000);
                 }
-                finally { release.Set(); }
+                finally
+                {
+                    release.Set();
+                }
+
                 scheduler.Dispose();
                 Assert(stopThread.Join(5000), "停止移动的辅助线程未退出。");
                 Assert(stoppedBeforeRelease && failure == null && !peer.IsMoving,
@@ -492,19 +661,33 @@ namespace Simulant.Tests
             var calls = 0;
             var invalidRan = false;
             Exception failure = null;
-            Action invalid = async () => { invalidRan = true; await Task.Yield(); };
-            Action multicast = () => { invalidRan = true; };
+            Action invalid = async () =>
+            {
+                invalidRan = true;
+                await Task.Yield();
+            };
+            Action multicast = () =>
+            {
+                invalidRan = true;
+            };
             multicast += invalid;
+
             using (var finished = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                finished.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(world, movement, scheduler, 0);
+
                 actor.MoveTo(Vector2.One, 100, animationId: 13, onArrived: () =>
                 {
                     calls++;
                     finished.Set();
                 });
+
                 Throws<ArgumentException>(() => actor.MoveTo(new Vector2(2, 2), onArrived: invalid));
                 Throws<ArgumentException>(() => actor.MoveTo(new Vector2(2, 2), onArrived: multicast));
                 Throws<ArgumentOutOfRangeException>(() => actor.MoveTo(new Vector2(2, 2), animationId: 0));
@@ -520,16 +703,28 @@ namespace Simulant.Tests
 
         public static void MovementCleanupPreservesExternalAnimationEvenWithTheSameId()
         {
-            foreach (ushort externalAnimation in new ushort[] { 13, 14 })
+            foreach (ushort externalAnimation in new ushort[]
+            {
+                13,
+                14
+            }
+
+            )
             {
                 var world = new EntityTestWorld();
                 Exception failure = null;
+
                 using (var finished = new ManualResetEventSlim())
-                using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+                using (var scheduler = new SimScheduler((error, _) =>
+                {
+                    failure = error;
+                    finished.Set();
+                }))
                 using (var movement = new SimMovementController(scheduler))
                 {
                     var actor = CreateActor(world, movement, scheduler, 0);
                     actor.MoveTo(new Vector2(100, 0), animationId: 13);
+
                     scheduler.Schedule(0.04, () =>
                     {
                         Assert(actor.Entity.BaseTimelineId == 13,
@@ -541,6 +736,7 @@ namespace Simulant.Tests
                             "旧移动收尾不得重置后来播放的动画，即使两次动画编号相同。");
                         finished.Set();
                     });
+
                     scheduler.Start();
                     Assert(finished.Wait(5000), "外部动画接管测试未完成。");
                     scheduler.Dispose();
@@ -553,8 +749,13 @@ namespace Simulant.Tests
         {
             var world = new EntityTestWorld();
             Exception failure = null;
+
             using (var finished = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                finished.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var alreadyCasting = CreateActor(world, movement, scheduler, 0);
@@ -563,6 +764,7 @@ namespace Simulant.Tests
                 alreadyCasting.Entity.SetCastInfo(1, 1);
                 alreadyCasting.MoveTo(new Vector2(100, 0), animationId: 13);
                 laterCasting.MoveTo(new Vector2(100, 0), animationId: 13);
+
                 scheduler.Schedule(0.04, () =>
                 {
                     Assert(alreadyCasting.Entity.BaseTimelineId == 21 &&
@@ -571,6 +773,7 @@ namespace Simulant.Tests
                     Assert(laterCasting.Entity.BaseTimelineId == 13,
                         "中途施法测试必须先启动移动动画。");
                     laterCasting.Entity.SetCastInfo(2, 1);
+
                     scheduler.ScheduleAfter(0.05, () =>
                     {
                         Assert(laterCasting.IsMoving && laterCasting.Entity.BaseTimelineId == 0 &&
@@ -578,6 +781,7 @@ namespace Simulant.Tests
                             "移动途中读条必须让出自己的动画，保留位移和施法状态。");
                         alreadyCasting.Entity.CastingActionId = 0;
                         laterCasting.Entity.CastingActionId = 0;
+
                         scheduler.ScheduleAfter(0.04, () =>
                         {
                             Assert(alreadyCasting.Entity.PlayedBaseTimelines.Count == 1 &&
@@ -592,6 +796,7 @@ namespace Simulant.Tests
                         });
                     });
                 });
+
                 scheduler.Start();
                 Assert(finished.Wait(5000), "移动与读条衔接测试未完成。");
                 scheduler.Dispose();
@@ -608,9 +813,20 @@ namespace Simulant.Tests
             Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>()[1] =
                 new Lumina.Excel.Sheets.Action
                 {
-                    RowId = 1, Cast100ms = 10, CastType = 2, EffectRange = 5,
-                    Omen = new Lumina.Excel.RowRef<Lumina.Excel.Sheets.Omen> { RowId = 1, ValueNullable = new Lumina.Excel.Sheets.Omen { Path = "test_omen" } }
+                    RowId = 1,
+                    Cast100ms = 10,
+                    CastType = 2,
+                    EffectRange = 5,
+                    Omen = new Lumina.Excel.RowRef<Lumina.Excel.Sheets.Omen>
+                    {
+                        RowId = 1,
+                        ValueNullable = new Lumina.Excel.Sheets.Omen
+                        {
+                            Path = "test_omen"
+                        }
+                    }
                 };
+
             using (var scheduler = new SimScheduler())
             using (var casts = new SimCastController(scheduler))
             using (var movement = new SimMovementController(scheduler))
@@ -619,19 +835,30 @@ namespace Simulant.Tests
                 actor.Cast(1);
                 actor.MoveTo(Vector2.One);
                 Assert(actor.IsActive && actor.IsMoving, "新关联的模拟角色必须能够控制自身移动。");
+
                 Simulant.ACT.TriggernometryInterop.OnCommand = command =>
                 {
-                    if (command.StartsWith("Action: Remove")) throw expected;
+                    if (command.StartsWith("Action: Remove"))
+                        throw expected;
                 };
+
                 try
                 {
-                    try { actor.Dispose(); throw new Exception("预期抛出原始的读条清理错误。"); }
+                    try
+                    {
+                        actor.Dispose();
+                        throw new Exception("预期抛出原始的读条清理错误。");
+                    }
                     catch (InvalidOperationException error)
                     {
                         Assert(ReferenceEquals(error, expected), "释放模拟角色时必须保留原始清理错误。");
                     }
                 }
-                finally { Simulant.ACT.TriggernometryInterop.OnCommand = null; }
+                finally
+                {
+                    Simulant.ACT.TriggernometryInterop.OnCommand = null;
+                }
+
                 Assert(!actor.IsActive && !actor.IsMoving && scheduler.PendingCount == 0,
                     "即使其他行为清理失败，Detach 也必须停止移动。");
                 Assert(entity.IsAlive, "解除模拟角色关联不得销毁底层游戏实体或使其失效。");
@@ -649,8 +876,12 @@ namespace Simulant.Tests
         public static void NetworkMovementSharesPollingAndUsesActualArrival()
         {
             Exception failure = null;
+
             using (var arrived = new CountdownEvent(2))
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var first = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
@@ -665,19 +896,23 @@ namespace Simulant.Tests
                     callbacks++;
                     arrived.Signal();
                 };
+
                 first.MoveNetworkTo(new Vector2(3, 4), onArrived: () =>
                 {
                     Assert(scheduler.ElapsedSeconds >= 5.0 / 3, "即使原生位置提前抵达，也不能跳过按速度计算的移动时间。");
                     callback();
                 });
+
                 second.MoveNetworkTo(new Vector2(-4, 0), speedParam: 40, onArrived: () =>
                 {
                     Assert(scheduler.ElapsedSeconds >= 1, "网络移动到达不能早于自身路程所需时间。");
                     callback();
                 });
+
                 local.MoveTo(new Vector2(100, 0));
                 Assert(scheduler.PendingCount == 1 && first.Entity.NetworkMoves.Count == 0,
                     "本地和多个网络角色应共享一个节点，调用线程不能提前发送移动包。");
+
                 scheduler.Schedule(0.32, () =>
                 {
                     Assert(first.IsMoving && second.IsMoving && callbacks == 0,
@@ -693,6 +928,7 @@ namespace Simulant.Tests
                     second.Entity.Pos = new Vector2(-4.02f, 0);
                     local.StopMoving();
                 });
+
                 scheduler.Start();
                 Assert(arrived.Wait(5000), "两个网络角色未按实际位置完成到达回调：" + failure);
                 scheduler.Dispose();
@@ -714,16 +950,29 @@ namespace Simulant.Tests
             Exception failure = null;
             var samples = new List<Tuple<double, Vector3>>();
             var callbacks = 0;
+
             using (var finished = new ManualResetEventSlim())
             using (var alreadyThere = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); alreadyThere.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                finished.Set();
+                alreadyThere.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
                 var target = new Vector2(2.22f, 0);
                 actor.Entity.OnActorMove = (position, _, __) => samples.Add(Tuple.Create(scheduler.ElapsedSeconds, position));
-                actor.MoveNetworkTo(target, speedParam: 60, onArrived: () => { callbacks++; finished.Set(); });
+
+                actor.MoveNetworkTo(target, speedParam: 60, onArrived: () =>
+                {
+                    callbacks++;
+                    finished.Set();
+                });
+
                 scheduler.Schedule(0.12, () => Thread.Sleep(220));
+
                 scheduler.Schedule(0.65, () =>
                 {
                     Assert(actor.IsMoving && callbacks == 0, "路径时间走完仍须等待实际位置，不能只按预估时间回调。");
@@ -731,6 +980,7 @@ namespace Simulant.Tests
                         "最后一个不足节拍的分段必须补发，等待实际到达期间不能重发同一终点。");
                     actor.Entity.Pos = target;
                 });
+
                 scheduler.Start();
                 Assert(finished.Wait(5000), "分段网络移动未完成：" + failure);
                 Assert(failure == null && callbacks == 1, "分段网络移动不应提前完成或报告异常：" + failure);
@@ -742,6 +992,7 @@ namespace Simulant.Tests
 
                 var start = samples[0].Item1;
                 Assert(samples.Count >= 3 && samples.Count <= 5, "掉帧后应跳过过时的中间包，不得补发一串追赶帧。");
+
                 for (var index = 1; index < samples.Count; index++)
                 {
                     var expected = Math.Min(target.X, 6 * (samples[index].Item1 - start));
@@ -749,6 +1000,7 @@ namespace Simulant.Tests
                         "网络包位置应根据真实经过时间计算，既不能提前发送未来位置，也不能按固定帧数慢慢追赶。");
                     Assert(samples[index].Item2.X > samples[index - 1].Item2.X, "途中位置必须前进，不能反复发送同一坐标。");
                 }
+
                 Assert(samples.Last().Item1 - start >= target.X / 6 - 0.005,
                     "最终目的地不得在计划路程完成前发送。");
                 Assert(samples.Last().Item1 - start < 0.45,
@@ -762,12 +1014,18 @@ namespace Simulant.Tests
             var obsoleteCalls = 0;
             var localCalls = 0;
             var finalCalls = 0;
+
             using (var finished = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; finished.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                finished.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
                 actor.MoveNetworkTo(new Vector2(10, 0), onArrived: () => obsoleteCalls++);
+
                 scheduler.Schedule(0.03, () =>
                 {
                     actor.Entity.Pos3D = new Vector3(1, 2, 3);
@@ -777,6 +1035,7 @@ namespace Simulant.Tests
                     Assert(stop.Position == new Vector3(1, 2, 3) && stop.Heading == 0.7f && stop.SpeedParam == 30,
                         "更换网络目标应先向实际当前位置发送停止包，保留原移动速度和当前面向。");
                 });
+
                 scheduler.Schedule(0.06, () =>
                 {
                     actor.MoveTo(new Vector2(1, 2), animationId: 13, onArrived: () =>
@@ -784,15 +1043,18 @@ namespace Simulant.Tests
                         localCalls++;
                         Assert(actor.Entity.BaseTimelineId == 0 && !actor.IsMoving,
                             "从本地到达回调切回网络移动前必须结束旧移动和动画。");
+
                         actor.MoveNetworkTo(new Vector2(2, 2), onArrived: () =>
                         {
                             finalCalls++;
                             finished.Set();
                         });
                     });
+
                     Assert(actor.Entity.NetworkMoves.Last().Position == new Vector3(1, 2, 3),
                         "本地移动替换网络移动时也必须先停止旧的原生移动。");
                 });
+
                 scheduler.Schedule(0.15, () => actor.Entity.Pos = new Vector2(2, 2));
                 scheduler.Start();
                 Assert(finished.Wait(5000), "本地与网络移动的到达链未完成。");
@@ -807,9 +1069,17 @@ namespace Simulant.Tests
 
         public static void NetworkMovementStopFailuresRemainRetryable()
         {
-            foreach (var mode in new[] { "停止", "解除关联", "释放控制器" })
+            foreach (var mode in new[]
+            {
+                "停止",
+                "解除关联",
+                "释放控制器"
+            }
+
+            )
             {
                 var callbackCalls = 0;
+
                 using (var sent = new ManualResetEventSlim())
                 using (var scheduler = new SimScheduler())
                 using (var movement = new SimMovementController(scheduler))
@@ -820,11 +1090,20 @@ namespace Simulant.Tests
                     scheduler.Start();
                     Assert(sent.Wait(5000), "网络移动没有发出首包。");
                     scheduler.Cancel();
-                    actor.Entity.OnActorMove = (_, __, ___) => { throw new InvalidOperationException("模拟原生停止失败。"); };
+
+                    actor.Entity.OnActorMove = (_, __, ___) =>
+                    {
+                        throw new InvalidOperationException("模拟原生停止失败。");
+                    };
+
                     Action stop = mode == "停止" ? (Action)actor.StopMoving :
                         mode == "解除关联" ? actor.Dispose : (Action)movement.Dispose;
-                    if (mode == "释放控制器") Throws<AggregateException>(stop);
-                    else Throws<InvalidOperationException>(stop);
+
+                    if (mode == "释放控制器")
+                        Throws<AggregateException>(stop);
+                    else
+                        Throws<InvalidOperationException>(stop);
+
                     Assert(actor.Entity.NetworkMoves.Count == 2, "停止失败后应保留已经尝试发送停止包的证据。");
                     actor.Entity.OnActorMove = null;
                     stop();
@@ -841,8 +1120,13 @@ namespace Simulant.Tests
         {
             Exception failure = null;
             var callbackCalls = 0;
+
             using (var failed = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; failed.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                failed.Set();
+            }))
             using (var movement = new SimMovementController(scheduler, networkTimeoutSeconds: 0.15))
             {
                 var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
@@ -862,6 +1146,7 @@ namespace Simulant.Tests
         public static void NetworkMovementRejectsInvalidOrCancelledRequestsBeforeDispatch()
         {
             var world = new EntityTestWorld();
+
             using (var scheduler = new SimScheduler())
             using (var movement = new SimMovementController(scheduler))
             {
@@ -872,7 +1157,15 @@ namespace Simulant.Tests
                 Throws<ArgumentOutOfRangeException>(() => actor.MoveNetworkTo(new Vector2(float.NaN, 0)));
                 Throws<ArgumentOutOfRangeException>(() => actor.MoveNetworkTo(new Vector2(1001, 0)));
                 Throws<ArgumentOutOfRangeException>(() => actor.MoveNetworkTo(Vector2.One, speedParam: 0));
-                foreach (ushort slot in new ushort[] { 0, 1, 3 })
+
+                foreach (ushort slot in new ushort[]
+                {
+                    0,
+                    1,
+                    3
+                }
+
+                )
                 {
                     var unsuitable = CreateActor(world, movement, scheduler, slot);
                     unsuitable.MoveTo(Vector2.One);
@@ -880,6 +1173,7 @@ namespace Simulant.Tests
                     Assert(unsuitable.IsMoving, "拒绝非网络表角色时不得取消其已有的本地移动。");
                     unsuitable.StopMoving();
                 }
+
                 var localRegistry = new Simulant.Core.Entity.EntityRegistry(slot => slot == 200 ?
                     new Simulant.Core.Entity.EntityObservation(new IntPtr(2000), 2000,
                         Simulant.Game.FFCS.Client.Game.Object.ObjectKind.BattleNpc) :
@@ -908,11 +1202,15 @@ namespace Simulant.Tests
         {
             var spawner = new Simulant.Core.Entity.EntitySpawner();
             var cleanupErrors = 0;
+
             using (var sent = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
             using (var replacementScheduler = new SimScheduler())
             {
-                var manager = new SimEntityManager(spawner, _ => cleanupErrors++) { Scheduler = scheduler };
+                var manager = new SimEntityManager(spawner, _ => cleanupErrors++)
+                {
+                    Scheduler = scheduler
+                };
                 var actor = manager.Attach(spawner.World.CreateCharacter(2));
                 actor.Entity.OnActorMove = (_, __, ___) => sent.Set();
                 actor.MoveNetworkTo(new Vector2(10, 0));
@@ -920,7 +1218,12 @@ namespace Simulant.Tests
                 scheduler.Start();
                 Assert(sent.Wait(5000), "借用网络角色没有发出首包。");
                 scheduler.Cancel();
-                actor.Entity.OnActorMove = (_, __, ___) => { throw new InvalidOperationException("模拟借用角色停止失败。"); };
+
+                actor.Entity.OnActorMove = (_, __, ___) =>
+                {
+                    throw new InvalidOperationException("模拟借用角色停止失败。");
+                };
+
                 Throws<InvalidOperationException>(() => manager.Detach(actor));
                 manager.Clear();
                 Assert(manager.HasPendingCleanup && cleanupErrors > 0 && actor.Entity.IsAlive,
@@ -942,26 +1245,47 @@ namespace Simulant.Tests
         {
             Exception failure = null;
             Exception detachFailure = null;
+
             using (var failed = new ManualResetEventSlim())
             using (var detached = new ManualResetEventSlim())
-            using (var scheduler = new SimScheduler((error, _) => { failure = error; failed.Set(); }))
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                failed.Set();
+            }))
             using (var movement = new SimMovementController(scheduler))
             {
                 var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
                 var expected = new InvalidOperationException("模拟移动包部分成功后失败。");
+
                 actor.Entity.OnActorMove = (_, __, ___) =>
                 {
-                    if (actor.Entity.NetworkMoves.Count != 1) return;
+                    if (actor.Entity.NetworkMoves.Count != 1)
+                        return;
+
                     var thread = new Thread(() =>
                     {
-                        try { actor.Dispose(); }
-                        catch (Exception error) { detachFailure = error; }
-                        finally { detached.Set(); }
-                    }) { IsBackground = true };
+                        try
+                        {
+                            actor.Dispose();
+                        }
+                        catch (Exception error)
+                        {
+                            detachFailure = error;
+                        }
+                        finally
+                        {
+                            detached.Set();
+                        }
+                    })
+                    {
+                        IsBackground = true
+                    };
                     thread.Start();
                     Assert(SpinWait.SpinUntil(() => !actor.IsActive, 5000), "解除关联线程没有进入停止路径。");
                     throw expected;
                 };
+
                 actor.MoveNetworkTo(new Vector2(10, 0));
                 scheduler.Start();
                 Assert(failed.Wait(5000) && detached.Wait(5000), "发包与并发解除关联没有按期结束。");
@@ -977,6 +1301,7 @@ namespace Simulant.Tests
         public static void NetworkMovementNeverStopsARecycledEntity()
         {
             var world = new EntityTestWorld();
+
             using (var sent = new ManualResetEventSlim())
             using (var scheduler = new SimScheduler())
             using (var movement = new SimMovementController(scheduler))
@@ -1004,13 +1329,22 @@ namespace Simulant.Tests
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
-        private static void Throws<T>(Action action) where T : Exception
+        private static void Throws<T>(Action action)
+            where T : Exception
         {
-            try { action(); }
-            catch (T) { return; }
+            try
+            {
+                action();
+            }
+            catch (T)
+            {
+                return;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
     }

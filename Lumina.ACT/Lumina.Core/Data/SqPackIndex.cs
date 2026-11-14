@@ -16,6 +16,7 @@ namespace Lumina.Data
         internal SqPackIndex(FileInfo indexFile, GameData gameData) : base(indexFile, gameData)
         {
             IsIndex2 = indexFile.Extension == ".index2";
+
             if (IsIndex2)
             {
                 LoadIndex2();
@@ -40,6 +41,7 @@ namespace Lumina.Data
                     fs.Position = IndexHeader.index_data_offset;
                     var entryCount = IndexHeader.index_data_size / Unsafe.SizeOf<IndexHashTableEntry>();
                     var tableEntries = br.ReadStructuresAsSpan<IndexHashTableEntry>((int)entryCount);
+
                     if (SqPackHeader.platformId == PlatformId.PS3)
                     {
                         for (var i = 0; i < entryCount; i++)
@@ -68,6 +70,7 @@ namespace Lumina.Data
                     fs.Position = IndexHeader.index_data_offset;
                     var entryCount = IndexHeader.index_data_size / Unsafe.SizeOf<Index2HashTableEntry>();
                     var tableEntries = br.ReadStructuresAsSpan<Index2HashTableEntry>((int)entryCount);
+
                     if (SqPackHeader.platformId == PlatformId.PS3)
                     {
                         for (var i = 0; i < entryCount; i++)

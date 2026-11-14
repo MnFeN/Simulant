@@ -20,7 +20,10 @@ namespace Lumina.Excel.Sheets
         public uint RowOffset => offset;
         public uint RowId => row;
         public global::Lumina.Excel.Collection<QuestBattleParamsStruct> QuestBattleParams => new global::Lumina.Excel.Collection<QuestBattleParamsStruct>(page, offset, offset, QuestBattleParamsCtor, 220);
-        public global::Lumina.Excel.RowRef Quest => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 1760), new System.Type[] { typeof(ArrayEventHandler), typeof(Quest) }, -600516196, page.Language);
+        public global::Lumina.Excel.RowRef Quest => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, (uint)page.ReadInt32(offset + 1760), new System.Type[]
+        {
+            typeof(ArrayEventHandler), typeof(Quest)
+        }, -600516196, page.Language);
         public ushort TimeLimit => page.ReadUInt16(offset + 1764);
         public ushort LevelSync => page.ReadUInt16(offset + 1766);
         public byte QuestBattleScene => page.ReadUInt8(offset + 1768);

@@ -11,6 +11,7 @@ namespace Lumina.Extensions
             var num5 = *((uint*)&value);
             var num3 = (uint)((num5 & -2147483648) >> 0x10);
             var num = num5 & 0x7fffffff;
+
             if (num > 0x47ffefff)
             {
                 return (ushort)(num3 | 0x7fff);
@@ -18,6 +19,7 @@ namespace Lumina.Extensions
 
             if (num >= 0x38800000)
                 return (ushort)(num3 | ((((num + -939524096) + 0xfff) + ((num >> 13) & 1)) >> 13));
+
             var num6 = (num & 0x7fffff) | 0x800000;
             var num4 = 0x71 - ((int)(num >> 0x17));
             num = (num4 > 0x1f) ? 0 : (num6 >> num4);
@@ -37,12 +39,14 @@ namespace Lumina.Extensions
         public static unsafe float Unpack(this ushort value)
         {
             uint num3;
+
             if ((value & -33792) == 0)
             {
                 if ((value & 0x3ff) != 0)
                 {
                     var num2 = 0xfffffff2;
                     var num = (uint)(value & 0x3ff);
+
                     while ((num & 0x400) == 0)
                     {
                         num2--;

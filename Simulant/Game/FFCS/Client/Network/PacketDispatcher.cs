@@ -15,10 +15,12 @@ namespace Simulant.Game.FFCS.Client.Network
             "48 89 5C 24 ? 57 48 81 EC ? ? ? ? 48 8B DA 8B F9 0F B6 92",
             "2D ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 48 8D 15 ? ? ? ? 48 98 0F B6 84 02 ? ? ? ? 8B 8C 82 ? ? ? ? 48 03 CA FF E1 8B 4F ? 48 8B D3 E8 * * * *")]
         public static IntPtr HandleSpawnPlayerPacketFuncPtr { get; set; }
+
         public static void HandleSpawnPlayerPacket(uint targetId, IntPtr packetPtr) // SpawnPlayerPacket*
         {
             if (HandleSpawnPlayerPacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络玩家生成函数尚未定位。");
+
             HandleSpawnPlayerPacketFuncPtr.Call(targetId, packetPtr);
         }
 
@@ -26,7 +28,9 @@ namespace Simulant.Game.FFCS.Client.Network
         {
             if (HandleSpawnPlayerPacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络玩家生成函数尚未定位。");
+
             var packetPtr = IntPtr.Zero;
+
             try
             {
                 packetPtr = Memory.AllocateMemory(sizeof(SpawnPlayerPacket));
@@ -35,7 +39,8 @@ namespace Simulant.Game.FFCS.Client.Network
             }
             finally
             {
-                if (packetPtr != IntPtr.Zero) Memory.FreeMemory(packetPtr);
+                if (packetPtr != IntPtr.Zero)
+                    Memory.FreeMemory(packetPtr);
             }
         }
 
@@ -44,11 +49,14 @@ namespace Simulant.Game.FFCS.Client.Network
             "48 89 5C 24 ? 57 48 81 EC ? ? ? ? 48 8B DA 8B F9 E8 ? ? ? ? 3C ? 75 ? E8 ? ? ? ? 3C ? 75 ? 80 BB ? ? ? ? ? 75 ? 8B 05 ? ? ? ? 39 43 ? 0F 85 ? ? ? ? 0F B6 53 ? 48 8D 0D ? ? ? ? E8 ? ? ? ? 0F B6 53 ? 48 8D 0D ? ? ? ? E8 ? ? ? ? 48 8D 44 24 ? C7 44 24 ? ? ? ? ? BA ? ? ? ? 66 90 48 8D 80 ? ? ? ? ? ? ? 0F 10 4B ? 48 8D 9B ? ? ? ? 0F 11 40 ? 0F 10 43 ? 0F 11 48 ? 0F 10 4B ? 0F 11 40 ? 0F 10 43 ? 0F 11 48 ? 0F 10 4B ? 0F 11 40 ? 0F 10 43 ? 0F 11 48 ? 0F 10 4B ? 0F 11 40 ? 0F 11 48 ? 48 83 EA ? 75 ? ? ? ? 4C 8D 44 24",
             "83 E8 ? 3D ? ? ? ? 0F 87 ? ? ? ? 48 8D 15 ? ? ? ? 48 98 0F B6 84 02 ? ? ? ? 8B 8C 82 ? ? ? ? 48 03 CA FF E1 8B 4F ? 48 8B D3 E8 * * * *")]
         public static IntPtr HandleSpawnNpcPacketFuncPtr { get; set; }
+
         public static unsafe void HandleSpawnNpcPacket(uint targetId, SpawnNpcPacket packet)
         {
             if (HandleSpawnNpcPacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络角色生成函数尚未定位。");
+
             IntPtr packetPtr = default;
+
             try
             {
                 packetPtr = Memory.AllocateMemory(sizeof(SpawnNpcPacket));
@@ -70,18 +78,25 @@ namespace Simulant.Game.FFCS.Client.Network
         {
             if (index == 0 || index >= 100)
                 throw new ArgumentOutOfRangeException(nameof(index), "模拟角色的网络槽位必须为 1-99。");
+
             if (HandleDespawnCharacterPacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络角色回收函数尚未定位。");
+
             var packetPtr = IntPtr.Zero;
+
             try
             {
                 packetPtr = Memory.AllocateMemory(1);
-                Memory.Write(packetPtr, new DespawnCharacterPacket { Index = index });
+                Memory.Write(packetPtr, new DespawnCharacterPacket
+                {
+                    Index = index
+                });
                 HandleDespawnCharacterPacketFuncPtr.Call(0ul, packetPtr);
             }
             finally
             {
-                if (packetPtr != IntPtr.Zero) Memory.FreeMemory(packetPtr);
+                if (packetPtr != IntPtr.Zero)
+                    Memory.FreeMemory(packetPtr);
             }
         }
 
@@ -91,10 +106,14 @@ namespace Simulant.Game.FFCS.Client.Network
 
         public static void HandleDespawnObjectPacket(byte index)
         {
-            if (index >= 40) throw new ArgumentOutOfRangeException(nameof(index), "EObj 索引必须为 0-39。");
+            if (index >= 40)
+                throw new ArgumentOutOfRangeException(nameof(index), "EObj 索引必须为 0-39。");
+
             if (HandleDespawnObjectPacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("EObj 回收函数尚未定位。");
+
             var packetPtr = IntPtr.Zero;
+
             try
             {
                 packetPtr = Memory.AllocateMemory(1);
@@ -103,7 +122,8 @@ namespace Simulant.Game.FFCS.Client.Network
             }
             finally
             {
-                if (packetPtr != IntPtr.Zero) Memory.FreeMemory(packetPtr);
+                if (packetPtr != IntPtr.Zero)
+                    Memory.FreeMemory(packetPtr);
             }
         }
 
@@ -112,9 +132,11 @@ namespace Simulant.Game.FFCS.Client.Network
             "40 53 57 48 83 EC ? F6 42",
             "E8 * * * * E9 ? ? ? ? 4C 8D 47 10 41 8B D6 48 8D 0D ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? 04 0F 85 ? ? ? ? 48 8D 57 10 41 8B CE E8 ? ? ? ? E9 ? ? ? ? 4C 8D 47 10 41 8B D6 48 8D 0D ? ? ? ? E8 ? ? ? ? F6 05 ? ? ? ? 04 0F 85 ? ? ? ? 48 8D 57 10 41 8B CE E8 ? ? ? ? E9 ? ? ? ? 48 8D 57 10 41 8B CE E8 ? ? ? ? E9 ? ? ? ? 4C 8D 47 10")]
         public static IntPtr HandleSpawnObjectPacketFuncPtr { get; set; }
+
         public static unsafe IntPtr HandleSpawnObjectPacket(uint targetId, SpawnObjectPacket packet)
         {
             IntPtr packetPtr = default;
+
             try
             {
                 packetPtr = Memory.AllocateMemory(sizeof(SpawnObjectPacket));
@@ -134,10 +156,12 @@ namespace Simulant.Game.FFCS.Client.Network
         // 仅对网络实体有效，也许以后找到方法将实体注册进网络实体列表后，可以换用这个控制假玩家的移动
         [SigPattern("48 89 5C 24 ? 57 48 83 EC ? 4C 63 05 ? ? ? ?")]
         public static IntPtr HandleActorMovePacketFuncPtr { get; set; }
+
         public static unsafe IntPtr HandleActorMovePacket(uint objectId, ActorMovePacket actorMovePayload)
         {
             if (HandleActorMovePacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络角色移动函数尚未定位。");
+
             var memory = NamazuInterop.Plugin.Memory;
             IntPtr actorMovePayloadPtr = default;
 
@@ -159,10 +183,12 @@ namespace Simulant.Game.FFCS.Client.Network
         // original "40 55 53 57 41 54 41 56 48 8D AC 24 ? ? ? ? B8 ? ? ? ?"
         [SigPattern("44 8B 4F ? 44 8B 47 ? 89 44 24 ? 8B 47 ? 89 44 24 ? E8 * * * *")]
         public static IntPtr HandleActorControlFuncPtr { get; set; }
+
         public static IntPtr HandleActorControl(uint objectId, ActorControlCategory category, uint a1, uint a2, uint a3, uint a4, uint a5, uint a6, uint a7, uint a8, uint targetId, uint unk)
         {
             if (HandleActorControlFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络角色控制函数尚未定位。");
+
             // 原生调用边界仍传 ushort，避免把枚举对象交给 GreyMagic 参数转换。
             return HandleActorControlFuncPtr.Call<IntPtr>(objectId, (ushort)category, a1, a2, a3, a4, a5, a6, a7, a8, targetId, unk);
         }

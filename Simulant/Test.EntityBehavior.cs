@@ -30,7 +30,10 @@ namespace Simulant
         private void ToggleEntityBehaviorTest(EntityTestKind kind)
         {
             EntityBehaviorRun previous;
-            lock (_entityTestGate) previous = _entityBehaviorRun;
+
+            lock (_entityTestGate)
+                previous = _entityBehaviorRun;
+
             if (previous != null)
             {
                 StopEntityBehaviorTest(previous, "手动停止");
@@ -39,34 +42,51 @@ namespace Simulant
 
             EnsureEntityTestReady();
             var castTime = 0f;
+
             if (kind == EntityTestKind.NetworkNpc || kind == EntityTestKind.LocalEntities)
             {
                 if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(EntityTestActionId, out var action) ||
                     (action.Cast100ms / 10f) < 3 || action.Omen.RowId == 0 || unchecked((int)action.AnimationEnd.RowId) < 0)
                     throw new InvalidOperationException("实体测试技能数据不完整，需要带读条、预兆和结束动画的流体摆动。");
+
                 castTime = (action.Cast100ms / 10f);
             }
 
             var run = new EntityBehaviorRun();
+
             run.Scheduler = new SimScheduler((ex, node) =>
             {
-                try { _host.LogError($"[实体测试] 节点「{node}」失败：{ex}"); }
-                finally { StopEntityBehaviorTest(run, "异常终止"); }
+                try
+                {
+                    _host.LogError($"[实体测试] 节点「{node}」失败：{ex}");
+                }
+                finally
+                {
+                    StopEntityBehaviorTest(run, "异常终止");
+                }
             });
+
             run.Entities = new SimEntityManager(_host.EntitySpawner, ex =>
             {
                 run.CleanupErrors++;
                 _host.LogError("[实体测试] 回收失败：" + ex);
-            }) { Scheduler = run.Scheduler, PlayerBehavior = _host.Configuration.SimulatedParty.Copy() };
+            })
+            {
+                Scheduler = run.Scheduler,
+                PlayerBehavior = _host.Configuration.SimulatedParty.Copy()
+            };
 
             try
             {
                 lock (_entityTestGate)
                 {
                     EnsureEntityTestReady();
+
                     if (_entityBehaviorRun != null)
                         throw new InvalidOperationException("已有实体测试正在运行。");
+
                     _entityBehaviorRun = run;
+
                     if (kind == EntityTestKind.NetworkParty)
                     {
                         run.Scheduler.Schedule(0, () => BeginPartyTest(run), "生成小队列表测试角色");
@@ -87,6 +107,7 @@ namespace Simulant
                         run.Scheduler.Schedule(0, () => BeginEntityMovementTest(run, castTime), "生成并移动测试角色");
                         LogEntityTest(run, "本地生成测试开始。请观察玩家前方三只实体；左右以玩家起始朝向为准，再次点击“调试”可随时停止，正常流程约 15 秒。");
                     }
+
                     run.Scheduler.Start();
                 }
             }
@@ -104,6 +125,7 @@ namespace Simulant
         {
             if (_host.Disposed || !_host.PluginReady || _host.IsInitializing || !_host.GameDataReady)
                 throw new InvalidOperationException("请等待插件初始化和 CSV 加载完成后再运行实体测试。");
+
             if (!_host.FirewallEnabled)
                 throw new InvalidOperationException("请先启用防火墙，再运行实体测试。");
         }
@@ -112,14 +134,17 @@ namespace Simulant
         {
             EnsureEntityTestReady();
             var player = _host.EntityProvider.GetMyself();
+
             if (player == null || !player.IsAlive)
                 throw new InvalidOperationException("未找到有效的玩家实体，无法确定测试位置。");
+
             var origin = player.Pos3D;
             var heading = player.Heading;
             var forward = new Vector2((float)Math.Sin(heading), (float)Math.Cos(heading));
             // 水平坐标的第二轴指向南；面向南时，角色右侧应为西（负 X）。
             var right = new Vector2(-forward.Y, forward.X);
             var center = new Vector2(origin.X, origin.Y) + forward * 5;
+
             for (var i = 0; i < 3; i++)
             {
                 var actor = run.Entities.SpawnBNpc(4909, 3765, 90);
@@ -150,7 +175,9 @@ namespace Simulant
             }, "等待移动到达回调超时");
             Action tryBeginCast = () =>
             {
-                if (!aArrived || !bArrived || !stopVerified || castStarted) return;
+                if (!aArrived || !bArrived || !stopVerified || castStarted)
+                    return;
+
                 castStarted = true;
                 arrivalTimeout.Cancel();
                 CheckEntityTest(run, Vector2.Distance(a.Pos, targetA) < 0.05f &&
@@ -158,35 +185,42 @@ namespace Simulant
                 var angle = b.Heading - preservedHeading;
                 CheckEntityTest(run, Math.Abs(Math.Atan2(Math.Sin(angle), Math.Cos(angle))) < 0.01,
                     "移动时保留指定朝向");
+
                 foreach (var actor in run.Actors)
                 {
                     CheckEntityTest(run, Math.Abs(actor.Pos3D.Z - origin.Z) < 0.05f, "移动保持高度");
                     actor.Heading = heading;
                 }
+
                 BeginEntityCastTest(run, castTime, forward);
             };
             a.MoveTo(targetA, 2, animationId: 13);
+
             b.MoveTo(targetB, 4, faceMovement: false, animationId: 13, onArrived: () =>
             {
                 bArrived = true;
                 LogEntityTest(run, $"B 到达回调，起步后 {run.Scheduler.ElapsedSeconds - movementStartedAt:0.00} 秒，位置（{b.Pos.X:0.00}, {b.Pos.Y:0.00}）。");
                 tryBeginCast();
             });
+
             c.MoveTo(c.Pos + forward * 10, 1.5f, animationId: 13);
             LogEntityTest(run, "1/4：A（左）途中改目标；B（中）向前移动但面向左侧，保留朝向；C（右）一秒后主动停止。B 移动 10 单位、速度 4，预计位移 2.50 秒。");
 
             run.Scheduler.ScheduleAfter(1, () =>
             {
                 targetA += right * 4;
+
                 a.MoveTo(targetA, 4, animationId: 13, onArrived: () =>
                 {
                     aArrived = true;
                     LogEntityTest(run, $"A 到达回调，起步后 {run.Scheduler.ElapsedSeconds - movementStartedAt:0.00} 秒，位置（{a.Pos.X:0.00}, {a.Pos.Y:0.00}）。");
                     tryBeginCast();
                 });
+
                 c.StopMoving();
                 var stoppedPosition = c.Pos3D;
                 LogEntityTest(run, $"A 已替换移动目标；C 已主动停止，位置（{stoppedPosition.X:0.00}, {stoppedPosition.Y:0.00}）。");
+
                 run.Scheduler.ScheduleAfter(0.5, () =>
                 {
                     CheckEntityTest(run, !c.IsMoving && Vector3.Distance(c.Pos3D, stoppedPosition) < 0.05f,
@@ -209,11 +243,13 @@ namespace Simulant
             CheckEntityTest(run, a.Entity.CastingActionId == EntityTestActionId &&
                 b.Entity.CastingActionId == EntityTestActionId && c.Entity.CastingActionId == EntityTestActionId,
                 "三个角色均写入读条状态");
+
             run.Scheduler.ScheduleAfter(0.75, () =>
             {
                 b.Cast(EntityTestActionId, omenDelay: 0.5f);
                 run.Entities.Delete(c);
                 CheckEntityTest(run, !c.IsActive && !c.Entity.IsAlive && !c.IsMoving, "读条中删除角色并使旧引用失效");
+
                 run.Scheduler.ScheduleAfter(castTime + 0.5, () =>
                 {
                     CheckEntityTest(run, a.Entity.CastingActionId == 0 && b.Entity.CastingActionId == 0,
@@ -231,11 +267,13 @@ namespace Simulant
             a.MoveTo(a.Pos + forward * 10, 2, animationId: 13);
             a.Cast(EntityTestActionId, omenDelay: 1);
             b.Cast(EntityTestActionId);
+
             run.Scheduler.ScheduleAfter(1.5, () =>
             {
                 run.Entities.Delete(a);
                 CheckEntityTest(run, !a.IsActive && !a.Entity.IsAlive && !a.IsMoving, "同时移动和读条的角色能够回收");
             }, "回收移动并读条的角色");
+
             run.Scheduler.ScheduleAfter(castTime + 0.5, () =>
             {
                 CheckEntityTest(run, b.IsActive && b.Entity.CastingActionId == 0,
@@ -243,10 +281,12 @@ namespace Simulant
                 LogEntityTest(run, "4/4：剩余的 B 再次移动和读条，一秒后整体停止，验证待执行节点与延迟预兆清理。");
                 b.MoveTo(b.Pos + forward * 8, 2, animationId: 13);
                 b.Cast(EntityTestActionId, omenDelay: 2);
+
                 run.Scheduler.ScheduleAfter(30, () =>
                 {
                     throw new InvalidOperationException("测试结束后仍执行了应取消的节点。");
                 }, "应随停止取消的节点");
+
                 run.Scheduler.ScheduleAfter(1, () => StopEntityBehaviorTest(run, "正常完成"), "结束实体测试");
             }, "验证独立角色并测试整体停止");
         }
@@ -256,7 +296,9 @@ namespace Simulant
 
         private void CheckEntityTest(EntityBehaviorRun run, bool condition, string description)
         {
-            if (!condition) throw new InvalidOperationException("实体测试未通过：" + description);
+            if (!condition)
+                throw new InvalidOperationException("实体测试未通过：" + description);
+
             run.Checks++;
             LogEntityTest(run, "通过：" + description);
         }
@@ -277,16 +319,23 @@ namespace Simulant
         {
             EntityBehaviorRun run;
             var waitForWorkerOnly = false;
+
             lock (_entityTestGate)
             {
                 run = _entityBehaviorRun;
-                if (run == null || (expected != null && !ReferenceEquals(run, expected))) return;
+
+                if (run == null || (expected != null && !ReferenceEquals(run, expected)))
+                    return;
+
                 if (run.StoppingThreadId != 0)
                 {
                     // 外部线程停止时可能正在等待本回调退出；调度线程和重入的清理线程不能反向等待。
                     if (run.Scheduler.IsSchedulerThread || run.StoppingThreadId == Thread.CurrentThread.ManagedThreadId)
                         return;
-                    while (!run.CleanupCompleted) Monitor.Wait(_entityTestGate);
+
+                    while (!run.CleanupCompleted)
+                        Monitor.Wait(_entityTestGate);
+
                     waitForWorkerOnly = true;
                 }
                 else
@@ -295,21 +344,34 @@ namespace Simulant
                     run.CleanupCompleted = false;
                 }
             }
+
             if (waitForWorkerOnly)
             {
                 // 清理可能由调度线程自己完成；外部停止还需等当前回调真正退出。
                 run.Scheduler.Dispose();
                 return;
             }
+
             // 不能持锁等待线程：正在执行的完成/异常回调也会进入停止入口。
             var previousCleanupErrors = run.CleanupErrors;
+
             try
             {
-                try { run.Scheduler.Dispose(); }
-                finally { run.Entities.Clear(); }
+                try
+                {
+                    run.Scheduler.Dispose();
+                }
+                finally
+                {
+                    run.Entities.Clear();
+                }
+
                 var clean = !run.Scheduler.IsRunning && run.Scheduler.PendingCount == 0 &&
                     !run.Entities.HasPendingCleanup && run.CleanupErrors == previousCleanupErrors;
-                foreach (var actor in run.Actors) clean &= !actor.IsActive && !actor.IsMoving;
+
+                foreach (var actor in run.Actors)
+                    clean &= !actor.IsActive && !actor.IsMoving;
+
                 if (!clean)
                     _host.LogError($"[实体测试] {reason}，清理检查未通过；本次回收异常 {run.CleanupErrors - previousCleanupErrors} 次。" +
                         "如仍有待回收实体，可再次点击调试或执行清理重试。");
@@ -322,8 +384,10 @@ namespace Simulant
                 {
                     run.CleanupCompleted = true;
                     run.StoppingThreadId = 0;
+
                     if (ReferenceEquals(_entityBehaviorRun, run) && !run.Entities.HasPendingCleanup)
                         _entityBehaviorRun = null;
+
                     Monitor.PulseAll(_entityTestGate);
                 }
             }

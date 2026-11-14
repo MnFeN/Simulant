@@ -34,15 +34,16 @@ namespace Simulant.Game.FFCS.Client.Game
         /// <returns></returns>
         [SigPattern("E8 * * * * B0 01 EB B6")]
         public static IntPtr UseActionFuncPtr { get; set; }
+
         public bool UseAction(
-            ActionType actionType, 
-            uint actionId, 
-            uint targetId = 0xE0000000, 
-            uint extraParam = 0, 
-            UseActionMode mode = UseActionMode.None, 
-            uint comboRouteId = 0, 
+            ActionType actionType,
+            uint actionId,
+            uint targetId = 0xE0000000,
+            uint extraParam = 0,
+            UseActionMode mode = UseActionMode.None,
+            uint comboRouteId = 0,
             IntPtr outOptAreaTargeted = default) // bool*
-            => UseActionFuncPtr.Call<bool>(Ptr, actionType, actionId, targetId, extraParam, (int)mode, comboRouteId, outOptAreaTargeted);
+        => UseActionFuncPtr.Call<bool>(Ptr, actionType, actionId, targetId, extraParam, (int)mode, comboRouteId, outOptAreaTargeted);
 
         /// <summary>
         /// Actually execute the action right now, if possible. This skips queueing, area targeting mode, etc.
@@ -61,12 +62,13 @@ namespace Simulant.Game.FFCS.Client.Game
         /// <returns></returns>
         [SigPattern("E8 * * * * 48 8B BC 24 ? ? ? ? 44 0F B6 F8 B0")]
         public static IntPtr UseActionLocationFuncPtr { get; set; }
+
         public bool UseActionLocation(
-            ActionType actionType, 
-            uint actionId, 
-            uint targetId = 0xE0000000, 
-            IntPtr vec3Ptr = default, // Vector3* 
-            uint extraParam = 0, 
+            ActionType actionType,
+            uint actionId,
+            uint targetId = 0xE0000000,
+            IntPtr vec3Ptr = default, // Vector3*
+        uint extraParam = 0,
             byte a7 = 0)
             => UseActionLocationFuncPtr.Call<bool>(Ptr, (byte)actionType, actionId, targetId, vec3Ptr, extraParam, a7);
 
@@ -86,7 +88,6 @@ namespace Simulant.Game.FFCS.Client.Game
         public void StartCooldown(ActionType actionType, uint actionId)
             => StartCooldownFuncPtr.Call(Ptr, actionType, actionId);
         */
-
         /// <summary>
         /// Calculate target position for area-targeted spell corresponding to current cursor position.
         /// </summary>
@@ -94,6 +95,7 @@ namespace Simulant.Game.FFCS.Client.Game
         /// <returns>Whether intersection with ground was found.</returns>
         [SigPattern("E8 * * * * E9 ? ? ? ? 44 8B 84 24 80 00 00 00 33 C0")]
         public static IntPtr GetGroundPositionForCursorFuncPtr { get; set; }
+
         public bool GetGroundPositionForCursor(IntPtr outPosition)
             => GetGroundPositionForCursorFuncPtr.Call<bool>(Ptr, outPosition);
 
@@ -102,11 +104,13 @@ namespace Simulant.Game.FFCS.Client.Game
         /// </summary>
         [SigPattern("48 8B C4 48 89 58 ? 56 48 81 EC ? ? ? ? 48 8B 35")]
         public static IntPtr UpdateFuncPtr { get; set; }
+
         public void Update()
             => UpdateFuncPtr.Call(Ptr);
 
         [SigPattern("E8 * * * * 41 83 FC ? 0F 84 ? ? ? ? 41 81 FC")]
         public static IntPtr OpenCastBarFuncPtr { get; set; }
+
         public void OpenCastBar(Character.Character character, ActionType actionType, uint actionId, uint spellId, uint extraParam, float castTimeElapsed, float castTimeTotal)
             => OpenCastBarFuncPtr.Call(Ptr, character.Ptr, actionType, actionId, spellId, extraParam, castTimeElapsed, castTimeTotal);
 
@@ -174,7 +178,6 @@ namespace Simulant.Game.FFCS.Client.Game
         public MemoryField<float> Total => Ptr.Field<float>(0xC);
     }
     */
-
     public struct ComboDetail : IMemoryObject
     {
         public IntPtr Ptr { get; set; }

@@ -41,7 +41,10 @@ namespace Lumina.Excel.Sheets
             }
 
             public global::Lumina.Text.ReadOnly.ReadOnlySeString Function => page.ReadString(offset, parentOffset);
-            public global::Lumina.Excel.RowRef Argument => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4), new System.Type[] { typeof(HowTo), typeof(Item), typeof(Quest) }, -760547874, page.Language);
+            public global::Lumina.Excel.RowRef Argument => global::Lumina.Excel.RowRef.GetFirstValidRowOrUntyped(page.Module, page.ReadUInt32(offset + 4), new System.Type[]
+            {
+                typeof(HowTo), typeof(Item), typeof(Quest)
+            }, -760547874, page.Language);
         }
 
         static public WarpLogic Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row) => new WarpLogic(page, offset, row);

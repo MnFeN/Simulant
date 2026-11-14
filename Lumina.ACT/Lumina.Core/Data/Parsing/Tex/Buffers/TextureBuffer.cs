@@ -24,11 +24,13 @@ namespace Lumina.Data.Parsing.Tex.Buffers
             Height = height;
             Depth = depth;
             Attribute = attribute;
+
             // Test if there are sufficient room for every mipmap in the texture
             for (var i = 0; i < mipmapAllocations.Length; i++)
             {
                 if (mipmapAllocations[i] >= NumBytesOfMipmap(i))
                     continue;
+
                 MipmapAllocations = new int[mipmapAllocations.Length];
                 break;
             }
@@ -39,6 +41,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
                 MipmapAllocations = mipmapAllocations;
                 NumBytes = mipmapAllocations.Sum();
                 RawData = buffer;
+
                 if (RawData.Length < NumBytes)
                     throw new InvalidOperationException("Buffer size mismatch");
             }
@@ -46,6 +49,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
             {
                 // Insufficient; create a new buffer
                 var mipmapSizes = new int[MipmapAllocations.Length];
+
                 for (var i = 0; i < MipmapAllocations.Length; i++)
                 {
                     mipmapSizes[i] = NumBytesOfMipmap(i);
@@ -54,6 +58,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
 
                 NumBytes = MipmapAllocations.Sum();
                 RawData = new byte[NumBytes];
+
                 for (int i = 0, srcOffset = 0, dstOffset = 0; i < MipmapAllocations.Length; srcOffset += MipmapAllocations[i], dstOffset += mipmapAllocations[i], i++)
                     Buffer.BlockCopy(buffer, srcOffset, RawData, dstOffset, Math.Min(mipmapSizes[i], mipmapAllocations[i]));
             }
@@ -71,6 +76,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
         public TextureBuffer Filter(int? mip = null, int? z = null, TexFile.TextureFormat? format = null)
         {
             var b8g8r8a8 = false;
+
             if (format.HasValue)
             {
                 if (format.Value == TexFile.TextureFormat.B8G8R8A8)
@@ -81,8 +87,10 @@ namespace Lumina.Data.Parsing.Tex.Buffers
 
             if (z == 0 && Depth == 1)
                 z = 0;
+
             if (mip == null && MipmapAllocations.Length == 1)
                 mip = 0;
+
             if (mip == null)
             {
                 if (z == null)
@@ -94,6 +102,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
                 {
                     if (MipmapAllocations.Length > 1)
                         throw new ArgumentException("Mipmap index must be specified to filter specific Z if when there are multiple mipmaps.", nameof(z));
+
                     z = 0;
                 }
             }
@@ -101,6 +110,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
             {
                 if (mip < 0 || mip >= MipmapAllocations.Length)
                     throw new ArgumentOutOfRangeException(nameof(mip));
+
                 if (z != null && (z < 0 || z >= DepthOfMipmap(mip.Value)))
                     throw new ArgumentOutOfRangeException(nameof(z));
             }
@@ -108,6 +118,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
             List<Tuple<int, int, int, int, int, int>> copyList = new global::System.Collections.Generic.List<global::System.Tuple<int, int, int, int, int, int>>();
             int[] newMipmapAllocations;
             int newWidth, newHeight, newDepth;
+
             if (mip == null)
             {
                 newMipmapAllocations = new int[MipmapAllocations.Length];
@@ -115,6 +126,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
                 newHeight = Height;
                 newDepth = Depth;
                 int srcOffset = 0, dstOffset = 0;
+
                 for (var i = 0; i < newMipmapAllocations.Length; i++)
                 {
                     newMipmapAllocations[i] = b8g8r8a8 ? 4 * NumPixelsOfMipmap(i) : NumBytesOfMipmap(i);
@@ -129,6 +141,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
                 newWidth = WidthOfMipmap(mip.Value);
                 newHeight = HeightOfMipmap(mip.Value);
                 newDepth = z == null ? DepthOfMipmap(mip.Value) : 1;
+
                 if (z == null)
                     newMipmapAllocations = new[]
                     {
@@ -139,20 +152,22 @@ namespace Lumina.Data.Parsing.Tex.Buffers
                     {
                         b8g8r8a8 ? 4 * NumPixelsOfMipmapPerPlane(mip.Value) : NumBytesOfMipmapPerPlane(mip.Value)
                     };
+
                 copyList.Add(new Tuple<int, int, int, int, int, int>(Lumina.Compatibility.ArraySlice(MipmapAllocations, 0, (mip.Value) - (0)).Sum() + (z == null ? 0 : z.Value * NumBytesOfMipmapPerPlane(mip.Value)), 0, newMipmapAllocations[0], newWidth, newHeight, newDepth));
                 newMipmapAllocations[0] = (newMipmapAllocations[0] + 3) / 4 * 4;
             }
 
             var buffer = new byte[newMipmapAllocations.Sum()];
+
             if (b8g8r8a8)
             {
-                foreach (var(srcOffset, dstOffset, _, w, h, d)in copyList)
+                foreach (var (srcOffset, dstOffset, _, w, h, d) in copyList)
                     ConvertToB8G8R8A8(buffer, dstOffset, srcOffset, w, h, d);
                 return new B8G8R8A8TextureBuffer(z == null ? Attribute : TexFile.Attribute.TextureType2D, newWidth, newHeight, newDepth, newMipmapAllocations, buffer);
             }
             else
             {
-                foreach (var(srcOffset, dstOffset, dstSize, _, _, _)in copyList)
+                foreach (var (srcOffset, dstOffset, dstSize, _, _, _) in copyList)
                     Buffer.BlockCopy(RawData, srcOffset, buffer, dstOffset, dstSize);
                 return CreateNew(z == null ? Attribute : TexFile.Attribute.TextureType2D, newWidth, newHeight, newDepth, newMipmapAllocations, buffer);
             }
@@ -162,6 +177,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
         {
             var loopCount = log2width + log2height + log2depth;
             int offset = 0;
+
             for (int i = 0; i < loopCount;)
             {
                 if (log2width > 0)
@@ -195,6 +211,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
             var srcBaseOffset = 0;
             var dstBaseOffset = 0;
             var faces = isCube ? 6 : 1;
+
             for (int i = 0; i < mipmapAllocations.Length; i++)
             {
                 var log2width = Compatibility.ILogB(width);
@@ -202,6 +219,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
                 var log2depth = Compatibility.ILogB(depth);
                 var srcOffset = 0;
                 var dstOffset = dstBaseOffset;
+
                 for (var j = 0; j < faces; j++)
                 {
                     for (var k = 0; k < depth; k++)
@@ -234,6 +252,7 @@ namespace Lumina.Data.Parsing.Tex.Buffers
             var buffer = new byte[src.Length];
             var srcPosition = 0;
             var dstBaseOffset = 0;
+
             for (var i = 0; i < mipmapAllocations.Length; i++)
             {
                 var dxtWidth = Math.Max(width / 4, 1);
@@ -241,9 +260,11 @@ namespace Lumina.Data.Parsing.Tex.Buffers
                 var dxtDepth = Math.Max(depth / 4, 1);
                 var size = pixelSize * dxtWidth * dxtHeight;
                 var depth4Size = Math.Min(depth, 4) * size;
+
                 for (var j = 0; j < dxtDepth; j++)
                 {
                     var dstOffset = dstBaseOffset + size * j * 4;
+
                     for (var k = 0; k < dxtHeight; k++)
                     {
                         for (var l = 0; l < dxtWidth; l++)
@@ -371,8 +392,10 @@ namespace Lumina.Data.Parsing.Tex.Buffers
         public static unsafe TextureBuffer FromStream(TexFile.TexHeader header, LuminaBinaryReader reader)
         {
             var mipmapAllocations = new int[Math.Min(13, header.MipCount)];
+
             for (var i = 0; i < mipmapAllocations.Length - 1; i++)
                 mipmapAllocations[i] = (int)(header.OffsetToSurface[i + 1] - header.OffsetToSurface[i]);
+
             mipmapAllocations[mipmapAllocations.Length - 1] = (int)(reader.BaseStream.Length - header.OffsetToSurface[mipmapAllocations.Length - 1]);
             var buffer = new byte[mipmapAllocations.Sum()];
             reader.BaseStream.Position = header.OffsetToSurface[0];

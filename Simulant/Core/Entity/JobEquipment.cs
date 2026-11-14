@@ -40,11 +40,14 @@ namespace Simulant.Core.Entity
         internal static unsafe bool TryApply(Job job, ref CommonSpawnData common)
         {
             var index = FindSet(job);
-            if (index < 0) return false;
+
+            if (index < 0)
+                return false;
 
             var set = Sets[index];
             common.MainhandWeaponModel = set.Mainhand;
             common.OffhandWeaponModel = set.Offhand;
+
             // 已逐件核对：每套五件护甲均使用相同模型编号、变体 1。旧格式的高字节是第一染色。
             var armor = (uint)set.ArmorId | 1u << 16;
             fixed (uint* equipment = common.Equipment)
@@ -62,7 +65,9 @@ namespace Simulant.Core.Entity
         private static int FindSet(Job job)
         {
             for (var i = 0; i < Sets.Length; i++)
-                if (Sets[i].Job == job) return i;
+                if (Sets[i].Job == job)
+                    return i;
+
             return -1;
         }
 

@@ -13,9 +13,11 @@ namespace Lumina.Misc
         static Crc32()
         {
             var table = CrcTable;
+
             for (uint i = 0; i < 256; i++)
             {
                 var res = i;
+
                 for (var t = 0; t < 16; t++)
                 {
                     for (var k = 0; k < 8; k++)
@@ -53,6 +55,7 @@ namespace Lumina.Misc
         {
             var crcLocal = uint.MaxValue ^ crc;
             var table = CrcTable;
+
             while (size >= 16)
             {
                 var a = table[(3 * 256) + buffer[start + 12]] ^ table[(2 * 256) + buffer[start + 13]] ^ table[(1 * 256) + buffer[start + 14]] ^ table[(0 * 256) + buffer[start + 15]];
@@ -66,6 +69,7 @@ namespace Lumina.Misc
 
             while (--size >= 0)
                 crcLocal = table[(byte)(crcLocal ^ buffer[start++])] ^ crcLocal >> 8;
+
             return ~(crcLocal ^ uint.MaxValue);
         }
     }

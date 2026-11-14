@@ -22,8 +22,13 @@ namespace Simulant.Tests
 
             var results = new EntityBase[8];
             var workers = results.Select((_, index) => new Thread(() => results[index] = world.Registry.Get(0))).ToArray();
-            foreach (var worker in workers) worker.Start();
-            foreach (var worker in workers) Assert(worker.Join(5000), "并发查询未完成。");
+
+            foreach (var worker in workers)
+                worker.Start();
+
+            foreach (var worker in workers)
+                Assert(worker.Join(5000), "并发查询未完成。");
+
             Assert(results.All(entity => ReferenceEquals(first, entity)),
                 "并发查询不得为同一生命周期创建多个包装对象。");
         }
@@ -138,7 +143,8 @@ namespace Simulant.Tests
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
     }
 
@@ -147,7 +153,10 @@ namespace Simulant.Tests
         internal readonly EntityObservation?[] Objects = new EntityObservation?[4];
         internal readonly EntityRegistry Registry;
 
-        internal EntityTestWorld() { Registry = new EntityRegistry(slot => Objects[slot], Objects.Length); }
+        internal EntityTestWorld()
+        {
+            Registry = new EntityRegistry(slot => Objects[slot], Objects.Length);
+        }
 
         internal Character CreateCharacter(ushort slot)
         {

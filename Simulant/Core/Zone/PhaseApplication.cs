@@ -30,23 +30,28 @@ namespace Simulant.Core.Zone
         internal Task<bool> ApplyAsync(Action<CancellationToken> prepare,
             Action<CancellationToken> apply, Func<CancellationToken, bool> isReady)
             => ApplyAsync(async token =>
-            {
-                prepare(token);
-                await WaitUntilAsync(isReady, token, "地图就绪");
-                token.ThrowIfCancellationRequested();
-                apply(token);
-            });
+        {
+            prepare(token);
+            await WaitUntilAsync(isReady, token, "地图就绪");
+            token.ThrowIfCancellationRequested();
+            apply(token);
+        });
 
         internal async Task WaitUntilAsync(Func<CancellationToken, bool> isReady,
             CancellationToken token, string stage)
         {
             var clock = Stopwatch.StartNew();
+
             while (true)
             {
                 token.ThrowIfCancellationRequested();
-                if (isReady(token)) return;
+
+                if (isReady(token))
+                    return;
+
                 if (clock.Elapsed.TotalSeconds >= 30)
                     throw new TimeoutException($"等待{stage}超过 30 秒。");
+
                 await _delay(50, token);
             }
         }
@@ -55,12 +60,14 @@ namespace Simulant.Core.Zone
         internal async Task<bool> ApplyAsync(Func<CancellationToken, Task> apply)
         {
             var source = new CancellationTokenSource();
+
             lock (_gate)
             {
                 var previous = _pending;
                 _pending = source;
                 previous?.Cancel();
             }
+
             try
             {
                 var token = source.Token;
@@ -77,7 +84,9 @@ namespace Simulant.Core.Zone
             {
                 lock (_gate)
                 {
-                    if (ReferenceEquals(_pending, source)) _pending = null;
+                    if (ReferenceEquals(_pending, source))
+                        _pending = null;
+
                     source.Dispose();
                 }
             }

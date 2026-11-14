@@ -6,7 +6,7 @@ namespace Simulant.Game.FFCS.Client.Network
     public struct NetworkModule : IMemoryObject
     {
         public IntPtr Ptr { get; set; }
-        public NetworkModulePacketReceiverCallback PacketReceiverCallback 
+        public NetworkModulePacketReceiverCallback PacketReceiverCallback
             => (Ptr + 0xAA8).ReadPtr().As<NetworkModulePacketReceiverCallback>();
     }
 }

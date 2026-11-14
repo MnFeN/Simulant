@@ -33,8 +33,20 @@
 
         private static void Run()
         {
-            foreach (var getFailure in new[] { false, true })
-                foreach (var dispose in new[] { false, true })
+            foreach (var getFailure in new[]
+            {
+                false,
+                true
+            }
+
+            )
+                foreach (var dispose in new[]
+                {
+                    false,
+                    true
+                }
+
+                )
                     Check("创建双失败后" + (dispose ? "释放" : "清理") + "可重试：" + (getFailure ? "读取" : "初始化"),
                         () => VerifyRetry(getFailure, dispose));
 
@@ -66,11 +78,24 @@
         private static void VerifyEventObjectAutoIndex()
         {
             var scene = new Scene();
-            var occupied = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 39, BaseId = 1 });
+            var occupied = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec
+            {
+                Index = 39,
+                BaseId = 1
+            });
             var spawn = typeof(EntitySpawner).GetMethod("SpawnEObj", BindingFlags.Instance | BindingFlags.NonPublic,
-                null, new[] { typeof(EventObjectSpawnSpec), typeof(bool) }, null);
+                null, new[]
+            {
+                typeof(EventObjectSpawnSpec), typeof(bool)
+            }, null);
             var entrance = (Simulant.Core.Entity.EventObject)spawn.Invoke(scene.Spawner,
-                new object[] { new EventObjectSpawnSpec { BaseId = 2007457 }, true });
+                new object[]
+            {
+                new EventObjectSpawnSpec
+                {
+                    BaseId = 2007457
+                }, true
+            });
             Assert(entrance.Identity.Slot == 449 + 38 && occupied.IsAlive && scene.Plugin.DeletedEventIndices.Count == 0,
                 "入口应自动使用下一个空槽，不能覆盖现有实体。");
             scene.Spawner.Delete(entrance);
@@ -82,7 +107,11 @@
         private static void VerifyEventObjectRetry()
         {
             var scene = new Scene();
-            var entity = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 3, BaseId = 1 });
+            var entity = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec
+            {
+                Index = 3,
+                BaseId = 1
+            });
             scene.Plugin.FailDelete = true;
             Throws<InvalidOperationException>(() => scene.Spawner.Delete(entity));
             Assert(entity.IsAlive && scene.Spawner.Owns(entity), "回收失败必须保留 EObj 的有效身份与所有权。");
@@ -91,7 +120,10 @@
             scene.Spawner.Clear();
             Assert(!entity.IsAlive && !scene.Spawner.Owns(entity) && scene.Memory.Read<IntPtr>(new IntPtr(0x20020 + 452 * IntPtr.Size)) == IntPtr.Zero,
                 "重试必须实际释放 EObj 槽位，不能仅隐藏模型。");
-            Assert(scene.Plugin.DeletedEventIndices.SequenceEqual(new byte[] { 3, 3 }) && scene.Plugin.DeleteCalls == 0,
+            Assert(scene.Plugin.DeletedEventIndices.SequenceEqual(new byte[]
+            {
+                3, 3
+            }) && scene.Plugin.DeleteCalls == 0,
                 "EObj 回收必须使用独立的对象索引和函数，不得调用角色回收。");
             scene.Spawner.Clear();
             Assert(scene.Plugin.DeletedEventIndices.Count == 2, "已释放的 EObj 不得重复删除。");
@@ -100,8 +132,16 @@
         private static void VerifyEventObjectReplacement()
         {
             var scene = new Scene();
-            var original = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0, BaseId = 1 });
-            var replacement = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0, BaseId = 2 });
+            var original = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec
+            {
+                Index = 0,
+                BaseId = 1
+            });
+            var replacement = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec
+            {
+                Index = 0,
+                BaseId = 2
+            });
             Assert(scene.Plugin.DeletedEventIndices.Count == 1 && !original.IsAlive && replacement.IsAlive,
                 "覆盖 EObj 槽位前必须先回收旧对象。");
             scene.Spawner.Delete(original);
@@ -118,13 +158,31 @@
             var beforeCreate = scene.Plugin.CreateCalls;
             Throws<InvalidOperationException>(() => scene.Spawner.SpawnBNpc(1, 1, 1));
             Assert(scene.Plugin.CreateCalls == beforeCreate, "失败记录未清理时不得再次分配本地角色。");
-            Throws<AggregateException>(() => { if (dispose) scene.Spawner.Dispose(); else scene.Spawner.Clear(); });
+
+            Throws<AggregateException>(() =>
+            {
+                if (dispose)
+                    scene.Spawner.Dispose();
+                else
+                    scene.Spawner.Clear();
+            });
+
             Assert(scene.Pending && scene.Plugin.DeleteCalls == 2, "失败重试必须保留记录且每轮只删除一次。");
             scene.Plugin.FailDelete = false;
-            if (dispose) scene.Spawner.Dispose(); else scene.Spawner.Clear();
+
+            if (dispose)
+                scene.Spawner.Dispose();
+            else
+                scene.Spawner.Clear();
+
             Assert(!scene.Pending && scene.FailedCount == 0 && scene.Plugin.DeleteCalls == 3,
                 "恢复后必须删除原分配并移除失败记录。");
-            if (dispose) scene.Spawner.Dispose(); else scene.Spawner.Clear();
+
+            if (dispose)
+                scene.Spawner.Dispose();
+            else
+                scene.Spawner.Clear();
+
             Assert(scene.Plugin.DeleteCalls == 3, "成功清理项不得再次删除。");
             Assert(scene.Plugin.DeletedIndices.All(index => index == 1), "重试删除必须使用原本地索引。");
             scene.Spawner.Dispose();
@@ -140,10 +198,16 @@
             scene.Invoke("RetryFailedCreations");
             Assert(!scene.Pending && scene.Spawner.Owns(delivered) && delivered.IsAlive,
                 "失败创建专用回收不能影响已交付实体。");
-            Assert(scene.Plugin.DeletedIndices.SequenceEqual(new ushort[] { 2, 2 }),
+            Assert(scene.Plugin.DeletedIndices.SequenceEqual(new ushort[]
+            {
+                2, 2
+            }),
                 "专用重试只能删除第二次创建的未交付分配。");
             scene.Spawner.Clear();
-            Assert(scene.Plugin.DeletedIndices.SequenceEqual(new ushort[] { 2, 2, 1 }),
+            Assert(scene.Plugin.DeletedIndices.SequenceEqual(new ushort[]
+            {
+                2, 2, 1
+            }),
                 "已交付实体必须保留到正常资源清理时回收。");
         }
 
@@ -160,10 +224,14 @@
             Assert(scene.Pending && scene.FailedCount == 1 && scene.Plugin.DeleteCalls == 1 && scene.Plugin.CallCount == previousCalls,
                 "归属变化时必须保留失败记录，不能调用旧函数或删除当前对象。");
             Assert(scene.Memory.WriteCalls == previousWrites, "拒绝回收不得写入原内存。");
-            if (noRead) Assert(scene.Memory.ReadCalls == previousReads, "上下文不匹配时不得读取原内存。");
+
+            if (noRead)
+                Assert(scene.Memory.ReadCalls == previousReads, "上下文不匹配时不得读取原内存。");
+
             if (!ReferenceEquals(scene.Plugin.Memory, scene.Memory))
                 Assert(scene.Plugin.Memory.ReadCalls == 0 && scene.Plugin.Memory.WriteCalls == 0,
                     "进程替换后不得读写新进程来回收旧分配。");
+
             var readsAfterFailure = scene.Memory.ReadCalls;
             scene.Spawner.ResetWorld();
             scene.Spawner.Clear();
@@ -265,13 +333,22 @@
 
         private static void Assert(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
         }
 
-        private static T Throws<T>(Action action) where T : Exception
+        private static T Throws<T>(Action action)
+            where T : Exception
         {
-            try { action(); }
-            catch (T error) { return error; }
+            try
+            {
+                action();
+            }
+            catch (T error)
+            {
+                return error;
+            }
+
             throw new Exception("预期抛出 " + typeof(T).Name + "。");
         }
 
@@ -281,17 +358,61 @@
             internal readonly FakeLocalPlugin Plugin;
             internal readonly EntitySpawner Spawner;
             internal readonly EntityRegistry Registry;
-            internal IntPtr Native { get { return Plugin.LastNative; } }
-            internal IntPtr LocalPointer { get { return new IntPtr(0x10010 + Plugin.LastIndex * 0x10); } }
-            internal IntPtr ObjectPointer { get { return new IntPtr(0x20020 + (200 + Plugin.LastIndex) * IntPtr.Size); } }
-            internal bool Pending { get { return (bool)typeof(EntitySpawner).GetProperty("HasPendingCreationCleanup", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Spawner, null); } }
-            internal int FailedCount { get { return ((IList)typeof(EntitySpawner).GetField("_failedLocalCreations", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Spawner)).Count; } }
-            internal int OwnedCount { get { return ((IDictionary)typeof(EntitySpawner).GetField("_owned", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Spawner)).Count; } }
+            internal IntPtr Native
+            {
+                get
+                {
+                    return Plugin.LastNative;
+                }
+            }
+
+            internal IntPtr LocalPointer
+            {
+                get
+                {
+                    return new IntPtr(0x10010 + Plugin.LastIndex * 0x10);
+                }
+            }
+
+            internal IntPtr ObjectPointer
+            {
+                get
+                {
+                    return new IntPtr(0x20020 + (200 + Plugin.LastIndex) * IntPtr.Size);
+                }
+            }
+
+            internal bool Pending
+            {
+                get
+                {
+                    return (bool)typeof(EntitySpawner).GetProperty("HasPendingCreationCleanup", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Spawner, null);
+                }
+            }
+
+            internal int FailedCount
+            {
+                get
+                {
+                    return ((IList)typeof(EntitySpawner).GetField("_failedLocalCreations", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Spawner)).Count;
+                }
+            }
+
+            internal int OwnedCount
+            {
+                get
+                {
+                    return ((IDictionary)typeof(EntitySpawner).GetField("_owned", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Spawner)).Count;
+                }
+            }
 
             internal Scene()
             {
                 Plugin = new FakeLocalPlugin(Memory);
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[] { new NamazuPlugin(Plugin) });
+                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
+                {
+                    new NamazuPlugin(Plugin)
+                });
                 ClientObjectManager.InstancePtr = new IntPtr(0x10000);
                 GameObjectManager.InstancePtr = new IntPtr(0x20000);
                 CharacterManager.InstancePtr = IntPtr.Zero;
@@ -312,8 +433,14 @@
 
             internal void Invoke(string method)
             {
-                try { typeof(EntitySpawner).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(Spawner, null); }
-                catch (TargetInvocationException error) { throw error.InnerException; }
+                try
+                {
+                    typeof(EntitySpawner).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(Spawner, null);
+                }
+                catch (TargetInvocationException error)
+                {
+                    throw error.InnerException;
+                }
             }
 
             internal void FailCreation(bool get)
@@ -357,37 +484,61 @@
         public readonly Dictionary<long, int> ReadsByAddress = new Dictionary<long, int>();
         private int _allocationIndex;
 
-        public void Put<T>(IntPtr address, T value) where T : struct { _values[address.ToInt64()] = value; }
-        public T Read<T>(IntPtr address) where T : struct
+        public void Put<T>(IntPtr address, T value)
+            where T : struct
+        {
+            _values[address.ToInt64()] = value;
+        }
+
+        public T Read<T>(IntPtr address)
+            where T : struct
         {
             ReadCalls++;
             int count;
             ReadsByAddress.TryGetValue(address.ToInt64(), out count);
             ReadsByAddress[address.ToInt64()] = count + 1;
-            if (FailRead || address == FailReadAddress) throw new InvalidOperationException("模拟内存读取失败。");
+
+            if (FailRead || address == FailReadAddress)
+                throw new InvalidOperationException("模拟内存读取失败。");
+
             object value;
             return _values.TryGetValue(address.ToInt64(), out value) ? (T)value : default(T);
         }
-        public void Write<T>(IntPtr address, T value) where T : struct
+
+        public void Write<T>(IntPtr address, T value)
+            where T : struct
         {
             WriteCalls++;
-            if (BeforeWrite != null) BeforeWrite(address);
-            if (FailWrite) throw new InvalidOperationException("模拟内存写入失败。");
+
+            if (BeforeWrite != null)
+                BeforeWrite(address);
+
+            if (FailWrite)
+                throw new InvalidOperationException("模拟内存写入失败。");
+
             Put(address, value);
         }
 
         public byte[] ReadBytes(IntPtr address, int count)
         {
             ReadBytesCalls++;
-            if (FailRead || FailReadBytes) throw new InvalidOperationException("模拟指针表批量读取失败。");
+
+            if (FailRead || FailReadBytes)
+                throw new InvalidOperationException("模拟指针表批量读取失败。");
+
             var bytes = new byte[count];
+
             for (var offset = 0; offset + IntPtr.Size <= count; offset += IntPtr.Size)
             {
                 object value;
-                if (!_values.TryGetValue(address.ToInt64() + offset, out value)) continue;
+
+                if (!_values.TryGetValue(address.ToInt64() + offset, out value))
+                    continue;
+
                 var pointer = (IntPtr)value;
                 Array.Copy(BitConverter.GetBytes(pointer.ToInt64()), 0, bytes, offset, IntPtr.Size);
             }
+
             return bytes;
         }
 
@@ -408,6 +559,7 @@
     public sealed class FakeLocalPlugin
     {
         public string State => "Ready";
+
         public readonly object CallScheduler = new object();
         private object PluginUi;
         public static readonly IntPtr CreateFunction = new IntPtr(0x101);
@@ -438,12 +590,20 @@
         public readonly List<uint> NetworkIds = new List<uint>();
         public readonly Exception SetupFailure = new InvalidOperationException("模拟角色读取或初始化失败。");
         public readonly Exception DeleteFailure = new InvalidOperationException("模拟角色删除失败。");
-        public FakeLocalPlugin(FakeLocalMemory memory) { Memory = memory; PluginUi = new object(); }
+        public FakeLocalPlugin(FakeLocalMemory memory)
+        {
+            Memory = memory;
+            PluginUi = new object();
+        }
 
-        public T Call<T>(IntPtr function, params object[] args) where T : struct
+        public T Call<T>(IntPtr function, params object[] args)
+            where T : struct
         {
             CallCount++;
-            if (FailEveryCall) throw new InvalidOperationException("不应调用旧函数。");
+
+            if (FailEveryCall)
+                throw new InvalidOperationException("不应调用旧函数。");
+
             if (function == CreateFunction)
             {
                 LastIndex = (ushort)++CreateCalls;
@@ -455,12 +615,18 @@
                 Memory.Put(LastNative + 0x90, ObjectKind.BattleNpc);
                 return (T)(object)(uint)LastIndex;
             }
+
             if (function == GetFunction)
             {
-                if (FailGet) throw SetupFailure;
+                if (FailGet)
+                    throw SetupFailure;
+
                 return (T)(object)LastNative;
             }
-            if (function == CopyFunction) return (T)(object)0ul;
+
+            if (function == CopyFunction)
+                return (T)(object)0ul;
+
             if (function == EventObjectFunction)
             {
                 var packet = Memory.Read<SpawnObjectPacket>((IntPtr)args[1]);
@@ -473,49 +639,72 @@
                 Memory.Put(new IntPtr(0xAA0000 + 13 * 8), HideFunction);
                 return (T)(object)pointer;
             }
+
             throw new InvalidOperationException("未知泛型原生调用。");
         }
 
         public void Call(IntPtr function, params object[] args)
         {
             CallCount++;
-            if (FailEveryCall) throw new InvalidOperationException("不应调用旧函数。");
+
+            if (FailEveryCall)
+                throw new InvalidOperationException("不应调用旧函数。");
+
             if (function == SetupFunction)
             {
-                if (BeforeSetup != null) BeforeSetup();
-                if (FailSetup) throw SetupFailure;
+                if (BeforeSetup != null)
+                    BeforeSetup();
+
+                if (FailSetup)
+                    throw SetupFailure;
+
                 return;
             }
+
             if (function == HideFunction)
             {
                 HiddenObjects.Add((IntPtr)args[0]);
                 return;
             }
+
             if (function == NetworkFunction)
             {
                 NetworkIds.Add(Convert.ToUInt32(args[0]));
                 return;
             }
-            if (function == DespawnFunction) return;
+
+            if (function == DespawnFunction)
+                return;
+
             if (function == DespawnObjectFunction)
             {
-                if (!(args[0] is uint) || !(args[1] is IntPtr)) throw new InvalidOperationException("EObj 回收必须传基础参数及远程包地址。");
+                if (!(args[0] is uint) || !(args[1] is IntPtr))
+                    throw new InvalidOperationException("EObj 回收必须传基础参数及远程包地址。");
+
                 var index = Memory.Read<byte>((IntPtr)args[1]);
                 DeletedEventIndices.Add(index);
-                if (FailDelete) throw DeleteFailure;
+
+                if (FailDelete)
+                    throw DeleteFailure;
+
                 Memory.Put(new IntPtr(0x20020 + (449 + index) * IntPtr.Size), IntPtr.Zero);
                 return;
             }
+
             if (function == DeleteFunction)
             {
                 DeleteCalls++;
                 var index = Convert.ToUInt16(args[1]);
                 DeletedIndices.Add(index);
-                if (FailDelete) throw DeleteFailure;
+
+                if (FailDelete)
+                    throw DeleteFailure;
+
                 Memory.Put(new IntPtr(0x10010 + index * 0x10), IntPtr.Zero);
                 Memory.Put(new IntPtr(0x20020 + (200 + index) * IntPtr.Size), IntPtr.Zero);
                 return;
             }
+
             throw new InvalidOperationException("未知原生调用。");
         }
     }

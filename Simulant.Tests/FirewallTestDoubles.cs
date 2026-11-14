@@ -50,6 +50,7 @@ namespace Simulant.ACT
         internal Func<IntPtr, int, byte[]> ReadResult { get; set; }
         internal Func<IntPtr> AllocateResult { get; set; }
         internal Func<IntPtr, bool> FreeResult { get; set; }
+
         internal int AllocateCalls;
         internal int ReadCalls;
         private long _nextAllocation = 0x4000;
@@ -61,26 +62,39 @@ namespace Simulant.ACT
         public byte[] ReadBytes(IntPtr address, int count)
         {
             ReadCalls++;
-            if (ReadResult != null) return ReadResult(address, count);
+
+            if (ReadResult != null)
+                return ReadResult(address, count);
+
             if (!Blocks.TryGetValue(address, out var data) || data.Length < count)
                 throw new InvalidOperationException("测试内存不存在完整的读取区域。");
+
             var result = new byte[count];
             Array.Copy(data, result, count);
             return result;
         }
 
-        public T Read<T>(IntPtr address) where T : struct
+        public T Read<T>(IntPtr address)
+            where T : struct
         {
-            if (typeof(T) == typeof(ushort)) return (T)(object)BitConverter.ToUInt16(ReadBytes(address, 2), 0);
+            if (typeof(T) == typeof(ushort))
+                return (T)(object)BitConverter.ToUInt16(ReadBytes(address, 2), 0);
+
             throw new InvalidOperationException("测试未声明该内存读取类型。");
         }
 
         public int WriteBytes(IntPtr address, byte[] bytes)
         {
-            Writes.Add(new WriteAttempt { Address = address, Bytes = (byte[])bytes.Clone() });
+            Writes.Add(new WriteAttempt
+            {
+                Address = address,
+                Bytes = (byte[])bytes.Clone()
+            });
             var count = WriteResult?.Invoke(address, bytes) ?? bytes.Length;
+
             if (!Blocks.TryGetValue(address, out var existing) || existing.Length < bytes.Length)
                 existing = Blocks[address] = new byte[bytes.Length];
+
             Array.Copy(bytes, existing, Math.Min(bytes.Length, Math.Max(0, count)));
             return count;
         }
@@ -90,19 +104,26 @@ namespace Simulant.ACT
             AllocateCalls++;
             var address = AllocateResult != null ? AllocateResult() : new IntPtr(_nextAllocation);
             _nextAllocation += 0x1000;
+
             if (address != IntPtr.Zero)
             {
                 Allocated.Add(address);
                 Blocks[address] = new byte[size];
             }
+
             return address;
         }
 
         public bool FreeMemory(IntPtr address)
         {
             FreeAttempts.Add(address);
-            if (FreeResult != null && !FreeResult(address)) return false;
-            if (!Blocks.Remove(address)) throw new InvalidOperationException("重复释放或释放了未持有的测试内存。");
+
+            if (FreeResult != null && !FreeResult(address))
+                return false;
+
+            if (!Blocks.Remove(address))
+                throw new InvalidOperationException("重复释放或释放了未持有的测试内存。");
+
             Freed.Add(address);
             return true;
         }
@@ -133,6 +154,7 @@ namespace Simulant.Game
         {
             if (dispatcher == IntPtr.Zero || index != 1)
                 throw new InvalidOperationException("测试收包入口解析参数不正确。");
+
             return Framework.ReceiveTarget;
         }
     }
@@ -144,10 +166,16 @@ namespace Simulant.Game.FFCS.Client.System.Framework
     {
         internal static IntPtr ReceiveTarget;
         internal static Action BeforeResolve { get; set; }
+
         public static Framework Instance
         {
-            get { BeforeResolve?.Invoke(); return new Framework(); }
+            get
+            {
+                BeforeResolve?.Invoke();
+                return new Framework();
+            }
         }
+
         public NetworkProxy NetworkModuleProxy => new NetworkProxy();
     }
 

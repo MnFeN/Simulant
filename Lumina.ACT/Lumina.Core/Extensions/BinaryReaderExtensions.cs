@@ -23,6 +23,7 @@ namespace Lumina.Extensions
         {
             var structs = br.ReadStructuresAsSpan<T>(count);
             var list = new List<T>(structs.Length);
+
             for (var i = 0; i < structs.Length; i++)
             {
                 list.Add(structs[i]);
@@ -55,6 +56,7 @@ namespace Lumina.Extensions
             br.BaseStream.Position = offset;
             var chars = new List<byte>();
             byte current;
+
             while ((current = br.ReadByte()) != 0)
             {
                 chars.Add(current);
@@ -68,6 +70,7 @@ namespace Lumina.Extensions
         {
             var chars = new List<byte>();
             byte current;
+
             while ((current = br.ReadByte()) != 0)
             {
                 chars.Add(current);

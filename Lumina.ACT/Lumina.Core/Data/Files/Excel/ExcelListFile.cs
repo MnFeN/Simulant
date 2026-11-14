@@ -24,6 +24,7 @@ namespace Lumina.Data.Files.Excel
             {
                 // read version
                 var headerStr = sr.ReadLine();
+
                 if (headerStr == null)
                 {
                     throw new InvalidOperationException("EXL file header missing/invalid file contents.");
@@ -31,14 +32,17 @@ namespace Lumina.Data.Files.Excel
 
                 var headerData = headerStr.Split(',');
                 var header = headerData[0];
+
                 if (header != FileMagic)
                 {
                     throw new InvalidOperationException($"Invalid file header, got {header}, expected {FileMagic}!");
                 }
 
                 Version = int.Parse(headerData[1]);
+
                 // read exd mappings
                 string row;
+
                 while ((row = sr.ReadLine()) != null)
                 {
                     if (row.Length == 0)

@@ -60,28 +60,43 @@ namespace Simulant.Core.Entity
         {
             if (BNpcBaseId == 0 || BNpcBaseId > int.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(BNpcBaseId), "战斗 NPC 基础编号必须为有效的正数表行编号。");
+
             if (BNpcNameId > int.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(BNpcNameId), "战斗 NPC 名字编号超出了表行编号范围。");
-            if (Level == 0) throw new ArgumentOutOfRangeException(nameof(Level), "网络实体等级必须大于零。");
+
+            if (Level == 0)
+                throw new ArgumentOutOfRangeException(nameof(Level), "网络实体等级必须大于零。");
+
             if (!IsFinite(Pos.X) || !IsFinite(Pos.Y) || !IsFinite(Pos.Z))
                 throw new ArgumentOutOfRangeException(nameof(Pos), "位置的各坐标分量必须为有限数。");
-            if (!IsFinite(Heading)) throw new ArgumentOutOfRangeException(nameof(Heading), "朝向必须为有限数。");
+
+            if (!IsFinite(Heading))
+                throw new ArgumentOutOfRangeException(nameof(Heading), "朝向必须为有限数。");
+
             var health = HealthPoints ?? MaxHealthPoints;
+
             if (MaxHealthPoints == 0 || health == 0 || health > MaxHealthPoints)
                 throw new ArgumentOutOfRangeException(nameof(HealthPoints), "当前生命值和最大生命值必须为正数，且当前值不能超过最大值。");
+
             var resource = ResourcePoints ?? MaxResourcePoints;
+
             if (resource > MaxResourcePoints)
                 throw new ArgumentOutOfRangeException(nameof(ResourcePoints), "当前资源值不能超过最大资源值。");
+
             var equipment = Equipment;
             var customize = Customize;
+
             if (equipment != null && equipment.Length != 10)
                 throw new ArgumentException("人形装备数据必须恰好包含 10 个槽位。", nameof(Equipment));
+
             if (customize != null && customize.Length != 26)
                 throw new ArgumentException("人形自定义数据必须恰好包含 26 字节。", nameof(Customize));
 
             BNpcBase baseRow = default(BNpcBase);
+
             if (!ModelCharaId.HasValue || !Battalion.HasValue)
                 baseRow = ReadRow<BNpcBase>(BNpcBaseId, "战斗 NPC 基础");
+
             var name = Name ?? (BNpcNameId == 0 ? string.Empty : ReadRow<BNpcName>(BNpcNameId, "战斗 NPC 名字").Singular.ExtractText());
             var nameBytes = PacketCodec.EncodeActorName(name);
             var packet = new SpawnNpcPacket
@@ -119,15 +134,23 @@ namespace Simulant.Core.Entity
                     OffhandWeaponModel = OffhandWeaponModel
                 }
             };
+
             // 人形、亚人模型的身体也可能属于装备部件；只传 ModelChara 会生成看不见的空模型。
             if (!ModelCharaId.HasValue && equipment == null && baseRow.NpcEquip.RowId != 0)
                 ApplyNpcEquipment(ref packet.Common, ReadRow<NpcEquip>(baseRow.NpcEquip.RowId, "战斗 NPC 装备"));
+
             // 输入数组只复制到此次包的固定缓冲区，不保存引用，也不改写可复用的生成参数。
-            for (var i = 0; i < nameBytes.Length; i++) packet.Common.Name[i] = nameBytes[i];
+            for (var i = 0; i < nameBytes.Length; i++)
+                packet.Common.Name[i] = nameBytes[i];
+
             if (equipment != null)
-                for (var i = 0; i < equipment.Length; i++) packet.Common.Equipment[i] = equipment[i];
+                for (var i = 0; i < equipment.Length; i++)
+                    packet.Common.Equipment[i] = equipment[i];
+
             if (customize != null)
-                for (var i = 0; i < customize.Length; i++) packet.Common.Customize[i] = customize[i];
+                for (var i = 0; i < customize.Length; i++)
+                    packet.Common.Customize[i] = customize[i];
+
             return packet;
         }
 
@@ -135,8 +158,10 @@ namespace Simulant.Core.Entity
         {
             if (common.MainhandWeaponModel == 0)
                 common.MainhandWeaponModel = row.ModelMainHand | (ulong)row.DyeMainHand.RowId << 48 | (ulong)row.Dye2MainHand.RowId << 56;
+
             if (common.OffhandWeaponModel == 0)
                 common.OffhandWeaponModel = row.ModelOffHand | (ulong)row.DyeOffHand.RowId << 48 | (ulong)row.Dye2OffHand.RowId << 56;
+
             var slots = new (uint Model, uint Stain, uint Stain2)[]
             {
                 (row.ModelHead, row.DyeHead.RowId, row.Dye2Head.RowId),
@@ -159,9 +184,12 @@ namespace Simulant.Core.Entity
                 }
         }
 
-        private static T ReadRow<T>(uint id, string description) where T : struct, IExcelRow<T>
+        private static T ReadRow<T>(uint id, string description)
+            where T : struct, IExcelRow<T>
         {
-            if (GameDataService.Instance.GetSheet<T>().TryGetRow(id, out var row)) return row;
+            if (GameDataService.Instance.GetSheet<T>().TryGetRow(id, out var row))
+                return row;
+
             throw new InvalidOperationException($"未找到{description}数据行 #{id}。");
         }
 

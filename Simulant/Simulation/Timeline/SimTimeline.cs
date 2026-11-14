@@ -21,6 +21,7 @@ namespace Simulant.Simulation.Timeline
 
             lock (_gate)
                 Add(seconds, action, name);
+
             return this;
         }
 
@@ -36,6 +37,7 @@ namespace Simulant.Simulation.Timeline
                 ValidateSeconds(time, nameof(seconds));
                 Add(time, action, name);
             }
+
             return this;
         }
 
@@ -46,15 +48,19 @@ namespace Simulant.Simulation.Timeline
         public SimTimeline At(double seconds, SimTimeline child)
         {
             ValidateSeconds(seconds, nameof(seconds));
-            if (child == null) throw new ArgumentNullException(nameof(child));
+
+            if (child == null)
+                throw new ArgumentNullException(nameof(child));
 
             var nodes = child.Snapshot();
+
             foreach (var node in nodes)
                 ValidateSeconds(seconds + node.Seconds, nameof(seconds));
 
             lock (_gate)
                 foreach (var node in nodes)
                     Add(seconds + node.Seconds, node.Action, node.Name);
+
             return this;
         }
 
@@ -63,9 +69,15 @@ namespace Simulant.Simulation.Timeline
         {
             ValidateSeconds(firstSeconds, nameof(firstSeconds));
             ValidateSeconds(intervalSeconds, nameof(intervalSeconds));
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
             ValidateAction(action, nameof(action));
-            if (count == 0) return this;
+
+            if (count == 0)
+                return this;
+
             ValidateSeconds(firstSeconds + (count - 1) * intervalSeconds, nameof(intervalSeconds));
 
             lock (_gate)
@@ -76,6 +88,7 @@ namespace Simulant.Simulation.Timeline
                     Add(firstSeconds + i * intervalSeconds, () => action(index), name);
                 }
             }
+
             return this;
         }
 
@@ -95,7 +108,9 @@ namespace Simulant.Simulation.Timeline
         // can still start asynchronous work; callers must not let such work escape the node's lifetime.
         internal static void ValidateAction(Delegate action, string parameterName)
         {
-            if (action == null) throw new ArgumentNullException(parameterName);
+            if (action == null)
+                throw new ArgumentNullException(parameterName);
+
             foreach (var callback in action.GetInvocationList())
             {
                 if (callback.Method.IsDefined(typeof(AsyncStateMachineAttribute), false))

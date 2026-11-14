@@ -25,9 +25,17 @@ namespace Simulant.Core.Entity
             ObjectKind = observation.ObjectKind;
         }
 
-        public void SetReadyToDraw() { }
-        public void EnableDraw() { }
-        public void Redraw() { }
+        public void SetReadyToDraw()
+        {
+        }
+
+        public void EnableDraw()
+        {
+        }
+
+        public void Redraw()
+        {
+        }
     }
 
     public sealed class Character : EntityBase
@@ -37,10 +45,13 @@ namespace Simulant.Core.Entity
         {
             get
             {
-                if (!IsAlive) throw new InvalidOperationException("状态控制器访问了已失效的实体。");
+                if (!IsAlive)
+                    throw new InvalidOperationException("状态控制器访问了已失效的实体。");
+
                 return _native;
             }
         }
+
         private Vector2 _position;
         private float _height;
         private float _heading;
@@ -56,18 +67,28 @@ namespace Simulant.Core.Entity
         internal readonly List<ushort> PlayedTimelines = new List<ushort>();
         internal readonly List<ushort> PlayedBaseTimelines = new List<ushort>();
         internal ushort BaseTimelineId { get; private set; }
+
         private long _baseTimelineVersion;
         internal int BaseTimelineResetCount;
 
         internal Character(EntityRegistry registry, EntityIdentity identity, EntityObservation observation)
-            : base(registry, identity, observation) { }
+            : base(registry, identity, observation)
+        {
+        }
 
         public Vector2 Pos
         {
-            get { PositionReads++; return _position; }
+            get
+            {
+                PositionReads++;
+                return _position;
+            }
+
             set
             {
-                if (!IsAlive) throw new InvalidOperationException("移动控制器写入了已失效的实体。");
+                if (!IsAlive)
+                    throw new InvalidOperationException("移动控制器写入了已失效的实体。");
+
                 _position = value;
                 PositionWrites.Add(value);
                 WriteThreads.Add(Thread.CurrentThread.ManagedThreadId);
@@ -80,40 +101,70 @@ namespace Simulant.Core.Entity
             get => _heading;
             set
             {
-                if (!IsAlive) throw new InvalidOperationException("移动控制器旋转了已失效的实体。");
+                if (!IsAlive)
+                    throw new InvalidOperationException("移动控制器旋转了已失效的实体。");
+
                 _heading = value;
             }
         }
 
         public Vector3 Pos3D
         {
-            get { PositionReads++; return new Vector3(_position.X, _position.Y, _height); }
-            set { Pos = new Vector2(value.X, value.Y); _height = value.Z; }
+            get
+            {
+                PositionReads++;
+                return new Vector3(_position.X, _position.Y, _height);
+            }
+
+            set
+            {
+                Pos = new Vector2(value.X, value.Y);
+                _height = value.Z;
+            }
         }
 
         public Simulant.Game.FFCS.Client.Game.Character.Job Job { get; set; }
         public uint HP { get; set; } = 10000;
         public bool IsTargetable { get; set; } = true;
         public bool IsWeaponDrawn { get; set; }
-        public void SetNetworkTarget(Character target) { }
-        internal void SetCastTarget(Character target) { }
-        public void ExecuteActionEffect(uint actionId, Character target) { }
+
+        public void SetNetworkTarget(Character target)
+        {
+        }
+
+        internal void SetCastTarget(Character target)
+        {
+        }
+
+        public void ExecuteActionEffect(uint actionId, Character target)
+        {
+        }
+
         public IntPtr ActorControl(Simulant.Game.ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
-        { return IntPtr.Zero; }
+        {
+            return IntPtr.Zero;
+        }
+
         internal byte[] NameBytes = new byte[64];
         internal Action BeforeNameWrite, AfterNameWrite;
         internal byte[] ReadNameBytes()
         {
-            if (!IsAlive) throw new InvalidOperationException("名字读取访问了已失效的实体。");
+            if (!IsAlive)
+                throw new InvalidOperationException("名字读取访问了已失效的实体。");
+
             return (byte[])NameBytes.Clone();
         }
+
         internal void SetNameBytes(byte[] bytes)
         {
-            if (!IsAlive) throw new InvalidOperationException("改名访问了已失效的实体。");
+            if (!IsAlive)
+                throw new InvalidOperationException("改名访问了已失效的实体。");
+
             BeforeNameWrite?.Invoke();
             NameBytes = (byte[])bytes.Clone();
             AfterNameWrite?.Invoke();
         }
+
         internal sealed class NetworkMove
         {
             internal Vector3 Position;
@@ -126,35 +177,60 @@ namespace Simulant.Core.Entity
         public void ActorMove(Vector3 position, float heading, byte speedParam = 20,
             Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags flags = Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags.None)
         {
-            if (!IsAlive) throw new InvalidOperationException("移动控制器向已失效的实体发送了移动包。");
+            if (!IsAlive)
+                throw new InvalidOperationException("移动控制器向已失效的实体发送了移动包。");
+
             NetworkMoves.Add(new NetworkMove
             {
-                Position = position, Heading = heading, SpeedParam = speedParam, Flags = flags,
+                Position = position,
+                Heading = heading,
+                SpeedParam = speedParam,
+                Flags = flags,
                 Thread = System.Threading.Thread.CurrentThread.ManagedThreadId
             });
             OnActorMove?.Invoke(position, heading, speedParam);
         }
-        public void Knockback(float heading, float distance, float duration) { NativeKnockbackCalls++; }
+
+        public void Knockback(float heading, float distance, float duration)
+        {
+            NativeKnockbackCalls++;
+        }
+
         public float HitboxRadius { get; set; }
+
         private uint _castingActionId;
         internal Action BeforeCastingActionIdRead;
         public uint CastingActionId
         {
-            get { BeforeCastingActionIdRead?.Invoke(); return _castingActionId; }
-            set { _castingActionId = value; }
+            get
+            {
+                BeforeCastingActionIdRead?.Invoke();
+                return _castingActionId;
+            }
+
+            set
+            {
+                _castingActionId = value;
+            }
         }
 
         public void SetCastInfo(uint actionId, float castTime)
         {
-            if (!IsAlive) throw new InvalidOperationException("读条控制器写入了已失效的实体。");
+            if (!IsAlive)
+                throw new InvalidOperationException("读条控制器写入了已失效的实体。");
+
             CastingActionId = actionId;
             CastStarts.Add(actionId);
         }
 
         public bool FinalizeCast(uint expectedActionId)
         {
-            if (!IsAlive) throw new InvalidOperationException("读条控制器结束了已失效实体的读条。");
-            if (CastingActionId == 0 || CastingActionId != expectedActionId) return false;
+            if (!IsAlive)
+                throw new InvalidOperationException("读条控制器结束了已失效实体的读条。");
+
+            if (CastingActionId == 0 || CastingActionId != expectedActionId)
+                return false;
+
             FinalizedCasts.Add(CastingActionId);
             CastingActionId = 0;
             return true;
@@ -162,8 +238,12 @@ namespace Simulant.Core.Entity
 
         public void PlayBaseTimeline(ushort timelineId, bool interrupt = true)
         {
-            if (!IsAlive) throw new InvalidOperationException("移动控制器播放了已失效实体的动画。");
-            if (timelineId == 0) return;
+            if (!IsAlive)
+                throw new InvalidOperationException("移动控制器播放了已失效实体的动画。");
+
+            if (timelineId == 0)
+                return;
+
             BaseTimelineId = timelineId;
             _baseTimelineVersion++;
             PlayedBaseTimelines.Add(timelineId);
@@ -171,7 +251,9 @@ namespace Simulant.Core.Entity
 
         public void ResetBaseTimeline()
         {
-            if (!IsAlive) throw new InvalidOperationException("移动控制器重置了已失效实体的动画。");
+            if (!IsAlive)
+                throw new InvalidOperationException("移动控制器重置了已失效实体的动画。");
+
             BaseTimelineId = 0;
             _baseTimelineVersion++;
             BaseTimelineResetCount++;
@@ -185,19 +267,28 @@ namespace Simulant.Core.Entity
 
         internal bool ResetOwnedBaseTimeline(ushort timelineId, long version)
         {
-            if (!IsAlive) throw new InvalidOperationException("移动控制器清理了已失效实体的动画。");
-            if (BaseTimelineId != timelineId || _baseTimelineVersion != version) return false;
+            if (!IsAlive)
+                throw new InvalidOperationException("移动控制器清理了已失效实体的动画。");
+
+            if (BaseTimelineId != timelineId || _baseTimelineVersion != version)
+                return false;
+
             ResetBaseTimeline();
             return true;
         }
 
-        public void PlayBlendTimeline(ushort timelineId) { PlayedTimelines.Add(timelineId); }
+        public void PlayBlendTimeline(ushort timelineId)
+        {
+            PlayedTimelines.Add(timelineId);
+        }
     }
 
     public sealed class EventObject : EntityBase
     {
         internal EventObject(EntityRegistry registry, EntityIdentity identity, EntityObservation observation)
-            : base(registry, identity, observation) { }
+            : base(registry, identity, observation)
+        {
+        }
     }
 
     internal sealed class StatusTestCharacter
@@ -229,7 +320,12 @@ namespace Simulant.Game.FFCS.Client.Game
         private readonly Status[] _values = new Status[60];
         internal int SetCalls, RemoveCalls;
         internal Action<int> AfterSet, BeforeRemove, AfterRemove;
-        public StatusManager() { for (var i = 0; i < _values.Length; i++) _values[i] = new Status(); }
+        public StatusManager()
+        {
+            for (var i = 0; i < _values.Length; i++)
+                _values[i] = new Status();
+        }
+
         public Status GetStatus(int index) => _values[index];
         public bool SetStatus(int index, ushort id, float remaining, ushort param, Object.GameObjectId source, bool refresh)
         {
@@ -243,6 +339,7 @@ namespace Simulant.Game.FFCS.Client.Game
             AfterSet?.Invoke(index);
             return identityChanged;
         }
+
         public void RemoveStatus(int index)
         {
             RemoveCalls++;
@@ -274,32 +371,44 @@ namespace Simulant.Core.Party
         {
             if (_owner != null && !ReferenceEquals(_owner, owner))
                 throw new InvalidOperationException("模拟小队已由另一会话持有。");
+
             _owner = owner;
             Members = members;
             ShowCount++;
         }
+
         internal void Restore(object owner)
         {
-            if (!IsOwnedBy(owner)) return;
+            if (!IsOwnedBy(owner))
+                return;
+
             RestoreAttempts++;
             BeforeRestore?.Invoke();
             _owner = null;
         }
+
         internal void RemoveMember(object owner, uint id)
         {
-            if (IsOwnedBy(owner)) Restore(owner);
+            if (IsOwnedBy(owner))
+                Restore(owner);
         }
+
         internal void SetEnmity(object owner, uint targetId,
             IReadOnlyList<Simulant.Simulation.Runtime.SimActor> members, IReadOnlyList<int> values)
         {
-            if (!IsOwnedBy(owner)) throw new InvalidOperationException("测试小队尚未被本会话接管。");
+            if (!IsOwnedBy(owner))
+                throw new InvalidOperationException("测试小队尚未被本会话接管。");
+
             EnmityTarget = targetId;
             EnmityValues = values;
             EnmitySetCount++;
         }
+
         internal void RefreshEnmity(object owner)
         {
-            if (!IsOwnedBy(owner)) throw new InvalidOperationException("小队恢复后仍调用了仇恨刷新。");
+            if (!IsOwnedBy(owner))
+                throw new InvalidOperationException("小队恢复后仍调用了仇恨刷新。");
+
             EnmityRefreshCount++;
             OnRefreshEnmity?.Invoke();
         }
@@ -324,22 +433,29 @@ namespace Simulant.ACT
                 OnWaymarkCommand?.Invoke(command);
                 return;
             }
+
             if (name == "command")
             {
                 ChatCommands.Add(command);
                 OnChatCommand?.Invoke(command);
                 return;
             }
-            if (name != "PictoACT") throw new InvalidOperationException("非预期的回调：" + name);
+
+            if (name != "PictoACT")
+                throw new InvalidOperationException("非预期的回调：" + name);
+
             Commands.Add(command);
             OnCommand?.Invoke(command);
         }
 
         internal static void Reset()
         {
-            Commands.Clear(); OnCommand = null;
-            ChatCommands.Clear(); OnChatCommand = null;
-            WaymarkCommands.Clear(); OnWaymarkCommand = null;
+            Commands.Clear();
+            OnCommand = null;
+            ChatCommands.Clear();
+            OnChatCommand = null;
+            WaymarkCommands.Clear();
+            OnWaymarkCommand = null;
         }
     }
 }
@@ -360,26 +476,44 @@ namespace Simulant.Game.FFCS.Client.Game.Object
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit, Size = 8)]
     public struct GameObjectId
     {
-        [global::System.Runtime.InteropServices.FieldOffset(0)] public ulong Id;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] public uint ObjectId;
-        public static implicit operator GameObjectId(ulong id) => new GameObjectId { Id = id };
+        [global::System.Runtime.InteropServices.FieldOffset(0)]
+        public ulong Id;
+        [global::System.Runtime.InteropServices.FieldOffset(0)]
+        public uint ObjectId;
+        public static implicit operator GameObjectId(ulong id) => new GameObjectId
+        {
+            Id = id
+        };
         public static implicit operator ulong(GameObjectId id) => id.Id;
     }
 
-    public enum ObjectKind : byte { None = 0, Pc = 1, BattleNpc = 2, EventObj = 7 }
+    public enum ObjectKind : byte
+    {
+        None = 0,
+        Pc = 1,
+        BattleNpc = 2,
+        EventObj = 7
+    }
+
     public struct GameObject
     {
         public IntPtr Ptr;
         public uint EntityId;
         public ObjectKind ObjectKind;
     }
+
     public struct GameObjectManager
     {
         public static GameObjectManager Instance()
             => throw new InvalidOperationException("测试必须使用注入的对象表观察数据。");
         public ObjectArrays Objects => default(ObjectArrays);
     }
-    public struct ObjectArrays { public GameObjectPtrs IndexSorted => default(GameObjectPtrs); }
+
+    public struct ObjectArrays
+    {
+        public GameObjectPtrs IndexSorted => default(GameObjectPtrs);
+    }
+
     public struct GameObjectPtrs
     {
         public const int Count = 819;
