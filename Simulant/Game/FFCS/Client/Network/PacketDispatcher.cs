@@ -85,6 +85,28 @@ namespace Simulant.Game.FFCS.Client.Network
             }
         }
 
+        // AnoMech 1646a706：EObj 专用回收，索引属于 EventObjectManager 的 40 个槽位。
+        [SigPattern("40 53 48 83 EC 20 48 8B DA 48 8D 0D ?? ?? ?? ?? 0F")]
+        public static IntPtr HandleDespawnObjectPacketFuncPtr { get; set; }
+
+        public static void HandleDespawnObjectPacket(byte index)
+        {
+            if (index >= 40) throw new ArgumentOutOfRangeException(nameof(index), "EObj 索引必须为 0-39。");
+            if (HandleDespawnObjectPacketFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("EObj 回收函数尚未定位。");
+            var packetPtr = IntPtr.Zero;
+            try
+            {
+                packetPtr = Memory.AllocateMemory(1);
+                Memory.Write(packetPtr, index);
+                HandleDespawnObjectPacketFuncPtr.Call(0u, packetPtr);
+            }
+            finally
+            {
+                if (packetPtr != IntPtr.Zero) Memory.FreeMemory(packetPtr);
+            }
+        }
+
         // 收包函数 SpawnObject 分支调用的函数
         [SigPattern(
             "40 53 57 48 83 EC ? F6 42",

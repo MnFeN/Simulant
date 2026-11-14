@@ -37,7 +37,7 @@
             Check("玩家计数器归零后从客户端最大旧 ID 继续", () => VerifyClientMaximum(true));
             Check("玩家和非玩家区间只受自身前缀影响", VerifyIndependentPrefixes);
             Check("删除记录后仍从本进程最大已分配 ID 继续", VerifyDeletionKeepsCounter);
-            Check("隐藏并释放的 EObj 仍占用其 ID", VerifyHiddenObject);
+            Check("旧插件隐藏并释放的 EObj 仍占用其 ID", VerifyHiddenObject);
             Check("尚未进入对象表的网络请求仍占用其 ID", VerifyPendingNetwork);
             Check("已交付但尚未清理的资源仍占用其 ID", VerifyOwnedRecord);
             Check("失败本地创建的已知身份仍占用其 ID", VerifyFailedCreation);
@@ -144,7 +144,10 @@
             SetCounter(false, 0x1000);
             var hidden = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0, BaseId = 1 });
             var oldId = hidden.Id;
-            scene.Spawner.Delete(hidden);
+            hidden.DisableDraw();
+            // 模拟旧插件只隐藏并丢弃引用的残留；新实现的 Delete 已会释放原生槽位。
+            scene.Spawner.ResetWorld();
+            scene.Invoke("ResumeWorld");
             Assert(scene.Plugin.HiddenObjects.Count == 1 && !scene.Spawner.Owns(hidden) && !hidden.IsAlive,
                 "基线必须经过实际 EObj 隐藏与释放路径。");
             Assert(scene.Memory.Read<IntPtr>(new IntPtr(0x20020 + 449 * IntPtr.Size)) != IntPtr.Zero,

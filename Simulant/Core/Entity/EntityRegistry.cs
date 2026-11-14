@@ -47,7 +47,7 @@ namespace Simulant.Core.Entity
                 }
                 var entry = _entries[slot];
                 if (entry != null && entry.Observation.Equals(observed.Value))
-                    return entry.Entity; // null 表示已显式释放，不应重新关联已经隐藏的 EObj。
+                    return entry.Entity; // null 表示已显式释放，不应重新关联尚未从对象表移除的旧对象。
                 return Register(slot, observed.Value);
             }
         }

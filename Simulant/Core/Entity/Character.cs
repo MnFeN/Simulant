@@ -175,6 +175,9 @@ namespace Simulant.Core.Entity
         }
 
         public void ActorMove(Vector3 pos, float heading, byte speedParam = 20)
+            => ActorMove(pos, heading, speedParam, ActorMoveFlags.None);
+
+        public void ActorMove(Vector3 pos, float heading, byte speedParam, ActorMoveFlags flags)
         {
             var payload = new ActorMovePacket
             {
@@ -182,7 +185,8 @@ namespace Simulant.Core.Entity
                 RawY = PacketCodec.EncodeUShortCoord(pos.Z),
                 RawZ = PacketCodec.EncodeUShortCoord(pos.Y),
                 RawHeading = PacketCodec.EncodeUShortHeading(heading),
-                SpeedParam = speedParam
+                SpeedParam = speedParam,
+                Flags = (ushort)flags
             };
             PacketDispatcher.HandleActorMovePacket(Native.EntityId, payload);
         }

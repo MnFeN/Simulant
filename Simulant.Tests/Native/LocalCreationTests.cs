@@ -39,6 +39,8 @@
                         () => VerifyRetry(getFailure, dispose));
 
             Check("仅回收失败分配，保留已交付实体", VerifyDeliveredEntity);
+            Check("EObj 回收失败保留身份，重试后释放槽位", VerifyEventObjectRetry);
+            Check("EObj 槽位复用后不回收新对象", VerifyEventObjectReplacement);
             Check("实体 ID 变化时拒绝删除", () => VerifyChanged(scene => scene.Memory.Put(scene.Native + 0x78, 999u), false));
             Check("实体指针变化时拒绝删除", () => VerifyChanged(scene => scene.SetIdentity(new IntPtr(0x50000), 444u), false));
             Check("本地表单独变化时拒绝删除", () => VerifyChanged(scene => scene.Memory.Put(scene.LocalPointer, new IntPtr(0x50000)), false));
@@ -58,6 +60,36 @@
             Check("初始化时槽位不符不得首次删除", () => VerifySetupConflict(scene => scene.Memory.Put(scene.Native + 0x8C, (ushort)300)));
             Check("已见替换对象后原地址重现也不得认领", VerifyConflictRemainsAfterOriginalReturns);
             Console.WriteLine("真实生成器故障注入通过：" + _passed + " 项。");
+        }
+
+        private static void VerifyEventObjectRetry()
+        {
+            var scene = new Scene();
+            var entity = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 3, BaseId = 1 });
+            scene.Plugin.FailDelete = true;
+            Throws<InvalidOperationException>(() => scene.Spawner.Delete(entity));
+            Assert(entity.IsAlive && scene.Spawner.Owns(entity), "回收失败必须保留 EObj 的有效身份与所有权。");
+            Assert(scene.Memory.AllocateCalls == scene.Memory.FreeCalls, "回收失败也必须释放临时包内存。");
+            scene.Plugin.FailDelete = false;
+            scene.Spawner.Clear();
+            Assert(!entity.IsAlive && !scene.Spawner.Owns(entity) && scene.Memory.Read<IntPtr>(new IntPtr(0x20020 + 452 * IntPtr.Size)) == IntPtr.Zero,
+                "重试必须实际释放 EObj 槽位，不能仅隐藏模型。");
+            Assert(scene.Plugin.DeletedEventIndices.SequenceEqual(new byte[] { 3, 3 }) && scene.Plugin.DeleteCalls == 0,
+                "EObj 回收必须使用独立的对象索引和函数，不得调用角色回收。");
+            scene.Spawner.Clear();
+            Assert(scene.Plugin.DeletedEventIndices.Count == 2, "已释放的 EObj 不得重复删除。");
+        }
+
+        private static void VerifyEventObjectReplacement()
+        {
+            var scene = new Scene();
+            var original = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0, BaseId = 1 });
+            var replacement = scene.Spawner.SpawnEObj(new EventObjectSpawnSpec { Index = 0, BaseId = 2 });
+            Assert(scene.Plugin.DeletedEventIndices.Count == 1 && !original.IsAlive && replacement.IsAlive,
+                "覆盖 EObj 槽位前必须先回收旧对象。");
+            scene.Spawner.Delete(original);
+            Assert(scene.Plugin.DeletedEventIndices.Count == 1 && replacement.IsAlive, "旧回收任务不能误删同槽位的新 EObj。");
+            scene.Spawner.Clear();
         }
 
         private static void VerifyRetry(bool getFailure, bool dispose)
@@ -252,6 +284,7 @@
                 CharacterSetupContainer.SetupBNpcFuncPtr = FakeLocalPlugin.SetupFunction;
                 CharacterSetupContainer.CopyFromCharacterFuncPtr = FakeLocalPlugin.CopyFunction;
                 PacketDispatcher.HandleSpawnObjectPacketFuncPtr = FakeLocalPlugin.EventObjectFunction;
+                PacketDispatcher.HandleDespawnObjectPacketFuncPtr = FakeLocalPlugin.DespawnObjectFunction;
                 PacketDispatcher.HandleSpawnNpcPacketFuncPtr = FakeLocalPlugin.NetworkFunction;
                 PacketDispatcher.HandleDespawnCharacterPacketFuncPtr = FakeLocalPlugin.DespawnFunction;
                 PacketDispatcher.HandleActorControlFuncPtr = FakeLocalPlugin.ActorControlFunction;
@@ -370,6 +403,7 @@
         public static readonly IntPtr DespawnFunction = new IntPtr(0x108);
         public static readonly IntPtr CopyFunction = new IntPtr(0x109);
         public static readonly IntPtr ActorControlFunction = new IntPtr(0x110);
+        public static readonly IntPtr DespawnObjectFunction = new IntPtr(0x111);
         public FakeLocalMemory Memory;
         public bool FailGet;
         public bool FailSetup;
@@ -382,6 +416,7 @@
         public ushort LastIndex;
         public IntPtr LastNative;
         public readonly List<ushort> DeletedIndices = new List<ushort>();
+        public readonly List<byte> DeletedEventIndices = new List<byte>();
         public readonly List<IntPtr> HiddenObjects = new List<IntPtr>();
         public readonly List<uint> NetworkIds = new List<uint>();
         public readonly Exception SetupFailure = new InvalidOperationException("模拟角色读取或初始化失败。");
@@ -445,6 +480,15 @@
                 return;
             }
             if (function == DespawnFunction) return;
+            if (function == DespawnObjectFunction)
+            {
+                if (!(args[0] is uint) || !(args[1] is IntPtr)) throw new InvalidOperationException("EObj 回收必须传基础参数及远程包地址。");
+                var index = Memory.Read<byte>((IntPtr)args[1]);
+                DeletedEventIndices.Add(index);
+                if (FailDelete) throw DeleteFailure;
+                Memory.Put(new IntPtr(0x20020 + (449 + index) * IntPtr.Size), IntPtr.Zero);
+                return;
+            }
             if (function == DeleteFunction)
             {
                 DeleteCalls++;

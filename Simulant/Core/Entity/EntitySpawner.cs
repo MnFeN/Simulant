@@ -196,7 +196,7 @@ namespace Simulant.Core.Entity
                 }
                 catch (Exception setupError)
                 {
-                    // 尚无 EObj 原生销毁接口：失败时也只隐藏本次生成的对象。
+                    // 只回收本次生成的 EObj；失败时保留所有权，供停止模拟时重试。
                     var current = _registry.Get(slot);
                     if (current is EventObject && current.Id == packet.EntityId)
                     {
@@ -204,8 +204,8 @@ namespace Simulant.Core.Entity
                         try { DeleteCore(current); }
                         catch (Exception cleanupError)
                         {
-                            LogCleanupError("EObj 初始化失败后隐藏失败：", cleanupError);
-                            throw new AggregateException("EObj 初始化及隐藏均失败。", setupError, cleanupError);
+                            LogCleanupError("EObj 初始化失败后回收失败：", cleanupError);
+                            throw new AggregateException("EObj 初始化及回收均失败。", setupError, cleanupError);
                         }
                     }
                     if (entity != null && entity.Id == packet.EntityId) _registry.Invalidate(entity);
@@ -241,12 +241,17 @@ namespace Simulant.Core.Entity
                 _owned.Remove(entity.Identity);
                 return; // 槽位已由游戏复用；绝不能删除当前的新对象。
             }
-            var native = entity.Address.As<GameObject>();
-            _registry.Invalidate(entity);
             if (entity is EventObject)
-                native.DisableDraw(); // 只隐藏并释放引用，不能使用 BattleChara 的删除方式回收 EObj。
+            {
+                PacketDispatcher.HandleDespawnObjectPacket(checked((byte)entry.LocalIndex));
+                // 原生回收失败时不能先撤销身份，否则下次清理无法重试。
+                _registry.Invalidate(entity);
+            }
             else
+            {
+                _registry.Invalidate(entity);
                 ClientObjectManager.Instance.DeleteObjectByIndex(entry.LocalIndex, 0);
+            }
             _owned.Remove(entity.Identity);
         }
 
