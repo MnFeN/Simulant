@@ -25,5 +25,6 @@ namespace Simulant.Simulation.Options
         }
 
         internal override bool GetValue() => (Control as CheckBox)?.Checked ?? _default;
+        protected override void SetValue(bool value) => ((CheckBox)Control).Checked = value;
     }
 }

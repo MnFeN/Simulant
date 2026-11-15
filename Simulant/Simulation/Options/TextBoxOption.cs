@@ -11,7 +11,7 @@ namespace Simulant.Simulation.Options
         {
             PropertyName = propName;
             _labelText = labelText;
-            _default = defaultValue;
+            _default = defaultValue ?? string.Empty;
             _hint = hint;
         }
 
@@ -26,5 +26,6 @@ namespace Simulant.Simulation.Options
         }
 
         internal override string GetValue() => (Control as TextBox)?.Text ?? _default;
+        protected override void SetValue(string value) => ((TextBox)Control).Text = value;
     }
 }

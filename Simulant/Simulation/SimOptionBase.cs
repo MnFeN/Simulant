@@ -65,6 +65,13 @@ namespace Simulant.Simulation
             return genericOption.GetValue();
         }
 
+        /// <summary>默认值和纯说明不写入配置；保存原始选择，不解析随机枚举。</summary>
+        internal virtual string SerializeValue() => null;
+
+        internal virtual void RestoreValue(string value)
+        {
+        }
+
         internal virtual void ApplyTo(object target)
         {
             // Implemented in SimOption<T> and will be ignored when the option is not SimOption<T>, such as LabelOption.

@@ -78,5 +78,6 @@ namespace Simulant.Simulation.Options
         }
 
         internal override string GetValue() => (_textBox?.Text ?? _default).Trim();
+        protected override void SetValue(string value) => _textBox.Text = value;
     }
 }

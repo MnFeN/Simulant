@@ -35,5 +35,6 @@ namespace Simulant.Simulation.Options
         }
 
         internal override double GetValue() => (double?)(Control as NumericUpDown)?.Value ?? _default;
+        protected override void SetValue(double value) => ((NumericUpDown)Control).Value = (decimal)value;
     }
 }

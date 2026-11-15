@@ -477,6 +477,8 @@ namespace Simulant.Core
             lock (_initLock)
             {
                 var snapshot = configuration.Copy();
+                // 全局设置窗口可能打开较久，保留期间自动保存的预设选项。
+                snapshot.Presets = Configuration.Copy().Presets;
                 snapshot.Save(ConfigurationPath);
 
                 if (!string.Equals(Configuration.FfxivPath, snapshot.FfxivPath, StringComparison.OrdinalIgnoreCase))
@@ -499,6 +501,24 @@ namespace Simulant.Core
 
             _ui?.UpdateControlStates();
             LogRuntime("全局配置已保存；游戏路径在下次初始化时读取，模拟队员设置从下一次模拟开始生效。");
+        }
+
+        internal void SavePresetOptions(Simulation.SimPresetBase preset)
+        {
+            lock (_initLock)
+            {
+                if (Disposed)
+                    return;
+
+                var snapshot = Configuration.Copy();
+                var values = preset.Options.Select(option =>
+                    new KeyValuePair<string, string>(option.PropertyName, option.SerializeValue()));
+                if (!snapshot.UpdatePreset(preset.GetType().FullName, values))
+                    return;
+
+                snapshot.Save(ConfigurationPath);
+                Configuration = snapshot;
+            }
         }
 
         internal async Task InitAsync()

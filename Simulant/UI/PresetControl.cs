@@ -24,6 +24,7 @@ namespace Simulant.UI
         {
             InitializeComponent();
             _optionEditor = new OptionEditor(tableOptions, toolTip);
+            _optionEditor.ValueChanged += SavePresetOptions;
             _sessionStateTimer = new Timer(components)
             {
                 Interval = 500
@@ -87,7 +88,39 @@ namespace Simulant.UI
         }
 
         private void RebuildOptions(SimPresetBase preset)
-            => _optionEditor.Build(preset.Options);
+        {
+            var saved = _host?.Configuration.Presets.Find(item => item.Id == preset.GetType().FullName);
+            _optionEditor.Build(preset.Options, option =>
+            {
+                var value = saved?.Options.Find(item => item.Name == option.PropertyName);
+                if (value == null)
+                    return;
+
+                try
+                {
+                    option.RestoreValue(value.Value ?? string.Empty);
+                }
+                catch (Exception error)
+                {
+                    _host.LogWarning($"预设「{preset.Name}」的选项「{option.PropertyName}」无法恢复，使用默认值：{error.Message}");
+                }
+            });
+        }
+
+        private void SavePresetOptions()
+        {
+            if (_host == null || _preset == null)
+                return;
+
+            try
+            {
+                _host.SavePresetOptions(_preset);
+            }
+            catch (Exception error)
+            {
+                _host.LogError($"保存预设「{_preset.Name}」的选项失败：{error}");
+            }
+        }
 
         private void ClearOptions()
             => _optionEditor.Clear();

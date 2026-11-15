@@ -1,5 +1,7 @@
 ﻿using Simulant.Simulation.Options;
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
 
 namespace Simulant.Simulation
@@ -9,6 +11,17 @@ namespace Simulant.Simulation
         protected T _default;
 
         internal abstract T GetValue();
+        protected abstract void SetValue(T value);
+
+        internal override string SerializeValue()
+        {
+            var value = GetValue();
+            return EqualityComparer<T>.Default.Equals(value, _default) ? null :
+                TypeDescriptor.GetConverter(typeof(T)).ConvertToInvariantString(value);
+        }
+
+        internal override void RestoreValue(string value)
+            => SetValue((T)TypeDescriptor.GetConverter(typeof(T)).ConvertFromInvariantString(value));
 
         internal override void ApplyTo(object target)
         {

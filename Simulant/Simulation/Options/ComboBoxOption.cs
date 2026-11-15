@@ -41,5 +41,13 @@ namespace Simulant.Simulation.Options
 
             return _default;
         }
+
+        protected override void SetValue(T value)
+        {
+            if (!_options.TryGetIndex(value, out var index))
+                throw new System.ArgumentException($"选项「{_labelText}」已不支持配置中的取值。");
+
+            ((ComboBox)Control).SelectedIndex = index;
+        }
     }
 }

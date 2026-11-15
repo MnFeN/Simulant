@@ -12,6 +12,8 @@ namespace Simulant.UI
         internal TableLayoutPanel Table { get; }
 
         private readonly ToolTip _toolTip;
+        private bool _updating;
+        internal event Action ValueChanged;
 
         public OptionEditor(TableLayoutPanel table, ToolTip toolTip)
         {
@@ -26,8 +28,9 @@ namespace Simulant.UI
             Table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         }
 
-        internal void Build(IEnumerable<SimOptionBase> options)
+        internal void Build(IEnumerable<SimOptionBase> options, Action<SimOptionBase> restore = null)
         {
+            _updating = true;
             Table.SuspendLayout();
 
             try
@@ -35,30 +38,71 @@ namespace Simulant.UI
                 Clear();
 
                 foreach (var option in options)
-                    option?.CreateUI(this, _toolTip);
+                {
+                    if (option == null)
+                        continue;
+
+                    option.CreateUI(this, _toolTip);
+                    restore?.Invoke(option);
+                    ObserveChanges(option.Control);
+                }
             }
             finally
             {
                 Table.ResumeLayout(true);
+                _updating = false;
             }
         }
 
         internal void Clear()
         {
-            var controls = new Control[Table.Controls.Count];
-            Table.Controls.CopyTo(controls, 0);
-            Table.Controls.Clear();
-
-            foreach (var control in controls)
+            var wasUpdating = _updating;
+            _updating = true;
+            try
             {
-                // 多个选项卡可能共用提示组件，只移除当前编辑器的提示。
-                _toolTip?.SetToolTip(control, null);
-                control.Dispose();
-            }
+                var controls = new Control[Table.Controls.Count];
+                Table.Controls.CopyTo(controls, 0);
+                Table.Controls.Clear();
 
-            Table.RowStyles.Clear();
-            Table.RowCount = 1;
-            Table.RowStyles.Add(new RowStyle(SizeType.Absolute, 5));
+                foreach (var control in controls)
+                {
+                    // 多个选项卡可能共用提示组件，只移除当前编辑器的提示。
+                    _toolTip?.SetToolTip(control, null);
+                    control.Dispose();
+                }
+
+                Table.RowStyles.Clear();
+                Table.RowCount = 1;
+                Table.RowStyles.Add(new RowStyle(SizeType.Absolute, 5));
+            }
+            finally
+            {
+                _updating = wasUpdating;
+            }
+        }
+
+        private void ObserveChanges(Control control)
+        {
+            if (control == null)
+                return;
+
+            if (control is ComboBox combo)
+                combo.SelectedIndexChanged += OnValueChanged;
+            else if (control is CheckBox check)
+                check.CheckedChanged += OnValueChanged;
+            else if (control is NumericUpDown number)
+                number.ValueChanged += OnValueChanged;
+            else if (control is TextBox text)
+                text.TextChanged += OnValueChanged;
+            else
+                foreach (Control child in control.Controls)
+                    ObserveChanges(child);
+        }
+
+        private void OnValueChanged(object sender, EventArgs e)
+        {
+            if (!_updating)
+                ValueChanged?.Invoke();
         }
 
         /// <summary>沿用预设选项的标签、间距和输入控件样式。</summary>

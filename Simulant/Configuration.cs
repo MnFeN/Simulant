@@ -1,6 +1,8 @@
 using Simulant.Simulation.Runtime;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Xml;
 using System.Xml.Serialization;
 
@@ -15,6 +17,11 @@ namespace Simulant
         public bool DeveloperMode { get; set; }
         public string FfxivPath { get; set; } = string.Empty;
 
+        [XmlArrayItem("Preset")]
+        public List<PresetConfiguration> Presets { get; set; } = new List<PresetConfiguration>();
+
+        public bool ShouldSerializePresets() => Presets.Count != 0;
+
         internal Configuration Copy()
         {
             if (SimulatedParty == null)
@@ -25,8 +32,42 @@ namespace Simulant
                 SimulatedParty = SimulatedParty.Copy(),
                 AutoInstallUpdates = AutoInstallUpdates,
                 DeveloperMode = DeveloperMode,
-                FfxivPath = FfxivPath?.Trim() ?? string.Empty
+                FfxivPath = FfxivPath?.Trim() ?? string.Empty,
+                Presets = (Presets ?? new List<PresetConfiguration>()).Where(preset => preset.Options.Count != 0)
+                    .Select(preset => new PresetConfiguration
+                    {
+                        Id = preset.Id,
+                        Options = preset.Options.Select(option => new PresetOptionConfiguration
+                        {
+                            Name = option.Name,
+                            Value = option.Value
+                        }).ToList()
+                    }).ToList()
             };
+        }
+
+        /// <summary>只记录非默认选项；全部恢复默认时连同预设节点一起移除。</summary>
+        internal bool UpdatePreset(string id, IEnumerable<KeyValuePair<string, string>> values)
+        {
+            var options = values.Where(value => !string.IsNullOrEmpty(value.Key) && value.Value != null)
+                .Select(value => new PresetOptionConfiguration
+                {
+                    Name = value.Key,
+                    Value = value.Value
+                }).ToList();
+            var previous = Presets.Find(preset => preset.Id == id);
+            if (options.Count == (previous?.Options.Count ?? 0) && (previous == null ||
+                options.Zip(previous.Options, (a, b) => a.Name == b.Name && a.Value == b.Value).All(equal => equal)))
+                return false;
+
+            Presets.RemoveAll(preset => preset.Id == id);
+            if (options.Count != 0)
+                Presets.Add(new PresetConfiguration
+                {
+                    Id = id,
+                    Options = options
+                });
+            return true;
         }
 
         internal static Configuration Load(string path)
@@ -69,5 +110,23 @@ namespace Simulant
                     File.Delete(temporary);
             }
         }
+    }
+
+    public sealed class PresetConfiguration
+    {
+        [XmlAttribute]
+        public string Id { get; set; }
+
+        [XmlElement("Option")]
+        public List<PresetOptionConfiguration> Options { get; set; } = new List<PresetOptionConfiguration>();
+    }
+
+    public sealed class PresetOptionConfiguration
+    {
+        [XmlAttribute]
+        public string Name { get; set; }
+
+        [XmlText]
+        public string Value { get; set; } = string.Empty;
     }
 }

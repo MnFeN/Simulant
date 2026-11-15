@@ -14,6 +14,7 @@ namespace Simulant.Tests
     {
         private const int TimeoutMs = 5000;
 
+        [STAThread]
         private static int Main()
         {
             // 测试类中无参数的 public static void 方法自动执行；辅助方法使用 internal 或 private。
