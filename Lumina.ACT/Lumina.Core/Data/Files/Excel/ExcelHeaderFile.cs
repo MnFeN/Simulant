@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Lumina.Data.Attributes;
@@ -59,7 +60,7 @@ namespace Lumina.Data.Files.Excel
 
         public string GetColumnsHashString()
         {
-            return GetColumnsHash().ToString("x8");
+            return GetColumnsHash().ToString("x8", CultureInfo.InvariantCulture);
         }
     }
 }

@@ -269,7 +269,7 @@ namespace Simulant.Core.Zone
             _host.LogRuntime($"已记录真实地图：{currentTerritoryId}");
 
             if (initialPosition.HasValue)
-                _host.LogRuntime($"已记录真实位置：{initialPosition.Value.X}, {initialPosition.Value.Y}, {initialPosition.Value.Z}");
+                _host.LogRuntime(FormattableString.Invariant($"已记录真实位置：{initialPosition.Value.X}, {initialPosition.Value.Y}, {initialPosition.Value.Z}"));
         }
 
         private void RestoreInitialPosition(Vector3? initialPosition, int worldVersion)
@@ -283,7 +283,7 @@ namespace Simulant.Core.Zone
 
             EnsureWorld(worldVersion);
             me.Pos3D = initialPosition.Value;
-            _host.LogRuntime($"已恢复真实位置：{initialPosition.Value.X}, {initialPosition.Value.Y}, {initialPosition.Value.Z}");
+            _host.LogRuntime(FormattableString.Invariant($"已恢复真实位置：{initialPosition.Value.X}, {initialPosition.Value.Y}, {initialPosition.Value.Z}"));
         }
 
         private static bool IsMapReady(uint territoryId, out string state)
@@ -318,7 +318,7 @@ namespace Simulant.Core.Zone
             }
 
             var clock = Stopwatch.StartNew();
-            _host.LogSim($"进入阶段 {phaseData.Name}：天气 {phaseData.Weather}，BGM {phaseData.BGM}，坐标 {spawn?.ToString() ?? "null"}");
+            _host.LogSim($"进入阶段 {phaseData.Name}：天气 {phaseData.Weather}，BGM {phaseData.BGM}，坐标 {spawn?.ToString(null, System.Globalization.CultureInfo.InvariantCulture) ?? "null"}");
 
             void CheckCurrent(CancellationToken token)
             {
@@ -361,7 +361,7 @@ namespace Simulant.Core.Zone
                 if (state != lastState)
                 {
                     lastState = state;
-                    _host.LogRuntime($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：{state}");
+                    _host.LogRuntime(FormattableString.Invariant($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：{state}"));
                 }
 
                 return ready;
@@ -383,7 +383,7 @@ namespace Simulant.Core.Zone
                         _host.EnvironmentService.PlayMapEffect(slot, flag.Value);
                 }
 
-                _host.LogRuntime($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：地图已就绪，已提交阶段「{phaseData.Name}」的天气、BGM 和场地效果。");
+                _host.LogRuntime(FormattableString.Invariant($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：地图已就绪，已提交阶段「{phaseData.Name}」的天气、BGM 和场地效果。"));
             }
 
             return _phaseApplication.ApplyAsync(Prepare, Apply, Ready);
@@ -476,7 +476,7 @@ namespace Simulant.Core.Zone
                 var groupsReady = false;
 
                 void LogTiming(string message)
-                    => _host.LogRuntime($"[出生圈计时] 区域 {territory.Value.RowId}，{clock.Elapsed.TotalSeconds:F3} 秒：{message}");
+                    => _host.LogRuntime(FormattableString.Invariant($"[出生圈计时] 区域 {territory.Value.RowId}，{clock.Elapsed.TotalSeconds:F3} 秒：{message}"));
 
                 string lastState = null;
 

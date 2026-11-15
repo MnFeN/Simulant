@@ -118,7 +118,7 @@ namespace Simulant.Content.U7b.Presets
             var actualTarget = result.Snapshot.Nearest(result.Center, Party[source])
                 ?? throw new InvalidOperationException("扇形没有可引导的队员。");
             var error = DescribeMarkerFailure(index, source, ForsakenMarker.Fan, area, result)
-                .WithDetail($"扇形偏离解法方向 {degrees:0.0}°，超过 30°；" +
+                .WithDetail(FormattableString.Invariant($"扇形偏离解法方向 {degrees:0.0}°，超过 30°；") +
                     $"实际由 {Roles[actualTarget.Slot]} 引导，约定由 {Roles[expectedTarget]} 引导");
 
             // 人数也失败时，交给 Failed 统一记录并发送中断提示，保留角度说明但不重复上报。

@@ -154,7 +154,7 @@ namespace Simulant
                 actor.Heading = heading;
                 actor.SetReadyToDraw();
                 actor.EnableDraw();
-                LogEntityTest(run, $"角色 {(char)('A' + i)}：实体 ID {actor.Id:X8}，起点（{start.X:0.00}, {start.Y:0.00}）。");
+                LogEntityTest(run, FormattableString.Invariant($"角色 {(char)('A' + i)}：实体 ID {actor.Id:X8}，起点（{start.X:0.00}, {start.Y:0.00}）。"));
             }
 
             var a = run.Actors[0];
@@ -199,7 +199,7 @@ namespace Simulant
             b.MoveTo(targetB, 4, faceMovement: false, animationId: 13, onArrived: () =>
             {
                 bArrived = true;
-                LogEntityTest(run, $"B 到达回调，起步后 {run.Scheduler.ElapsedSeconds - movementStartedAt:0.00} 秒，位置（{b.Pos.X:0.00}, {b.Pos.Y:0.00}）。");
+                LogEntityTest(run, FormattableString.Invariant($"B 到达回调，起步后 {run.Scheduler.ElapsedSeconds - movementStartedAt:0.00} 秒，位置（{b.Pos.X:0.00}, {b.Pos.Y:0.00}）。"));
                 tryBeginCast();
             });
 
@@ -213,13 +213,13 @@ namespace Simulant
                 a.MoveTo(targetA, 4, animationId: 13, onArrived: () =>
                 {
                     aArrived = true;
-                    LogEntityTest(run, $"A 到达回调，起步后 {run.Scheduler.ElapsedSeconds - movementStartedAt:0.00} 秒，位置（{a.Pos.X:0.00}, {a.Pos.Y:0.00}）。");
+                    LogEntityTest(run, FormattableString.Invariant($"A 到达回调，起步后 {run.Scheduler.ElapsedSeconds - movementStartedAt:0.00} 秒，位置（{a.Pos.X:0.00}, {a.Pos.Y:0.00}）。"));
                     tryBeginCast();
                 });
 
                 c.StopMoving();
                 var stoppedPosition = c.Pos3D;
-                LogEntityTest(run, $"A 已替换移动目标；C 已主动停止，位置（{stoppedPosition.X:0.00}, {stoppedPosition.Y:0.00}）。");
+                LogEntityTest(run, FormattableString.Invariant($"A 已替换移动目标；C 已主动停止，位置（{stoppedPosition.X:0.00}, {stoppedPosition.Y:0.00}）。"));
 
                 run.Scheduler.ScheduleAfter(0.5, () =>
                 {
@@ -292,7 +292,7 @@ namespace Simulant
         }
 
         private void LogEntityTest(EntityBehaviorRun run, string message)
-            => _host.LogRuntime($"[实体测试] {run.Scheduler.ElapsedSeconds:0.00} 秒：{message}");
+            => _host.LogRuntime(FormattableString.Invariant($"[实体测试] {run.Scheduler.ElapsedSeconds:0.00} 秒：{message}"));
 
         private void CheckEntityTest(EntityBehaviorRun run, bool condition, string description)
         {

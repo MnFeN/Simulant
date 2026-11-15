@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -113,7 +114,7 @@ namespace Lumina.Models.Materials
 
             try
             {
-                v = int.Parse(vSub);
+                v = int.Parse(vSub, CultureInfo.InvariantCulture);
             }
             catch (FormatException)
             {

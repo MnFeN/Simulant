@@ -72,7 +72,7 @@ namespace Simulant.Utils.Maths
                     double value = costSelector(src[i], tgt[j]);
 
                     if (double.IsNaN(value) || double.IsInfinity(value))
-                        throw new ArgumentException($"组 ({i}, {j}) 返回了无效值 {value}。");
+                        throw new ArgumentException(FormattableString.Invariant($"组 ({i}, {j}) 返回了无效值 {value}。"));
 
                     cost[i, j] = value;
                 }

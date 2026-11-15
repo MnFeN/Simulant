@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Reflection;
 using Lumina.Data;
@@ -125,7 +126,7 @@ namespace Lumina.Excel.Exceptions
         public uint ActualHash { get; private set; }
 
         public MismatchedColumnHashException(string sheet, uint expected, uint actual)
-            : base(string.Format("Sheet {0} schema mismatch: expected {1:X8}, actual {2:X8}. Use a matching schema or the raw EXD API.", sheet, expected, actual))
+            : base(string.Format(CultureInfo.InvariantCulture, "Sheet {0} schema mismatch: expected {1:X8}, actual {2:X8}. Use a matching schema or the raw EXD API.", sheet, expected, actual))
         {
             SheetName = sheet;
             ExpectedHash = expected;

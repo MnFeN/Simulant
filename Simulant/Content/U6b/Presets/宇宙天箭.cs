@@ -239,7 +239,7 @@ namespace Simulant.Content.U6b.Presets
                 if (_marked.Add(slot))
                     ShowMarker(slot, "m0489trg_b0c");
 
-            var message = $"[宇宙天箭] {Scheduler.ElapsedSeconds - _origin:0.000} 秒：" + error.Format(SelfSlot, slot => CosmoArrowPlan.Roles[slot]);
+            var message = FormattableString.Invariant($"[宇宙天箭] {Scheduler.ElapsedSeconds - _origin:0.000} 秒：") + error.Format(SelfSlot, slot => CosmoArrowPlan.Roles[slot]);
             _host.LogWarning(message);
 
             try

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -163,7 +164,7 @@ namespace Lumina.Data
 
             try
             {
-                ExpansionId = int.Parse(Name.Substring(2));
+                ExpansionId = int.Parse(Name.Substring(2), CultureInfo.InvariantCulture);
             }
             catch (FormatException e)
             {

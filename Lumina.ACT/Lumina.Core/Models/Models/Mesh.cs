@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -249,20 +250,20 @@ namespace Lumina.Models.Models
             var sb = new StringBuilder();
 
             foreach (var vert in vsList)
-                sb.Append($"v {(decimal)vert.X} {(decimal)vert.Y} {(decimal)vert.Z}{nl}");
+                sb.Append(FormattableString.Invariant($"v {(decimal)vert.X} {(decimal)vert.Y} {(decimal)vert.Z}{nl}"));
 
             foreach (var color in vcList)
-                sb.Append($"vc {(decimal)color.W} {(decimal)color.X} {(decimal)color.Y} {(decimal)color.Z}{nl}");
+                sb.Append(FormattableString.Invariant($"vc {(decimal)color.W} {(decimal)color.X} {(decimal)color.Y} {(decimal)color.Z}{nl}"));
 
             foreach (var texCoord in vtList)
-                sb.Append($"vt {(decimal)texCoord.X} {(decimal)texCoord.Y} {(decimal)texCoord.W} {(decimal)texCoord.Z}{nl}");
+                sb.Append(FormattableString.Invariant($"vt {(decimal)texCoord.X} {(decimal)texCoord.Y} {(decimal)texCoord.W} {(decimal)texCoord.Z}{nl}"));
 
             foreach (var norm in nmList)
-                sb.Append($"vn {(decimal)norm.X} {(decimal)norm.Y} {(decimal)norm.Z}{nl}");
+                sb.Append(FormattableString.Invariant($"vn {(decimal)norm.X} {(decimal)norm.Y} {(decimal)norm.Z}{nl}"));
 
             foreach (var ind in inList)
             {
-                sb.Append(String.Format("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}{3}", (ushort)ind.X, (ushort)ind.Y, (ushort)ind.Z, nl));
+                sb.Append(String.Format(CultureInfo.InvariantCulture, "f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}{3}", (ushort)ind.X, (ushort)ind.Y, (ushort)ind.Z, nl));
             }
 
             return sb.ToString();

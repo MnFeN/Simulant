@@ -168,7 +168,7 @@ namespace Simulant.Content.U7a.Presets
 
             timeline.At(0, () =>
             {
-                _host.LogVerbose($"地火线 {lineEObj.Id} @ {lineEObj.Address.Hex()} 开始时间轴: Pos = <{pos.X:F2}, {pos.Y:F2}>, Heading = {heading:F2}");
+                _host.LogVerbose(FormattableString.Invariant($"地火线 {lineEObj.Id} @ {lineEObj.Address.Hex()} 开始时间轴: Pos = <{pos.X:F2}, {pos.Y:F2}>, Heading = {heading:F2}"));
                 lineEObj.PlayAnimation(0x10);
                 // 初始的矩形 Omen，技能实际没有其他效果。
                 DummyCast(pos, heading, 0x9D73, 10, 5); // 光
@@ -249,7 +249,7 @@ namespace Simulant.Content.U7a.Presets
                 var absolutePos = new Vector3(pos.X + 100, pos.Y + 100, 0);
                 result[i] = (absolutePos, (float)eObjHeading);
 
-                _host.LogVerbose($"地火线 {i} 计算结果：Pos = <{absolutePos.X:F2}, {absolutePos.Y:F2}>, heading = {result[i].heading:F2}");
+                _host.LogVerbose(FormattableString.Invariant($"地火线 {i} 计算结果：Pos = <{absolutePos.X:F2}, {absolutePos.Y:F2}>, heading = {result[i].heading:F2}"));
             }
 
             return result;

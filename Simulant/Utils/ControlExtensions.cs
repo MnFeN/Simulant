@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -59,7 +60,7 @@ namespace Simulant.Utils
             }
             else
             {
-                target.AppendText($"\n[{DateTime.Now.ToLongTimeString()}] {text}");
+                target.AppendText($"\n[{DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture)}] {text}");
                 target.ScrollToCaret();
             }
         }

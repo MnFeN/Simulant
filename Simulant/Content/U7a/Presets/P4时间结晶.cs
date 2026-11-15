@@ -411,7 +411,7 @@ namespace Simulant.Content.U7a.Presets
                 if (_marked.Add(slot))
                     TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[slot].Address}, m0489trg_b0c");
 
-            var message = $"[时间结晶] {Now:0.000} 秒：" + error.Format(Self, slot => CrystallizeTimePlan.Roles[slot]);
+            var message = FormattableString.Invariant($"[时间结晶] {Now:0.000} 秒：") + error.Format(Self, slot => CrystallizeTimePlan.Roles[slot]);
             _host.LogWarning(message);
 
             try

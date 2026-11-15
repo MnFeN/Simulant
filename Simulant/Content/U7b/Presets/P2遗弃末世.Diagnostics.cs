@@ -1,3 +1,4 @@
+using System;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
 using System.Linq;
@@ -82,7 +83,7 @@ namespace Simulant.Content.U7b.Presets
                 ShowResultMarker("m0489trg_b0c", slot);
             }
 
-            return $"[遗弃末世] {Scheduler.ElapsedSeconds - _origin:0.000} 秒：" + error.Format(_selfSlot, slot => Roles[slot]);
+            return FormattableString.Invariant($"[遗弃末世] {Scheduler.ElapsedSeconds - _origin:0.000} 秒：") + error.Format(_selfSlot, slot => Roles[slot]);
         }
     }
 }

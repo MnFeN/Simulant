@@ -16,7 +16,7 @@ namespace Simulant.ACT
         /// <param name="message"></param>
         public static void AddLogLine(string type, string message)
         {
-            var logline = $"00|{DateTime.Now:O}|0|{type}:{message}|";
+            var logline = FormattableString.Invariant($"00|{DateTime.Now:O}|0|{type}:{message}|");
             ActGlobals.oFormActMain.ParseRawLogLine(isImport: false, DateTime.Now, logline ?? "");
         }
     }

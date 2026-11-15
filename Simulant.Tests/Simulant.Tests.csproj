@@ -27,6 +27,16 @@
       <Link>ACT\SimCommandListener.cs</Link>
     </Compile>
     <Compile Include="MathParserTests.cs" />
+    <Compile Include="NumericCultureTests.cs" />
+    <Compile Include="..\Simulant\Utils\InvariantNumericExtensions.cs">
+      <Link>Utils\InvariantNumericExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Utils\DataStringHelper.cs">
+      <Link>Utils\DataStringHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Utils\ArgHelper.cs">
+      <Link>Utils\ArgHelper.cs</Link>
+    </Compile>
     <Compile Include="..\Simulant\Utils\Maths\MathParser.cs">
       <Link>Utils\Maths\MathParser.cs</Link>
     </Compile>

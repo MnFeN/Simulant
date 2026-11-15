@@ -97,7 +97,7 @@ namespace Simulant.Simulation.Runtime
                                 () => ShowOmen(actor, state, action), "技能 " + actionId + " 预兆");
                     }
 
-                    _log?.Invoke($"开始读条：技能 {actionId}（{duration:0.0} 秒）");
+                    _log?.Invoke(FormattableString.Invariant($"开始读条：技能 {actionId}（{duration:0.0} 秒）"));
                 }
                 catch
                 {

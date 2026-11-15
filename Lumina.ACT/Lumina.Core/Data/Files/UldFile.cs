@@ -1,3 +1,4 @@
+using System.Globalization;
 using Lumina.Data.Attributes;
 using Lumina.Data.Parsing.Uld;
 using Lumina.Extensions;
@@ -30,7 +31,7 @@ namespace Lumina.Data.Files
             ComponentHeader = UldRoot.AtkHeader.Read(Reader);
             Reader.Seek(preComponentPos + ComponentHeader.AssetListOffset);
             AssetList = UldRoot.PartHeader.Read(Reader);
-            var assetListVersionU32 = uint.Parse(new string(AssetList.Version));
+            var assetListVersionU32 = uint.Parse(new string(AssetList.Version), CultureInfo.InvariantCulture);
             AssetData = new UldRoot.TextureEntry[AssetList.ElementCount];
 
             for (var i = 0; i < AssetList.ElementCount; i++)

@@ -434,6 +434,27 @@ namespace Simulant.Tests
             }
         }
 
+        public static void OmenDurationHeadingAndScaleUseInvariantNumbers()
+        {
+            NumericCultureTests.InCommaCultures(() =>
+            {
+                using (var scene = new CastTestScene())
+                {
+                    scene.AddAction(1, 4, omen: true);
+                    var action = GameDataService.Instance.GetSheet<ActionRow>()[1];
+                    action.CastType = 4;
+                    action.XAxisModifier = 7;
+                    var actor = scene.Actor(0);
+                    new SimOmenRenderer().Show(actor, action, 3.7, "区域设置验证",
+                        new Vector3(100.25f, -2.5f, 0.75f), -0.7853982f);
+                    var command = TriggernometryInterop.Commands.Single();
+                    Assert(command.Contains("t: 3.7\n") && command.Contains("θ: -0.7853982\n")
+                        && command.Contains("O: 100.25, -2.5, 0.75\n") && command.Contains("Scale: 3.5, "),
+                        "预兆时长、负角度、坐标和缩放必须使用点号小数。");
+                }
+            });
+        }
+
         public static void CastDisposeCleansEveryActorAfterCallbackFailure()
         {
             using (var scene = new CastTestScene())

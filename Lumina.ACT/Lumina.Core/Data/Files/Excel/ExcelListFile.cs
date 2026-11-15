@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.IO;
 using Lumina.Data.Attributes;
@@ -38,7 +39,7 @@ namespace Lumina.Data.Files.Excel
                     throw new InvalidOperationException($"Invalid file header, got {header}, expected {FileMagic}!");
                 }
 
-                Version = int.Parse(headerData[1]);
+                Version = int.Parse(headerData[1], CultureInfo.InvariantCulture);
 
                 // read exd mappings
                 string row;
@@ -57,7 +58,7 @@ namespace Lumina.Data.Files.Excel
                     }
 
                     var data = row.Split(',');
-                    var id = int.Parse(data[1]);
+                    var id = int.Parse(data[1], CultureInfo.InvariantCulture);
                     ExdMap[data[0]] = id;
                 }
 

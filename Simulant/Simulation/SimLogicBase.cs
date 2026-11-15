@@ -100,7 +100,7 @@ namespace Simulant.Simulation
                 option.ApplyTo(this);
 
                 var optionValue = prop.GetValue(this);
-                _host.LogSim($"应用当前模拟选项：{prop.Name} = {optionValue}");
+                _host.LogSim(FormattableString.Invariant($"应用当前模拟选项：{prop.Name} = {optionValue}"));
             }
         }
 

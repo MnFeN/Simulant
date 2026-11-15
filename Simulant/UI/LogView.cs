@@ -1,6 +1,7 @@
 ﻿#pragma warning disable IDE1006
 using Simulant.Core;
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -284,7 +285,7 @@ namespace Simulant.UI
             switch (e.ColumnIndex)
             {
                 case 0:
-                    e.Value = item.Timestamp.ToString("HH:mm:ss.f");
+                    e.Value = item.Timestamp.ToString("HH:mm:ss.f", CultureInfo.InvariantCulture);
                     break;
                 case 1:
                     e.Value = item.TypeDescription;
@@ -419,7 +420,7 @@ namespace Simulant.UI
                 .Select(r =>
             {
                 var item = _virtualData[r.Index];
-                return $"{item.Timestamp:HH:mm:ss.fff} {item.TypeDescription} {item.Message}";
+                return FormattableString.Invariant($"{item.Timestamp:HH:mm:ss.fff} {item.TypeDescription} {item.Message}");
             });
 
             var text = string.Join(Environment.NewLine, lines);

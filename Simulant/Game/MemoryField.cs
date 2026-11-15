@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace Simulant.Game
 {
@@ -26,7 +27,10 @@ namespace Simulant.Game
         public void Set(T value) => Value = value;
 
         public override string ToString()
-            => Value.ToString();
+        {
+            var value = Value;
+            return value is IFormattable formattable ? formattable.ToString(null, CultureInfo.InvariantCulture) : value.ToString();
+        }
 
         public static implicit operator T(MemoryField<T> field)
             => field.Value;

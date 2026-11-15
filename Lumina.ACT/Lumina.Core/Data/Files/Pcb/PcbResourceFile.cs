@@ -156,7 +156,7 @@ namespace Lumina.Data.Files.Pcb
 
         private static void Stringify(StringBuilder sb, ResourceNode r, string tabs)
         {
-            sb.AppendLine($"{tabs}Bounding Box: " + $"({r.BoundingBox.Min.X}, {r.BoundingBox.Min.Y}, {r.BoundingBox.Min.Z}) => " + $"({r.BoundingBox.Max.X}, {r.BoundingBox.Max.Y}, {r.BoundingBox.Max.Z})");
+            sb.AppendLine($"{tabs}Bounding Box: " + FormattableString.Invariant($"({r.BoundingBox.Min.X}, {r.BoundingBox.Min.Y}, {r.BoundingBox.Min.Z}) => ") + FormattableString.Invariant($"({r.BoundingBox.Max.X}, {r.BoundingBox.Max.Y}, {r.BoundingBox.Max.Z})"));
 
             if (r.Polygons.Length > 0)
             {
@@ -164,7 +164,7 @@ namespace Lumina.Data.Files.Pcb
 
                 foreach (var p in r.Polygons)
                 {
-                    sb.AppendLine($"{tabs}" + $"({r.Vertices[p.VertexIndex[0]].X}, {r.Vertices[p.VertexIndex[0]].Y}, {r.Vertices[p.VertexIndex[0]].Z}), " + $"({r.Vertices[p.VertexIndex[1]].X}, {r.Vertices[p.VertexIndex[1]].Y}, {r.Vertices[p.VertexIndex[1]].Z}), " + $"({r.Vertices[p.VertexIndex[2]].X}, {r.Vertices[p.VertexIndex[2]].Y}, {r.Vertices[p.VertexIndex[2]].Z}) - {p.Unknown:X}");
+                    sb.AppendLine($"{tabs}" + FormattableString.Invariant($"({r.Vertices[p.VertexIndex[0]].X}, {r.Vertices[p.VertexIndex[0]].Y}, {r.Vertices[p.VertexIndex[0]].Z}), ") + FormattableString.Invariant($"({r.Vertices[p.VertexIndex[1]].X}, {r.Vertices[p.VertexIndex[1]].Y}, {r.Vertices[p.VertexIndex[1]].Z}), ") + FormattableString.Invariant($"({r.Vertices[p.VertexIndex[2]].X}, {r.Vertices[p.VertexIndex[2]].Y}, {r.Vertices[p.VertexIndex[2]].Z}) - {p.Unknown:X}"));
                 }
             }
 

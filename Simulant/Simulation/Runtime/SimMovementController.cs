@@ -459,7 +459,7 @@ namespace Simulant.Simulation.Runtime
             }
             else if (now - movement.UpdatedAt >= _networkTimeoutSeconds)
             {
-                var timeout = new TimeoutException($"网络角色 #{entity.Id:X8} 在 {_networkTimeoutSeconds} 秒内未到达目标位置。");
+                var timeout = new TimeoutException(FormattableString.Invariant($"网络角色 #{entity.Id:X8} 在 {_networkTimeoutSeconds} 秒内未到达目标位置。"));
 
                 try
                 {

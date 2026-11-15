@@ -39,7 +39,7 @@ namespace Simulant
                 run.Actors.Add(actor);
                 CheckNetworkEntityTables(run, actor);
                 CheckEntityTest(run, Vector3.Distance(actor.Pos3D, start) < 0.15f, "网络包中的生成坐标生效");
-                LogEntityTest(run, $"网络角色 {actor.Id:X8} 在 {run.Scheduler.ElapsedSeconds - requestedAt:0.000} 秒后就绪，对象槽 {actor.Entity.Identity.Slot}。请观察模型、名称与可选中状态。");
+                LogEntityTest(run, FormattableString.Invariant($"网络角色 {actor.Id:X8} 在 {run.Scheduler.ElapsedSeconds - requestedAt:0.000} 秒后就绪，对象槽 {actor.Entity.Identity.Slot}。请观察模型、名称与可选中状态。"));
 
                 WaitForNetworkTargetability(run, actor, true, () =>
                 {
@@ -75,7 +75,7 @@ namespace Simulant
                 var delta = actor.Heading - moveHeading;
                 CheckEntityTest(run, Math.Abs(Math.Atan2(Math.Sin(delta), Math.Cos(delta))) < 0.02,
                     "ActorMove 的朝向生效");
-                LogEntityTest(run, $"ActorMove 在 {run.Scheduler.ElapsedSeconds - moveStartedAt:0.000} 秒后到达；接下来读条并显示预兆。");
+                LogEntityTest(run, FormattableString.Invariant($"ActorMove 在 {run.Scheduler.ElapsedSeconds - moveStartedAt:0.000} 秒后到达；接下来读条并显示预兆。"));
                 actor.Cast(EntityTestActionId);
 
                 run.Scheduler.ScheduleAfter(castTime + 0.5, () =>
@@ -157,7 +157,7 @@ namespace Simulant
                     arrived();
                 }
                 else if (run.Scheduler.ElapsedSeconds >= deadline)
-                    throw new TimeoutException($"ActorMove 未到达目标，当前位置 {actor.Pos3D}，目标 {target}。");
+                    throw new TimeoutException(FormattableString.Invariant($"ActorMove 未到达目标，当前位置 {actor.Pos3D}，目标 {target}。"));
                 else
                     WaitForNetworkMove(run, actor, target, deadline, arrived);
             }, "等待客户端消费移动包");

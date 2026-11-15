@@ -57,7 +57,7 @@ namespace Simulant.Utils
                 // "1"
                 if (part.All(c => char.IsDigit(c)))
                 {
-                    var exact = int.Parse(part);
+                    var exact = part.ParseInt();
                     checks.Add(i => i == exact);
                     last2 = last1;
                     last1 = exact;
@@ -66,15 +66,15 @@ namespace Simulant.Utils
                 else if (part.Contains('-'))
                 {
                     var rangeParts = part.Split('-');
-                    var min = int.Parse(rangeParts[0]);
-                    var max = int.Parse(rangeParts[1]);
+                    var min = rangeParts[0].ParseInt();
+                    var max = rangeParts[1].ParseInt();
                     checks.Add(i => i >= min && i <= max);
                     last1 = null;
                 }
                 // ">=7"
                 else if (part.StartsWith(">="))
                 {
-                    var min = int.Parse(part.Substring(2));
+                    var min = part.Substring(2).ParseInt();
                     checks.Add(i => i >= min);
                     last1 = null;
                 }

@@ -28,26 +28,6 @@ namespace Simulant.Utils
                     return $"{v2.X.ToStringInvariant()}, {v2.Y.ToStringInvariant()}";
                 case Vector3 v3:
                     return $"{v3.X.ToStringInvariant()}, {v3.Y.ToStringInvariant()}, {v3.Z.ToStringInvariant()}";
-                case float f:
-                    try
-                    {
-                        return f.ToStringInvariant();
-                    }
-                    catch (Exception)
-                    {
-                        return f.ToString();
-                    }
-
-                case double d:
-                    try
-                    {
-                        return d.ToStringInvariant();
-                    }
-                    catch (Exception)
-                    {
-                        return d.ToString();
-                    }
-
                 case IFormattable formattable:
                     return formattable.ToString(null, CultureInfo.InvariantCulture);
                 case IEnumerable data:

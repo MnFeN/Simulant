@@ -1,4 +1,5 @@
-﻿using Simulant.Core.Environment;
+﻿using Simulant.Utils;
+using Simulant.Core.Environment;
 using Simulant.Game.Data;
 using Lumina.Excel.Sheets;
 using System;
@@ -121,7 +122,7 @@ namespace Simulant.UI
                 .Select((territory, i) => new TerritoryViewItem
                 {
                     Id = i,
-                    IdString = i.ToString(),
+                    IdString = i.ToStringInvariant(),
                     PlaceName = territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty,
                     InstanceName = territory?.ContentFinderCondition.ValueNullable?.Name.ExtractText() ?? string.Empty,
                     RegionName = territory?.PlaceNameRegion.ValueNullable?.Name.ExtractText() ?? string.Empty,

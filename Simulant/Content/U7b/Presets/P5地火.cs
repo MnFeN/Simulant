@@ -380,7 +380,7 @@ namespace Simulant.Content.U7b.Presets
         }
 
         const string AuxiliaryLineTag = "Simulant_AuxiliaryLine";
-        private string AuxiliaryLinePictoACTCommand(int lineIdx, bool isTopLeft) => $@"
+        private static string AuxiliaryLinePictoACTCommand(int lineIdx, bool isTopLeft) => FormattableString.Invariant($@"
 Omen: m131om_setu0f
 Tag: {AuxiliaryLineTag}
 t: 30
@@ -389,7 +389,7 @@ DirN4: {(isTopLeft ? 0 : 3)}
 Pos: {lineIdx - 3.5} * 5 * √2, -17.5 * √2
 Angle: 0
 Scale: 0.03, 35 * √2, 0.05
-Color: 1, 1, 1, 0.5";
+Color: 1, 1, 1, 0.5");
 
         private void CreateAuxiliaryLines()
         {
@@ -463,14 +463,14 @@ Color: 1, 1, 1, 0.5";
 
         private static void LogCast(SimActor src, uint actionId, Vector3 pos, float heading)
         {
-            TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 14:{src.Id:X8}:casterName:{actionId:X2}:actionName:");
-            TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 107:{src.Id:X8}:{actionId:X2}:{pos.X}:{pos.Y}:{pos.Z}:{heading}");
+            TriggernometryInterop.QueueACTLogEvent(FormattableString.Invariant($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 14:{src.Id:X8}:casterName:{actionId:X2}:actionName:"));
+            TriggernometryInterop.QueueACTLogEvent(FormattableString.Invariant($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 107:{src.Id:X8}:{actionId:X2}:{pos.X}:{pos.Y}:{pos.Z}:{heading}"));
         }
 
         private static void LogExecute(SimActor src, uint actionId)
         {
-            TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 15:{src.Id:X8}:casterName:{actionId:X2}:actionName:");
-            TriggernometryInterop.QueueACTLogEvent($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 108:{src.Id:X8}:{actionId:X2}:00000000:0::::");
+            TriggernometryInterop.QueueACTLogEvent(FormattableString.Invariant($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 15:{src.Id:X8}:casterName:{actionId:X2}:actionName:"));
+            TriggernometryInterop.QueueACTLogEvent(FormattableString.Invariant($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 108:{src.Id:X8}:{actionId:X2}:00000000:0::::"));
         }
     }
 }

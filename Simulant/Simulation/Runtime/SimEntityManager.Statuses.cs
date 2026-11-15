@@ -128,8 +128,8 @@ namespace Simulant.Simulation.Runtime
                 if (actualId != statusId || actualSource != source.Id || actualParam != param)
                     throw new InvalidOperationException("原生状态设置后未读到预期点名，已保留清理责任。" +
                         $"目标 0x{actor.Id:X8}，槽 {owned.Slot}；" +
-                        $"期望编号 0x{statusId:X4}、参数 {param}、来源 0x{source.Id:X16}、时间 {seconds:F3} 秒；" +
-                        $"实际编号 0x{actualId:X4}、参数 {actualParam}、来源 0x{actualSource:X16}、剩余 {actual.RemainingTime.Get():F3} 秒；" +
+                        FormattableString.Invariant($"期望编号 0x{statusId:X4}、参数 {param}、来源 0x{source.Id:X16}、时间 {seconds:F3} 秒；") +
+                        FormattableString.Invariant($"实际编号 0x{actualId:X4}、参数 {actualParam}、来源 0x{actualSource:X16}、剩余 {actual.RemainingTime.Get():F3} 秒；") +
                         $"原生编号或来源变化标志：{(identityChanged ? "是" : "否")}。");
 
                 RefreshMovementLocks();

@@ -4,6 +4,7 @@ using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Simulation.Runtime;
 using System;
+using System.Globalization;
 using System.Windows.Forms;
 
 namespace Simulant.UI
@@ -60,7 +61,7 @@ namespace Simulant.UI
 
             lblPreset.Text = "预设：" + preset.Name;
             lblAuthor.Text = "作者：" + preset.Author;
-            lblLastChanged.Text = "更新时间：" + preset.LastUpdated.ToString("yyyy-MM-dd");
+            lblLastChanged.Text = "更新时间：" + preset.LastUpdated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             rtbInfo.Text = preset.Description ?? "（无）";
 
             if (!preset.IsImplemented)
