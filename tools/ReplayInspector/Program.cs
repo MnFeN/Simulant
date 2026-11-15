@@ -11,7 +11,7 @@ namespace Simulant.ReplayTool
         {
             if (args.Length == 0 || args[0] == "--help")
             {
-                Console.WriteLine("回放只读检查工具\n用法：Simulant.ReplayInspector.exe <回放.dat> [--output <新输出目录>] [--profile CN7.57]\n不指定版本时只输出候选；指定版本仍需核对录制版本，不会自动把内部构建号当作补丁号。");
+                Console.WriteLine("回放只读检查工具\n用法：Simulant.ReplayInspector.exe <回放.dat> [--output <新输出目录>] [--profile CN7.57|CN7.58]\n不指定版本时只输出候选；指定版本仍需核对录制版本，不会自动把内部构建号当作补丁号。");
                 return args.Length == 0 ? 2 : 0;
             }
 

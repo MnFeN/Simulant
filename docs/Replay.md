@@ -18,12 +18,12 @@ $msbuildPath = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vsw
 if ($LASTEXITCODE -ne 0) { throw '回放工具编译失败' }
 
 & ./tools/ReplayInspector/bin/Release/Simulant.ReplayInspector.exe `
-  'C:\Program Files\SquareEnix\FFXIV_CN\game\My Games\FINAL FANTASY XIV - A Realm Reborn\replay\FFXIV_0040001087FA8E18_001.dat' `
-  --profile CN7.57
+  'D:\Replay\example.dat' `
+  --profile CN7.58 --output .local/replay/example
 if ($LASTEXITCODE -ne 0) { throw '回放读取失败' }
 ```
 
-默认在工具旁的 `reports` 下创建带时间的新目录，也可用 `--output <新目录>` 指定。输出目录不能已经存在、位于源回放目录中，或经过目录链接。不会覆盖原文件或已有结果。源回放始终以只读方式打开，读取期间不允许其他进程写入或替换它。
+示例路径需替换为实际录像路径，并先创建 `.local/replay` 父目录。示例将调查结果保存在被忽略的 `.local` 中。省略 `--output` 时，默认在工具旁的 `reports` 下创建带时间的新目录。输出目录不能已经存在、位于源回放目录中，或经过目录链接。不会覆盖原文件或已有结果。源回放始终以只读方式打开，读取期间不允许其他进程写入或替换它。
 
 输出包括：
 
@@ -56,42 +56,17 @@ CSV 使用带 BOM 的 UTF-8，文本列保留引号；对象 ID 是该记录的�
 
 ## opcode 识别
 
-目前内置一份固定的 `CN7.57` 目录，保留源码版本，导出时不临时抓取随时可能变化的在线表：
+目前内置 `CN7.57` 与 `CN7.58` 目录，导出时不临时抓取在线表。7.57 的来源如下：
 
 - [FFXIVOpcodes 国服表](https://github.com/karashiiro/FFXIVOpcodes/blob/d85eaebec24b08948550e09c005fe5860d17c3f2/FFXIVOpcodes/Ipcs_cn.cs)。
 - [7.57 补充表](https://github.com/zhyupe/ffxiv-opcode-worker/blob/06df8d0ddf52e230c73826006cfbc50e6c2891a6/json/7.57.json)，含 `UpdateParty`；[构建报告](https://github.com/zhyupe/ffxiv-opcode-worker/blob/06df8d0ddf52e230c73826006cfbc50e6c2891a6/reports/7.57.json) 给出 `2026.10.06.0000.0000` 及 CN/KR 共用信息。
 - 长度参考 [BossMod 包结构](https://github.com/awgil/ffxiv_bossmod/blob/6e410ef8bb912fc70e3c1f97eedfb77a7dc4dfc0/BossMod/Network/ServerIPC.cs)、[已有回放长度表](https://github.com/gamous/FFXIVNetworkOpcodes/blob/cd1a8b5704b92c60971fbd0189616691e8753f89/output/Global_2023.03.24/opcodes_record.json)、项目已迁入的 FFCS 生成包，以及 [Countdown 的新版长度](https://github.com/OverlayPlugin/OverlayPlugin/blob/5b16a642351e588fc729f3ea9cf345cb0862f9d4/OverlayPlugin.Core/NetworkProcessors/LineCountdown.cs)。旧长度资料可能不适用于新版，因此仍检查实测长度并保留冲突。
 
+7.58 来源为 [opcode-worker 7.58.json](https://github.com/zhyupe/ffxiv-opcode-worker/blob/master/json/7.58.json)。`ActorControlSelf` 接受 32 和 40 字节记录并保留完整正文；分类成功不代表全部参数已经解码。
+
 不传 `--profile` 时，所有网络包只显示候选。显式指定版本后，已知 opcode 与长度都一致才填入类型名称；长度未知仍是候选，已知长度不同则标冲突。同长度可能对应多个包，即使只剩一个候选也不能视为确认。
 
 回放内部构建号与公开补丁号的自动对应关系目前没有可靠来源，不能把安装客户端版本当作所有历史录像的版本。后续增加版本时，应添加对应来源与长度证据，并在有独立证据时建立内部构建号映射。回放扩展记录 `0xF001/0xF002/0xF003` 与普通网络 opcode 分开识别。
-
-## 本次只读样本
-
-`FFXIV_0040001087FA8E18_001.dat`：
-
-- SHA-256：`04EC70A2E4E27949F6EE0B3CC6FB96A69A63380D677CAFED20E2DFEB7D3CA139`。
-- 大小 `11,006,988` 字节，格式 5，内部构建号 `0x00D72B67`。
-- 录制时间为 `2026-11-01 23:01:16 +08:00`；匹配副本 ID `694`，对应亚历山大绝境战。
-- 完整读取 `109,954` 条记录、`44` 种 opcode，包流最大时间 `24:23.849`，没有截断或时间回退，末条边界与 EOF 完全一致。
-- 文件头的时长、声明数据长度和章节均为零；只报告此差异，不修补原录像。
-
-按指定 `CN7.57` 目录，主要记录如下。这是录像中的出现次数，不等于一次完整战斗需要执行的次数，也不证明每条都应重放：
-
-| 类别 | 本样本数量 | 模拟用途 |
-| --- | ---: | --- |
-| ActorMove / ActorSetPos | 63,526 / 262 | 连续移动、位置与朝向校正 |
-| ActorCast | 948 | 读条和技能起始 |
-| ActionEffect1 / 8 / 16 | 4,737 / 883 / 18 | 技能结算、目标与表现，需进一步拆分效果 |
-| ActorControl / Target | 11,088 / 972 | 标记、连线、可选中、目标、状态等子事件 |
-| ActorControlSelf 候选 | 795 | 实长 40 与现有 32 字节资料冲突，尚不能按旧布局全部解释 |
-| NpcSpawn / PlayerSpawn / ObjectSpawn | 583 / 8 / 217 | 实体初始状态与场景对象 |
-| DespawnCharacter / ObjectDespawn | 517 / 143 | 对应实体生命周期结束 |
-| MapEffect | 92 | 场地效果和场景状态 |
-| StatusEffectListDouble / StatusEffectList | 7,168 / 801 | 血蓝和状态快照，不能全部当作新增状态事件 |
-| UpdateHate / UpdateHater | 4,150 / 1,097 | 仇恨与敌对列表显示 |
-
-尚未命名的 opcode 包括 `0x0075/8`、`0x03A0/8`、`0x006A/136`、`0x00E1/24`、`0x0095/32`、`0x02C1/1408`，斜线后是负载字节数。`0x006A/136` 与 `ContentDirectorSync` 同长，`0x00E1/24` 与 `DirectorVars` 同长，但目录没有足够证据将它们直接命名。
 
 ## 到可运行时间轴还需处理
 
@@ -103,10 +78,8 @@ CSV 使用带 BOM 的 UTF-8，文本列保留引号；对象 ID 是该记录的�
 
 回归测试位于 `Simulant.Tests/ReplayTests.cs`，使用合成数据覆盖完整容器、错误边界、短读、未收尾元数据、原始顺序、流生命周期与识别歧义，不提交真实回放数据。
 
-## 咏唱包的预兆延迟
+## 读条、预兆与结算
 
-FFCS 的 [ActorCastPacket 定义](https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/Game/Network/ActorCastPacket.cs) 明确将负载偏移 `0x03` 定义为 `byte OmenDelay`，除以 `10.0f` 得到延后显示预兆的秒数。`0x08` 则是独立的 `float CastTime`。不要沿用部分其他库对 `0x03` 的旧名称 `BaseCastTime100ms`，也不能只从技能表的 `Cast100ms` 推断延迟。
+回放导入应分别保存 ActorCast 的 `CastTime`、`OmenDelay` 与 ActionEffect 的时间，不把读条结束直接当作结算。FFCS 的 [ActorCastPacket](https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/Game/Network/ActorCastPacket.cs) 将偏移 0x03 定义为 `byte OmenDelay`（单位 0.1 秒），0x08 为独立的 `float CastTime`。
 
-宝宝椅绝欧 P6 场外步进地火监听的读条为 `0x7BAD`「波动炮」，当前客户端技能表咏唱为 12 秒，预兆为 Omen 145（`yazirushi1o0c`）。当前本地回放目录及子目录中未找到 ContentFinderCondition 908（欧米茄绝境验证战）的文件，因此暂不填入这一招的实际网络延迟值。
-
-已检查时间结晶回放：六个 `0x9D6B`「巨漩涡」咏唱包的 `OmenDelay` 都是 0，`CastTime` 都是 1.2 秒。本轮仅记录字段调查，保留现有沙漏表现；后续回放导入时应同时保存咏唱时间和预兆延迟，分别驱动读条与预兆显示。
+模拟层查表读条默认减 0.3 秒，结束后再间隔 0.3 秒结算。已经从 ActorCast 取得的实际时长不能重复扣除；有回放证据时分别采用原始读条和结算时刻。完整的机制导入与自动生成时间轴尚未实现。

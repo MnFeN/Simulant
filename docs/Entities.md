@@ -63,7 +63,7 @@ EntityManager.SetPartyEnmity(boss, 100, 80, 20, 15, 40, 35, 30, 25);
 
 当前国服客户端的 UpdateHate 收包函数只更新成员 ID、百分比和人数，不写 `HateTargetId`（`Hate + 0x104`）。读回校验不能要求该目标 ID 与发包参数一致；发送前单独确认选中目标即可。显示数据暂时未同步时留待下一次补发，不抛异常中断模拟。只需假队员攻击、Boss 固定点名的预设直接用 `SetCombatTarget` 和技能目标，无须建立仇恨列表。
 
-自身原先未入战时，通过 `ActorControl SetBattle (0x04, 1)` 临时入战，停止时恢复；原先已入战则保持原状态。此流程参考 [Sapphire Player.cpp](https://github.com/SapphireServer/Sapphire/blob/aab9cb2347eb0ec42e85ee3e117a0c177b9b3070/src/world/Actor/Player.cpp)，当前目标仇恨包和函数入口使用 [国服 KodakkuAssist 的定义](https://github.com/moewcorp/KodakkuAssist/blob/e5bd79f841fe483e14a3dd22a04f845eab239026/KodakkuAssist/Module/GameEvent/Types/EnmityUpdate.cs)。原生血条与仇恨显示的修复效果仍需国服 7.57 实测，入口见 [实体实机测试](EntityTests.md)。
+自身原先未入战时，通过 `ActorControl SetBattle (0x04, 1)` 临时入战，停止时恢复；原先已入战则保持原状态。此流程参考 [Sapphire Player.cpp](https://github.com/SapphireServer/Sapphire/blob/aab9cb2347eb0ec42e85ee3e117a0c177b9b3070/src/world/Actor/Player.cpp)，当前目标仇恨包和函数入口使用 [国服 KodakkuAssist 的定义](https://github.com/moewcorp/KodakkuAssist/blob/e5bd79f841fe483e14a3dd22a04f845eab239026/KodakkuAssist/Module/GameEvent/Types/EnmityUpdate.cs)。原生血条与仇恨显示需要游戏内验证，步骤见 [实体实机测试](EntityTests.md)。
 
 首次显示前保存原小队名单与仇恨；恢复通过同一个原生收包入口完成，再补回全部 60 个状态及其计数标志、成员姓名、坐标、护盾和标志。快照不复制原生对象指针。只允许一个会话借用原生小队，暂不覆盖团队名单。
 
@@ -84,16 +84,14 @@ eventObject.ActorControl(ActorControlCategory.SetSharedGroupTimelineState, timel
 
 普通实体入口提供四个参数。需要 `ActorControlSelf` 的额外参数、或 `ActorControlTarget` 的目标 ID 时，使用完整的 `PacketDispatcher.HandleActorControl` 入口；例如 `SetTarget` 的目标应传入 `targetId`，不能误放到 `a1`。未知类别可显式转换为 `(ActorControlCategory)rawCategory`，方便后续回放解析；是否能够执行仍取决于对应版本的参数布局。
 
-枚举保留用户提供的 215 项名称与数值，补充 `HoT = 0x604` 和 `DoT = 0x605`。另外提供 `SetBattle`、`SetEventState`、`SetSharedGroupTimelineState`、`PlaySharedGroupTimeline` 和 `Knockback` 五个同值别名，方便直接表达常用操作。参数说明使用中文，不引入新的库依赖。
+协议参考：
 
-本次核对来源：
-
-- [BossMod 控制分类](https://github.com/awgil/ffxiv_bossmod/blob/master/BossMod/Network/ServerIPC.cs)：其现有类别编号已包含在用户提供的列表中。
+- [BossMod 控制分类](https://github.com/awgil/ffxiv_bossmod/blob/master/BossMod/Network/ServerIPC.cs)：用于交叉核对类别编号。
 - [Sapphire 控制分类](https://github.com/SapphireServer/Sapphire/blob/master/src/common/Network/CommonActorControl.h)：用于核对常用操作名称和参数说明；它对应的客户端版本不能直接等同于国服 7.57。
 - [FFXIV-Packet-Dissector 枚举](https://github.com/zhyupe/FFXIV-Packet-Dissector/blob/3d9c3b6b0e0067e626a0b75f958c5ac21e65a835/src/ffxiv_enum.lua)：核对历史分类名称与数值。
 - [Machina 国际服定义](https://github.com/ravahn/machina/blob/2bd9a7d291e1e54ce523a4c31daa93919e1c44fa/Machina.FFXIV/Headers/Global/Server_ActorControl.cs)：注明持续治疗与持续伤害从 7.10 起使用 `0x604`、`0x605`。[同提交的国服定义](https://github.com/ravahn/machina/blob/2bd9a7d291e1e54ce523a4c31daa93919e1c44fa/Machina.FFXIV/Headers/Chinese/Server_ActorControl.cs) 仍保留旧 `0x17`；因此保留三项，不据此宣称新参数已在国服实测。
 
-不同来源的命名冲突保留区分：`SetMaxGearSets = 0x230` 与 `SetMaxGearSetsSapphire = 0x320` 不是别名；Sapphire 所称的 `SetDutyActionActive = 0x5EA` 对应这里的 `SetDutyActionPresent`，这里的 `SetDutyActionActive` 仍按用户列表使用 `0x5EB`。`GainEffect` 等提示类别不能代替真实状态列表或血量同步。枚举属于包内子类别，不是回放文件中需要按版本识别的顶层 opcode。
+不同来源的命名冲突保留区分：`SetMaxGearSets = 0x230` 与 `SetMaxGearSetsSapphire = 0x320` 不是别名；Sapphire 所称的 `SetDutyActionActive = 0x5EA` 对应这里的 `SetDutyActionPresent`，这里的 `SetDutyActionActive` 使用 `0x5EB`。`GainEffect` 等提示类别不能代替真实状态列表或血量同步。枚举属于包内子类别，不是回放文件中需要按版本识别的顶层 opcode。
 
 ## 会话回收
 
@@ -106,6 +104,10 @@ eventObject.ActorControl(ActorControlCategory.SetSharedGroupTimelineState, timel
 会话的 `OnStop` 每轮只调用一次；后续 `Stop()` 或 `Dispose()` 只重试剩余实体清理。界面会保留清理失败的会话，禁用“开始模拟”，保留“停止模拟”按钮供再次重试。清理成功后可以重新开始；换图后旧世界记录失效，后续清理只移除旧记录，不访问旧指针。
 
 ## 读条与取消
+
+`Cast` 未指定 `castTime` 时，以技能表时长减 0.3 秒作为实际咏唱，最低为零；显式时长直接使用，不再扣除。读条结束后默认间隔 0.3 秒播放结算，瞬发默认无间隔，`effectDelay` 可覆盖。
+
+若机制判定节点已经负责技能演出，传 `executeOnFinish: false`，避免自动完成再次播放。自动战斗允许读条完成后移动，但下一招等待上一招结算；`StopCasting` 会取消尚待播放的结算。
 
 ```csharp
 boss.Cast(0x7BA2);
@@ -157,7 +159,7 @@ boss.MoveTo(new Vector2(100, 90), speed: 6, animationId: 13,
 
 `onArrived` 在调度线程上执行一次，此时已经停止移动并清理所属动画，可以直接施法、开始下一段移动或删除角色。停止、改目标、删除和会话结束都会取消尚未领取的旧回调；已经领取的回调允许执行完毕，从调度线程外停止会话会等待它退出再回收实体。回调必须是短同步操作。回调中的实际延迟使用 `Scheduler.ScheduleAfter`，避免慢帧时把下一阶段当成已经过去。
 
-当前实现不含寻路、碰撞、重力、路径曲线或自动选择跑步动画。后续路径或追踪行为可扩展移动控制器，保持现有 `MoveTo` 调用方式。
+底层移动接口不提供场地寻路和碰撞规避。假队员的绕路、滑步、贪刀与冲刺由通用行为控制器负责，机制只提交目的范围、目标时间和是否紧急。
 
 ## 状态造成的移动限制
 
@@ -187,19 +189,4 @@ boss.MoveTo(new Vector2(100, 90), speed: 6, animationId: 13,
 
 这些检查不能与游戏自身的对象销毁原子同步，也无法识别从未观测到空槽位、且地址/ID/种类完全相同的外部复用。它们防止已知失效引用被继续使用，不构成对任意原生竞态的保证。
 
-目前没有 EObj 的原生销毁接口，回收只停止绘制并使包装失效，槽位等待下次生成包或换图复用。移动画面、原生字段偏移、动作播放和实际回收效果仍需在游戏中验证；自动化回归覆盖身份、会话归属、调度和行为清理。
-
-## 希瓦·米特隆的模型状态与部件
-
-核对回放「光暗未来绝境战 2026.11.15 00.03.27.dat」及对应客户端资源：
-
-- P2：BNpcBase 17823，ModelChara 4374（m0640 / b0001），生成包 ModelState=0、ModelAttributeFlags=0xF0。
-- P4：BNpcBase 17833，ModelChara 4375（m0640 / b0002），生成包 ModelState=0、ModelAttributeFlags=0xFC。两者主副手武器模型均为 0。
-- 以时间结晶双读条为 0 秒，P4 在 -71.194 秒收到 ActorControl 0x3F，a1=4；-71.112 秒收到 0x1E，参数 0、1、圣龙实体 ID。时间结晶开始前没有再次切换模型状态。
-- 日志中的 `[Weapon] → 4` 对应 Timeline.ModelState，不是主手装备模型。ModelState 表第 4 行指向 ActionTimeline 210（idle_sp/idle_sp_1）；具体表现依赖当前身体模型，不能把 4 当作所有模型通用的圣龙形态编号。
-
-真正的赋形控制是同一时刻的 ActorControl `0x5FB, a1=45`：客户端在 Character+0x9D8 的 TransformationContainer 中读取 StanceChange 45，其变身目标为 Transformation 547，最终替换成 ModelChara 4376（m0640 / b0003）。原先只设置 ModelState=4，身体仍是 4375，所以仍显示光形态；0xFC 修正镰刀部件不等于完成变身。用户已实测确认：只调用 0x5FB=45 即可正确变身，无需额外添加永久状态 2273/参数 547、GainEffect、0x3F=4、0x1E 或 0xFC 部件标志，但会播放完整变身动画。时间结晶从圣龙形态开始，因此当前改为在生成包中直接指定 ModelCharaId=4376，不再调用 StanceChange；这个直接生成版本仍待实机确认。
-
-0x1E 的国服 7.57 分支调用 ModelContainer 的部件处理：a1 是 0–5 的索引，a2 是部件状态，读取 BNpcBase.BNpcParts；a3 只在 a4 非零且目标实体存在时参与额外特效。希瓦的 BNpcParts=67、首个 BNpcBase=17834，但 PartSlot1=0；不能将这一条控制称为圣龙模型挂接。
-
-希瓦的离场和重现使用回放中的 ActorControl 0x197：13.100 秒播放 0x11E5 隐藏时间轴，24.837 秒定位后播放 0x1E43 显现时间轴，不再手动 DisableDraw/EnableDraw。以上原生调用仍需游戏实测确认最终演出。
+EObj 通过 `HandleDespawnObjectPacket` 回收，确认原生回收成功后撤销身份；失败时保留记录供重试。移动画面、原生字段偏移、动作播放和实际回收效果仍需在游戏中验证；自动化回归覆盖身份、会话归属、调度和行为清理。

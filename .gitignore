@@ -364,3 +364,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 /.deepseek
+
+# 本地调查、临时脚本与个人 skill
+/.local/

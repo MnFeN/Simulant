@@ -44,6 +44,8 @@ namespace Simulant.Replay
     public static class ReplayPacketCatalog
     {
         public const string China757Profile = "CN7.57";
+        public const string China758Profile = "CN7.58";
+        public const string China758SourceUrl = "https://github.com/zhyupe/ffxiv-opcode-worker/blob/master/json/7.58.json";
         public const string OpcodeSourceUrl =
             "https://github.com/karashiiro/FFXIVOpcodes/blob/d85eaebec24b08948550e09c005fe5860d17c3f2/FFXIVOpcodes/Ipcs_cn.cs";
         public const string SupplementalOpcodeSourceUrl =
@@ -97,7 +99,8 @@ namespace Simulant.Replay
                 "ActorControlSelf",
                 new[]
                 {
-                    0x20
+                    // 国服回放还有 40 字节变体；只识别记录，正文仍完整保留，不按旧结构截断。
+                    0x20, 0x28
                 }
             },
             {
@@ -1236,13 +1239,62 @@ namespace Simulant.Replay
             },
         };
 
+        // 2026-11-16 核对 opcode-worker 的 7.58.json；仅迁入战斗回放相关的服务器包。
+        private static readonly Dictionary<ushort, string> China758Opcodes = new Dictionary<ushort, string>
+        {
+            [0x00AE] = "ActorMove",
+            [0x03A6] = "ActorSetPos",
+            [0x0160] = "ActorCast",
+            [0x02DF] = "ActorControl",
+            [0x00A9] = "ActorControlSelf",
+            [0x0100] = "ActorControlTarget",
+            [0x0190] = "ActionEffect1",
+            [0x0233] = "ActionEffect8",
+            [0x0119] = "ActionEffect16",
+            [0x039C] = "ActionEffect24",
+            [0x00DD] = "ActionEffect32",
+            [0x0176] = "NpcSpawn",
+            [0x02FD] = "NpcSpawn2",
+            [0x02FC] = "PlayerSpawn",
+            [0x00DB] = "ObjectSpawn",
+            [0x010B] = "DespawnCharacter",
+            [0x0097] = "MapEffect",
+            [0x0247] = "MapEffect4",
+            [0x0165] = "MapEffect8",
+            [0x018A] = "MapEffect12",
+            [0x0293] = "EffectResult",
+            [0x0355] = "EffectResult4",
+            [0x02C9] = "EffectResult8",
+            [0x037B] = "EffectResult16",
+            [0x024A] = "EffectResultBasic",
+            [0x033B] = "EffectResultBasic4",
+            [0x01AF] = "EffectResultBasic8",
+            [0x025F] = "EffectResultBasic16",
+            [0x0077] = "EffectResultBasic32",
+            [0x01A6] = "EffectResultBasic64",
+            [0x015D] = "StatusEffectList",
+            [0x00A4] = "StatusEffectList2",
+            [0x035D] = "StatusEffectList3",
+            [0x02F8] = "StatusEffectListDouble",
+            [0x03AC] = "UpdateHpMpTp",
+            [0x02DA] = "UpdateHate",
+            [0x03D2] = "UpdateHater",
+            [0x03E3] = "UpdateParty",
+            [0x03C0] = "WeatherChange",
+            [0x02E3] = "FirstAttack",
+            [0x00E9] = "PlaceFieldMarker",
+            [0x0177] = "PlaceFieldMarkerPreset",
+            [0x025C] = "CountdownInitiate",
+            [0x0089] = "CountdownCancel",
+        };
+
         public static ReplayPacketClassification Classify(uint gameVersion, ushort opcode,
             int payloadLength, string profile = null)
         {
             if (payloadLength < 0 || payloadLength > ushort.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(payloadLength), "回放包正文长度必须在 0-65535 之间。");
 
-            if (!string.IsNullOrEmpty(profile) && profile != China757Profile)
+            if (!string.IsNullOrEmpty(profile) && profile != China757Profile && profile != China758Profile)
                 throw new ArgumentException("未支持的回放包版本配置：" + profile, nameof(profile));
 
             string[] lengthCandidates;
@@ -1271,7 +1323,8 @@ namespace Simulant.Replay
                     null, RecordMarkerSourceUrl);
 
             string mappedName;
-            China757Opcodes.TryGetValue(opcode, out mappedName);
+            var opcodes = profile == China758Profile ? China758Opcodes : China757Opcodes;
+            opcodes.TryGetValue(opcode, out mappedName);
             int[] expectedLengths = null;
 
             if (mappedName != null)
@@ -1283,8 +1336,9 @@ namespace Simulant.Replay
 
             if (!string.IsNullOrEmpty(profile) && mappedName != null)
             {
-                string evidence = "明确指定 CN 7.57；" + buildEvidence;
-                string source = mappedName == "UpdateParty" ? SupplementalOpcodeSourceUrl : OpcodeSourceUrl;
+                string evidence = "明确指定 " + profile + "；" + buildEvidence;
+                string source = profile == China758Profile ? China758SourceUrl :
+                    mappedName == "UpdateParty" ? SupplementalOpcodeSourceUrl : OpcodeSourceUrl;
 
                 if (lengthMatches)
                     return new ReplayPacketClassification(mappedName, ReplayPacketConfidence.SelectedProfileMatch,

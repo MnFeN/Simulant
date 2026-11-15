@@ -12,6 +12,19 @@ namespace Simulant.Tests
     {
         private const int DataOffset = 0x36C;
 
+        public static void China758KeepsProfileAndExtendedControlSeparate()
+        {
+            var cast = ReplayPacketCatalog.Classify(0xD975C9, 0x160, 32, ReplayPacketCatalog.China758Profile);
+            Assert(cast.Name == "ActorCast" && cast.Confidence == ReplayPacketConfidence.SelectedProfileMatch,
+                "7.58 必须按自己的 opcode 识别咏唱包。");
+            var control = ReplayPacketCatalog.Classify(0xD975C9, 0xA9, 40, ReplayPacketCatalog.China758Profile);
+            Assert(control.Name == "ActorControlSelf", "不能丢弃国服 40 字节控制包。");
+            var wrongLength = ReplayPacketCatalog.Classify(0xD975C9, 0xA9, 24, ReplayPacketCatalog.China758Profile);
+            Assert(wrongLength.Confidence == ReplayPacketConfidence.LengthConflict, "已知类别仍须检查长度。");
+            var wrongProfile = ReplayPacketCatalog.Classify(0xD975C9, 0x160, 32, ReplayPacketCatalog.China757Profile);
+            Assert(wrongProfile.Name != "ActorCast", "不能跨版本共用同一个 opcode 映射。");
+        }
+
         public static void ReplayReadsHeaderChaptersAndPackets()
         {
             var bytes = CreateReplay(new Packet(0x123, 1500, 0x10203040, new byte[]
