@@ -338,6 +338,7 @@ namespace Simulant.Core
             Commands = new SimCommandListener(LogError);
             PlayerActions = new SimActionService(this);
             Commands.Received += PlayerActions.Receive;
+            Commands.Received += _ui.ReceiveSimulationCommand;
 
             Attach();
 

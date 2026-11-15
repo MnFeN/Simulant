@@ -93,13 +93,16 @@ namespace Simulant.UI
             => _optionEditor.Clear();
 
         private void btnStart_Click(object sender, EventArgs e)
+            => StartCurrentSession();
+
+        internal void StartCurrentSession()
         {
             if (_host == null)
                 throw new InvalidOperationException("PresetControl 尚未初始化 PluginHost。");
 
-            _host?.LogVerbose("点击 btnStart");
+            _host.LogVerbose("开始或重启当前模拟");
 
-            if (_preset == null)
+            if (_preset == null || !_preset.IsImplemented)
                 return;
 
             try
@@ -193,7 +196,7 @@ namespace Simulant.UI
             _displayedReadyToStart = GetStartBlockReason() == null;
 
             _host?.LogVerbose($"UpdateButtons: hasHost = {hasHost}, hasPreset = {hasPreset}, isRunning = {isRunning}");
-            btnStart.Enabled = hasHost && hasPreset && _preset.IsImplemented && _displayedReadyToStart && !isRunning && !hasPendingCleanup;
+            btnStart.Enabled = hasHost && hasPreset && _preset.IsImplemented && _displayedReadyToStart;
             btnEnd.Enabled = hasHost && (isRunning || hasPendingCleanup);
         }
 

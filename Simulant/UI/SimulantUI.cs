@@ -168,6 +168,36 @@ namespace Simulant.UI
         internal void StopCurrentSession()
             => presetControl.StopCurrentSession();
 
+        internal void ReceiveSimulationCommand(string command)
+        {
+            System.Action action;
+            if (string.Equals(command?.Trim(), "start", StringComparison.OrdinalIgnoreCase))
+                action = presetControl.StartCurrentSession;
+            else if (string.Equals(command?.Trim(), "stop", StringComparison.OrdinalIgnoreCase))
+                action = StopCurrentSession;
+            else
+                return;
+
+            if (IsDisposed || Disposing || _host.Disposed || !IsHandleCreated)
+                return;
+
+            // 日志线程只投递命令，与按钮操作共用界面线程，串行完成停止和重开。
+            BeginInvoke(new System.Action(() =>
+            {
+                if (IsDisposed || Disposing || _host.Disposed)
+                    return;
+
+                try
+                {
+                    action();
+                }
+                catch (Exception error)
+                {
+                    _host.LogError("执行模拟命令失败：" + error);
+                }
+            }));
+        }
+
         internal void OnEntityWorldChanged()
         {
             if (IsDisposed || Disposing || _host.Disposed)
