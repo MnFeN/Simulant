@@ -123,11 +123,10 @@ namespace Simulant
 
         private void EnsureEntityTestReady()
         {
-            if (_host.Disposed || !_host.PluginReady || _host.IsInitializing || !_host.GameDataReady)
-                throw new InvalidOperationException("请等待插件初始化和 CSV 加载完成后再运行实体测试。");
+            _host.EnsureDebugAllowed();
 
-            if (!_host.FirewallEnabled)
-                throw new InvalidOperationException("请先启用防火墙，再运行实体测试。");
+            if (!_host.GameDataReady)
+                throw new InvalidOperationException("请等待游戏数据加载完成后再运行实体测试。");
         }
 
         private void BeginEntityMovementTest(EntityBehaviorRun run, float castTime)

@@ -10,6 +10,30 @@ namespace Simulant.Tests
 {
     internal static class FirewallTests
     {
+        public static void DeniedEnableNeverWritesHooksAndDoesNotPreventCleanup()
+        {
+            using (var scene = new FirewallScene())
+            {
+                var denied = new InvalidOperationException("当前地图不允许开启防火墙。");
+                scene.Host.BeforeEnableFirewall = () => throw denied;
+                foreach (Action enable in new Action[]
+                {
+                    scene.Service.Enable, scene.Service.ReceiveHookEnable, scene.Service.SendHookEnable
+                })
+                    Assert(ReferenceEquals(Throws<InvalidOperationException>(enable), denied), "所有开启入口都必须先检查权限。");
+
+                Assert(scene.Memory.Writes.Count == 0 && scene.Memory.AllocateCalls == 0
+                    && !scene.Service.HasPendingCleanup && scene.Parser.NetworkTimeout == 60,
+                    "拒绝启用时不能写内存、分配代码洞或改变解析插件计时器。");
+                scene.Host.BeforeEnableFirewall = null;
+                scene.Service.Enable();
+                scene.Host.BeforeEnableFirewall = () => throw denied;
+                scene.Service.Enable();
+                scene.Service.Disable();
+                scene.AssertRestored();
+            }
+        }
+
         public static void FirewallEnableAndDisableAreIdempotent()
         {
             using (var scene = new FirewallScene())

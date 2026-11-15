@@ -43,10 +43,11 @@ namespace Simulant
 
         public async Task 招募信息Test()
         {
+            _host.EnsureDebugAllowed();
             const int intervalMs = 3000;
             const int count = 20;
 
-            for (var n = 0; n < count && !_host.Disposed; n++)
+            for (var n = 0; n < count && _host.CanRunDebug; n++)
             {
                 try
                 {
@@ -104,6 +105,7 @@ namespace Simulant
 
         public async Task EObjSharedTimelineStateTest()
         {
+            _host.EnsureDebugAllowed();
             var data = new EventObjectSpawnSpec
             {
                 Index = 6,
@@ -132,7 +134,7 @@ namespace Simulant
 
         public async Task EObjTargetableFlagsTest()
         {
-
+            _host.EnsureDebugAllowed();
             var data = new EventObjectSpawnSpec
             {
                 Index = 7,
@@ -161,6 +163,7 @@ namespace Simulant
 
         public void LogObjectArrays()
         {
+            _host.EnsureDebugAllowed();
             var objects = GameObjectManager.Instance().Objects;
             LogGameObjects("IndexSorted", objects.IndexSorted);
             LogGameObjects("GameObjectIdSorted", objects.GameObjectIdSorted);
@@ -192,6 +195,7 @@ namespace Simulant
 
         private void EntityExecuteTest(uint baseId, uint actionId)
         {
+            _host.EnsureDebugAllowed();
             var me = _host.EntityProvider.GetMyself();
 
             _host.DebugEntities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
@@ -206,6 +210,7 @@ namespace Simulant
 
         private void EntityCastTest(uint baseId, uint actionId)
         {
+            _host.EnsureDebugAllowed();
             var me = _host.EntityProvider.GetMyself();
 
             _host.DebugEntities.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
@@ -225,6 +230,7 @@ namespace Simulant
 
         private void TestEnvManager()
         {
+            _host.EnsureDebugAllowed();
             var phaseData = Content.U6b.U6b.P3;
             _host.EnvironmentService.SetWeather(phaseData.Weather);
             _host.EnvironmentService.SetBgm(phaseData.BGM);
@@ -240,6 +246,7 @@ namespace Simulant
 
         private void TestInstanceDirectors()
         {
+            _host.EnsureDebugAllowed();
             var ef = EventFramework.Instance;
             _host.LogRuntime($"EventFramework: {(ulong)ef.Ptr:X}");
             _host.LogRuntime($"ContentDirector: {(ulong)ef.ContentDirector.Ptr:X}");
@@ -250,6 +257,7 @@ namespace Simulant
 
         private void EntityTimelineTest()
         {
+            _host.EnsureDebugAllowed();
             var me = _host.EntityProvider.GetMyself();
             var entities = _host.DebugEntities;
 
@@ -269,6 +277,7 @@ namespace Simulant
 
         private void GetOnReceivePtr()
         {
+            _host.EnsureDebugAllowed();
             var ptr = Framework.Instance.NetworkModuleProxy.NetworkModule.PacketReceiverCallback.PacketDispatcher.Ptr.GetVFuncPtr(1);
             _host.LogRuntime($"OnReceive: {(ulong)ptr:X}");
         }

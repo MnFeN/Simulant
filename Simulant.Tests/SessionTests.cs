@@ -1011,6 +1011,8 @@ namespace Simulant.Core
         internal readonly ConcurrentQueue<string> Errors = new ConcurrentQueue<string>();
         internal void LogError(string message) => Errors.Enqueue(message);
         internal Action<string> FirewallLog { get; set; }
+        internal Action BeforeEnableFirewall { get; set; }
+        internal void EnsureFirewallAllowed() => BeforeEnableFirewall?.Invoke();
 
         internal void LogRuntime(string message) => FirewallLog?.Invoke(message);
         internal void LogWarning(string message) => FirewallLog?.Invoke(message);

@@ -117,6 +117,9 @@ namespace Simulant.Core.Firewall
                 if ((_receive != null && !_receive.Enabled) || (_send != null && !_send.Enabled))
                     throw new InvalidOperationException("防火墙仍有未完成的清理，请先关闭并重试。");
 
+                if (!IsEnabled)
+                    _host.EnsureFirewallAllowed();
+
                 try
                 {
                     enable();

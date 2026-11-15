@@ -85,6 +85,8 @@ try {
             (Join-Path $PSScriptRoot 'Native\ExdResourceTests.cs'),
             (Join-Path $repositoryPath 'Simulant\Game\Data\ExdResource.cs')) },
         @{ Name = 'LocalCreationTests'; Label = '本地创建与失败清理'; Sources = @($localTestsPath) },
+        @{ Name = 'DeveloperModeTests'; Label = '开发者模式与旅馆类型限制'; Sources = @($localTestsPath,
+            (Join-Path $PSScriptRoot 'Native\DeveloperModeTests.cs')) },
         @{ Name = 'EntityIdAllocationTests'; Label = '实体 ID 分配'; Sources = @($localTestsPath, $idTestsPath) },
         @{ Name = 'PluginUnloadTests'; Label = '退出模拟并卸载插件'; Sources = @($localTestsPath, $unloadTestsPath) },
         @{ Name = 'PartyServiceTests'; Label = '模拟小队与仇恨恢复'; Sources = @($partyTestsPath) },

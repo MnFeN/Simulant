@@ -4,6 +4,8 @@ using Simulant.Core.Entity;
 using Simulant.Core.Zone;
 using Simulant.Game;
 using Simulant.Game.Data;
+using Simulant.Game.FFCS.Client.Game;
+using TerritoryType = Lumina.Excel.Sheets.TerritoryType;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using Simulant.UI;
@@ -55,6 +57,31 @@ namespace Simulant.Core
         internal bool IsInitializing { get; private set; }
         internal bool FirewallEnabled => FirewallService != null && FirewallService.IsEnabled;
         internal bool IsSwitchingTerritory => _ui?.IsSwitchingTerritory == true;
+        internal bool CanRunDebug => PluginReady && !IsInitializing && !Disposed && !IsSwitchingTerritory
+            && (FirewallEnabled || Configuration.DeveloperMode);
+
+        internal void EnsureDebugAllowed()
+        {
+            if (!CanRunDebug)
+                throw new InvalidOperationException("请先初始化插件并等待区域切换完成；未开启开发者模式时，调试操作必须启用防火墙。");
+        }
+
+        internal void EnsureFirewallAllowed()
+        {
+            if (!PluginReady || IsInitializing || Disposed || IsSwitchingTerritory)
+                throw new InvalidOperationException("请先初始化插件并等待区域切换完成，再启用防火墙。");
+
+            if (Configuration.DeveloperMode)
+                return;
+
+            var game = GameMain.Instance.ThrowIfNull();
+            if (game.TerritoryLoadState.Get() != 2)
+                throw new InvalidOperationException("请等待地图加载完成后再启用防火墙。");
+
+            var territory = GameDataService.Instance.GetSheet<TerritoryType>().GetRowOrDefault(game.CurrentTerritoryTypeId.Get());
+            if (territory?.TerritoryIntendedUse.RowId != (uint)TerritoryIntendedUseEnum.Inn)
+                throw new InvalidOperationException("未开启开发者模式时，仅允许在旅馆地图内启用防火墙。");
+        }
 
         internal Firewall.FirewallService FirewallService;
         internal ZoneService ZoneService;
@@ -95,6 +122,7 @@ namespace Simulant.Core
         {
             get
             {
+                EnsureDebugAllowed();
                 lock (_debugGate)
                 {
                     if (Disposed)
@@ -304,8 +332,7 @@ namespace Simulant.Core
             EntityRegistry = new EntityRegistry();
             EntityProvider = new EntityProvider(EntityRegistry,
                 () => XivPluginInterop.plugin?.DataRepository.GetCurrentPlayerID() ?? 0);
-            EntitySpawner = new EntitySpawner(EntityRegistry, EntityProvider, LogError,
-                () => FirewallEnabled && PluginReady && !IsInitializing && !Disposed);
+            EntitySpawner = new EntitySpawner(EntityRegistry, EntityProvider, LogError, () => CanRunDebug);
             PartyService = new Party.SimPartyService(this);
             DebugTest = new Test(this);
             Commands = new SimCommandListener(LogError);
@@ -445,6 +472,7 @@ namespace Simulant.Core
             if (Disposed)
                 throw new InvalidOperationException("插件已卸载，不能保存配置。");
 
+            var stopDebug = Configuration.DeveloperMode && !configuration.DeveloperMode && !FirewallEnabled;
             lock (_initLock)
             {
                 var snapshot = configuration.Copy();
@@ -456,6 +484,19 @@ namespace Simulant.Core
                 Configuration = snapshot;
             }
 
+            if (stopDebug)
+            {
+                try
+                {
+                    StopDebugEntities();
+                }
+                catch (Exception error)
+                {
+                    LogWarning("开发者模式已关闭，停止调试时发生错误：" + error.Message);
+                }
+            }
+
+            _ui?.UpdateControlStates();
             LogRuntime("全局配置已保存；游戏路径在下次初始化时读取，模拟队员设置从下一次模拟开始生效。");
         }
 

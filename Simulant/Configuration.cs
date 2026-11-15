@@ -12,6 +12,7 @@ namespace Simulant
     {
         public SimActorBehaviorOptions SimulatedParty { get; set; } = new SimActorBehaviorOptions();
         public bool AutoInstallUpdates { get; set; } = true;
+        public bool DeveloperMode { get; set; }
         public string FfxivPath { get; set; } = string.Empty;
 
         internal Configuration Copy()
@@ -23,6 +24,7 @@ namespace Simulant
             {
                 SimulatedParty = SimulatedParty.Copy(),
                 AutoInstallUpdates = AutoInstallUpdates,
+                DeveloperMode = DeveloperMode,
                 FfxivPath = FfxivPath?.Trim() ?? string.Empty
             };
         }

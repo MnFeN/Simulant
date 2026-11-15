@@ -74,6 +74,25 @@ namespace Simulant.Tests
             });
         }
 
+        public static void DeveloperModeDefaultsToDisabledAndPersistsOnlyAfterSaving()
+        {
+            WithPath(path =>
+            {
+                Assert(!Configuration.Load(path).DeveloperMode, "新配置应默认关闭开发者模式。");
+                new Configuration().Save(path);
+                File.WriteAllText(path, "<Simulant />");
+                var configuration = Configuration.Load(path);
+                Assert(!configuration.DeveloperMode, "旧配置缺少该选项时不能自动开启开发者模式。");
+                var draft = configuration.Copy();
+                draft.DeveloperMode = true;
+                Assert(!configuration.DeveloperMode, "编辑配置副本不能提前放开操作限制。");
+                draft.Save(path);
+                Assert(Configuration.Load(path).DeveloperMode, "保存后必须保留开发者模式设置。");
+                configuration.Save(path);
+                Assert(!Configuration.Load(path).DeveloperMode, "关闭后必须恢复普通模式。");
+            });
+        }
+
         public static void ConfigurationRoundTripsAndKeepsDefaultsForMissingOptions()
         {
             WithPath(path =>

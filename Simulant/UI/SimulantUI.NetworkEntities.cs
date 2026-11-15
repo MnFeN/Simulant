@@ -32,10 +32,10 @@ namespace Simulant.UI
 
             menu.Opening += (_, __) =>
             {
-                var ready = _host.PluginReady && !_host.IsInitializing && _host.FirewallEnabled && !_switchingTerritory;
+                var ready = _host.CanRunDebug;
                 npc.Enabled = ready && _host.GameDataReady && !_host.GameDataLoading;
                 player.Enabled = ready;
-                local.Enabled = _host.PluginReady && !_host.IsInitializing && !_host.Disposed && !_switchingTerritory;
+                local.Enabled = ready;
             };
 
             return menu;
@@ -59,8 +59,7 @@ namespace Simulant.UI
 
         private Character GetManualSpawnSource()
         {
-            if (!_host.PluginReady || _host.IsInitializing || _host.Disposed || !_host.FirewallEnabled || _switchingTerritory)
-                throw new InvalidOperationException("请先初始化插件、开启防火墙，并等待区域切换完成。");
+            _host.EnsureDebugAllowed();
 
             var source = _host.EntityProvider.GetMyself();
 

@@ -59,16 +59,27 @@ namespace Simulant.UI
                 Padding = new Padding(5)
             };
             var miscTable = new TableLayoutPanel();
+            var developerMode = new CheckBoxOption(nameof(Configuration.DeveloperMode), "开发者模式", _draft.DeveloperMode,
+                "允许在任意地图启用防火墙，并在未启用防火墙时使用调试功能。");
             _miscOptions = new List<SimOptionBase>
             {
                 new FilePathOption(nameof(Configuration.FfxivPath), "FFXIV 安装路径", _draft.FfxivPath,
                     "FFXIV 客户端|ffxiv_dx11.exe",
                     "用于读取游戏资源文件，如果安装了多个游戏版本，请选择正确的版本。\n若未设置，则会自动检测当前启动的 ffxiv_dx11.exe。\n若有不同客户端多开需求，必须指定路径。"),
                 new CheckBoxOption(nameof(Configuration.AutoInstallUpdates), "自动安装更新", _draft.AutoInstallUpdates,
-                    "开启插件时异步检查更新；发现新版本后自动下载安装，重启 ACT 后生效。")
+                    "开启插件时异步检查更新；发现新版本后自动下载安装，重启 ACT 后生效。"),
+                developerMode
             };
             miscTab.Controls.Add(miscTable);
             new OptionEditor(miscTable, toolTip).Build(_miscOptions);
+            var developerCheckBox = (CheckBox)developerMode.Control;
+            developerCheckBox.CheckedChanged += (_, __) =>
+            {
+                if (developerCheckBox.Checked && MessageBox.Show(this,
+                    "该选项开启后不会限制非预期的危险操作，可能会将异常数据发送至服务器。",
+                    "开启开发者模式", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                    developerCheckBox.Checked = false;
+            };
             tabs.TabPages.Add(miscTab);
 
             var buttons = new FlowLayoutPanel

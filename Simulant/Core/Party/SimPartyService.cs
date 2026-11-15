@@ -62,8 +62,7 @@ namespace Simulant.Core.Party
             {
                 var worldVersion = Volatile.Read(ref _worldVersion);
 
-                if (!_host.PluginReady || !_host.FirewallEnabled || _host.Disposed || _host.IsInitializing)
-                    throw new InvalidOperationException("请在初始化完成并启用防火墙后显示模拟小队。");
+                _host.EnsureDebugAllowed();
 
                 if (_owner != null && !ReferenceEquals(_owner, owner))
                     throw new InvalidOperationException("已有另一场模拟占用原生小队列表，请先停止它。");

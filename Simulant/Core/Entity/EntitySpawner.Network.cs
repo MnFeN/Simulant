@@ -76,7 +76,7 @@ namespace Simulant.Core.Entity
                 EnsureWorldReady();
 
                 if (_networkSpawnAllowed == null || !_networkSpawnAllowed())
-                    throw new InvalidOperationException("网络实体模拟需要先开启防火墙。");
+                    throw new InvalidOperationException("当前不允许生成网络实体；请完成初始化，未开启开发者模式时还需启用防火墙。");
 
                 EnsureNetworkDespawnFunction();
                 var spawnFunction = objectKind == ObjectKind.Pc

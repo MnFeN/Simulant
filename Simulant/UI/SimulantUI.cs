@@ -88,7 +88,7 @@ namespace Simulant.UI
             var debug = new ToolStripMenuItem("调试功能");
             _addEntityMenuItem = new ToolStripMenuItem("添加实体")
             {
-                ToolTipText = "单击生成网络 NPC 或场景物件；右键可生成玩家、使用本地备用方式或清理实体。网络生成需要开启防火墙。"
+                ToolTipText = "单击生成网络 NPC 或场景物件；右键可生成玩家、使用本地备用方式或清理实体。未开启开发者模式时，生成实体需要启用防火墙。"
             };
             _debugMenuItem = new ToolStripMenuItem("调试")
             {
@@ -217,8 +217,8 @@ namespace Simulant.UI
             chkToggleFirewall.Enabled = !_host.IsInitializing && (pluginReady || firewallPending);
             // 部分失败时仍保留勾选，用户可以继续关闭并重试剩余清理。
             SetFirewallToggleChecked(firewallPending);
-            _debugMenuItem.Enabled = pluginReady;
-            _addEntityMenuItem.Enabled = pluginReady || _host.HasPendingDebugEntityCleanup;
+            _debugMenuItem.Enabled = _host.CanRunDebug || _host.DebugTest?.HasPendingEntityTestCleanup == true;
+            _addEntityMenuItem.Enabled = _host.CanRunDebug || _host.HasPendingDebugEntityCleanup;
             _actionResourceMenuItem.Enabled = gameDataReady;
             _exdResourceMenuItem.Enabled = gameDataReady;
 
@@ -552,6 +552,7 @@ namespace Simulant.UI
 
             try
             {
+                _host.EnsureDebugAllowed();
                 string result;
 
                 using (var form = new SimpleInputForm(

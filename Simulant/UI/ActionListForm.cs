@@ -269,7 +269,7 @@ namespace Simulant.UI
             miCopyTemplate.Enabled = gridActions.SelectedRows.Count != 0;
             miOmen.Visible = row != null && !string.IsNullOrWhiteSpace(row.Omen);
             miGimmick.Visible = row != null && row.VfxPaths.Length != 0;
-            miOmen.Enabled = miGimmick.Enabled = _host?.PluginReady == true && !_host.Disposed;
+            miOmen.Enabled = miGimmick.Enabled = _host?.CanRunDebug == true;
         }
 
         private void miCopyCell_Click(object sender, EventArgs e)
@@ -359,9 +359,10 @@ namespace Simulant.UI
             {
                 var command = await Task.Run(() =>
                 {
-                    if (_host == null || !_host.PluginReady || _host.Disposed)
+                    if (_host == null)
                         throw new InvalidOperationException("请先初始化插件并进入游戏。");
 
+                    _host.EnsureDebugAllowed();
                     _lifetimeToken.ThrowIfCancellationRequested();
                     var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("没有找到当前玩家。");
                     var pos = me.Pos3D;
@@ -400,9 +401,10 @@ namespace Simulant.UI
             {
                 await Task.Run(() =>
                 {
-                    if (_host == null || !_host.PluginReady || _host.Disposed)
+                    if (_host == null)
                         throw new InvalidOperationException("请先初始化插件并进入游戏。");
 
+                    _host.EnsureDebugAllowed();
                     _lifetimeToken.ThrowIfCancellationRequested();
                     var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("没有找到当前玩家。");
                     var address = TargetSystem.InstancePtr == IntPtr.Zero ? IntPtr.Zero : (IntPtr)TargetSystem.Instance().Target;
