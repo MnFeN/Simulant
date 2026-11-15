@@ -239,7 +239,7 @@ namespace Simulant.Content.U7b.Presets
             _cleaveOrigins[source] = origin;
             // 判定保存锁定的目标角度，不读取客户端尚在插值的当前朝向。
             _cleaveHeadings[source] = heading + (round.FutureEnd ? 0 : (float)Math.PI);
-            actor.Cast(round.FutureEnd ? 0xBADCu : 0xBADDu);
+            actor.Cast(round.FutureEnd ? 0xBADCu : 0xBADDu, executeOnFinish: false);
         }
 
         private void ResolveCleaves(ForsakenRoundPlan round, int[] sources)

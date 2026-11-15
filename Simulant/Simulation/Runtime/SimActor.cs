@@ -126,12 +126,14 @@ namespace Simulant.Simulation.Runtime
         /// <summary>读条并播放技能；指定目标时沿用原生带目标演出，不产生实际伤害。</summary>
         /// <param name="omenPosition">可选的预兆落点（ACT 坐标），用于同帧移动包尚未更新实体的情况。</param>
         /// <param name="omenHeading">可选的预兆朝向；未指定时在显示预兆时读取实体朝向。</param>
-        /// <param name="castTime">可选的咏唱秒数，未指定时使用技能表时长。</param>
+        /// <param name="castTime">可选的实际咏唱秒数，未指定时使用技能表时长减 0.3 秒。</param>
+        /// <param name="effectDelay">读条结束至结算演出的秒数；默认 0.3 秒，瞬发默认 0。</param>
+        /// <param name="executeOnFinish">是否自动播放结算；由机制判定节点显式执行时设为 false。</param>
         public void Cast(uint actionId, float? omenDelay = 0, SimActor target = null,
-            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null)
+            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null, float? effectDelay = null, bool executeOnFinish = true)
         {
             BehaviorController?.ManualAction(this);
-            _casts.Cast(this, actionId, omenDelay, target, omenPosition, omenHeading, castTime);
+            _casts.Cast(this, actionId, omenDelay, target, omenPosition, omenHeading, castTime, effectDelay, executeOnFinish);
         }
 
         public void Execute(uint actionId)

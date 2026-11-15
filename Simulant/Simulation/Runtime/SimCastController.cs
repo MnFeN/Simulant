@@ -17,6 +17,8 @@ namespace Simulant.Simulation.Runtime
             public string OmenTag;
             public bool OmenVisible;
             public SimScheduledAction Completion;
+            public SimScheduledAction CastCompletion;
+            public bool CastFinished;
             public SimScheduledAction PendingOmen;
             public SimActor Target;
             public Vector3? OmenPosition;
@@ -39,7 +41,7 @@ namespace Simulant.Simulation.Runtime
         }
 
         public void Cast(SimActor actor, uint actionId, float? omenDelay = 0, SimActor target = null,
-            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null)
+            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null, float? effectDelay = null, bool executeOnFinish = true)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -58,7 +60,9 @@ namespace Simulant.Simulation.Runtime
                 if (!GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(actionId, out var action))
                     return;
 
-                var duration = castTime ?? action.Cast100ms / 10f;
+                var duration = castTime ?? CastDuration(action.Cast100ms);
+                var delayAfterCast = effectDelay ?? (duration > 0 ? 0.3f : 0);
+                SimTimeline.ValidateSeconds(delayAfterCast, nameof(effectDelay));
                 CancelCore(actor);
 
                 // 移除预兆会调用外部代码；它可能已清理角色或开始更新的读条。
@@ -83,8 +87,11 @@ namespace Simulant.Simulation.Runtime
                     if (target != null)
                         actor.Entity.SetCastTarget(target.Entity);
 
-                    state.Completion = _scheduler.ScheduleAfter(duration,
-                        () => Complete(actor, state, action), "技能 " + actionId + " 读条完成");
+                    if (duration > 0 && executeOnFinish)
+                        state.CastCompletion = _scheduler.ScheduleAfter(duration,
+                            () => FinishCast(actor, state), "技能 " + actionId + " 读条完成");
+                    state.Completion = _scheduler.ScheduleAfter(duration + (executeOnFinish ? delayAfterCast : 0),
+                        () => Complete(actor, state, action, executeOnFinish), "技能 " + actionId + " 结算演出");
 
                     if (action.Omen.RowId > 0 && omenDelay.HasValue)
                     {
@@ -92,7 +99,7 @@ namespace Simulant.Simulation.Runtime
 
                         if (delay == 0)
                             ShowOmen(actor, state, action);
-                        else if (delay < duration - 0.3)
+                        else if (delay < duration)
                             state.PendingOmen = _scheduler.ScheduleAfter(delay,
                                 () => ShowOmen(actor, state, action), "技能 " + actionId + " 预兆");
                     }
@@ -131,6 +138,12 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
+        internal bool HasPendingAction(SimActor actor)
+        {
+            lock (_gate)
+                return _casts.ContainsKey(actor);
+        }
+
         internal double Remaining(SimActor actor)
         {
             lock (_gate)
@@ -141,7 +154,7 @@ namespace Simulant.Simulation.Runtime
         internal void CancelVisual(SimActor actor)
         {
             lock (_gate)
-                if (_casts.TryGetValue(actor, out var state) && state.Target != null)
+                if (_casts.TryGetValue(actor, out var state) && state.Target != null && !state.CastFinished)
                     CancelCore(actor);
         }
 
@@ -171,12 +184,39 @@ namespace Simulant.Simulation.Runtime
 
                 // 外部回调接收预兆后即使抛出异常，取消时仍会移除对应的唯一标签。
                 state.OmenVisible = true;
-                state.OmenVisible = _omens.Show(actor, action, state.EndsAt - _scheduler.ElapsedSeconds - 0.3,
+                state.OmenVisible = _omens.Show(actor, action, state.EndsAt - _scheduler.ElapsedSeconds,
                     state.OmenTag, state.OmenPosition, state.OmenHeading);
             }
         }
 
-        private void Complete(SimActor actor, CastState state, ActionRow action)
+        /// <summary>技能表包含结算前的 0.3 秒间隔；显式传入的网络咏唱时长不再扣除。</summary>
+        internal static float CastDuration(ushort cast100ms) => Math.Max(0, cast100ms / 10f - 0.3f);
+
+        private void FinishCast(SimActor actor, CastState state)
+        {
+            lock (_gate)
+            {
+                if (!IsCurrent(actor, state))
+                    return;
+
+                try
+                {
+                    FinishCastDisplay(actor, state);
+                }
+                catch
+                {
+                    if (IsCurrent(actor, state))
+                    {
+                        _casts.Remove(actor);
+                        state.Completion?.Cancel();
+                        state.PendingOmen?.Cancel();
+                    }
+                    throw;
+                }
+            }
+        }
+
+        private void Complete(SimActor actor, CastState state, ActionRow action, bool executeOnFinish)
         {
             lock (_gate)
             {
@@ -200,7 +240,7 @@ namespace Simulant.Simulation.Runtime
                     CancelState(actor, state);
                 }
 
-                if (!execute || _disposed || !actor.IsActive || _casts.ContainsKey(actor))
+                if (!executeOnFinish || !execute || _disposed || !actor.IsActive || _casts.ContainsKey(actor))
                     return;
 
                 // 清理预兆期间也可能有外部原生读条接管动画，必须重新读取当前技能。
@@ -247,8 +287,18 @@ namespace Simulant.Simulation.Runtime
         private void CancelState(SimActor actor, CastState state)
         {
             state.Completion?.Cancel();
+            state.CastCompletion?.Cancel();
             state.PendingOmen?.Cancel();
+            FinishCastDisplay(actor, state);
+        }
 
+        private void FinishCastDisplay(SimActor actor, CastState state)
+        {
+            if (state.CastFinished)
+                return;
+
+            state.CastFinished = true;
+            state.PendingOmen?.Cancel();
             try
             {
                 // 不清除借用角色上无关的读条，也不访问已失效的原生实体。

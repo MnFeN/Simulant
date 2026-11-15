@@ -246,6 +246,22 @@ namespace Simulant.Content.U7a.Presets
             return Math.Sign(point.X) == Math.Sign(-point.Y) * NorthSlowSide ? 2 : 1;
         }
 
+        internal static readonly double[] SandCasts =
+        {
+            20.472, 26.004, 31.191
+        };
+        internal static readonly double[][] WaveCasts =
+        {
+            new[]
+            {
+                28.355, 31.391, 33.456, 35.507
+            },
+            new[]
+            {
+                34.706, 37.790, 39.858, 41.942
+            }
+        };
+
         internal static readonly double[] SandHits =
         {
             21.955,

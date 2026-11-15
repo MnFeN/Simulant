@@ -1,3 +1,4 @@
+using Simulant.Game;
 using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Runtime;
@@ -125,7 +126,7 @@ namespace Simulant.Content.U7b.Presets
 
                 if (caster != 0)
                 {
-                    timeline.At(CleaveHit[pair, caster] + 3, () => _casters[source].Entity.PlayBlendTimeline(0x1E39),
+                    timeline.At(CleaveHit[pair, caster] + 3, () => _casters[source].Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 0x1E39),
                         $"第 {pair + 1} 次复制体 {caster} 退场动画");
                     timeline.At(CleaveHit[pair, caster] + 4.5, () => _casters[source].Entity.DisableDraw(),
                         $"第 {pair + 1} 次隐藏复制体 {caster}");

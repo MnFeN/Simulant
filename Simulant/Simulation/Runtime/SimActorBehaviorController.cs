@@ -293,7 +293,7 @@ namespace Simulant.Simulation.Runtime
             var actor = state.Actor;
             var actions = state.Actions;
 
-            if (actions == null || now < state.NextAction || actor.Entity.CastingActionId != 0 || _casts.Remaining(actor) > 0)
+            if (actions == null || now < state.NextAction || actor.Entity.CastingActionId != 0 || _casts.HasPendingAction(actor))
                 return;
 
             var distance = Vector2.Distance(actor.Pos, _targetPosition) - _targetRadius;
@@ -310,7 +310,7 @@ namespace Simulant.Simulation.Runtime
             if (distance > range)
                 return;
 
-            var castTime = id == step.Id && step.Instant ? 0 : (action.Cast100ms / 10f);
+            var castTime = id == step.Id && step.Instant ? 0 : SimCastController.CastDuration(action.Cast100ms);
 
             if (castTime > 0 && (moving || !CanWait(state, now, castTime + 0.3)))
             {

@@ -29,7 +29,7 @@ namespace Simulant.Content.U7a.Presets
         public override WaymarkLayout Waymarks => U7a.Waymarks;
         public override string Description => 
             "红色同点名按优先级，高左低右；\n" +
-            "蓝色固定土水冰暗分别标记 1、2、3、4，面朝南侧从左至后吃白圈。";
+            "蓝色固定土水冰暗分别标记 1、2、3、4，面朝南侧从左至右吃白圈。";
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
             new ComboBoxOption<int>(nameof(CrystallizeTimeLogic.PlayerSlot), "自身职能", 1,

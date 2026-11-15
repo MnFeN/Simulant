@@ -22,17 +22,64 @@ namespace Simulant.Tests
                 var normal = scene.Actor(1);
                 fast.Cast(1, omenDelay: 2, castTime: 1);
                 normal.Cast(1, omenDelay: null);
-                Assert(fast.Entity.CastDuration == 1 && normal.Entity.CastDuration == 10,
-                    "指定时长必须写入原生读条；未指定时仍沿用技能表。");
-                Assert(scene.Casts.Remaining(fast) == 1 && scene.Casts.Remaining(normal) == 10,
+                Assert(fast.Entity.CastDuration == 1 && Math.Abs(normal.Entity.CastDuration - 9.7) < 0.001,
+                    "指定时长必须写入原生读条；未指定时应从技能表扣除 0.3 秒结算间隔。");
+                Assert(scene.Casts.Remaining(fast) == 1 && Math.Abs(scene.Casts.Remaining(normal) - 9.7) < 0.001,
                     "读条剩余时间必须使用实际咏唱时长。");
-                scene.RunPast(1.1);
+                scene.Scheduler.Schedule(1.1, () =>
+                    Assert(fast.Entity.CastingActionId == 0 && fast.Entity.PlayedTimelines.Count == 0,
+                        "读条结束后必须保留结算间隔，不能提前播放技能。"));
+                scene.RunPast(1.4);
                 Assert(fast.Entity.CastingActionId == 0 && fast.Entity.PlayedTimelines.Single() == 101,
                     "缩短后的读条必须按新期限完成并播放技能。");
                 Assert(normal.Entity.CastingActionId == 1 && normal.Entity.PlayedTimelines.Count == 0,
                     "同技能的普通读条不应被加速。");
                 Assert(TriggernometryInterop.Commands.Count == 0,
                     "超过新咏唱期限的延迟预兆不应出现。");
+            }
+        }
+
+        public static void CompletedCastCanMoveButStopCancelsPendingEffect()
+        {
+            using (var scene = new CastTestScene())
+            {
+                scene.AddAction(1, 0.5f, omen: true);
+                var actor = scene.Actor(0);
+                var target = scene.Actor(1);
+                actor.Cast(1, target: target);
+                scene.Scheduler.Schedule(0.3, () =>
+                {
+                    Assert(actor.Entity.CastingActionId == 0 && scene.Casts.Remaining(actor) == 0,
+                        "0.5 秒表时长应在 0.2 秒结束读条，不再限制移动。");
+                    var pending = scene.Scheduler.PendingCount;
+                    scene.Casts.CancelVisual(actor);
+                    Assert(scene.Scheduler.PendingCount == pending,
+                        "已经完成读条后开始移动，不能取消等待中的结算演出。");
+                    actor.StopCasting();
+                    Assert(scene.Scheduler.PendingCount == pending - 1,
+                        "显式停止必须仍能取消读条结束后的演出节点。");
+                });
+                scene.RunPast(0.6);
+                Assert(actor.Entity.ActionEffects.Count == 0, "停止后不得出现迟到的技能演出。");
+            }
+        }
+
+        public static void ManualResolutionDoesNotDuplicateCastEffect()
+        {
+            using (var scene = new CastTestScene())
+            {
+                scene.AddAction(1, 0.5f, omen: true);
+                var actor = scene.Actor(0);
+                actor.Cast(1, executeOnFinish: false);
+                scene.Scheduler.Schedule(0.55, () =>
+                {
+                    Assert(actor.Entity.CastingActionId == 0 && actor.Entity.PlayedTimelines.Count == 0,
+                        "显式判定的读条只能清理预兆，不得先自动播放一次技能。");
+                    actor.Execute(1);
+                });
+                scene.RunPast(0.65);
+                Assert(actor.Entity.PlayedTimelines.SequenceEqual(new ushort[] { 101 }),
+                    "机制判定应只播放一次结算演出。");
             }
         }
 
@@ -44,9 +91,9 @@ namespace Simulant.Tests
                 scene.AddAction(2, 0.04f);
                 var actor = scene.Actor(0);
                 actor.Cast(1, omenDelay: 0.05f);
-                Assert(scene.Scheduler.PendingCount == 2, "延迟预兆和读条完成应各有一个节点。");
+                Assert(scene.Scheduler.PendingCount == 3, "延迟预兆、读条完成和结算演出应各有一个节点。");
                 actor.Cast(2);
-                Assert(scene.Scheduler.PendingCount == 1, "替换读条必须移除两个旧调度节点。");
+                Assert(scene.Scheduler.PendingCount == 1, "替换读条必须移除旧读条和演出的全部节点。");
                 scene.RunPast(0.08);
                 Assert(actor.Entity.CastStarts.SequenceEqual(new uint[]
                 {
@@ -74,7 +121,7 @@ namespace Simulant.Tests
                 visible.Cast(1);
                 delayed.Cast(1, omenDelay: 0.05f);
                 visible.StopCasting();
-                Assert(visible.Entity.CastingActionId == 0 && scene.Scheduler.PendingCount == 2,
+                Assert(visible.Entity.CastingActionId == 0 && scene.Scheduler.PendingCount == 3,
                     "StopCasting 必须仅清除指定模拟角色的读条，并保留另一角色的调度。");
                 scene.Casts.Dispose();
                 scene.Casts.Dispose();
@@ -240,7 +287,7 @@ namespace Simulant.Tests
                     shown[0]
                 }),
                     "同步替换必须移除旧的可见预兆并保留新预兆。");
-                Assert(actor.Entity.CastingActionId == 2 && scene.Scheduler.PendingCount == 1,
+                Assert(actor.Entity.CastingActionId == 2 && scene.Scheduler.PendingCount == 2,
                     "被替换的外层回调出错时，不得取消新读条。");
             }
         }
@@ -309,7 +356,7 @@ namespace Simulant.Tests
                     1, 3
                     }) &&
                     actor.Entity.PlayedTimelines.Count == 0 && actor.Entity.BaseTimelineResetCount == 0 &&
-                    scene.Scheduler.PendingCount == 1,
+                    scene.Scheduler.PendingCount == 2,
                     "取消回调启动新读条后，较早的 Cast 或 Execute 必须让出控制权，不能重复登记或覆盖新动画。");
                 }
         }

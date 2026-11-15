@@ -145,8 +145,11 @@ namespace Simulant.Core.Entity
         {
         }
 
+        internal List<uint> ActionEffects { get; } = new List<uint>();
+
         public void ExecuteActionEffect(uint actionId, Character target)
         {
+            ActionEffects.Add(actionId);
         }
 
         public IntPtr ActorControl(Simulant.Game.ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)

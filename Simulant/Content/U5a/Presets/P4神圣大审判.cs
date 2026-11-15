@@ -146,8 +146,8 @@ namespace Simulant.Content.U5a.Presets
                 mechanic.At(showAt + 8, () => ResolveFlares(name, group, myself), name + "爆炸");
             }
 
-            // 神圣大审判读条 3 秒，结束 3.5 秒后持续朝向玩家，直到株连开始读条。
-            mechanic.Repeat(6.5, 0.1, 76, _ => FacePlayer(boss, myself), "完美亚历山大朝向玩家");
+            // 神圣大审判读条 2.7 秒，结束 3.5 秒后持续朝向玩家，直到株连开始读条。
+            mechanic.Repeat(6.2, 0.1, 79, _ => FacePlayer(boss, myself), "完美亚历山大朝向玩家");
 
             mechanic.At(14.1, () =>
             {

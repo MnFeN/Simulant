@@ -1,5 +1,6 @@
 using Simulant.Game;
 using Simulant.Simulation.Geometry;
+using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Linq;
@@ -85,8 +86,10 @@ namespace Simulant.Content.U7a.Presets
             for (var i = 0; i < 6; i++)
             {
                 var index = i;
-                var hit = CrystallizeTimePlan.SandHits[_plan.HourglassWave(i)];
-                timeline.At(hit - 1.5, () => _sand[index].Cast(40299), "沙漏预兆");
+                var wave = _plan.HourglassWave(i);
+                var start = CrystallizeTimePlan.SandCasts[wave];
+                var delay = (float)(CrystallizeTimePlan.SandHits[wave] - start - 1.2);
+                timeline.At(start, () => _sand[index].Cast(40299, castTime: 1.2f, effectDelay: delay), "沙漏预兆");
             }
 
             for (var wave = 0; wave < 3; wave++)
@@ -111,13 +114,23 @@ namespace Simulant.Content.U7a.Presets
                     0x26
                 };
 
-                timeline.At(18.886 + wave * 2, () =>
+                timeline.At(new[]
+                {
+                    18.886,
+                    20.822,
+                    22.888
+                }[wave], () =>
                 {
                     foreach (var slot in slots)
                         Map(slot, 0x80);
                 }, "地板时间线预告");
 
-                timeline.At(CrystallizeTimePlan.SandHits[wave] - 1.5, () =>
+                timeline.At(new[]
+                {
+                    20.372,
+                    25.904,
+                    31.076
+                }[wave], () =>
                 {
                     foreach (var slot in slots)
                         Map(slot, 0x200);
@@ -151,6 +164,12 @@ namespace Simulant.Content.U7a.Presets
             }
 
             timeline.At(22.888, ResolveWater, "黑暗狂水四人分摊");
+            timeline.At(22.888, () => _gaia.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 4576), "暗之巫女隐藏");
+            timeline.At(42.026, () => _gaia.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 4564), "暗之巫女显现");
+
+            AddJump(timeline, _shiva, 0x9CEF, 26.986, 27.702, _plan.WaveStart(0), 27.985);
+            AddJump(timeline, _shiva, 0x9CEF, 33.456, 34.173, _plan.WaveStart(1), 34.423);
+            AddJump(timeline, _shiva, 0x9CEF, 45.309, 45.942, Center, 46.226);
 
             timeline.At(24.837, () =>
             {
@@ -204,17 +223,16 @@ namespace Simulant.Content.U7a.Presets
 
             timeline.At(44.16, () =>
             {
-                _gaia.EnableDraw();
                 _gaia.Entity.ActorMove(new Vector3(Center + new Vector2(0, 5), 0), 0, 0);
-                _gaia.Cast(40288);
+                _gaia.Cast(40288, castTime: 2.7f, effectDelay: 0.282f);
             }, "碎灵一击读条");
 
             timeline.At(CrystallizeTimePlan.RewindTime, () => MoveAll(_plan.Spread, CrystallizeTimePlan.SpreadArrival, urgent: true), "回返记录后分散");
 
             timeline.At(46.609, () =>
             {
-                _shiva.Entity.ActorMove(new Vector3(Center, 0), Heading(_plan.WaveStart(0) - Center), 0);
-                _shiva.Cast(40229);
+                _shiva.FaceNetwork(Heading(_plan.WaveStart(0) - Center));
+                _shiva.Cast(40229, castTime: 4.4f, effectDelay: 0.283f);
             }, "第一次圣翼读条");
 
             timeline.At(47.375, ResolveSpiritTaker, "碎灵一击选人与跳跃判定");
@@ -235,7 +253,7 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(51.774, Return, "回返传送动画");
             timeline.At(52.758, () => WingCast(0), "第一次圣翼击退预备");
             timeline.At(53.241, () => BeginWing(0), "第一次圣翼演出与判定锁定");
-            timeline.At(55.343, () => _shiva.Cast(40230), "第二次圣翼读条");
+            timeline.At(55.343, () => _shiva.Cast(40230, castTime: 0.2f, effectDelay: 0.25f), "第二次圣翼读条");
             timeline.At(57.264, () => WingCast(1), "第二次圣翼击退预备");
             timeline.At(57.697, () => BeginWing(1), "第二次圣翼演出与判定锁定");
 
@@ -255,26 +273,8 @@ namespace Simulant.Content.U7a.Presets
                 Map(0x28, 0x40);
             }, "回场前场地效果");
 
-            timeline.At(61.715, () =>
-            {
-                // 技能包中的坐标用于演出朝向；实际回场位置仍由后续 ActorMove 同步。
-                var shivaPosition = Center + new Vector2(-3.54f, 0);
-                var gaiaPosition = Center + new Vector2(3.54f, 0);
-                _shiva.Entity.ExecuteActionEffectAt(0x9CEF, new Vector3(shivaPosition, 0), Heading(shivaPosition - _shiva.Pos), 1.1f);
-                _gaia.Entity.ExecuteActionEffectAt(0x9CB5, new Vector3(gaiaPosition, 0), Heading(gaiaPosition - _gaia.Pos), 1.1f);
-            }, "双 Boss 回场技能演出");
-
-            timeline.At(62.299, () =>
-                _gaia.Entity.ActorMove(new Vector3(Center + new Vector2(3.54f, 0), 0),
-                    PacketCodec.DecodeUShortHeading(0xE81A), 90), "暗之巫女回场落点");
-
-            timeline.At(62.483, () =>
-                _shiva.Entity.ActorMove(new Vector3(Center + new Vector2(-3.54f, 0), 0),
-                    PacketCodec.DecodeUShortHeading(0x0720), 90), "希瓦回场落点");
-
-            timeline.At(62.701, () =>
-                _wyrm.Entity.ActorMove(new Vector3(Center + new Vector2(-3.54f, 0), 0),
-                    PacketCodec.DecodeUShortHeading(0x0720), 60), "圣龙回场落点");
+            AddJump(timeline, _shiva, 0x9CEF, 61.715, 62.483, Center + new Vector2(-3.54f, 0), 62.701);
+            AddJump(timeline, _gaia, 0x9CB5, 61.715, 62.299, Center + new Vector2(3.54f, 0));
 
             timeline.At(63.018, () =>
             {
@@ -316,6 +316,21 @@ namespace Simulant.Content.U7a.Presets
             return timeline;
         }
 
+        private void AddJump(SimTimeline timeline, SimActor actor, uint action, double start, double landing,
+            Vector2 destination, double? wyrmLanding = null)
+        {
+            var heading = 0f;
+            timeline.At(start, () =>
+            {
+                heading = Heading(destination - actor.Pos);
+                actor.StopCasting();
+                actor.Entity.ExecuteActionEffectAt(action, new Vector3(destination, 0), heading, 1.1f);
+            }, "Boss 跳跃技能演出");
+            timeline.At(landing, () => actor.Entity.ActorMove(new Vector3(destination, 0), heading, 90), "Boss 跳跃落点");
+            if (wyrmLanding.HasValue)
+                timeline.At(wyrmLanding.Value, () => _wyrm.Entity.ActorMove(new Vector3(destination, 0), heading, 60), "圣龙跟随落点");
+        }
+
         private void AddWaveTimeline(SimTimeline timeline)
         {
             for (var wave = 0; wave < 2; wave++)
@@ -325,19 +340,24 @@ namespace Simulant.Content.U7a.Presets
                     var s = step;
                     var hit = CrystallizeTimePlan.WaveHits[w][s];
 
-                    timeline.At(hit - (step == 0 ? 3 : 2), () =>
+                    var start = CrystallizeTimePlan.WaveCasts[w][s];
+                    var duration = step == 0 ? 2.7f : 1.7f;
+                    var delay = (float)(hit - start - duration);
+                    timeline.At(start, () =>
                     {
                         var pos = _plan.WavePosition(w, s);
                         var heading = Heading(_plan.WaveDirection(w));
 
                         if (s == 0)
                         {
-                            _shiva.Entity.ActorMove(new Vector3(pos, 0), heading, 0);
-                            _shiva.Cast(40251, omenPosition: new Vector3(pos, 0), omenHeading: heading);
+                            _shiva.FaceNetwork(heading);
+                            _shiva.Cast(40251, omenPosition: new Vector3(pos, 0), omenHeading: heading,
+                                castTime: duration, effectDelay: delay);
+                            Party[Self].Entity.PlayPositionVfx(2269, new Vector3(pos, 0));
                         }
 
                         Helper(8 + w * 4 + s, pos, heading).Cast(s == 0 ? 40252u : 40253u,
-                            omenPosition: new Vector3(pos, 0), omenHeading: heading);
+                            omenPosition: new Vector3(pos, 0), omenHeading: heading, castTime: duration, effectDelay: delay);
                     }, "光波预兆与读条");
 
                     timeline.At(hit, () => ResolveWave(w, s), $"第 {w + 1} 组光波第 {s + 1} 次");
