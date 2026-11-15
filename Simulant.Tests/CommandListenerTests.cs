@@ -90,6 +90,22 @@ namespace Simulant.Tests
             listener.Stop();
         }
 
+        public static void InterfaceCommandsShareDispatchAndRespectListenerLifetime()
+        {
+            var source = new FormActMain();
+            var commands = new List<string>();
+            var listener = new SimCommandListener(message => { });
+            listener.Received += commands.Add;
+            listener.Dispatch("ac 冲刺");
+            listener.Start(source);
+            listener.Dispatch("ac 冲刺");
+            source.Emit(false, Prefix + "sim ac 亲疏自行");
+            listener.Stop();
+            listener.Dispatch("ac 沉稳咏唱");
+            Assert(commands.Count == 2 && commands[0] == "ac 冲刺" && commands[1] == "ac 亲疏自行",
+                "界面与默语应走同一事件；初始化前或停止后不能分发命令。");
+        }
+
         private static void ExpectFailure(Action action)
         {
             try

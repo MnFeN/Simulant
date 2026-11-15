@@ -1,6 +1,7 @@
 using Simulant.Simulation.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -14,6 +15,9 @@ namespace Simulant
     {
         public SimActorBehaviorOptions SimulatedParty { get; set; } = new SimActorBehaviorOptions();
         public bool AutoInstallUpdates { get; set; } = true;
+        public bool QuickControlsEnabled { get; set; } = true;
+        public Point? QuickControlsLocation { get; set; }
+        public bool ShouldSerializeQuickControlsLocation() => QuickControlsLocation.HasValue;
         public bool DeveloperMode { get; set; }
         public string FfxivPath { get; set; } = string.Empty;
 
@@ -31,6 +35,8 @@ namespace Simulant
             {
                 SimulatedParty = SimulatedParty.Copy(),
                 AutoInstallUpdates = AutoInstallUpdates,
+                QuickControlsEnabled = QuickControlsEnabled,
+                QuickControlsLocation = QuickControlsLocation,
                 DeveloperMode = DeveloperMode,
                 FfxivPath = FfxivPath?.Trim() ?? string.Empty,
                 Presets = (Presets ?? new List<PresetConfiguration>()).Where(preset => preset.Options.Count != 0)

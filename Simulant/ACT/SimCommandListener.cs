@@ -59,29 +59,33 @@ namespace Simulant.ACT
                 if (!match.Success)
                     return;
 
-                var command = match.Groups["cmd"].Value;
-                var handlers = Received;
-                if (string.IsNullOrWhiteSpace(command) || handlers == null)
-                    return;
-
-                foreach (Action<string> handler in handlers.GetInvocationList())
-                {
-                    if (!_listening)
-                        return;
-
-                    try
-                    {
-                        handler(command);
-                    }
-                    catch (Exception error)
-                    {
-                        ReportError("处理模拟命令失败：" + error);
-                    }
-                }
+                Dispatch(match.Groups["cmd"].Value);
             }
             catch (Exception error)
             {
                 ReportError("读取模拟命令日志失败：" + error);
+            }
+        }
+
+        /// <summary>默语与界面共用命令入口；停止监听后不再接收操作。</summary>
+        internal void Dispatch(string command)
+        {
+            var handlers = Received;
+            if (!_listening || string.IsNullOrWhiteSpace(command) || handlers == null)
+                return;
+
+            foreach (Action<string> handler in handlers.GetInvocationList())
+            {
+                if (!_listening)
+                    return;
+                try
+                {
+                    handler(command);
+                }
+                catch (Exception error)
+                {
+                    ReportError("处理模拟命令失败：" + error);
+                }
             }
         }
 

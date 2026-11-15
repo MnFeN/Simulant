@@ -16,6 +16,7 @@ namespace Simulant.UI
         private SimSession _session;
         private readonly Timer _sessionStateTimer;
         private readonly OptionEditor _optionEditor;
+        private QuickControlForm _quickControls;
         private bool _displayedRunning;
         private bool _displayedPendingCleanup;
         private bool _displayedReadyToStart;
@@ -36,10 +37,16 @@ namespace Simulant.UI
                     (_session?.HasPendingCleanup == true) != _displayedPendingCleanup ||
                     (GetStartBlockReason() == null) != _displayedReadyToStart)
                     UpdateButtons();
+
+                UpdateQuickControls();
             };
 
             _sessionStateTimer.Start();
-            Disposed += (sender, e) => StopCurrentSession();
+            Disposed += (sender, e) =>
+            {
+                _quickControls?.Dispose();
+                StopCurrentSession();
+            };
             ClearPreset();
         }
 
@@ -231,6 +238,49 @@ namespace Simulant.UI
             _host?.LogVerbose($"UpdateButtons: hasHost = {hasHost}, hasPreset = {hasPreset}, isRunning = {isRunning}");
             btnStart.Enabled = hasHost && hasPreset && _preset.IsImplemented && _displayedReadyToStart;
             btnEnd.Enabled = hasHost && (isRunning || hasPendingCleanup);
+            UpdateQuickControls();
+        }
+
+        internal void UpdateQuickControls()
+        {
+            var show = !IsDisposed && !Disposing && _host != null && !_host.Disposed &&
+                _host.PluginReady && _host.FirewallEnabled && _host.Configuration.QuickControlsEnabled &&
+                _host.ZoneService?.IsInSimulatedTerritory == true && _preset?.IsImplemented == true;
+
+            if (!show)
+            {
+                _quickControls?.Dispose();
+                _quickControls = null;
+                return;
+            }
+
+            if (_quickControls == null || _quickControls.IsDisposed)
+            {
+                _quickControls = new QuickControlForm(StartCurrentSession, StopCurrentSession, _host.Commands.Dispatch,
+                    _host.LogWarning, _host.PlayerActions.Cooldown)
+                {
+                    IsGameForeground = () => _host.IsGameForeground
+                };
+                if (_host.Configuration.QuickControlsLocation.HasValue)
+                    _quickControls.RestoreLocation(_host.Configuration.QuickControlsLocation.Value);
+                _quickControls.LocationCommitted += _host.SaveQuickControlsLocation;
+            }
+
+            bool? surecast = null;
+            if (!_host.IsSwitchingTerritory)
+            {
+                try
+                {
+                    var player = _host.EntityProvider.GetMyself();
+                    if (player != null && player.IsAlive && player.HP != 0)
+                        surecast = SimJobActions.For(player.Job)?.Caster == true;
+                }
+                catch (InvalidOperationException)
+                {
+                    // 换图或掉线时身份可能已失效，保留窗口但禁用技能。
+                }
+            }
+            _quickControls.UpdateState(btnStart.Enabled, btnEnd.Enabled, surecast);
         }
 
     }

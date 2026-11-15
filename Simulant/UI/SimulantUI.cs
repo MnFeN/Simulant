@@ -255,6 +255,7 @@ namespace Simulant.UI
             // 防火墙开启：允许加载区域、退出模拟
             btnSimEnter.Enabled = firewallReady && !_switchingTerritory;
             btnSimExit.Enabled = firewallReady && !_switchingTerritory;
+            presetControl.UpdateQuickControls();
         }
 
         #region Firewall

@@ -57,6 +57,28 @@ namespace Simulant.Tests
             }
         }
 
+        public static void LocalActionsPlayPlayerTimelineAndKeepNetworkVisuals()
+        {
+            var actions = new uint[] { 3, 7548, 7559 };
+            var sheet = Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>();
+            foreach (var id in actions)
+                sheet[(int)id] = new Lumina.Excel.Sheets.Action { RowId = id, AnimationEnd = (short)(id + 100) };
+            using (var scene = new Scene())
+            {
+                foreach (var id in actions)
+                {
+                    scene.Manager.UseLocalAction(scene.Player, id);
+                    Assert(scene.Player.Entity.PlayedTimelines.Contains((ushort)(id + 100)),
+                        "本机模拟技能必须补播技能表中的角色动作。");
+                }
+                scene.Manager.UseLocalAction(scene.Source, 7548);
+                Assert(scene.Source.Entity.PlayedTimelines.Count == 0,
+                    "网络队员继续使用技能结算演出，不重复补播本机动作。");
+                Assert(scene.Player.Entity.HasStatus(50) && scene.Player.IsKnockbackImmune,
+                    "补播动作不能改变冲刺和防击退的状态效果。");
+            }
+        }
+
         public static void KnockbackImmunityReadsActualStatusesAcrossManagers()
         {
             using (var scene = new Scene())

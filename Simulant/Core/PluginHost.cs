@@ -57,6 +57,7 @@ namespace Simulant.Core
         internal bool IsInitializing { get; private set; }
         internal bool FirewallEnabled => FirewallService != null && FirewallService.IsEnabled;
         internal bool IsSwitchingTerritory => _ui?.IsSwitchingTerritory == true;
+        internal bool IsGameForeground => Utils.WindowFocus.IsProcessForeground(_entityProcessId ?? 0);
         internal bool CanRunDebug => PluginReady && !IsInitializing && !Disposed && !IsSwitchingTerritory
             && (FirewallEnabled || Configuration.DeveloperMode);
 
@@ -477,8 +478,9 @@ namespace Simulant.Core
             lock (_initLock)
             {
                 var snapshot = configuration.Copy();
-                // 全局设置窗口可能打开较久，保留期间自动保存的预设选项。
+                // 全局设置窗口可能打开较久，保留期间自动保存的预设选项和悬浮窗位置。
                 snapshot.Presets = Configuration.Copy().Presets;
+                snapshot.QuickControlsLocation = Configuration.QuickControlsLocation;
                 snapshot.Save(ConfigurationPath);
 
                 if (!string.Equals(Configuration.FfxivPath, snapshot.FfxivPath, StringComparison.OrdinalIgnoreCase))
@@ -501,6 +503,26 @@ namespace Simulant.Core
 
             _ui?.UpdateControlStates();
             LogRuntime("全局配置已保存；游戏路径在下次初始化时读取，模拟队员设置从下一次模拟开始生效。");
+        }
+
+        internal void SaveQuickControlsLocation(System.Drawing.Point location)
+        {
+            try
+            {
+                lock (_initLock)
+                {
+                    if (Disposed || Configuration.QuickControlsLocation == location)
+                        return;
+                    var snapshot = Configuration.Copy();
+                    snapshot.QuickControlsLocation = location;
+                    snapshot.Save(ConfigurationPath);
+                    Configuration = snapshot;
+                }
+            }
+            catch (Exception error)
+            {
+                LogWarning("保存快捷控制悬浮窗位置失败：" + error.Message);
+            }
         }
 
         internal void SavePresetOptions(Simulation.SimPresetBase preset)

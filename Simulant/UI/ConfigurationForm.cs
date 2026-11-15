@@ -68,6 +68,8 @@ namespace Simulant.UI
                     "用于读取游戏资源文件，如果安装了多个游戏版本，请选择正确的版本。\n若未设置，则会自动检测当前启动的 ffxiv_dx11.exe。\n若有不同客户端多开需求，必须指定路径。"),
                 new CheckBoxOption(nameof(Configuration.AutoInstallUpdates), "自动安装更新", _draft.AutoInstallUpdates,
                     "开启插件时异步检查更新；发现新版本后自动下载安装，重启 ACT 后生效。"),
+                new CheckBoxOption(nameof(Configuration.QuickControlsEnabled), "模拟期间启用快捷控制悬浮窗", _draft.QuickControlsEnabled,
+                    "选中模拟预设并进入副本后，显示置顶的模拟控制与冲刺、防击退按钮。单击图标执行操作，按住拖动移动窗口，拖动边缘调整大小；退出副本后自动关闭。"),
                 developerMode
             };
             miscTab.Controls.Add(miscTable);

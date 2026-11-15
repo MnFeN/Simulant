@@ -8,6 +8,21 @@ namespace Simulant.Tests
 {
     internal static class ConfigurationTests
     {
+        public static void QuickControlLocationPersistsAndOldConfigurationsKeepDefault()
+        {
+            WithPath(path =>
+            {
+                var configuration = Configuration.Load(path);
+                Assert(!configuration.QuickControlsLocation.HasValue, "未保存位置时应使用屏幕左上角。");
+                configuration.Save(path);
+                Assert(!File.ReadAllText(path).Contains("QuickControlsLocation"), "默认位置无需写入配置。");
+                configuration.QuickControlsLocation = new System.Drawing.Point(-700, 260);
+                configuration.Copy().Save(path);
+                Assert(Configuration.Load(path).QuickControlsLocation == configuration.QuickControlsLocation,
+                    "位置应跨配置副本和重新加载保留，允许左侧显示器的负坐标。");
+            });
+        }
+
         public static void GamePathDefaultsToEmptyAndPersistsWithoutAliasingTheDraft()
         {
             WithPath(path =>

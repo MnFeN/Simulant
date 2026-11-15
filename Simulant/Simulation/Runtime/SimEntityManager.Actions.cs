@@ -16,7 +16,7 @@ namespace Simulant.Simulation.Runtime
         }
 
         /// <summary>本地模拟已支持的职能技能和冲刺；状态和演出共用，冷却不作限制。</summary>
-        internal void UseLocalAction(SimActor actor, uint actionId)
+        internal bool UseLocalAction(SimActor actor, uint actionId)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -48,7 +48,7 @@ namespace Simulant.Simulation.Runtime
                 {
                     var statusId = statuses.GetStatus(slot).StatusId.Get();
                     if (statusId != 0 && sheet.TryGetRow(statusId, out var row) && row.LockActions)
-                        return;
+                        return false;
                 }
 
                 var seconds = actionId == 3 ? 10 : 6;
@@ -56,6 +56,10 @@ namespace Simulant.Simulation.Runtime
                 var param = actionId == 3 ? (ushort)30 : (ushort)0;
                 SetStatus(actor, id, seconds, param, actor);
                 actor.Entity.ExecuteActionEffect(actionId, actor.Entity);
+                // 本机没有真正按下技能，需补播角色动作；其他网络角色仍由结算演出驱动。
+                if (actor.Entity.Identity.Slot == 0 &&
+                    GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var action))
+                    actor.Entity.PlayBlendTimeline((ushort)action.AnimationEnd.RowId);
                 _scheduler.ScheduleAfter(seconds, () =>
                 {
                     lock (_gate)
@@ -65,6 +69,7 @@ namespace Simulant.Simulation.Runtime
                             RemoveStatus(actor, id);
                     }
                 }, "模拟技能状态结束");
+                return true;
             }
         }
     }

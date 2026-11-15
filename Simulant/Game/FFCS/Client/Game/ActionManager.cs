@@ -14,6 +14,20 @@ namespace Simulant.Game.FFCS.Client.Game
             => InstancePtr.As<ActionManager>();
 
         public MemoryField<float> AnimationLock => Ptr.Field<float>(0x08);
+
+        // 迁移自 FFXIVClientStructs ActionManager；复用客户端处理冷却更新的方法。
+        [SigPattern("E8 * * * * 8B D0 48 8B CD 8B F0")]
+        public static IntPtr GetRecastGroupFuncPtr { get; set; }
+        public int GetRecastGroup(uint actionId) => GetRecastGroupFuncPtr.Call<int>(Ptr, 1, actionId);
+
+        [SigPattern("40 53 48 83 EC 20 48 63 DA 85 D2")]
+        public static IntPtr GetRecastGroupDetailFuncPtr { get; set; }
+        public IntPtr GetRecastGroupDetail(int group) => GetRecastGroupDetailFuncPtr.Call<IntPtr>(Ptr, group);
+
+        [SigPattern("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 8B F2 0F 29 74 24 ?? 0F B6 D2")]
+        public static IntPtr SetCooldownFuncPtr { get; set; }
+        public void SetCooldown(uint actionId, float elapsed, float total)
+            => SetCooldownFuncPtr.Call(Ptr, 1, actionId, elapsed, total);
         // [FieldOffset(0x184), FixedSizeArray] internal FixedSizeArray80<RecastDetail> _cooldowns;
         public MemoryField<float> DistanceToTargetHitbox => Ptr.Field<float>(0x7E8); // distance to target minus both self & target hitbox radius, clamped to 0
 
