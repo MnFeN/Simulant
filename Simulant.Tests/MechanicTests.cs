@@ -15,6 +15,21 @@ namespace Simulant.Tests
 {
     internal static class MechanicTests
     {
+        public static void FixedAvoidableHitsAndBoundaryFailuresUseShortMessages()
+        {
+            var roles = new[] { "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4" };
+            var hit = MechanicError.Fixed("第 1 组光波第 2 次", Array.Empty<int>(), new[] { 3, 2, 3 });
+            Assert(hit.Format(0, slot => roles[slot]) == "第 1 组光波第 2 次技能击中了 H1 H2。",
+                "固定位置的避让技能应直接报告命中名单，去重后按小队顺序显示。");
+            Assert(hit.Offenders.Count == 0, "精简报错不能改变已有的责任归属规则。");
+            var boundary = MechanicError.Boundary("电网", 7);
+            Assert(boundary.Format(0, slot => roles[slot]) == "D4 踩到了电网。" && boundary.Offenders.SequenceEqual(new[] { 7 }),
+                "电网逐人报告，不能把所有出界队员合成一条范围伤害错误。");
+            var targeted = MechanicError.Targeted("MT 的黑暗冰封", Array.Empty<int>(), new[] { 2 }, 0);
+            Assert(targeted.Format(0, slot => roles[slot]).Contains("· 点名：MT"),
+                "无人应吃的点名伤害仍需保留点名者，不能当作固定位置范围伤害。");
+        }
+
         public static void CorrectSelfBaitWithExtraHitSuggestsPositionWithoutAssigningBlame()
         {
             var error = MechanicError.Bait("第 8 轮 D3 的扇形点名", new[]

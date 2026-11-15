@@ -227,6 +227,9 @@ namespace Simulant.Simulation.Runtime
                         continue;
                     }
 
+                    if (!targetable || !state.Options.AttackTarget)
+                        CancelMeleeApproach(state, now);
+
                     UpdateMovement(state, now);
                     RefreshCombat(state, now, inCombat, targetable);
 
@@ -251,7 +254,7 @@ namespace Simulant.Simulation.Runtime
                     else
                         CancelOwnCast(state);
 
-                    UpdateIdle(state, now);
+                    UpdateIdle(state, now, targetable);
                 }
 
                 QueueTick();
@@ -336,7 +339,7 @@ namespace Simulant.Simulation.Runtime
                 state.ActionIndex = (state.ActionIndex + 1) % actions.Loop.Length;
         }
 
-        private void UpdateIdle(State state, double now)
+        private void UpdateIdle(State state, double now, bool targetable)
         {
             if (state.Move != null || state.ManualMovement || state.Actor.IsMoving || now < state.NextIdle || state.Options.IdleRadius <= 0)
                 return;
@@ -350,7 +353,8 @@ namespace Simulant.Simulation.Runtime
             var position = state.Anchor + new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * radius;
 
             // 以原站位为锚，不累计漂移；已经在近战范围内时也不因闲逛丢失攻击距离。
-            if (state.Actions?.Melee == true && Vector2.Distance(state.Anchor, _targetPosition) <= _targetRadius + 3 &&
+            if (targetable && state.Options.AttackTarget && state.Actions?.Melee == true &&
+                Vector2.Distance(state.Anchor, _targetPosition) <= _targetRadius + 3 &&
                 Vector2.Distance(position, _targetPosition) > _targetRadius + 2.8)
                 return;
 
@@ -399,15 +403,24 @@ namespace Simulant.Simulation.Runtime
             state.OwnCast = 0;
         }
 
-        private void QueueTick()
+        private void QueueTick(bool immediate = false)
         {
-            if (_disposed || _tick != null)
+            if (_disposed)
                 return;
+
+            if (_tick != null)
+            {
+                // 紧急意图提前唤醒同一个共享更新节点，不额外等待最多 0.1 秒的行为轮询。
+                if (!immediate || _tick.Seconds <= _scheduler.ElapsedSeconds || !_tick.Cancel())
+                    return;
+
+                _tick = null;
+            }
 
             foreach (var state in _states.Values)
                 if (_target != null || state.Move != null || state.ManualMovement || state.InCombat || state.SelectedTarget != 0xE0000000)
                 {
-                    _tick = _scheduler.ScheduleAfter(TickSeconds, _update, "更新假玩家战斗与走位意图");
+                    _tick = _scheduler.ScheduleAfter(immediate ? 0 : TickSeconds, _update, "更新假玩家战斗与走位意图");
                     return;
                 }
         }

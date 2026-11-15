@@ -10,6 +10,8 @@ namespace Simulant.Simulation.Mechanics
     public sealed class AreaMechanic : SimMechanic
     {
         public ActionArea Area { get; set; }
+        /// <summary>可预先锁定站位，在技能命中时结算；为空时使用结算当时的快照。</summary>
+        public PartySnapshot LockedSnapshot { get; set; }
         public Vector2 Center { get; set; }
         public float Heading { get; set; }
         /// <summary>默认失败时中断；设为 Warning 时仍记录失败，但允许后续结算和时间轴继续。</summary>
@@ -40,6 +42,7 @@ namespace Simulant.Simulation.Mechanics
 
         protected override MechanicResult Evaluate(PartySnapshot snapshot)
         {
+            snapshot = LockedSnapshot ?? snapshot;
             var center = CenterAtResolve?.Invoke(snapshot) ?? Center;
             var heading = HeadingAtResolve?.Invoke(snapshot) ?? Heading;
             var participants = snapshot.InArea(Area, center, heading, Exclude);

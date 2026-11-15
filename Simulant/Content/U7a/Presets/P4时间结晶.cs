@@ -29,9 +29,7 @@ namespace Simulant.Content.U7a.Presets
         public override WaymarkLayout Waymarks => U7a.Waymarks;
         public override string Description => 
             "红色同点名按优先级，高左低右；\n" +
-            "蓝色固定土水冰暗分别标记 1、2、3、4，面朝南侧从左至后吃白圈。\n\n" +
-            "/e sim ac 沉稳咏唱／亲疏自行 可模拟防击退；\n" +
-            "/e sim ac 冲刺 可模拟冲刺。";
+            "蓝色固定土水冰暗分别标记 1、2、3、4，面朝南侧从左至后吃白圈。";
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
             new ComboBoxOption<int>(nameof(CrystallizeTimeLogic.PlayerSlot), "自身职能", 1,
@@ -44,18 +42,6 @@ namespace Simulant.Content.U7a.Presets
             {
                 [CrystalSolution.Knockback] = "正攻击退", [CrystalSolution.YAntiKnockback] = "Y 字防击退逃课"
             }),
-            new ComboBoxOption<CrystalDebuff>(nameof(CrystallizeTimeLogic.InitialDebuff), "初始点名", CrystalDebuff.Random,
-                new Map<CrystalDebuff> {
-                    [CrystalDebuff.Random] = "全随机", 
-                    [CrystalDebuff.RandomRed] = "随机红龙", 
-                    [CrystalDebuff.RandomBlue] = "随机蓝龙",
-                    [CrystalDebuff.RedWind] = "红龙 + 黑暗暴风（风）", 
-                    [CrystalDebuff.RedIce] = "红龙 + 黑暗冰封（冰）", 
-                    [CrystalDebuff.BlueWater] = "蓝龙 + 黑暗狂水（水）", 
-                    [CrystalDebuff.BlueEarth] = "蓝龙 + 黑暗神圣（土）",
-                    [CrystalDebuff.BlueDark] = "蓝龙 + 暗炎喷发（暗）", 
-                    [CrystalDebuff.BlueIce] = "蓝龙 + 黑暗冰封（冰）"
-                }),
             new ComboBoxOption<string>(nameof(CrystallizeTimeLogic.RedPriority), "红组优先级", CrystallizeTimePlan.DefaultRedPriority,
                 new Map<string>
                 {
@@ -65,6 +51,18 @@ namespace Simulant.Content.U7a.Presets
                     ["23184567"] = "H1 MT ST D1-4 H2（日服）"
                 },
                 "红冰、红风各自比较优先级，高优先级去左，低优先级去右。"),
+            new ComboBoxOption<CrystalDebuff>(nameof(CrystallizeTimeLogic.InitialDebuff), "初始点名", CrystalDebuff.Random,
+                new Map<CrystalDebuff> {
+                    [CrystalDebuff.Random] = "全随机",
+                    [CrystalDebuff.RandomRed] = "随机红龙",
+                    [CrystalDebuff.RandomBlue] = "随机蓝龙",
+                    [CrystalDebuff.RedWind] = "红龙 + 黑暗暴风（风）",
+                    [CrystalDebuff.RedIce] = "红龙 + 黑暗冰封（冰）",
+                    [CrystalDebuff.BlueWater] = "蓝龙 + 黑暗狂水（水）",
+                    [CrystalDebuff.BlueEarth] = "蓝龙 + 黑暗神圣（土）",
+                    [CrystalDebuff.BlueDark] = "蓝龙 + 暗炎喷发（暗）",
+                    [CrystalDebuff.BlueIce] = "蓝龙 + 黑暗冰封（冰）"
+                }),
             new ComboBoxOption<CrystalWave>(nameof(CrystallizeTimeLogic.Wave), "光波起始方向", CrystalWave.Random,
                 new Map<CrystalWave>
                 {
@@ -82,7 +80,7 @@ namespace Simulant.Content.U7a.Presets
                     [CrystalPurple.AntiDiagonal] = "副斜向（／）"
                 }),
             new CheckBoxOption(nameof(CrystallizeTimeLogic.FastOpening), "开场读条加速", false,
-                "开场两个咏唱缩短为 1 秒，后续机制同步提前。")
+                "开场咏唱缩短为 1 秒，后续机制同步提前。")
         };
     }
 
@@ -155,16 +153,16 @@ namespace Simulant.Content.U7a.Presets
                 if (--pending != 0)
                     return;
 
-                _shiva.Entity.ActorControl(ActorControlCategory.SetModelState, 4);
-                _shiva.Entity.ActorControl(ActorControlCategory.UnkVisControl, 0, 1, _wyrm.Id);
                 Scheduler.ScheduleAfter(3, BeginEncounter, "开始时间结晶双读条");
             }
 
-            void Spawn(uint id, uint name, Vector2 pos, Action<SimActor> accept, bool hidden = false, uint layout = 0, float heading = (float)Math.PI)
+            void Spawn(uint id, uint name, Vector2 pos, Action<SimActor> accept, bool hidden = false, uint layout = 0, float heading = (float)Math.PI,
+                ushort? modelCharaId = null)
                 => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
                 {
                     BNpcBaseId = id,
                     BNpcNameId = name,
+                    ModelCharaId = modelCharaId,
                     LayoutId = layout,
                     Pos = new Vector3(pos, 0),
                     Heading = heading,
@@ -180,7 +178,8 @@ namespace Simulant.Content.U7a.Presets
                     Ready();
                 });
 
-            Spawn(17833, 12809, Center + new Vector2(0, 5), actor => _shiva = actor, layout: 0xA55C01, heading: 0);
+            // 直接使用 Transformation 547 对应的圣龙模型，跳过 StanceChange 45 的变身动画。
+            Spawn(17833, 12809, Center + new Vector2(0, 5), actor => _shiva = actor, layout: 0xA55C01, heading: 0, modelCharaId: 4376);
             Spawn(17835, 9832, Center, actor => _gaia = actor, layout: 0xA55C02);
 
             PrepareCrystal(Ready);
@@ -309,13 +308,12 @@ namespace Simulant.Content.U7a.Presets
             }
         }
 
-        private void Move(int slot, SimPosition area, double arrival, double hold = 120, bool urgent = false, bool relativeToNow = false)
+        private void Move(int slot, SimPosition area, double arrival, double hold = 120, bool urgent = false)
         {
             if (slot == Self)
                 return;
 
-            var origin = relativeToNow ? Scheduler.ElapsedSeconds : _origin;
-            Party[slot].MoveForMechanic(area, origin + arrival, origin + hold, urgent);
+            Party[slot].MoveForMechanic(area, _origin + arrival, _origin + hold, urgent);
         }
 
         private void MoveAll(Func<int, SimPosition> area, double arrival, double hold = 120, bool urgent = false)
@@ -354,7 +352,7 @@ namespace Simulant.Content.U7a.Presets
             for (var i = 0; i < 4; i++)
                 Mark(i + 1, Party[_plan.BlueOrder[i]].Id);
 
-            MoveAll(_plan.Initial, 18.5);
+            MoveAll(_plan.Initial, CrystallizeTimePlan.SandHits[0] - 1.2);
         }
 
         private static void Mark(int number, uint id) => TriggernometryInterop.InvokeNamedCallback("mark",

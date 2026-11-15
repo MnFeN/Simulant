@@ -93,9 +93,6 @@ namespace Simulant.Content.U6b.Presets
             {
                 Party[slot].Pos = CosmoArrowPlan.SpawnArea.Sample(_random);
                 Party[slot].Heading = Heading(CosmoArrowPlan.Center - Party[slot].Pos);
-
-                if (slot != SelfSlot)
-                    Party[slot].MoveForMechanic(Party[slot].Pos, Scheduler.ElapsedSeconds + 1, Scheduler.ElapsedSeconds + 120, urgent: true);
             }
 
             var pending = 1 + _helpers.Length;
@@ -186,7 +183,7 @@ namespace Simulant.Content.U6b.Presets
 
                 foreach (var move in CosmoArrowPlan.Route(ArrowMode, Occurrence, slot))
                     timeline.At(move.Start, () => actor.MoveForMechanic(move.Area,
-                        _origin + move.Arrival, _origin + finish + 1, urgent: true), $"{CosmoArrowPlan.Roles[slot]} 天箭走位");
+                        _origin + move.Arrival, _origin + finish + 1, urgent: move.Start > 0), $"{CosmoArrowPlan.Roles[slot]} 天箭走位");
             }
 
             timeline.At(CosmoArrowPlan.FollowupCast(Occurrence), () => _boss.Cast(Occurrence == ArrowOccurrence.First ? 0x7BA6u : 0x7BA9u), "天箭后续读条");

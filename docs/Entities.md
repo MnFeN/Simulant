@@ -188,3 +188,18 @@ boss.MoveTo(new Vector2(100, 90), speed: 6, animationId: 13,
 这些检查不能与游戏自身的对象销毁原子同步，也无法识别从未观测到空槽位、且地址/ID/种类完全相同的外部复用。它们防止已知失效引用被继续使用，不构成对任意原生竞态的保证。
 
 目前没有 EObj 的原生销毁接口，回收只停止绘制并使包装失效，槽位等待下次生成包或换图复用。移动画面、原生字段偏移、动作播放和实际回收效果仍需在游戏中验证；自动化回归覆盖身份、会话归属、调度和行为清理。
+
+## 希瓦·米特隆的模型状态与部件
+
+核对回放「光暗未来绝境战 2026.11.15 00.03.27.dat」及对应客户端资源：
+
+- P2：BNpcBase 17823，ModelChara 4374（m0640 / b0001），生成包 ModelState=0、ModelAttributeFlags=0xF0。
+- P4：BNpcBase 17833，ModelChara 4375（m0640 / b0002），生成包 ModelState=0、ModelAttributeFlags=0xFC。两者主副手武器模型均为 0。
+- 以时间结晶双读条为 0 秒，P4 在 -71.194 秒收到 ActorControl 0x3F，a1=4；-71.112 秒收到 0x1E，参数 0、1、圣龙实体 ID。时间结晶开始前没有再次切换模型状态。
+- 日志中的 `[Weapon] → 4` 对应 Timeline.ModelState，不是主手装备模型。ModelState 表第 4 行指向 ActionTimeline 210（idle_sp/idle_sp_1）；具体表现依赖当前身体模型，不能把 4 当作所有模型通用的圣龙形态编号。
+
+真正的赋形控制是同一时刻的 ActorControl `0x5FB, a1=45`：客户端在 Character+0x9D8 的 TransformationContainer 中读取 StanceChange 45，其变身目标为 Transformation 547，最终替换成 ModelChara 4376（m0640 / b0003）。原先只设置 ModelState=4，身体仍是 4375，所以仍显示光形态；0xFC 修正镰刀部件不等于完成变身。用户已实测确认：只调用 0x5FB=45 即可正确变身，无需额外添加永久状态 2273/参数 547、GainEffect、0x3F=4、0x1E 或 0xFC 部件标志，但会播放完整变身动画。时间结晶从圣龙形态开始，因此当前改为在生成包中直接指定 ModelCharaId=4376，不再调用 StanceChange；这个直接生成版本仍待实机确认。
+
+0x1E 的国服 7.57 分支调用 ModelContainer 的部件处理：a1 是 0–5 的索引，a2 是部件状态，读取 BNpcBase.BNpcParts；a3 只在 a4 非零且目标实体存在时参与额外特效。希瓦的 BNpcParts=67、首个 BNpcBase=17834，但 PartSlot1=0；不能将这一条控制称为圣龙模型挂接。
+
+希瓦的离场和重现使用回放中的 ActorControl 0x197：13.100 秒播放 0x11E5 隐藏时间轴，24.837 秒定位后播放 0x1E43 显现时间轴，不再手动 DisableDraw/EnableDraw。以上原生调用仍需游戏实测确认最终演出。

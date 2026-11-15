@@ -178,10 +178,8 @@ namespace Simulant.Tests
                                 AttackTarget = false,
                                 IdleRadius = 0
                             });
-                            actor.MoveForMechanic(actor.Pos, 1, 30, urgent: true);
-
                             foreach (var move in CosmoArrowPlan.Route(mode, occurrence, slot))
-                                scheduler.Schedule(move.Start, () => actor.MoveForMechanic(move.Area, move.Arrival, 30, urgent: true));
+                                scheduler.Schedule(move.Start, () => actor.MoveForMechanic(move.Area, move.Arrival, 30, urgent: move.Start > 0));
 
                             return actor;
                         }).ToArray();

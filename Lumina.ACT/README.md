@@ -11,3 +11,5 @@ Simulant 通过 `GameDataService` 打开配置中 `FfxivPath` 指定的 `ffxiv_d
 核心和运行依赖在构建时通过 ILRepack 合并进 Simulant.dll，发布只需这一个 DLL。ACT 会先扫描程序集类型再创建插件，不能依赖模块初始化后才注册的内嵌依赖加载器。ACT、解析插件及 Machina 仍由宿主提供，不参与合并。调试符号使用 Portable PDB，以便合并时保留源码定位。
 
 日常构建不需要生成器；以后更新表定义时，需使用原备份的 TypedGenerator 和匹配客户端的 EXDSchema，仅保留 Stable 定义及对应清单，不能只改变字段名而保留错误的偏移。
+
+本地表定义修正：`StanceChange` 已按国服 7.57 客户端的原生变身流程核对，偏移 `0x04` 引用 `Transformation`，`0x06/0x08` 引用 `ActionTimeline`（原定义误指向 `Action`），`0x0A` 引用起始 `ActionTimeline`。原始列类型、偏移和列哈希未变。以后重新生成时需将这些修正同步到 schema 输入，避免覆盖。

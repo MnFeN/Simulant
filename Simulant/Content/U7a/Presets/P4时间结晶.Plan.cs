@@ -173,42 +173,50 @@ namespace Simulant.Content.U7a.Presets
             kind == CrystalDebuff.BlueWater ? "蓝水" : kind == CrystalDebuff.BlueEarth ? "蓝土" : kind == CrystalDebuff.BlueDark ? "蓝暗" : "蓝冰";
         internal static Vector2 Polar(float radius, double degrees) => Center + Direction(degrees) * radius;
         internal static Vector2 Direction(double degrees) => new Vector2((float)Math.Sin(degrees * Math.PI / 180), (float)Math.Cos(degrees * Math.PI / 180));
-        internal static SimPosition Circle(Vector2 point, float tolerance = 0.3f) => SimPosition.Ellipse(point, tolerance);
+        internal static SimPosition Circle(Vector2 point, float tolerance = 1) => SimPosition.Ellipse(point, tolerance);
         internal static SimPosition Sector(float radius, double degrees, float dr = 0.3f, double dtheta = 0.6)
             => SimPosition.AnnularSector(Center, radius, degrees * Math.PI / 180, dr, dtheta * Math.PI / 180);
 
         internal SimPosition Initial(int slot)
         {
-            if (Debuffs[slot] == CrystalDebuff.RedIce) return Sector(13, 90 * RedSide[slot]);
+            if (Debuffs[slot] == CrystalDebuff.RedIce)
+                return Circle(Polar(13, 90 * RedSide[slot]), 0.8f);
+
             // 开场暗点名先避开第一轮沙漏；五人土分摊在沙漏结算后另行集合。
             if (Debuffs[slot] == CrystalDebuff.BlueDark)
-                return Sector(19, 140 * NorthSlowSide, 0.25f, 0.5);
-            return Sector(19, 40 * (IsRed(slot) ? RedSide[slot] : -NorthSlowSide), 0.2f, 0.5);
+                return Corner(NorthSlowSide, 12.220099f, -14.809091f);
+            return Corner(IsRed(slot) ? RedSide[slot] : -NorthSlowSide, 12.220099f, 14.809091f);
         }
-        internal SimPosition Stack => Sector(16, 135 * NorthSlowSide, 2, 7);
-        internal SimPosition NorthRest => Circle(Polar(6, -150 * NorthSlowSide), 0.2f);
-        internal SimPosition SouthRest => Circle(Polar(6, 30 * NorthSlowSide), 0.2f);
 
-        internal SimPosition Wind(int side) => Circle(Polar(19, 30 * side), 0.1f);
+        // 圆心到场中为 19.2 米、到相邻沙漏为 12.8 米；0.8 米相切圆内使用 0.7 米容差。
+        private static SimPosition Corner(int side, float x, float y) => Circle(Center + new Vector2(side * x, y), 0.7f);
+        internal SimPosition Stack => Sector(16, 135 * NorthSlowSide, 3, 7);
+        // 点名者缩小随机区；距水晶的最小距离约 11.15 米，与参与者最远相距 4.97 米。
+        internal SimPosition StackFor(int slot) => Debuffs[slot] == CrystalDebuff.BlueEarth
+            ? Sector(16, 135 * NorthSlowSide, 1, 3) : Stack;
+        // 跨线窗口不足一秒：等待区靠近中线，南北保留随机性，东西限制最大横移路程。
+        internal SimPosition NorthRest => SimPosition.Ellipse(Center + new Vector2(-3 * NorthSlowSide, -6.5f), 0.9f, 0.35f);
+        // 红风留在正南，先横向躲光波，不能从另一名红风的撞头位置穿回场中。
+        internal SimPosition SouthRest => SimPosition.Ellipse(Canonical(-2, 18.5f), 0.4f, 0.25f);
+
+        internal SimPosition Wind(int side) => Circle(Polar(19, 30 * side), 0.9f);
+        internal SimPosition WindApproach => Circle(Polar(17.5f, -30 * NorthSlowSide), 0.9f);
         internal SimPosition WindRider(Vector2 wind)
         {
-            var heading = Math.Atan2(Center.X - wind.X, Center.Y - wind.Y);
-            // 以实际红风站位为圆心，避免独立随机后把 30 米击退的角度误差放大。
-            return SimPosition.AnnularSector(wind, 2.5f, heading, 0.35f, 0.6 * Math.PI / 180);
+            // 随实际红风位置平移，中轴固定朝场内，不随红风偏离预设中心而转向。
+            return SimPosition.AnnularSector(wind, 2, Math.PI - 35 * NorthSlowSide * Math.PI / 180,
+                0.9f, 15 * Math.PI / 180);
         }
         internal SimPosition RedAfterIce(int side)
         {
             if (side == NorthSlowSide)
                 return Stack;
 
-            // 半径 0.8 米的圆同时内切场边、外切北侧沙漏的 12 米范围，取靠侧边的交点。
-            const double radius = 20 - 0.8;
-            var offset = Math.Acos((radius * radius + 11 * 11 - 12.8 * 12.8) / (2 * radius * 11));
-            var angle = 120 - offset * 180 / Math.PI;
-            return Circle(Polar((float)radius, angle * side), 0.5f);
+            return Corner(side, 18.935099f, 3.178371f);
         }
 
-        internal SimPosition RedIceNorth => Circle(Center + new Vector2(0, -16), 0.5f);
+        internal SimPosition WindWait => Corner(NorthSlowSide, 6.714999f, 17.987462f);
+        internal SimPosition RedIceNorth => Circle(Center + new Vector2(0, -16));
 
         internal IEnumerable<Move> RedIceRoute(int side, double contactTime)
         {
@@ -216,7 +224,17 @@ namespace Simulant.Content.U7a.Presets
             yield return new Move(contactTime, 27.25, RedAfterIce(side));
             yield return new Move(side == NorthSlowSide ? 27.98 : SandHits[1] + 0.08, 31.1, RedIceNorth);
         }
-        internal SimPosition RedHead(int side) => Sector(13, 33 * side, 0.2f, 0.5);
+        internal IEnumerable<Move> RedWindRoute(Vector2 position, double contactTime)
+        {
+            // 保持撞头时的横坐标，竖直向南撤到半径 19 米处，再沿南侧靠近中线。
+            var x = position.X - Center.X;
+            var edge = new Vector2(position.X, Center.Y + (float)Math.Sqrt(Math.Max(0, 19 * 19 - x * x)));
+            var retreatEnd = contactTime + Vector2.Distance(position, edge) / 6 + 0.2;
+            yield return new Move(contactTime, retreatEnd, SimPosition.Ellipse(edge, 0.25f, 0));
+            yield return new Move(retreatEnd, 32.1, SouthRest);
+        }
+
+        internal SimPosition RedHead(int side) => Circle(Polar(13, 33 * side), 0.9f);
 
         internal Vector2 Hourglass(int index) => Polar(11, index * 60);
         internal int HourglassWave(int index)
@@ -274,14 +292,16 @@ namespace Simulant.Content.U7a.Presets
         }
 
         /// <summary>光波期间的转折点属于机制约束；沿途避开尚未爆炸的条带。</summary>
-        internal IEnumerable<Move> RewindRoute(int slot, Vector2[] puddles)
+        internal IEnumerable<Move> RewindRoute(int slot, Vector2 position, Vector2[] puddles)
         {
             // 最后一组沙漏结束后立即跨过中线，必须在下一道光波前完成，而非只赶在后续转向前。
             var redIce = Debuffs[slot] == CrystalDebuff.RedIce;
-            yield return new Move(32.46, 33.05, Circle(Canonical(1, redIce ? -14 : Debuffs[slot] == CrystalDebuff.RedWind ? 5 : -5), 0.1f));
+            // 红风仍在正南横向跨线；下一道横向光波结束后再进场内，此时最后的沙漏已经炸完。
+            // 蓝色同样沿当前南北位置跨线，避免斜跑拖慢东西方向的避让。
+            yield return new Move(32.46, 33.05, SimPosition.Ellipse(Canonical(2, redIce ? -14 : position.Y - 100), 0.8f, 0.3f));
 
             if (IsRed(slot))
-                yield return new Move(33.48, 36.8, Circle(Canonical(-10, 7.5f), 0.15f));
+                yield return new Move(33.48, 36.8, Circle(Canonical(-10, 7.5f)));
             else
             {
                 var number = Array.IndexOf(BlueOrder, slot) + 1;
@@ -290,18 +310,18 @@ namespace Simulant.Content.U7a.Presets
 
                 if ((number == 2 || number == 3) && x > 0)
                 {
-                    yield return new Move(33.48, 35.15, Circle(Canonical(-1, 6), 0.1f));
-                    yield return new Move(35.5, 36.95, Circle(point, 0.15f));
+                    yield return new Move(33.48, 35.15, Circle(Canonical(-1.1f, 6)));
+                    yield return new Move(35.5, 36.95, Circle(point, 0.9f));
                 }
                 else
-                    yield return new Move(33.48, x > 0 ? 35.05 : number == 2 || number == 3 ? 36.75 : 36.6, Circle(point, 0.15f));
+                    yield return new Move(33.48, x > 0 ? 35.05 : number == 2 || number == 3 ? 36.75 : 36.6, Circle(point, 0.9f));
             }
 
             var staging = Canonical(-10, SecondSide > 0 ? 13 : 5);
             if (IsY)
                 staging.X = Rewind(slot).Midpoint().X;
 
-            yield return new Move(37.8, IsY ? 39.7 : 41, Circle(staging, 0.15f));
+            yield return new Move(37.8, IsY ? 39.7 : 41, Circle(staging));
             yield return new Move(39.92, IsY ? 41.5 : 43.6, Rewind(slot));
         }
 
@@ -309,7 +329,7 @@ namespace Simulant.Content.U7a.Presets
         {
             var x = (position.X - 100) * -FirstSide;
             var arrival = SecondSide > 0 && position.Y > 109 ? 37.25 : 38.6;
-            return new Move(Math.Max(now, x > 10 ? 35.5 : now), arrival, Circle(Canonical(x > 0 ? 4 : -10, 7.5f), 0.1f));
+            return new Move(Math.Max(now, x > 10 ? 35.5 : now), arrival, Circle(Canonical(x > 0 ? 4 : -10, SecondSide > 0 ? 6 : 7.5f)));
         }
 
         internal SimPosition Rewind(int slot)
@@ -325,9 +345,9 @@ namespace Simulant.Content.U7a.Presets
             // 两列在两个坐标轴上的前后关系相反；各轴第一人是坦克，前四人互补。
             var firstGroup = (FirstSide == SecondSide) == left;
             var rank = Array.IndexOf(left ? LeftParty : RightParty, slot);
-            var front = rank == 0 ? 14f : 11.5f + (rank - 1) * 0.45f;
-            var back = 8f + rank * 0.35f;
-            return Circle(Center + new Vector2(FirstSide * (firstGroup ? front : back), SecondSide * (firstGroup ? back : front)), 0.12f);
+            var front = rank == 0 ? 14.5f : 11.5f + (rank - 1) * 0.2f;
+            var back = rank == 0 ? 9 : 8.5f;
+            return Circle(Center + new Vector2(FirstSide * (firstGroup ? front : back), SecondSide * (firstGroup ? back : front)));
         }
 
         internal SimPosition Spread(int slot)
@@ -363,8 +383,8 @@ namespace Simulant.Content.U7a.Presets
             return nearby.Length != 0 ? nearby[random.Next(nearby.Length)] : random.Next(positions.Length);
         }
 
-        internal static SimPosition AkhMorn(int slot) => Circle(Center + new Vector2(LeftParty.Contains(slot) ? -5 : 5, 3), 0.6f);
-        internal static SimPosition MornAfah => Circle(Center + new Vector2(0, 4), 0.7f);
+        internal static SimPosition AkhMorn(int slot) => Circle(Center + new Vector2(LeftParty.Contains(slot) ? -5 : 5, 3));
+        internal static SimPosition MornAfah => Circle(Center + new Vector2(0, 4));
 
         internal static int[] FrontFour(Vector2[] positions, int wave, int side)
             => Enumerable.Range(0, 8).OrderByDescending(i => side * (wave == 0 ? positions[i].X : positions[i].Y)).ToArray();

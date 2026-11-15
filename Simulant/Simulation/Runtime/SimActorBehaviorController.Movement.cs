@@ -12,8 +12,8 @@ namespace Simulant.Simulation.Runtime
             public Vector2 Destination;
             public readonly List<Vector2> Points = new List<Vector2>();
             public int Point;
-            public double Arrival, NotBefore, Latest, HoldUntil;
-            public bool Immediate, StageFirst, Arrived, Running;
+            public double Arrival, NotBefore, Latest, HoldUntil, StageAt;
+            public bool Immediate, StageFirst, Arrived, Running, ReturnToMelee;
             public byte Speed = RunSpeed;
             public Func<SimPosition> Follow;
             public double SampleFirst, SampleSecond, NorthHeading;
@@ -182,6 +182,13 @@ namespace Simulant.Simulation.Runtime
 
                     TrySprint(plan, position, now);
 
+                    if (plan.StageFirst)
+                    {
+                        // 贪刀前也留出各自的反应时间；只使用往返和输出之外的空闲，不挤占机制走位。
+                        var spare = Math.Max(0, plan.Arrival - now - TravelTime(position, plan) - 1);
+                        plan.StageAt = now + Math.Min(spare, 0.5 + _random.NextDouble() * 1.5);
+                    }
+
                     // 延迟到达只推迟实体自己的出发安排，仍预留更新余量；关闭或紧急时尽早出发。
                     var earliest = now + TravelTime(position, plan);
                     plan.Arrival = Math.Max(earliest, plan.Arrival);
@@ -203,7 +210,7 @@ namespace Simulant.Simulation.Runtime
                 if (plan.Immediate)
                     CancelOwnCast(state);
 
-                QueueTick();
+                QueueTick(plan.Immediate);
             }
         }
 
@@ -225,6 +232,7 @@ namespace Simulant.Simulation.Runtime
             {
                 Destination = destination,
                 Immediate = true,
+                ReturnToMelee = true,
                 HoldUntil = now
             };
             plan.Points.Add(destination);
@@ -233,6 +241,30 @@ namespace Simulant.Simulation.Runtime
             state.Move = plan;
             // 后续闲逛以新的近战位置为中心，不再回到已经结束的远处机制点。
             state.Anchor = destination;
+        }
+
+        private void CancelMeleeApproach(State state, double now)
+        {
+            var plan = state.Move;
+            if (plan == null || !plan.ReturnToMelee && !(plan.StageFirst && plan.Point == 0))
+                return;
+
+            _movement.Stop(state.Actor);
+            SetSprintEffect(state, false);
+
+            if (plan.ReturnToMelee)
+            {
+                state.Move = null;
+                state.Anchor = state.Actor.Pos;
+                state.NextIdle = now + 3;
+                return;
+            }
+
+            // Boss 已不可攻击，只取消可选的贪刀绕路，保留真正的机制目的地和期限。
+            plan.Points.Clear();
+            plan.Points.Add(plan.Destination);
+            plan.Point = 0;
+            plan.StageFirst = false;
         }
 
         private void UpdateMovement(State state, double now)
@@ -382,7 +414,7 @@ namespace Simulant.Simulation.Runtime
         private bool MustRun(State state, double now)
         {
             var plan = state.Move;
-            return plan != null && !plan.Arrived && (plan.Immediate || plan.Running || plan.StageFirst && plan.Point == 0 ||
+            return plan != null && !plan.Arrived && (plan.Immediate || plan.Running || plan.StageFirst && plan.Point == 0 && now >= plan.StageAt ||
                 now + TravelTime(state.Actor.Pos, plan) >= plan.Arrival);
         }
 

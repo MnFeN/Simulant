@@ -13,6 +13,51 @@ namespace Simulant.Tests
 {
     internal static class BehaviorMovementTests
     {
+        public static void MeleeApproachWaitsAndStopsWhenBossCannotBeAttacked()
+        {
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var boss = new SimActor(new EntityTestWorld().CreateCharacter(0), casts, movement);
+                boss.Entity.HitboxRadius = 2;
+                behavior.SetTarget(boss);
+                var waiting = CreateActor(behavior, movement, casts, job: Job.VPR, position: new Vector2(4, 0));
+                var returning = CreateActor(behavior, movement, casts, job: Job.MNK, position: new Vector2(20, 0));
+                var urgent = CreateActor(behavior, movement, casts, job: Job.DRK, position: new Vector2(4, 0));
+                var stopped = Vector2.Zero;
+                waiting.MoveForMechanic(new Vector2(0, 15), 12, holdUntil: 14);
+                urgent.MoveForMechanic(new Vector2(4, 5), 2, holdUntil: 14, urgent: true);
+
+                scheduler.Schedule(0.3, () =>
+                {
+                    Assert(waiting.Pos == new Vector2(4, 0) && !waiting.IsMoving,
+                        "机制时间充裕时，不能接到指令就立刻转向贪刀位置。");
+                    Assert(returning.IsMoving, "检查前远离且无机制的近战应已开始回近战范围。");
+                    boss.Entity.IsTargetable = false;
+                });
+                scheduler.Schedule(0.6, () => stopped = returning.Pos);
+                scheduler.Schedule(2.3, () =>
+                {
+                    Assert(waiting.Pos == new Vector2(4, 0) && !waiting.IsMoving,
+                        "Boss 不可选中后，尚未开始的贪刀绕路应取消，保留机制目的地。");
+                    Assert(returning.Pos == stopped && !returning.IsMoving,
+                        "Boss 不可选中后，已经开始的返回近战动作也应停止。");
+                    Assert(urgent.Pos == new Vector2(4, 5), "Boss 不可选中不能取消真正的机制移动。");
+                    done.Set();
+                });
+                scheduler.Start();
+                Assert(done.Wait(4000) && failure == null, "近战贪刀与目标状态检查失败：" + failure);
+            }
+        }
+
         public static void DynamicFollowingKeepsItsOffsetAndEndsWithoutOverridingNewMovement()
         {
             Exception failure = null;
@@ -645,10 +690,10 @@ namespace Simulant.Tests
                     immediate.MoveForMechanic(new Vector2(12, 0), 6, holdUntil: 7);
                 });
 
-                scheduler.Schedule(3.1, () =>
+                scheduler.Schedule(3.7, () =>
                 {
                     Assert(normal.Pos == new Vector2(4, 0) && !normal.IsMoving,
-                        "下一次仍使用原来的远处站位时，有足够空闲应先回到近战输出。");
+                        "下一次仍使用原来的远处站位时，应在随机反应时间后回到近战输出。");
 
                     foreach (var actor in new[]
                     {

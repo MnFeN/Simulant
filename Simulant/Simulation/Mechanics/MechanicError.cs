@@ -8,6 +8,7 @@ namespace Simulant.Simulation.Mechanics
     public sealed class MechanicError
     {
         private readonly bool _isBait;
+        private readonly bool _isBoundary;
         private bool _hasAttribution;
         private string _selfHint;
         private string _detail;
@@ -26,7 +27,8 @@ namespace Simulant.Simulation.Mechanics
         public IReadOnlyList<int> Offenders { get; private set; } = Array.AsReadOnly(Array.Empty<int>());
 
         private MechanicError(string description, IEnumerable<int> expected, IEnumerable<int> actual,
-            string reason, int? source = null, bool isBait = false, int? expectedTarget = null, int? actualTarget = null)
+            string reason, int? source = null, bool isBait = false, int? expectedTarget = null, int? actualTarget = null,
+            bool isBoundary = false)
         {
             if (string.IsNullOrWhiteSpace(description))
                 throw new ArgumentException("机制描述不能为空。", nameof(description));
@@ -44,6 +46,7 @@ namespace Simulant.Simulation.Mechanics
             ExpectedTarget = expectedTarget;
             ActualTarget = actualTarget;
             _isBait = isBait;
+            _isBoundary = isBoundary;
         }
 
         public static MechanicError Fixed(string description, IEnumerable<int> expected, IEnumerable<int> actual, string reason = null)
@@ -62,6 +65,11 @@ namespace Simulant.Simulation.Mechanics
         /// <summary>层数、距离、方向、时机、重复受伤等规则错误；不编造应有名单或自动把受影响者当成责任人。</summary>
         public static MechanicError Rule(string description, IEnumerable<int> affected, string reason)
             => new MechanicError(description, null, affected, reason);
+
+        /// <summary>每位进入场地危险边界的队员单独报告，不比较参与名单。</summary>
+        public static MechanicError Boundary(string description, int slot)
+            => new MechanicError(description, null, new[] { slot }, null, isBoundary: true)
+                .WithAttribution(new[] { slot });
 
         /// <summary>根据实际范围、状态等明确的个人处理条件指定画叉对象；不能仅凭偏离导航点或被波及归责。</summary>
         public MechanicError WithAttribution(IEnumerable<int> offenders, string selfHint = null)
@@ -85,6 +93,12 @@ namespace Simulant.Simulation.Mechanics
         {
             if (name == null)
                 throw new ArgumentNullException(nameof(name));
+
+            if (_isBoundary)
+                return name(Actual[0]) + " 踩到了" + Description + "。";
+
+            if (!_isBait && !Source.HasValue && Expected?.Count == 0)
+                return Description + "技能击中了 " + Names(Actual, null, name) + "。";
 
             var lines = new List<string>
             {

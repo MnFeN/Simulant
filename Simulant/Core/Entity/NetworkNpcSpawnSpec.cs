@@ -37,6 +37,8 @@ namespace Simulant.Core.Entity
         public uint GimmickId;
         public byte ModelScaleId;
         public byte ModelState;
+        /// <summary>模型部件显隐标志；按实体生成包设置，与武器装备编号无关。</summary>
+        public byte ModelAttributeFlags;
         public uint DisplayFlags = 0x4000B;
         /// <summary>角色进入战斗列表后，通过 ActorControl 初始化可选中状态；可见不等于可选中。</summary>
         public bool Targetable = true;
@@ -137,6 +139,7 @@ namespace Simulant.Core.Entity
                     DisplayFlags = DisplayFlags,
                     ModelScaleId = ModelScaleId,
                     ModelState = ModelState,
+                    ModelAttributeFlags = ModelAttributeFlags,
                     MainhandWeaponModel = MainhandWeaponModel,
                     OffhandWeaponModel = OffhandWeaponModel
                 }

@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace Simulant.Game.FFCS.Client.Game.Character
 {
-    /// <summary>FFCS 的技能结算接收入口；当前只封装一个目标、没有伤害效果的演出调用。</summary>
+    /// <summary>FFCS 的技能结算接收入口；封装指定位置或单个目标、没有伤害效果的演出调用。</summary>
     public static class ActionEffectHandler
     {
         // 来源：FFXIVClientStructs/FFXIV/Client/Game/Character/ActionEffectHandler.cs。
@@ -45,9 +45,9 @@ namespace Simulant.Game.FFCS.Client.Game.Character
 
         private static int _globalSequence;
 
-        /// <summary>向原生入口提供完整主目标及空的八项效果。坐标采用游戏原生 XYZ（Y 为高度）。</summary>
+        /// <summary>向原生入口提供演出坐标及空的八项效果；目标 0xE0000000 表示无目标。坐标采用游戏原生 XYZ（Y 为高度）。</summary>
         public static void ReceiveVisual(uint casterEntityId, IntPtr casterPtr, uint actionId, float heading,
-            Vector3 targetPosition, GameObjectId targetId)
+            Vector3 targetPosition, GameObjectId targetId, float animationLock = 0)
         {
             if (ReceiveFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("原生技能结算接收函数尚未定位。");
@@ -55,7 +55,7 @@ namespace Simulant.Game.FFCS.Client.Game.Character
             if (casterPtr == IntPtr.Zero || casterEntityId == 0 || casterEntityId == 0xE0000000)
                 throw new ArgumentException("技能演出的施法者身份或地址无效。", nameof(casterEntityId));
 
-            if (targetId.ObjectId == 0 || targetId.ObjectId == 0xE0000000)
+            if (targetId.ObjectId == 0)
                 throw new ArgumentException("技能演出的目标身份无效。", nameof(targetId));
 
             if (actionId == 0 || actionId > ushort.MaxValue)
@@ -63,6 +63,9 @@ namespace Simulant.Game.FFCS.Client.Game.Character
 
             if (!IsFinite(targetPosition.X) || !IsFinite(targetPosition.Y) || !IsFinite(targetPosition.Z))
                 throw new ArgumentOutOfRangeException(nameof(targetPosition), "技能目标坐标必须为有限数。");
+
+            if (!IsFinite(animationLock) || animationLock < 0)
+                throw new ArgumentOutOfRangeException(nameof(animationLock), "技能动画锁时长必须为非负有限数。");
 
             var rotation = PacketCodec.EncodeUShortHeading(heading);
             var sequence = unchecked((uint)Interlocked.Increment(ref _globalSequence));
@@ -75,11 +78,12 @@ namespace Simulant.Game.FFCS.Client.Game.Character
                 AnimationTargetId = targetId,
                 ActionId = actionId,
                 GlobalSequence = sequence,
+                AnimationLock = animationLock,
                 BallistaEntityId = 0xE0000000,
                 RotationInt = rotation,
                 SpellId = (ushort)actionId,
                 ActionType = 1,
-                NumTargets = 1,
+                NumTargets = (byte)(targetId.ObjectId == 0xE0000000 ? 0 : 1),
             };
 
             var memory = NamazuInterop.Plugin.Memory;
@@ -98,7 +102,8 @@ namespace Simulant.Game.FFCS.Client.Game.Character
 
                 memory.Write(buffer, targetPosition);
                 memory.Write(buffer + 0x10, header);
-                memory.Write(buffer + 0x78, targetId.Id);
+                if (header.NumTargets != 0)
+                    memory.Write(buffer + 0x78, targetId.Id);
                 // 自定义结构体仅写入远程内存，绝不作为 GreyMagic 的按值调用参数。
                 ReceiveFuncPtr.Call(casterEntityId, casterPtr, buffer, buffer + 0x10, buffer + 0x38, buffer + 0x78);
             }

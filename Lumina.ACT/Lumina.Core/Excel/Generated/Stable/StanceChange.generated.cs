@@ -20,11 +20,12 @@ namespace Lumina.Excel.Sheets
         public uint RowOffset => offset;
         public uint RowId => row;
         public float Unknown0 => page.ReadFloat32(offset);
-        public ushort Unknown1 => page.ReadUInt16(offset + 4);
-        public global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<Action>> Action => new global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<Action>>(page, offset, offset, ActionCtor, 2);
-        public ushort Unknown2 => page.ReadUInt16(offset + 10);
+        // 本地修正：按国服 7.57 的原生变身流程核对引用目标，更新生成定义时保留。
+        public global::Lumina.Excel.RowRef<Transformation> Transformation => new global::Lumina.Excel.RowRef<Transformation>(page.Module, (uint)page.ReadUInt16(offset + 4), page.Language);
+        public global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<ActionTimeline>> ActionTimeline => new global::Lumina.Excel.Collection<global::Lumina.Excel.RowRef<ActionTimeline>>(page, offset, offset, ActionTimelineCtor, 2);
+        public global::Lumina.Excel.RowRef<ActionTimeline> InitialTimeline => new global::Lumina.Excel.RowRef<ActionTimeline>(page.Module, (uint)page.ReadUInt16(offset + 10), page.Language);
 
-        private static global::Lumina.Excel.RowRef<Action> ActionCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => new global::Lumina.Excel.RowRef<Action>(page.Module, (uint)page.ReadUInt16(offset + 6 + i * 2), page.Language);
+        private static global::Lumina.Excel.RowRef<ActionTimeline> ActionTimelineCtor(global::Lumina.Excel.ExcelPage page, uint parentOffset, uint offset, uint i) => new global::Lumina.Excel.RowRef<ActionTimeline>(page.Module, (uint)page.ReadUInt16(offset + 6 + i * 2), page.Language);
         static public StanceChange Create(global::Lumina.Excel.ExcelPage page, uint offset, uint row) => new StanceChange(page, offset, row);
     }
 }

@@ -52,7 +52,11 @@ namespace Simulant.Game
         Unk2 = 0x0019,
         /// <summary>逃离相关控制；参数未确认。</summary>
         Flee = 0x001B,
-        /// <summary>疑似可见性控制；参数含生成后的延迟、可见状态及编号，含义待核对。</summary>
+        /// <summary>
+        /// NPC 部件状态；a1：部件索引（0–5），a2：状态，按 BNpcParts 配置处理。<br />
+        /// a4 非零且 a3 对应实体存在时，额外播放关联目标特效；不是模型绑定。<br />
+        /// 国服 7.57 客户端分支已核对；保留原枚举名称兼容现有调用。
+        /// </summary>
         UnkVisControl = 0x001E,
         /// <summary>疑似动画控制；保留 Sapphire 的原名称。</summary>
         Unk3 = 0x0020,
@@ -82,7 +86,7 @@ namespace Simulant.Game
         Targetable = 0x0036,
         /// <summary>模型动画状态；a1：动画组索引（0 或 1），a2：组内动画索引（0 至 7）。</summary>
         SetAnimationState = 0x003E,
-        /// <summary>模型状态；a1：ModelState 行号。</summary>
+        /// <summary>模型状态；a1：ModelState 行号。又称 WeaponID。</summary>
         SetModelState = 0x003F,
         /// <summary>开始极限技的控制。</summary>
         LimitBreakStart = 0x0047,
@@ -423,13 +427,21 @@ namespace Simulant.Game
         SetDutyActionActive = 0x05EB,
         /// <summary>任务技能层数。</summary>
         SetDutyActionCharges = 0x05EC,
+        /// <summary>
+        /// 切换形态；a1：StanceChange 表行号，不是技能编号或模型编号。<br />
+        /// StanceChange 引用 Transformation 指定变身目标，再由 Transformation.Model 引用 ModelChara；
+        /// 过渡动画引用 ActionTimeline，而非 Action。<br />
+        /// a2-a4：7.57 的此处理分支未使用，所核对回放中均为 0。<br />
+        /// 例：a1=45 → StanceChange 45 → Transformation 547 → ModelChara 4376（希瓦的圣龙形态）。
+        /// </summary>
+        StanceChange = 0x05FB,
         /// <summary>冷却进度增量；a1：冷却组，a2：以 100 毫秒量化的增量。</summary>
         IncrementRecast = 0x0600,
         /// <summary>持续治疗；Machina 国际服定义注明从 7.10 起使用 0x604。保留旧类别，国服参数需实机核对。</summary>
         HoT = 0x0604,
         /// <summary>持续伤害；Machina 国际服定义注明从 7.10 起使用 0x605。保留旧类别，国服参数需实机核对。</summary>
         DoT = 0x0605,
-        /// <summary>驯兽师捕获相关；a1：目标 ID，a2：捕获类别，a3：累计捕获数。来自用户提供的定义，未在本项目验证。</summary>
+        /// <summary>驯兽师捕获相关；a1：目标 ID，a2：捕获类别，a3：累计捕获数。</summary>
         BeastMasterLearn = 0x060B,
         /// <summary>优雷卡进度。</summary>
         EurekaStep = 0x073A,

@@ -361,7 +361,7 @@ namespace Simulant.Core.Zone
                 if (state != lastState)
                 {
                     lastState = state;
-                    _host.LogRuntime(FormattableString.Invariant($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：{state}"));
+                    _host.LogVerbose(FormattableString.Invariant($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：{state}"));
                 }
 
                 return ready;
@@ -383,7 +383,7 @@ namespace Simulant.Core.Zone
                         _host.EnvironmentService.PlayMapEffect(slot, flag.Value);
                 }
 
-                _host.LogRuntime(FormattableString.Invariant($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：地图已就绪，已提交阶段「{phaseData.Name}」的天气、BGM 和场地效果。"));
+                _host.LogVerbose(FormattableString.Invariant($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：地图已就绪，已提交阶段「{phaseData.Name}」的天气、BGM 和场地效果。"));
             }
 
             return _phaseApplication.ApplyAsync(Prepare, Apply, Ready);
@@ -476,7 +476,7 @@ namespace Simulant.Core.Zone
                 var groupsReady = false;
 
                 void LogTiming(string message)
-                    => _host.LogRuntime(FormattableString.Invariant($"[出生圈计时] 区域 {territory.Value.RowId}，{clock.Elapsed.TotalSeconds:F3} 秒：{message}"));
+                    => _host.LogVerbose(FormattableString.Invariant($"[出生圈计时] 区域 {territory.Value.RowId}，{clock.Elapsed.TotalSeconds:F3} 秒：{message}"));
 
                 string lastState = null;
 

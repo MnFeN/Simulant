@@ -37,8 +37,8 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(13.1, () =>
             {
                 _shiva.Entity.SetTargetable(false);
-                _shiva.Entity.DisableDraw();
-                _wyrm.Entity.DisableDraw();
+                // 回放通过隐藏时间轴离场，不能只关闭当前绘制对象。
+                _shiva.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 0x11E5);
             }, "希瓦离场");
 
             timeline.At(14.169, () =>
@@ -124,35 +124,47 @@ namespace Simulant.Content.U7a.Presets
                 }, "地板时间线消退");
             }
 
-            timeline.At(22, () =>
+            foreach (var side in new[]
             {
-                foreach (var side in new[]
+                -1,
+                1
+            })
+            {
+                var groupSide = side;
+                var enter = CrystallizeTimePlan.SandHits[0] + _random.NextDouble();
+                timeline.At(enter, () =>
                 {
-                    -1,
-                    1
-                }
+                    Move(_plan.Red(CrystalDebuff.RedWind, groupSide), _plan.Wind(groupSide), enter + 1, urgent: true);
 
-                )
-                    Move(_plan.Red(CrystalDebuff.RedWind, side), _plan.Wind(side), 23, urgent: true);
-            }, "红风穿入击退位置");
+                    if (groupSide == -_plan.NorthSlowSide)
+                        foreach (var slot in _plan.WaterGroup.Where(i => !_plan.IsRed(i)))
+                            Move(slot, _plan.WindApproach, enter + 1, urgent: true);
+                }, "沙漏爆炸后红风与同组蓝色队员穿入");
+
+                if (groupSide == -_plan.NorthSlowSide)
+                    timeline.At(enter + 1, () =>
+                    {
+                        var wind = Party[_plan.Red(CrystalDebuff.RedWind, groupSide)];
+                        foreach (var slot in _plan.WaterGroup.Where(i => !_plan.IsRed(i) && i != Self))
+                            Party[slot].FollowForMechanic(() => _plan.WindRider(wind.Pos), _origin + 24.837);
+                    }, "穿入一秒后蓝组持续对准红风");
+            }
 
             timeline.At(22.888, ResolveWater, "黑暗狂水四人分摊");
 
-            timeline.At(23.15, () =>
+            timeline.At(24.837, () =>
             {
-                var wind = Party[_plan.Red(CrystalDebuff.RedWind, -_plan.NorthSlowSide)];
-
-                foreach (var slot in _plan.WaterGroup.Where(i => !_plan.IsRed(i) && i != Self))
-                    Party[slot].FollowForMechanic(() => _plan.WindRider(wind.Pos), _origin + 24.837);
-            }, "蓝色三人持续对准红风击退");
-
-            timeline.At(24.837, ResolveIceWindDark, "冰、风、暗同时结算");
+                // 回放先将希瓦放回场中，再播放 warp/warp_end，随后才到场边释放光波。
+                _shiva.Entity.ActorSetPos(new Vector3(Center, 0), 0);
+                _shiva.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 0x1E43);
+                ResolveIceWindDark();
+            }, "希瓦显现与冰、风、暗同时结算");
 
             timeline.At(24.94, () =>
             {
                 // 在击退期间提交目标，实体从完整落点规划，结束后自行开始跑步。
                 foreach (var slot in _plan.BlueOrder)
-                    Move(slot, _plan.Stack, 27.6, urgent: true);
+                    Move(slot, _plan.StackFor(slot), 27.6, urgent: true);
             }, "击退后五人分摊");
 
             timeline.At(25.8, () =>
@@ -164,7 +176,7 @@ namespace Simulant.Content.U7a.Presets
                 }
 
                 )
-                    Move(_plan.Red(CrystalDebuff.RedWind, side), side == _plan.NorthSlowSide ? CrystallizeTimePlan.Sector(19, 20 * side, 0.2f, 0.5) : _plan.RedHead(side), 27.2, urgent: true);
+                    Move(_plan.Red(CrystalDebuff.RedWind, side), side == _plan.NorthSlowSide ? _plan.WindWait : _plan.RedHead(side), 27.2, urgent: true);
             }, "红风等候撞头");
 
             timeline.At(27.5, () => Move(_plan.Red(CrystalDebuff.RedWind, _plan.NorthSlowSide), _plan.RedHead(_plan.NorthSlowSide), 29.5, urgent: true), "第二轮沙漏后红风撞头");
@@ -201,7 +213,6 @@ namespace Simulant.Content.U7a.Presets
 
             timeline.At(46.609, () =>
             {
-                _shiva.EnableDraw();
                 _shiva.Entity.ActorMove(new Vector3(Center, 0), Heading(_plan.WaveStart(0) - Center), 0);
                 _shiva.Cast(40229);
             }, "第一次圣翼读条");
@@ -242,11 +253,28 @@ namespace Simulant.Content.U7a.Presets
                     Map(i, 8);
 
                 Map(0x28, 0x40);
-                _shiva.Entity.ActorMove(new Vector3(Center + new Vector2(-3.54f, 0), 0), 0, 0);
-                _gaia.Entity.ActorMove(new Vector3(Center + new Vector2(3.54f, 0), 0), 0, 0);
-                _wyrm.Entity.ActorMove(new Vector3(Center + new Vector2(-3.54f, 0), 0), 0, 0);
-                _wyrm.EnableDraw();
-            }, "双 Boss 返回场中");
+            }, "回场前场地效果");
+
+            timeline.At(61.715, () =>
+            {
+                // 技能包中的坐标用于演出朝向；实际回场位置仍由后续 ActorMove 同步。
+                var shivaPosition = Center + new Vector2(-3.54f, 0);
+                var gaiaPosition = Center + new Vector2(3.54f, 0);
+                _shiva.Entity.ExecuteActionEffectAt(0x9CEF, new Vector3(shivaPosition, 0), Heading(shivaPosition - _shiva.Pos), 1.1f);
+                _gaia.Entity.ExecuteActionEffectAt(0x9CB5, new Vector3(gaiaPosition, 0), Heading(gaiaPosition - _gaia.Pos), 1.1f);
+            }, "双 Boss 回场技能演出");
+
+            timeline.At(62.299, () =>
+                _gaia.Entity.ActorMove(new Vector3(Center + new Vector2(3.54f, 0), 0),
+                    PacketCodec.DecodeUShortHeading(0xE81A), 90), "暗之巫女回场落点");
+
+            timeline.At(62.483, () =>
+                _shiva.Entity.ActorMove(new Vector3(Center + new Vector2(-3.54f, 0), 0),
+                    PacketCodec.DecodeUShortHeading(0x0720), 90), "希瓦回场落点");
+
+            timeline.At(62.701, () =>
+                _wyrm.Entity.ActorMove(new Vector3(Center + new Vector2(-3.54f, 0), 0),
+                    PacketCodec.DecodeUShortHeading(0x0720), 60), "圣龙回场落点");
 
             timeline.At(63.018, () =>
             {
@@ -272,7 +300,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 _shiva.Cast(40249, target: MT);
                 _gaia.Cast(40304, target: MT);
-                MoveAll(_ => CrystallizeTimePlan.MornAfah, 77.8, 79);
+                MoveAll(_ => CrystallizeTimePlan.MornAfah, 75.8, 79);
             }, "无尽顿悟双读条与八人集合");
 
             timeline.At(78.318, () => Effect(0, 40250, 0), "无尽顿悟演出");
@@ -304,7 +332,6 @@ namespace Simulant.Content.U7a.Presets
 
                         if (s == 0)
                         {
-                            _shiva.EnableDraw();
                             _shiva.Entity.ActorMove(new Vector3(pos, 0), heading, 0);
                             _shiva.Cast(40251, omenPosition: new Vector3(pos, 0), omenHeading: heading);
                         }
@@ -327,7 +354,7 @@ namespace Simulant.Content.U7a.Presets
                 {
                     var member = slot;
 
-                    foreach (var move in _plan.RewindRoute(slot, puddles))
+                    foreach (var move in _plan.RewindRoute(slot, Party[slot].Pos, puddles))
                         Scheduler.Schedule(_origin + move.Start, () => Move(member, move.Area, move.Arrival, urgent: true), "光波、白圈与回返走位");
                 }
             }, "按白圈实际位置安排光波走位");

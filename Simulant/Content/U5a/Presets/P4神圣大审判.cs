@@ -205,7 +205,9 @@ namespace Simulant.Content.U5a.Presets
                 {
                     _hit = true;
                     ShowResultMarker(myself, "m0489trg_b0c");
-                    var message = $"[神圣大审判] {name}命中自身：自身仍在爆炸范围内。";
+                    var message = "[神圣大审判] " + MechanicError.Fixed(name, Array.Empty<int>(),
+                        result.Children.SelectMany(child => child.Participants).Select(member => member.Slot))
+                        .Format(null, slot => "自身");
                     _host.LogWarning(message);
 
                     try

@@ -41,10 +41,15 @@ namespace Simulant.Content.U7a.Presets
             mechanic.CenterAtResolve = snapshot =>
             {
                 var center = centerAtResolve?.Invoke(snapshot) ?? mechanic.Center;
-                hit = !_crystalBroken && mechanic.Area.IntersectsCircle(_crystal.Pos, _crystal.Entity.HitboxRadius, center, mechanic.Heading);
+                var crystalPosition = _crystal.Pos;
+                var crystalRadius = _crystal.Entity.HitboxRadius;
+                hit = !_crystalBroken && mechanic.Area.IntersectsCircle(crystalPosition, crystalRadius, center, mechanic.Heading);
 
                 if (hit)
+                {
                     mechanic.FailureSeverity = MechanicFailureSeverity.Fatal;
+                    _host.LogVerbose(FormattableString.Invariant($"[时间结晶] {mechanic.Name} 水晶命中判定：技能中心 ({center.X:0.000}, {center.Y:0.000})，水晶 ({crystalPosition.X:0.000}, {crystalPosition.Y:0.000})，水晶半径 {crystalRadius:0.000} 米，中心距离 {Vector2.Distance(center, crystalPosition):0.000} 米。"));
+                }
 
                 return center;
             };
@@ -104,7 +109,7 @@ namespace Simulant.Content.U7a.Presets
             return Array.Empty<int>();
         }
 
-        private AreaMechanic Avoid(string name, ActionArea area, Vector2 center, float heading = 0)
+        private AreaMechanic Avoid(string name, ActionArea area, Vector2 center, float heading = 0, int? target = null)
             => new AreaMechanic
             {
                 Name = name,
@@ -113,7 +118,7 @@ namespace Simulant.Content.U7a.Presets
                 Heading = heading,
                 MaxPlayers = 0,
                 FailureSeverity = MechanicFailureSeverity.Warning,
-                Failed = result => Report(MechanicError.Fixed(name, Array.Empty<int>(), result.Participants.Select(m => m.Slot))
+                Failed = result => Report(result.DescribeFailure(name, Array.Empty<int>(), target)
                         .WithAttribution(result.Participants.Select(m => m.Slot), "自身进入伤害范围"), result)
             };
 
@@ -197,7 +202,7 @@ namespace Simulant.Content.U7a.Presets
                 else
                 {
                     // 该动作没有预兆行；内圈按上游机制定义取 3 米，外圈仍读取技能表。
-                    var mechanic = Avoid(CrystallizeTimePlan.Roles[slot] + " 的黑暗冰封", ActionArea.FromAction(40279, innerRadius: 3), Party[slot].JudgementPosition);
+                    var mechanic = Avoid(CrystallizeTimePlan.Roles[slot] + " 的黑暗冰封", ActionArea.FromAction(40279, innerRadius: 3), Party[slot].JudgementPosition, target: slot);
                     mechanic.Visual = result => Effect(target, 40279, target);
                     mechanics.Add(ProtectCrystal(mechanic, slot));
                 }
@@ -272,21 +277,22 @@ namespace Simulant.Content.U7a.Presets
                 {
                     var extra = result.Participants.Where(m => m.Slot != slot).Select(m => m.Slot).ToArray();
                     var wrongTarget = slot != expected;
-                    var offenders = wrongTarget ? new[]
-                    {
-                        slot
-                    }.Concat(extra) : extra;
+                    // 点名身份相符不等于处理正确；自身撞头波及假队员时，不能反过来归责受击者。
+                    var offenders = wrongTarget || slot == Self ? new[] { slot } : extra;
                     var detail = wrongTarget ? "该次龙头应由 " + CrystallizeTimePlan.Roles[expected] + " 接触" :
-                        CrystallizeTimePlan.Roles[slot] + " 正确接触龙头";
+                        CrystallizeTimePlan.Roles[slot] + " 接触了分配给自己的龙头，但本次处理失败";
                     if (extra.Length != 0)
-                        detail += "；" + string.Join(" ", extra.Select(i => CrystallizeTimePlan.Roles[i])) + " 未避开本次爆炸";
+                        detail += "；接触爆炸波及 " + string.Join(" ", extra.Select(i => CrystallizeTimePlan.Roles[i]));
+
+                    var selfHint = slot != Self ? "自身未避开龙头爆炸" : wrongTarget ? "自身接触了其他队员应处理的龙头" :
+                        "自身可能接触龙头过晚或接触位置不当，导致爆炸波及队友或水晶";
 
                     Report(result.DescribeFailure(name, new[]
                     {
                         expected
                     }, slot)
                         .WithDetail(detail)
-                        .WithAttribution(offenders, wrongTarget && slot == Self ? "自身接触了其他队员应处理的龙头" : "自身未避开龙头爆炸"), result);
+                        .WithAttribution(offenders, selfHint), result);
                 },
                 Succeeded = result =>
                 {
@@ -298,7 +304,8 @@ namespace Simulant.Content.U7a.Presets
                     {
                         _heads[head].Execute(40244);
                         Scheduler.ScheduleAfter(0.7, () => _heads[head].Entity.DisableDraw(), "龙头消失");
-                        Move(slot, _plan.SouthRest, 32.1, urgent: true);
+                        foreach (var move in _plan.RedWindRoute(Party[slot].Pos, Now))
+                            Scheduler.Schedule(_origin + move.Start, () => Move(slot, move.Area, move.Arrival, urgent: true), "红风撞头后沿南侧撤离");
                     }
                     else
                     {
@@ -381,9 +388,10 @@ namespace Simulant.Content.U7a.Presets
             var outside = Enumerable.Range(0, 8).Where(i => Vector2.DistanceSquared(Party[i].JudgementPosition, Center) > 400).ToArray();
             if (outside.Length != 0)
             {
-                Report(MechanicError.Rule("电网即死", outside, "超出场地 20 米半径，触碰电网。")
-                    .WithAttribution(outside, "自身走出场地，或击退前站位、防击退时机不正确"));
-                throw new SimMechanicFailedException("电网即死", "有人触碰场外电网。");
+                foreach (var slot in outside)
+                    Report(MechanicError.Boundary("电网", slot));
+
+                throw new SimMechanicFailedException("电网即死", "有人触碰场外电网。", alreadyReported: true);
             }
 
             Scheduler.ScheduleAfter(0.1, CheckArena, "电网即死检查");
@@ -392,18 +400,18 @@ namespace Simulant.Content.U7a.Presets
         private void ResolveSpiritTaker()
         {
             var area = ActionArea.FromAction(40289);
-            var target = CrystallizeTimePlan.SpiritTakerTarget(Party.Select(actor => actor.JudgementPosition).ToArray(), Self,
+            var snapshot = PartySnapshot.Capture(Party);
+            var target = CrystallizeTimePlan.SpiritTakerTarget(Enumerable.Range(0, Party.Count).Select(slot => snapshot.Get(slot).Position).ToArray(), Self,
                 area, _crystal.Pos, _crystal.Entity.HitboxRadius, _random);
+            var center = Party[target].Pos;
+            var immune = Party.Select(actor => actor.JudgementKnockbackImmune).ToArray();
             var mechanic = Targeted("碎灵一击分散", 40289, target, new[]
             {
                 target
             }, 0, area, result =>
             {
-                var center = Party[target].Pos;
-                _gaia.Entity.ExecuteActionEffect(40289, Party[target].Entity);
-
-                // 主目标承受跳跃，范围内的其他人向外击退 40 米。
-                foreach (var member in result.Participants.Where(member => member.Slot != target))
+                // 主目标承受跳跃，范围内的其他人向外击退 40 米；使用选人时锁定的免疫结果。
+                foreach (var member in result.Participants.Where(member => member.Slot != target && !immune[member.Slot]))
                 {
                     var position = Party[member.Slot].Pos;
                     var direction = position - center;
@@ -414,9 +422,14 @@ namespace Simulant.Content.U7a.Presets
                     if (direction.LengthSquared() < 0.0001f)
                         direction = Vector2.UnitY;
 
-                    Party[member.Slot].Knockback(Heading(direction), 40, 0.8f);
+                    Party[member.Slot].Knockback(Heading(direction), 40, 0.8f, ignoreImmunity: true);
                 }
             });
+            // 回放：47.375 秒演出包，48.309 秒伤害结算；波及队友的记录也是约 0.935 秒后结算。
+            // 锁定站位后先播放跳跃，落地才击退并报错，避免失败中断取消尚未执行的击退。
+            mechanic.LockedSnapshot = snapshot;
+            mechanic.ResolveAfter = 0.934;
+            mechanic.Started = _ => _gaia.Entity.ExecuteActionEffect(40289, Party[target].Entity);
             EntityManager.RunMechanic(mechanic);
         }
 

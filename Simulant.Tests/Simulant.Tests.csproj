@@ -71,8 +71,12 @@
     <Compile Include="SessionTests.cs" />
     <Compile Include="HotbarInputTests.cs" />
     <Compile Include="QuickControlPaintingTests.cs" />
-    <Compile Include="..\Simulant\UI\QuickControlForm.cs" />
-    <Compile Include="..\Simulant\UI\QuickControlForm.Skills.cs" />
+    <Compile Include="..\Simulant\UI\QuickControlForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\QuickControlForm.Skills.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="..\Simulant\Core\HotbarBinding.cs" />
     <Compile Include="..\Simulant\Core\SimActionCooldown.cs" />
     <Compile Include="..\Simulant\Core\SimActionService.cs">
