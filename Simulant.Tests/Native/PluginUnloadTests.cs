@@ -310,6 +310,7 @@ namespace Simulant.Tests.Native
                 Set(Host, "EntityRegistry", registry);
                 Set(Host, "EntityProvider", new EntityProvider(registry, () => 1));
                 Set(Host, "EntitySpawner", spawner);
+                Set(Host, "<PlayerActions>k__BackingField", Create("Simulant.Core.SimActionService", Host));
                 Set(Host, "<PluginReady>k__BackingField", true);
                 _zone = Create("Simulant.Core.Zone.ZoneService", Host);
                 _firewall = Create("Simulant.Core.Firewall.FirewallService", Host);

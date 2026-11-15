@@ -460,8 +460,8 @@ namespace Simulant.Tests
                     first.Cast(1);
                     second.Cast(2);
                     var shownTags = TriggernometryInterop.Commands.Select(OmenTag).ToArray();
-                    Assert(scheduler.PendingCount == 3,
-                        "两次读条与两个角色的移动应只排入两个完成节点和一个共享更新节点。");
+                    Assert(scheduler.PendingCount == 5,
+                        "两次读条应各有一个读条完成节点和一个结算节点，两个角色共用一个移动更新节点。");
 
                     scheduler.Schedule(0.04, () =>
                     {
@@ -541,8 +541,8 @@ namespace Simulant.Tests
                         Assert(release.Wait(5000), "未解除组合测试的移动同步点。");
                     };
 
-                    Assert(firstScheduler.PendingCount == 4,
-                        "停止前应存在两个读条完成节点、一个延迟预兆和一个共享移动更新。");
+                    Assert(firstScheduler.PendingCount == 6,
+                        "停止前应存在两个读条完成节点、两个结算节点、一个延迟预兆和一个共享移动更新。");
                     firstScheduler.Start();
 
                     try

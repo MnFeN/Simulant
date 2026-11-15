@@ -63,6 +63,13 @@ namespace Simulant.Tests.Native
                 Assert(scene.Memory.Bytes.Freed.SequenceEqual(scene.Memory.Bytes.Allocations), "成功后必须释放远程缓冲区。");
                 ActionEffectHandler.ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD9, 0, position, target);
                 Assert(scene.Plugin.Headers[1].GlobalSequence != header.GlobalSequence, "连续演出应使用不同结算序号。");
+                ActionEffectHandler.ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD9, 0, position,
+                    new GameObjectId
+                    {
+                        ObjectId = 0xE0000000
+                    });
+                Assert(scene.Plugin.Headers[2].NumTargets == 0 && scene.Plugin.Headers[2].AnimationTargetId.ObjectId == 0xE0000000 &&
+                    scene.Plugin.Targets[2] == 0, "无指定目标的场地演出必须保留空目标标识，不能伪造受击者。");
                 Throws<ArgumentException>(() => scene.Plugin.Call(ActionEffectPlugin.Function, 0x40FF2222u,
                     new IntPtr(0x330000), position, header, new byte[64], target));
             }
@@ -107,14 +114,15 @@ namespace Simulant.Tests.Native
                 {
                     ObjectId = 123
                 };
-                Action<uint, IntPtr, uint, float, Vector3, GameObjectId> send = ActionEffectHandler.ReceiveVisual;
+                Action<uint, IntPtr, uint, float, Vector3, GameObjectId> send = (caster, address, action, heading, position, id)
+                    => ActionEffectHandler.ReceiveVisual(caster, address, action, heading, position, id);
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 0, 0, Vector3.Zero, target));
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 65536, 0, Vector3.Zero, target));
                 Throws<ArgumentException>(() => send(0, new IntPtr(1), 1, 0, Vector3.Zero, target));
                 Throws<ArgumentException>(() => send(1, IntPtr.Zero, 1, 0, Vector3.Zero, target));
                 Throws<ArgumentException>(() => send(1, new IntPtr(1), 1, 0, Vector3.Zero, new GameObjectId
                 {
-                    ObjectId = 0xE0000000
+                    ObjectId = 0
                 }));
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 1, float.NaN, Vector3.Zero, target));
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 1, 0, new Vector3(float.PositiveInfinity), target));
