@@ -21,6 +21,7 @@ namespace Simulant.Simulation.Runtime
         private SimCastController _casts;
         private SimMovementController _movement;
         private SimActorBehaviorController _behaviors;
+        public double SelfJudgementAdvance { get; set; }
         public SimActorBehaviorOptions PlayerBehavior { get; set; } = new SimActorBehaviorOptions();
 
         private bool _acceptingEntities;
@@ -247,6 +248,8 @@ namespace Simulant.Simulation.Runtime
 
                 actor = new SimActor(entity, _casts, _movement);
                 _actors[entity.Identity] = actor;
+                if (entity.Identity.Slot == 0 && SelfJudgementAdvance > 0)
+                    actor.StartJudgementSampling(_scheduler, SelfJudgementAdvance);
                 return actor;
             }
         }

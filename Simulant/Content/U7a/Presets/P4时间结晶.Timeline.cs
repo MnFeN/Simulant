@@ -345,7 +345,7 @@ namespace Simulant.Content.U7a.Presets
 
             for (var slot = 0; slot < 8; slot++)
             {
-                _rewind[slot] = Party[slot].Entity.Pos3D;
+                _rewind[slot] = Party[slot].JudgementPosition3D;
                 // 回放使用 ActorControlSelf 0xB7 播放位置特效，没有生成或删除 EObj。
                 Party[Self].Entity.PlayPositionVfx(1013, _rewind[slot]);
                 ClearStatus(slot, 4208);
@@ -362,6 +362,10 @@ namespace Simulant.Content.U7a.Presets
                 ClearStatus(slot, 2452);
                 Status(slot, 4163, 9);
             }
+
+            for (var number = 1; number <= 4; number++)
+                Mark(number, 0xE0000000);
+            _markersOwned = false;
         }
 
         private void Return()

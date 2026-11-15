@@ -74,7 +74,11 @@ namespace Simulant.Content.U7b.Presets
                     RequiredPlayers = marker == ForsakenMarker.Stack ? 3 : 1,
                     Visual = result =>
                     {
-                        Effect(source, result.Center, result.Heading, action);
+                        // 目标仍由历史判定选定，特效在该目标当前的位置和方向上播放。
+                        var center = Party[source].Pos;
+                        var bait = fan ? result.Snapshot.Nearest(result.Center, Party[source]) : null;
+                        var heading = bait.HasValue ? Heading(center, Party[bait.Value.Slot].Pos) : 0;
+                        Effect(source, center, heading, action);
 
                         if (fan)
                             directionError = CheckFanDirection(index, source, area, result);
@@ -180,11 +184,13 @@ namespace Simulant.Content.U7b.Presets
                     Failed = result => ReportJumpFailure(round, target, result),
                     Visual = result =>
                     {
-                        var direction = result.Center - ForsakenPlan.Center;
+                        // 落点在动作触发时锁定，延迟发送移动包时不再次追踪玩家。
+                        var targetPosition = Party[target].Pos;
+                        var direction = targetPosition - ForsakenPlan.Center;
                         var distance = direction.Length();
                         var landing = ForsakenPlan.Center + (distance > 4 ? direction * (1 - 4 / distance) : Vector2.Zero);
                         var position = new Vector3(landing, actor.Pos3D.Z);
-                        var heading = distance > 0.0001f ? Heading(ForsakenPlan.Center, result.Center) : (float)Math.PI;
+                        var heading = distance > 0.0001f ? Heading(ForsakenPlan.Center, targetPosition) : (float)Math.PI;
                         actor.StopCasting();
                         actor.Entity.ResetBaseTimeline();
                         actor.FaceNetwork(heading);
@@ -224,7 +230,12 @@ namespace Simulant.Content.U7b.Presets
                 direction = new Vector2(0, -1);
 
             var heading = Heading(origin, origin + direction);
-            actor.FaceNetwork(heading);
+            var visualDirection = Party[target.Slot].Pos - origin;
+            if (visualDirection.LengthSquared() < 0.0001f)
+                visualDirection = new Vector2(0, -1);
+
+            // 判定和演出各自在原锁定时刻保存方向，读条期间均不继续追踪。
+            actor.FaceNetwork(Heading(origin, origin + visualDirection));
             _cleaveOrigins[source] = origin;
             // 判定保存锁定的目标角度，不读取客户端尚在插值的当前朝向。
             _cleaveHeadings[source] = heading + (round.FutureEnd ? 0 : (float)Math.PI);

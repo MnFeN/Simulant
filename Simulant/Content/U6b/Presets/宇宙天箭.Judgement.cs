@@ -55,7 +55,7 @@ namespace Simulant.Content.U6b.Presets
                 Check = members => index < 2
                     ? (targets[index] < 2 && members.All(member => member.Slot < 2) ? null : "死刑必须由双 T 在近点单独引导。")
                     : (targets[index] >= 2 && members.All(member => member.Slot >= 2) ? null : "分摊必须由非坦克在远点引导，由六名非坦克共同承担。"), // 龙炎在被引导者身上播放，必须提供目标，单播施法者动作不会产生完整特效。
-                Visual = result => PlaceHelper(12 + index, _boss.Pos, Heading(result.Center - _boss.Pos))
+                Visual = result => PlaceHelper(12 + index, _boss.Pos, Heading(Party[targets[index]].Pos - _boss.Pos))
                         .Entity.ExecuteActionEffect(index < 2 ? 0x7BA7u : 0x7BA8u, Party[targets[index]].Entity),
             }).ToArray())
             {
@@ -101,7 +101,8 @@ namespace Simulant.Content.U6b.Presets
                 HeadingAtResolve = snapshot => CosmoArrowPlan.TargetHeading(Positions(snapshot), target),
                 RequiredPlayers = 1,
                 FailureSeverity = MechanicFailureSeverity.Warning,
-                Visual = result => PlaceHelper(12 + index, result.Center, result.Heading).Execute(0x7BAB),
+                Visual = result => PlaceHelper(12 + index, CosmoArrowPlan.Center,
+                    Heading(Party[target].Pos - CosmoArrowPlan.Center)).Execute(0x7BAB),
             }).ToArray())
             {
                 Name = $"第 {wave + 1} 组波动炮",
@@ -149,7 +150,7 @@ namespace Simulant.Content.U6b.Presets
                 Check = members => front.All(slot => slot < 2) ? null : "双 T 必须站在分摊队列最前方挡枪。",
                 Visual = result =>
                 {
-                    _boss.FaceNetwork(result.Heading);
+                    _boss.FaceNetwork(Heading(Party[_chargeTarget].Pos - CosmoArrowPlan.Center));
                     _boss.Entity.ExecuteActionEffect(0x7BAA, Party[_chargeTarget].Entity);
                 },
                 Failed = result => Report(result.DescribeFailure("波动炮八人分摊", Enumerable.Range(0, 8), _chargeTarget)

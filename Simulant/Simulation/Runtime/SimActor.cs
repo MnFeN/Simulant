@@ -1,5 +1,6 @@
 using Simulant.Core.Entity;
 using Simulant.Simulation.Geometry;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Numerics;
 using System.Threading;
@@ -30,6 +31,36 @@ namespace Simulant.Simulation.Runtime
         public bool IsKnockbackImmune => IsActive && (Entity.HasStatus(160) || Entity.HasStatus(1209));
         public uint Id => Entity.Id;
         public IntPtr Address => Entity.Address;
+
+        private PositionHistory _judgementHistory;
+        private SimScheduledAction _judgementSample;
+        private SimScheduler _judgementClock;
+        private double _judgementAdvance;
+
+        /// <summary>判定专用坐标；仅自身使用历史位置，移动和演出仍读取 Pos。</summary>
+        public Vector2 JudgementPosition => _judgementHistory?.At(_judgementClock.ElapsedSeconds - _judgementAdvance) ?? Pos;
+        public Vector3 JudgementPosition3D => _judgementHistory?.PositionAt(_judgementClock.ElapsedSeconds - _judgementAdvance) ?? Pos3D;
+        public bool JudgementKnockbackImmune => _judgementHistory?.ImmunityAt(_judgementClock.ElapsedSeconds - _judgementAdvance) ?? IsKnockbackImmune;
+
+        internal void StartJudgementSampling(SimScheduler scheduler, double advance)
+        {
+            _judgementClock = scheduler;
+            _judgementAdvance = advance;
+            _judgementHistory = new PositionHistory();
+            SampleJudgementPosition();
+        }
+
+        private void SampleJudgementPosition()
+        {
+            if (!IsActive)
+                return;
+
+            // 状态表一次读取，不在高频采样中调用原生 HasStatus 函数。
+            var position = Entity.Pos3D;
+            var immune = Entity.Native.StatusManager.ReadKnockbackImmunity();
+            _judgementHistory.Add(_judgementClock.ElapsedSeconds, position, immune);
+            _judgementSample = _judgementClock.ScheduleAfter(0.02, SampleJudgementPosition, "记录自身判定位置");
+        }
 
         public Vector2 Pos
         {
@@ -172,7 +203,7 @@ namespace Simulant.Simulation.Runtime
         public void Knockback(float heading, float distance, float duration, bool ignoreImmunity = false)
         {
             EnsureActive();
-            if (!ignoreImmunity && IsKnockbackImmune)
+            if (!ignoreImmunity && JudgementKnockbackImmune)
                 return;
 
             _movement.Knockback(this, heading, distance, duration);
@@ -246,6 +277,7 @@ namespace Simulant.Simulation.Runtime
         /// <summary>解除关联并停止本会话的读条、本地及网络移动；保留实体及直接 ActorMove 产生的移动。</summary>
         internal void Detach()
         {
+            _judgementSample?.Cancel();
             BehaviorController?.Remove(this);
 
             if (Interlocked.Exchange(ref _detached, 1) != 0)

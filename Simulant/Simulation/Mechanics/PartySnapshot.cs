@@ -68,7 +68,7 @@ namespace Simulant.Simulation.Mechanics
 
                 try
                 {
-                    members.Add(new PartyMemberSnapshot(actor, actor.Pos, slot));
+                    members.Add(new PartyMemberSnapshot(actor, actor.JudgementPosition, slot));
                 }
                 catch (InvalidOperationException) when (!actor.IsActive)
                 {

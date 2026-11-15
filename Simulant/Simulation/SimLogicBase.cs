@@ -35,6 +35,7 @@ namespace Simulant.Simulation
 
         internal void Start()
         {
+            EntityManager.Attach(_host.EntityProvider.GetMyself());
             var timeline = new SimTimeline();
             BuildTimeline(timeline);
             // 准备入口从当前时刻开始；网络实体的后续机制由就绪回调排入。

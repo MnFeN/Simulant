@@ -71,6 +71,7 @@ namespace Simulant.Simulation.Runtime
                     Interlocked.Exchange(ref _cleanupRequired, 1);
                     // 行为来自插件全局配置；每次模拟取独立快照，不受窗口编辑或预设切换影响。
                     _entityManager.PlayerBehavior = _host.Configuration.SimulatedParty.Copy();
+                    _entityManager.SelfJudgementAdvance = _host.Configuration.SelfJudgementAdvance;
                     _logic.Prepare();
                     _host.PlayerActions.BeginSimulation();
                     var waymarks = _preset.Waymarks;

@@ -11,6 +11,8 @@ namespace Simulant.Content.U7a.Presets
 {
     internal sealed partial class CrystallizeTimeLogic
     {
+        private readonly double[] _puddleReadyAt = new double[4];
+
         private AreaMechanic Targeted(string name, uint action, int target, int[] expected, int helper,
             ActionArea? area = null, Action<MechanicResult> visual = null)
         {
@@ -173,12 +175,14 @@ namespace Simulant.Content.U7a.Presets
 
                     mechanic.Visual = result =>
                     {
+                        var center = Party[target].Pos;
                         visual(result);
 
                         foreach (var member in result.Participants.Where(m => m.Slot != target))
                         {
                             var actor = Party[member.Slot];
-                            var direction = member.Position - result.Center;
+                            // 受击名单使用历史判定，实际击退从当前站位向外展开。
+                            var direction = actor.Pos - center;
 
                             if (direction.LengthSquared() < 0.0001f)
                                 direction = Vector2.UnitY;
@@ -193,7 +197,7 @@ namespace Simulant.Content.U7a.Presets
                 else
                 {
                     // 该动作没有预兆行；内圈按上游机制定义取 3 米，外圈仍读取技能表。
-                    var mechanic = Avoid(CrystallizeTimePlan.Roles[slot] + " 的黑暗冰封", ActionArea.FromAction(40279, innerRadius: 3), Party[slot].Pos);
+                    var mechanic = Avoid(CrystallizeTimePlan.Roles[slot] + " 的黑暗冰封", ActionArea.FromAction(40279, innerRadius: 3), Party[slot].JudgementPosition);
                     mechanic.Visual = result => Effect(target, 40279, target);
                     mechanics.Add(ProtectCrystal(mechanic, slot));
                 }
@@ -221,8 +225,8 @@ namespace Simulant.Content.U7a.Presets
                 var position = _plan.HeadPosition(side, time);
                 _heads[index].Entity.ActorMove(new Vector3(position, 0), Heading(_plan.HeadPosition(side, time + 0.1) - position), 30);
                 var radius = _headHits[index] == 0 ? 2f : 1f;
-                var touched = Enumerable.Range(0, 8).Where(slot => !(_cleansed[slot] && _plan.IsRed(slot)) && Vector2.Distance(Party[slot].Pos, position) <= radius)
-                    .OrderBy(slot => Vector2.DistanceSquared(Party[slot].Pos, position)).ToArray();
+                var touched = Enumerable.Range(0, 8).Where(slot => !(_cleansed[slot] && _plan.IsRed(slot)) && Vector2.Distance(Party[slot].JudgementPosition, position) <= radius)
+                    .OrderBy(slot => Vector2.DistanceSquared(Party[slot].JudgementPosition, position)).ToArray();
 
                 if (touched.Length != 0)
                     TouchHead(index, touched[0], position);
@@ -230,11 +234,11 @@ namespace Simulant.Content.U7a.Presets
 
             for (var index = 0; index < 4; index++)
             {
-                if (_puddles[index] == null || _taken[index])
+                if (_puddles[index] == null || _taken[index] || time < _puddleReadyAt[index])
                     continue;
 
-                var touched = Enumerable.Range(0, 8).Where(slot => !_cleansed[slot] && !_plan.IsRed(slot) && Vector2.Distance(Party[slot].Pos, _puddlePositions[index]) <= 1)
-                    .OrderBy(slot => Vector2.DistanceSquared(Party[slot].Pos, _puddlePositions[index])).ToArray();
+                var touched = Enumerable.Range(0, 8).Where(slot => !_cleansed[slot] && !_plan.IsRed(slot) && Vector2.Distance(Party[slot].JudgementPosition, _puddlePositions[index]) <= 1)
+                    .OrderBy(slot => Vector2.DistanceSquared(Party[slot].JudgementPosition, _puddlePositions[index])).ToArray();
 
                 if (touched.Length != 0)
                     TakePuddle(index, touched[0]);
@@ -322,6 +326,8 @@ namespace Simulant.Content.U7a.Presets
                 Pos = new Vector3(center, 0),
                 SharedGroupState = (uint)(0x500003 + index * 0x10000)
             });
+            // 从实际生成完成起计时，前两秒只显示白圈，不接受接触。
+            _puddleReadyAt[index] = Now + 2;
         }
 
         private void TakePuddle(int index, int slot)
@@ -372,7 +378,7 @@ namespace Simulant.Content.U7a.Presets
 
         private void CheckArena()
         {
-            var outside = Enumerable.Range(0, 8).Where(i => Vector2.DistanceSquared(Party[i].Pos, Center) > 400).ToArray();
+            var outside = Enumerable.Range(0, 8).Where(i => Vector2.DistanceSquared(Party[i].JudgementPosition, Center) > 400).ToArray();
             if (outside.Length != 0)
             {
                 Report(MechanicError.Rule("电网即死", outside, "超出场地 20 米半径，触碰电网。")
@@ -386,22 +392,24 @@ namespace Simulant.Content.U7a.Presets
         private void ResolveSpiritTaker()
         {
             var area = ActionArea.FromAction(40289);
-            var target = CrystallizeTimePlan.SpiritTakerTarget(Party.Select(actor => actor.Pos).ToArray(), Self,
+            var target = CrystallizeTimePlan.SpiritTakerTarget(Party.Select(actor => actor.JudgementPosition).ToArray(), Self,
                 area, _crystal.Pos, _crystal.Entity.HitboxRadius, _random);
             var mechanic = Targeted("碎灵一击分散", 40289, target, new[]
             {
                 target
             }, 0, area, result =>
             {
+                var center = Party[target].Pos;
                 _gaia.Entity.ExecuteActionEffect(40289, Party[target].Entity);
 
                 // 主目标承受跳跃，范围内的其他人向外击退 40 米。
                 foreach (var member in result.Participants.Where(member => member.Slot != target))
                 {
-                    var direction = member.Position - result.Center;
+                    var position = Party[member.Slot].Pos;
+                    var direction = position - center;
 
                     if (direction.LengthSquared() < 0.0001f)
-                        direction = member.Position - Center;
+                        direction = position - Center;
 
                     if (direction.LengthSquared() < 0.0001f)
                         direction = Vector2.UnitY;
@@ -414,9 +422,9 @@ namespace Simulant.Content.U7a.Presets
 
         private void BeginWing(int wave)
         {
-            var positions = Party.Select(actor => actor.Pos).ToArray();
+            var positions = Party.Select(actor => actor.JudgementPosition).ToArray();
             var order = CrystallizeTimePlan.FrontFour(positions, wave, wave == 0 ? _plan.FirstSide : _plan.SecondSide);
-            var immune = Party.Select(actor => actor.IsKnockbackImmune).ToArray();
+            var immune = Party.Select(actor => actor.JudgementKnockbackImmune).ToArray();
             _shiva.Execute(40332);
 
             foreach (var actor in Party)
@@ -457,6 +465,23 @@ namespace Simulant.Content.U7a.Presets
                     .WithAttribution(offenders.Distinct(), "自身排队位置不正确"));
                 throw new SimMechanicFailedException("圣翼排队", "坦克或前四人顺序错误。");
             }
+
+            if (wave == 1)
+                // 等击退落地及延迟的电网检查完成，避免尚未判定出界就先显示成功。
+                Scheduler.ScheduleAfter(0.9 + EntityManager.SelfJudgementAdvance, () =>
+                {
+                    if (_mistakes != 0 || !Party[Self].IsActive)
+                        return;
+
+                    try
+                    {
+                        TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[Self].Address}, m0489trg_a0c");
+                    }
+                    catch (Exception ex)
+                    {
+                        _host.LogWarning("[时间结晶] 成功提示特效显示失败：" + ex.Message);
+                    }
+                }, "两次圣翼击退完成提示");
         }
     }
 }

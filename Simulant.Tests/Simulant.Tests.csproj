@@ -23,6 +23,8 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Web.Extensions" />
     <Compile Include="Program.cs" />
+    <Compile Include="PositionHistoryTests.cs" />
+    <Compile Include="..\Simulant\Simulation\Runtime\PositionHistory.cs" />
     <Compile Include="CommandListenerTests.cs" />
     <Compile Include="CommandListenerTestDoubles.cs" />
     <Compile Include="..\Simulant\ACT\SimCommandListener.cs">

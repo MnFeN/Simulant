@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading;
 
@@ -347,6 +348,7 @@ namespace Simulant.Game.FFCS.Client.Game
         }
 
         public Status GetStatus(int index) => _values[index];
+        public bool ReadKnockbackImmunity() => _values.Any(status => status.StatusId.Get() == 160 || status.StatusId.Get() == 1209);
         public bool SetStatus(int index, ushort id, float remaining, ushort param, Object.GameObjectId source, bool refresh)
         {
             SetCalls++;

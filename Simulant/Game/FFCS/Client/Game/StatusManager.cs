@@ -10,6 +10,19 @@ namespace Simulant.Game.FFCS.Client.Game
         // [FieldOffset(0x8), FixedSizeArray] internal FixedSizeArray60<Status> _status;
         public Status GetStatus(int index) => Ptr.As<Status>(0x8 + index * 0x10); // temp until we implement the array struct
 
+        /// <summary>一次读取状态表，避免采样时反复调用游戏线程。</summary>
+        public bool ReadKnockbackImmunity()
+        {
+            var statuses = Ptr.ReadBytes(60 * 0x10, 0x8);
+            for (var offset = 0; offset < statuses.Length; offset += 0x10)
+            {
+                var id = BitConverter.ToUInt16(statuses, offset);
+                if (id == 160 || id == 1209)
+                    return true;
+            }
+            return false;
+        }
+
         [SigPattern("E8 * * * * C6 43 2D 00")]
         public static IntPtr HasStatusFuncPtr { get; set; }
 
