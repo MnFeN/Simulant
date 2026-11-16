@@ -57,6 +57,7 @@ namespace Simulant.ACT
 
         public object RawMemory => this;
         public IntPtr ProcessHandle { get; set; } = new IntPtr(1);
+        public System.Diagnostics.Process Process { get; set; } = System.Diagnostics.Process.GetCurrentProcess();
         public bool IsProcessOpen { get; set; } = true;
 
         public byte[] ReadBytes(IntPtr address, int count)

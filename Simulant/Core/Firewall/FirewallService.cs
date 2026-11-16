@@ -3,6 +3,7 @@ using Simulant.Game;
 using Simulant.Game.FFCS.Client.System.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Simulant.Core.Firewall
@@ -13,6 +14,7 @@ namespace Simulant.Core.Firewall
         {
             internal GreyMagicExternalProcessMemory Memory;
             internal IntPtr ProcessHandle;
+            internal Process Process;
             internal IntPtr Target;
             internal byte[] Original;
             internal IntPtr Cave;
@@ -87,6 +89,29 @@ namespace Simulant.Core.Firewall
             finally
             {
                 LogSafely(() => _host.PlayerActions?.Reset());
+            }
+        }
+
+        /// <summary>退出模拟等前置清理失败时，仅在确认绑定进程已退出后重置防火墙。</summary>
+        public bool TryResetExitedProcess()
+        {
+            lock (_gate)
+            {
+                if (_receive == null && _send == null)
+                    return false;
+                if ((_receive != null && !HasCapturedProcessExited(_receive)) ||
+                    (_send != null && !HasCapturedProcessExited(_send)))
+                    return false;
+
+                if (_receive != null)
+                    ResetExitedHook(_receive);
+                if (_send != null)
+                    ResetExitedHook(_send);
+                _receive = null;
+                _send = null;
+                ResetProcessModeIfCleared();
+                LogSafely(() => _host.PlayerActions?.Reset());
+                return true;
             }
         }
 
@@ -227,6 +252,20 @@ namespace Simulant.Core.Firewall
         }
 
         private void ReceiveHookDisableCore()
+        {
+            var state = _receive;
+            try
+            {
+                ReceiveHookRestoreCore();
+            }
+            catch (Exception) when (HasCapturedProcessExited(state))
+            {
+                ResetExitedHook(state);
+                _receive = null;
+            }
+        }
+
+        private void ReceiveHookRestoreCore()
         {
             var state = _receive;
 
@@ -394,6 +433,20 @@ namespace Simulant.Core.Firewall
         private void SendHookDisableCore()
         {
             var state = _send;
+            try
+            {
+                SendHookRestoreCore();
+            }
+            catch (Exception) when (HasCapturedProcessExited(state))
+            {
+                ResetExitedHook(state);
+                _send = null;
+            }
+        }
+
+        private void SendHookRestoreCore()
+        {
+            var state = _send;
 
             if (state == null)
                 return;
@@ -456,6 +509,7 @@ namespace Simulant.Core.Firewall
             {
                 Memory = memory,
                 ProcessHandle = processHandle,
+                Process = memory.Process,
                 Target = target
             };
             EnsureCapturedProcess(state);
@@ -475,6 +529,32 @@ namespace Simulant.Core.Firewall
 
         private static bool IsCapturedProcessAvailable(HookState state)
             => state.Memory.IsProcessOpen && state.Memory.ProcessHandle == state.ProcessHandle;
+
+        private static bool HasCapturedProcessExited(HookState state)
+        {
+            try
+            {
+                return state?.Process?.HasExited == true;
+            }
+            catch
+            {
+                // 无法确认进程退出时仍保留清理记录，避免遗留运行中的补丁。
+                return false;
+            }
+        }
+
+        private void ResetExitedHook(HookState state)
+        {
+            try
+            {
+                state.RestoreNetworkTimeout?.Invoke();
+            }
+            catch (Exception error)
+            {
+                LogSafely(() => _host.LogWarning($"游戏进程已退出，恢复解析插件收包计时器失败：{error.Message}"));
+            }
+            LogSafely(() => _host.LogWarning("关闭防火墙时清理失败，但原绑定的 FF14 进程已退出，已重置防火墙记录。"));
+        }
 
         private static void WriteExact(HookState state, IntPtr address, byte[] bytes)
         {

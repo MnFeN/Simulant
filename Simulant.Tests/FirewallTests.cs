@@ -4,6 +4,7 @@ using Simulant.Core.Firewall;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.System.Framework;
 using System;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Simulant.Tests
@@ -324,6 +325,105 @@ namespace Simulant.Tests
                     scene.Memory.Writes.Count(write => write.Address == scene.Send) == sendWrites,
                     "切换后的关闭重试必须恢复旧收包入口并只释放旧代码洞。");
                 AssertUntouched(nextMemory);
+            }
+        }
+
+        public static void FirewallDisableResetsExitedProcessAfterCleanupFailure()
+        {
+            foreach (var singleHook in new[] { false, true })
+            {
+                for (var stage = 0; stage < 3; stage++)
+                {
+                    using (var process = Process.Start(new ProcessStartInfo("cmd.exe", "/D /Q")
+                    {
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    }))
+                    using (var scene = new FirewallScene())
+                    {
+                        scene.Memory.Process = process;
+                        scene.Service.Enable();
+                        var warnings = 0;
+                        scene.Host.FirewallLog = message =>
+                        {
+                            if (message.Contains("已退出，已重置防火墙记录"))
+                                warnings++;
+                        };
+                        scene.Memory.WriteResult = (address, bytes) =>
+                            address == (stage == 0 ? scene.Receive : scene.Send) && stage != 2 ? (int?)0 : null;
+                        scene.Memory.FreeResult = _ => stage != 2;
+
+                        Throws<AggregateException>(scene.Service.Disable);
+                        Assert(scene.Service.HasPendingCleanup && warnings == 0,
+                            "绑定进程仍运行时，关闭失败必须报错并保留清理记录。");
+                        Assert(!scene.Service.TryResetExitedProcess(), "绑定进程仍运行时不能强制重置。");
+
+                        // 邮差尚未更新句柄，甚至已替换 Process 属性时，也必须检查安装时绑定的进程。
+                        scene.Memory.Process = Process.GetCurrentProcess();
+                        var nextMemory = scene.SwitchCurrentProcess();
+                        process.StandardInput.WriteLine("exit");
+                        process.StandardInput.Flush();
+                        Assert(process.WaitForExit(5000), "测试子进程应按期退出。");
+
+                        if (singleHook)
+                        {
+                            scene.Service.ReceiveHookDisable();
+                            scene.Service.SendHookDisable();
+                        }
+                        else
+                            scene.Service.Disable();
+
+                        Assert(!scene.Service.HasPendingCleanup && !scene.Service.HasActiveHooks && !scene.Service.IsEnabled,
+                            "原绑定进程退出后，关闭失败应清空全部防火墙状态。");
+                        Assert(warnings == 1 && scene.Parser.NetworkTimeout == 60,
+                            "退出后的清理失败应仅警告，并恢复 ACT 收包计时器。");
+                        AssertUntouched(nextMemory);
+                        var writes = scene.Memory.Writes.Count;
+                        var frees = scene.Memory.FreeAttempts.Count;
+                        scene.Service.Disable();
+                        Assert(scene.Memory.Writes.Count == writes && scene.Memory.FreeAttempts.Count == frees,
+                            "重置后重复关闭不应继续访问已退出的进程。");
+                    }
+                }
+            }
+        }
+
+        public static void FirewallDisableKeepsCleanupWhenProcessExitCannotBeConfirmed()
+        {
+            using (var scene = new FirewallScene())
+            {
+                scene.Memory.Process = null;
+                scene.Service.Enable();
+                scene.Memory.WriteResult = (_, bytes) => 0;
+                Throws<AggregateException>(scene.Service.Disable);
+                Assert(scene.Service.HasPendingCleanup,
+                    "无法确认原绑定进程已退出时，不能丢弃清理记录。");
+                Assert(!scene.Service.TryResetExitedProcess(), "无法确认进程退出时不能强制重置。");
+            }
+        }
+
+        public static void FirewallResetAfterPreCleanupFailureOnlyTouchesExitedProcessState()
+        {
+            using (var process = Process.Start(new ProcessStartInfo("cmd.exe", "/D /C exit")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }))
+            using (var scene = new FirewallScene())
+            {
+                scene.Memory.Process = process;
+                scene.Service.Enable();
+                Assert(process.WaitForExit(5000), "测试子进程应按期退出。");
+                var writes = scene.Memory.Writes.Count;
+                Assert(scene.Service.TryResetExitedProcess(), "前置清理失败时应能重置已退出进程的防火墙。");
+                Assert(!scene.Service.HasPendingCleanup && !scene.Service.HasActiveHooks && !scene.Service.IsEnabled &&
+                    scene.Parser.NetworkTimeout == 60, "强制重置应清空状态并恢复 ACT 收包计时器。");
+                Assert(scene.Memory.Writes.Count == writes && scene.Memory.FreeAttempts.Count == 0,
+                    "强制重置不应访问已退出进程的内存。");
+                Assert(!scene.Service.TryResetExitedProcess(), "清空后不应重复重置。");
             }
         }
 

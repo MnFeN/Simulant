@@ -325,7 +325,10 @@ namespace Simulant.UI
             }
             catch (Exception ex)
             {
-                _host.LogError("防火墙关闭失败：" + ex.Message);
+                if (_host.FirewallService.TryResetExitedProcess())
+                    _host.LogWarning("关闭防火墙的清理失败，但原绑定的 FF14 进程已退出，防火墙已重置：" + ex.Message);
+                else
+                    _host.LogError("防火墙关闭失败：" + ex.Message);
                 SetFirewallToggleChecked(_host.FirewallService.HasPendingCleanup);
             }
             finally
