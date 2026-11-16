@@ -1,3 +1,4 @@
+using Simulant.Content.U7a.Presets;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
@@ -8,11 +9,240 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
 using ActionRow = Lumina.Excel.Sheets.Action;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
     internal static class BehaviorMovementTests
     {
+        public static void ApocalypseHealersReturnBeforeTheThirdWaterStack()
+        {
+            GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Knockback>()[201] = new Lumina.Excel.Sheets.Knockback
+            {
+                Distance = 21,
+                Speed = 40
+            };
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var boss = new Vector2(99.992f, 89.036f);
+                var towardCenter = Math.Atan2(100 - boss.X, 100 - boss.Y);
+                var maxRadius = 0.8f * (Vector2.Distance(boss, new Vector2(100, 100)) - 2);
+                var actors = new List<SimActor>();
+                var destinations = new List<Vector2>();
+                var sides = new List<int>();
+                var startedAt = new List<double>();
+                foreach (var side in new[] { -1, 1 })
+                    foreach (var radius in new[] { maxRadius / 2, maxRadius })
+                        foreach (var angle in new[] { 10, 20 })
+                            foreach (var stackRadius in new[] { 13, 15 })
+                                foreach (var stackAngle in new[] { 17, 33 })
+                                {
+                                    var heading = towardCenter + Deg(side * angle);
+                                    var start = boss + radius * ApocalypsePlan.Direction(heading);
+                                    var destination = boss + stackRadius * ApocalypsePlan.Direction(towardCenter + Deg(side * stackAngle));
+                                    var actor = CreateActor(behavior, movement, casts, job: Job.SCH, position: start);
+                                    var index = actors.Count;
+                                    startedAt.Add(double.PositiveInfinity);
+                                    actor.Entity.OnActorMove = (next, _, speed) =>
+                                    {
+                                        var packet = actor.Entity.NetworkMoves[actor.Entity.NetworkMoves.Count - 1];
+                                        if (speed != 0 && packet.Flags == Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags.None)
+                                            startedAt[index] = Math.Min(startedAt[index], scheduler.ElapsedSeconds);
+                                        if (scheduler.IsRunning)
+                                            scheduler.ScheduleAfter(0.08, () => actor.Entity.Pos3D = next);
+                                    };
+                                    actor.KnockbackFromEffect((float)heading, 201);
+                                    scheduler.Schedule(0.15, () => actor.MoveForMechanic(destination, 2.25, 3.85, urgent: true, gapClose: true));
+                                    actors.Add(actor);
+                                    destinations.Add(destination);
+                                    sides.Add(side);
+                                }
+
+                scheduler.Schedule(3.21, () =>
+                {
+                    for (var i = 0; i < actors.Count; i++)
+                    {
+                        Assert(startedAt[i] < 0.95, "击退落地后应及时回跑，不能继续使用旧的一秒锁定窗口。");
+                        foreach (var near in new[] { true, false })
+                            foreach (var radius in near ? new[] { 11, 13 } : new[] { 13, 15 })
+                                foreach (var angle in new[] { 17, 33 })
+                                {
+                                    var target = boss + radius * ApocalypsePlan.Direction(towardCenter + Deg(sides[i] * angle));
+                                    Assert(Vector2.Distance(actors[i].Pos, target) <= 6,
+                                        FormattableString.Invariant($"治疗击退后必须参与第三轮分摊：实际 {actors[i].Pos}，终点 {destinations[i]}，与点名者相距 {Vector2.Distance(actors[i].Pos, target):F3} 米。"));
+                                }
+                    }
+                    done.Set();
+                });
+                scheduler.Start();
+                Assert(done.Wait(5000) && failure == null, "治疗击退回跑检查失败：" + failure);
+            }
+        }
+
+        public static void ApocalypseTankReachesEighteenMetresBeforeTheBaitSnapshot()
+        {
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var actors = new List<SimActor>();
+                var destinations = new List<Vector2>();
+                var random = new Random(40182);
+                foreach (var tank in new[] { BaitTank.MT, BaitTank.ST })
+                    foreach (var group in new[] { 0, 1 })
+                    {
+                        ApocalypsePlan plan = null;
+                        for (var attempt = 0; attempt < 64; attempt++)
+                        {
+                            plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, ApocalypseSolution.DoubleCN,
+                                ApocalypseReference.GroupSafe, ApocalypseHalf.NorthToSouthwest,
+                                ExerciseDirection.N, ExerciseTurn.Clockwise, random, 5, tank);
+                            if (plan.StackGroups[(int)tank] == group)
+                                break;
+                        }
+                        Assert(plan.StackGroups[(int)tank] == group, "检查必须覆盖从两侧分摊位置引导。");
+                        var departure = plan.SecondStack((int)tank);
+                        var destination = plan.TankPosition;
+                        var start = departure.Sample(0, 0.5, Math.PI);
+                        var actor = CreateActor(behavior, movement, casts, job: Job.DRK, position: start);
+                        actor.MoveForMechanic(destination, 36.35 - 34.55, 37.84 - 34.55, urgent: true);
+                        actors.Add(actor);
+                        destinations.Add(destination);
+                    }
+
+                scheduler.Schedule(36.81 - 34.55, () =>
+                {
+                    for (var index = 0; index < actors.Count; index++)
+                    {
+                        Assert(Vector2.Distance(actors[index].Pos, destinations[index]) <= 0.025f,
+                            "坦克应通过实际移动控制器在死刑锁定前到达十八米引导点。");
+                        Assert(actors[index].Entity.NetworkMoves.TrueForAll(move => move.SpeedParam <= 78),
+                            "贴边引导不能超过一倍三移速上限。");
+                    }
+                    done.Set();
+                });
+                scheduler.Start();
+                Assert(done.Wait(4000) && failure == null, "十八米贴边引导检查失败：" + failure);
+            }
+        }
+
+        public static void GapClosingWaitsForKnockbackAndKeepsTheMechanicDestination()
+        {
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var boss = new SimActor(new EntityTestWorld().CreateCharacter(0), casts, movement);
+                boss.Entity.HitboxRadius = 3;
+                behavior.SetTarget(boss);
+                var actors = new List<SimActor>();
+                foreach (var job in new[] { Job.PLD, Job.WAR, Job.DRK, Job.GNB, Job.MNK, Job.DRG, Job.NIN, Job.SAM, Job.RPR, Job.VPR, Job.BRD })
+                {
+                    var actor = CreateActor(behavior, movement, casts, job: job, position: new Vector2(20, 0));
+                    actor.Entity.OnActorMove = (next, _, __) =>
+                    {
+                        if (scheduler.IsRunning)
+                            scheduler.ScheduleAfter(0.25, () => actor.Entity.Pos3D = next);
+                    };
+                    actor.Knockback((float)Deg(90), 6, 0.2f);
+                    actors.Add(actor);
+                }
+                var destination = new Vector2(9, 5);
+                scheduler.Schedule(0.1, () =>
+                {
+                    foreach (var actor in actors)
+                        actor.MoveForMechanic(destination, 2.2, 3.5, urgent: true, gapClose: true);
+                });
+                scheduler.Schedule(0.3, () =>
+                {
+                    foreach (var actor in actors)
+                        actor.MoveForMechanic(destination, 2.2, 3.5, urgent: true, gapClose: true);
+                });
+                scheduler.Schedule(0.43, () =>
+                {
+                    foreach (var actor in actors)
+                        Assert(actor.Entity.ActionEffects.Count == 0, "击退未结束时不能提前突进、截断击退轨迹。");
+                });
+                scheduler.Schedule(0.95, () =>
+                {
+                    foreach (var actor in actors)
+                    {
+                        var action = SimJobActions.For(actor.Job).GapCloser;
+                        Assert(action == 0 ? actor.Entity.ActionEffects.Count == 0 : actor.Entity.ActionEffects.Contains(action),
+                            "T 和近战应使用本职业突进，远程保持普通回跑。");
+                        if (action != 0)
+                            Assert(actor.Entity.NetworkMoves.Exists(move => Vector2.Distance(new Vector2(move.Position.X, move.Position.Y), new Vector2(3.5f, 0)) < 0.025f),
+                                "突进必须沿原连线落在目标圈外半米，不能把普通跑步或站位终点当作突进落点。");
+                    }
+                });
+                scheduler.Schedule(3.35, () =>
+                {
+                    foreach (var actor in actors)
+                    {
+                        Assert(Vector2.Distance(actor.Pos, destination) < 0.025f && !actor.IsMoving,
+                            FormattableString.Invariant($"突进结束后仍须完成原机制走位，不能停在 Boss 身边或丢失目的地：{actor.Job} 位于 {actor.Pos}。"));
+                        if (SimJobActions.For(actor.Job).GapCloser != 0)
+                            Assert(actor.Entity.ActionEffects.Count == 1, "同一条走位意图只能突进一次。");
+                    }
+                    done.Set();
+                });
+                scheduler.Start();
+                Assert(done.Wait(4500) && failure == null, "击退后突进并继续走位检查失败：" + failure);
+            }
+        }
+
+        public static void GapClosingFallsBackWhenBossCannotBeTargeted()
+        {
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            using (var casts = new SimCastController(scheduler))
+            using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
+            {
+                var boss = new SimActor(new EntityTestWorld().CreateCharacter(0), casts, movement);
+                boss.Entity.IsTargetable = false;
+                behavior.SetTarget(boss);
+                var actor = CreateActor(behavior, movement, casts, job: Job.DRK, position: new Vector2(20, 0));
+                actor.MoveForMechanic(new Vector2(20, 2), 1, 1.5, urgent: true, gapClose: true);
+                scheduler.Schedule(1.1, () =>
+                {
+                    Assert(actor.Entity.ActionEffects.Count == 0 && Vector2.Distance(actor.Pos, new Vector2(20, 2)) < 0.025f,
+                        "Boss 不可选中时应直接完成普通机制移动，不得突进或中断流程。");
+                    done.Set();
+                });
+                scheduler.Start();
+                Assert(done.Wait(2500) && failure == null, "不可选中目标的突进降级检查失败：" + failure);
+            }
+        }
+
         public static void MeleeApproachWaitsAndStopsWhenBossCannotBeAttacked()
         {
             Exception failure = null;

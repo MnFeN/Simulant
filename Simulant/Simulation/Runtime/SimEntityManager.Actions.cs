@@ -6,6 +6,22 @@ namespace Simulant.Simulation.Runtime
 {
     public sealed partial class SimEntityManager
     {
+        /// <summary>四人水分摊、五人神圣等人数不足时，所有实际参与者获得死亡刻印。</summary>
+        public void MarkUnderfilledStack(SimActor[] participants, int required, SimActor source)
+        {
+            if (participants.Length >= required)
+                return;
+            lock (_gate)
+            {
+                foreach (var actor in participants)
+                {
+                    var status = _statuses.FirstOrDefault(s => s.Actor.Identity == actor.Entity.Identity && s.StatusId == 4372);
+                    var stacks = status == null ? 0 : actor.Entity.Native.StatusManager.GetStatus(status.Slot).Param.Get();
+                    SetStatus(actor, 4372, 600, (ushort)(stacks + 1), source);
+                }
+            }
+        }
+
         /// <summary>模拟职能防击退：施加六秒状态和技能演出，不向服务器使用技能。</summary>
         public void UseKnockbackImmunity(SimActor actor, bool? surecast = null)
         {

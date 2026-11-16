@@ -137,6 +137,15 @@ namespace Simulant.Simulation.Runtime
         internal void FollowNetworkTo(SimActor actor, Vector2 target, byte speedParam)
             => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, null, retarget: true);
 
+        /// <summary>技能突进单独按演出时长同步位移，不使用普通跑步的冲刺速度上限。</summary>
+        internal void DashTo(SimActor actor, Vector2 target, float duration)
+        {
+            ValidateSpeed(duration);
+            var speed = Vector2.Distance(actor.Pos, target) / duration;
+            ValidateSpeed(speed);
+            StartNetworkMovement(actor, target, speed, (byte)Math.Max(1, Math.Min(255, speed * 10)), false, null);
+        }
+
         internal void Knockback(SimActor actor, float heading, float distance, float duration)
         {
             if (actor == null)
@@ -158,7 +167,7 @@ namespace Simulant.Simulation.Runtime
                 throw new ArgumentOutOfRangeException(nameof(distance), "击退落点超出了移动包的坐标范围。");
 
             // 保留已有的更长眩晕；新走位可在暂停期间排队，但不能覆盖击退轨迹。
-            actor.SuspendBehavior(duration + 0.2);
+            actor.SuspendBehavior(duration);
 
             if (network)
                 StartNetworkMovement(actor, target, speed, (byte)Math.Max(1, Math.Min(255, speed * 10)), true, null);
@@ -259,6 +268,15 @@ namespace Simulant.Simulation.Runtime
             {
                 var index = Find(actor);
                 return !_disposed && actor.IsActive && index >= 0 && !_moving[index].Arrived;
+            }
+        }
+
+        internal bool IsKnockingBack(SimActor actor)
+        {
+            lock (_gate)
+            {
+                var index = Find(actor);
+                return index >= 0 && _moving[index].Knockback && !_moving[index].Arrived && !_moving[index].Stopping;
             }
         }
 

@@ -62,6 +62,7 @@ namespace Simulant.Core.Entity
         internal int PositionReads;
         internal readonly List<NetworkMove> NetworkMoves = new List<NetworkMove>();
         internal int NativeKnockbackCalls;
+        internal float NativeKnockbackDistance, NativeKnockbackDuration;
         internal Action<Vector3, float, byte> OnActorMove;
         internal readonly List<uint> CastStarts = new List<uint>();
         internal readonly List<uint> FinalizedCasts = new List<uint>();
@@ -152,6 +153,14 @@ namespace Simulant.Core.Entity
             ActionEffects.Add(actionId);
         }
 
+        public void ExecuteActionEffect(uint actionId, Character target, float? heading)
+            => ExecuteActionEffect(actionId, target);
+
+        public void ExecuteActionEffectAt(uint actionId, Vector3 position, float heading, float animationLock = 0)
+        {
+            ActionEffects.Add(actionId);
+        }
+
         public IntPtr ActorControl(Simulant.Game.ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
         {
             return IntPtr.Zero;
@@ -206,6 +215,8 @@ namespace Simulant.Core.Entity
         public void Knockback(float heading, float distance, float duration)
         {
             NativeKnockbackCalls++;
+            NativeKnockbackDistance = distance;
+            NativeKnockbackDuration = duration;
         }
 
         public float HitboxRadius { get; set; }

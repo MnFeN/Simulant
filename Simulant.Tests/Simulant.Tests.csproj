@@ -31,6 +31,9 @@
       <Link>ACT\SimCommandListener.cs</Link>
     </Compile>
     <Compile Include="MathParserTests.cs" />
+    <Compile Include="..\Simulant\Utils\Maths\Angles.cs">
+      <Link>Utils\Maths\Angles.cs</Link>
+    </Compile>
     <Compile Include="NumericCultureTests.cs" />
     <Compile Include="..\Simulant\Utils\InvariantNumericExtensions.cs">
       <Link>Utils\InvariantNumericExtensions.cs</Link>
@@ -45,6 +48,10 @@
       <Link>Utils\Maths\MathParser.cs</Link>
     </Compile>
     <Compile Include="CosmoArrowTests.cs" />
+    <Compile Include="U7aExerciseTests.cs" />
+    <Compile Include="AssignmentRandomTests.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P3启示.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\U7aExerciseOptions.cs" />
     <Compile Include="CrystallizeTimeTests.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\P4时间结晶.Plan.cs">
       <Link>Content\P4时间结晶.Plan.cs</Link>
@@ -55,6 +62,7 @@
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="PresetConfigurationTests.cs" />
     <Compile Include="..\Simulant\Simulation\SimOptionBase.cs" />
+    <Compile Include="..\Simulant\Simulation\AssignmentRandom.cs" />
     <Compile Include="..\Simulant\Simulation\SimOptionGeneric.cs" />
     <Compile Include="..\Simulant\Simulation\Options\*.cs" Exclude="..\Simulant\Simulation\Options\RandomEnumAttribute.cs" />
     <Compile Include="..\Simulant\UI\OptionEditor.cs" />

@@ -13,7 +13,7 @@ namespace Simulant.Simulation.Runtime
             public readonly List<Vector2> Points = new List<Vector2>();
             public int Point;
             public double Arrival, NotBefore, Latest, HoldUntil, StageAt;
-            public bool Immediate, StageFirst, Arrived, Running, ReturnToMelee;
+            public bool Immediate, StageFirst, Arrived, Running, ReturnToMelee, GapClose;
             public byte Speed = RunSpeed;
             public Func<SimPosition> Follow;
             public double SampleFirst, SampleSecond, NorthHeading;
@@ -44,7 +44,7 @@ namespace Simulant.Simulation.Runtime
                 };
                 plan.Destination = SampleFollowTarget(plan);
 
-                if (_scheduler.ElapsedSeconds >= state.SuspendedUntil)
+                if (CanResumeMovement(state, _scheduler.ElapsedSeconds))
                     _movement.Stop(actor);
 
                 SetSprintEffect(state, false);
@@ -104,7 +104,7 @@ namespace Simulant.Simulation.Runtime
 
         /// <summary>绝对时间均以会话调度器为基准；保持时间覆盖最后一次相关机制判定。</summary>
         internal void MoveForMechanic(SimActor actor, SimPosition area, double arriveBy, double holdUntil,
-            bool urgent, double northHeading)
+            bool urgent, double northHeading, bool gapClose)
         {
             if (!Finite(arriveBy) || !Finite(holdUntil) || holdUntil < arriveBy)
                 throw new ArgumentException("目标时间必须有效，且保持站位的结束时间不能早于目标时间。");
@@ -130,6 +130,7 @@ namespace Simulant.Simulation.Runtime
                     Destination = destination,
                     Latest = arriveBy,
                     HoldUntil = holdUntil,
+                    GapClose = gapClose,
                     Immediate = immediate,
                     NotBefore = immediate ? now : arriveBy - 1,
                     Arrival = immediate ? now : arriveBy - 0.25 - _random.NextDouble() * 0.35
@@ -196,7 +197,7 @@ namespace Simulant.Simulation.Runtime
                 else
                     plan.Arrived = true;
 
-                if (_scheduler.ElapsedSeconds >= state.SuspendedUntil)
+                if (CanResumeMovement(state, _scheduler.ElapsedSeconds))
                     _movement.Stop(actor);
 
                 if (plan.Speed == RunSpeed || plan.Arrived)
@@ -289,6 +290,9 @@ namespace Simulant.Simulation.Runtime
                 UpdateFollowing(state, plan, now);
                 return;
             }
+
+            if (TryGapClose(state, plan, now))
+                return;
 
             if (plan.Arrived)
             {

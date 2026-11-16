@@ -1,5 +1,6 @@
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
+using Simulant.Game.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,92 @@ namespace Simulant.Tests
 {
     internal static class MovementTests
     {
+        public static void KnockbackEffectsUseTableSpeedForLocalAndRemotePlayers()
+        {
+            var sheet = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Knockback>();
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var remotes = new List<SimActor>();
+                foreach (var sample in new[]
+                {
+                    new { Id = 201, Distance = 21, Speed = 40, Extra = 0, Duration = 0.525f },
+                    new { Id = 108, Distance = 20, Speed = 40, Extra = 0, Duration = 0.5f },
+                    new { Id = 65000, Distance = 21, Speed = 60, Extra = 3, Duration = 0.4f }
+                })
+                {
+                    sheet[sample.Id] = new Lumina.Excel.Sheets.Knockback
+                    {
+                        Distance = (byte)sample.Distance,
+                        Speed = (byte)sample.Speed
+                    };
+                    var local = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
+                    var remote = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                    var distance = sample.Distance + sample.Extra;
+                    var finishedAt = double.PositiveInfinity;
+                    remote.Entity.OnActorMove = (position, _, __) =>
+                    {
+                        remote.Entity.Pos3D = position;
+                        if (Math.Abs(position.Y - distance) < 0.001)
+                            finishedAt = Math.Min(finishedAt, scheduler.ElapsedSeconds);
+                    };
+                    local.KnockbackFromEffect(0, (ushort)sample.Id, (byte)sample.Extra);
+                    remote.KnockbackFromEffect(0, (ushort)sample.Id, (byte)sample.Extra);
+                    Assert(local.Entity.NativeKnockbackCalls == 1 && local.Entity.NativeKnockbackDistance == distance &&
+                        Math.Abs(local.Entity.NativeKnockbackDuration - sample.Duration) < 0.00001,
+                        "自身原生击退必须按效果行、追加距离和表内速度计算时长。");
+                    scheduler.Schedule(sample.Duration + 0.2, () =>
+                    {
+                        Assert(Math.Abs(remote.Pos.Y - distance) < 0.001 && !remote.IsMoving,
+                            "假玩家必须按同一份查表参数完成击退。");
+                        Assert(finishedAt >= sample.Duration - 0.01 && finishedAt < sample.Duration + 0.15,
+                            "假玩家轨迹应使用表内时长，不能继续沿用固定 0.8 秒或额外追加暂停。");
+                    });
+                    remotes.Add(remote);
+                }
+                scheduler.Schedule(0.85, done.Set);
+                scheduler.Start();
+                Assert(done.Wait(2000) && failure == null, "查表击退检查失败：" + failure);
+                Assert(remotes.All(actor => actor.Entity.NativeKnockbackCalls == 0), "假玩家应继续通过移动包执行击退。");
+            }
+            sheet.Remove(65000);
+        }
+
+        public static void InvalidKnockbackEffectsDoNotUseGuessedTiming()
+        {
+            var sheet = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Knockback>();
+            sheet.Remove(65001);
+            sheet[65002] = new Lumina.Excel.Sheets.Knockback { Distance = 20, Speed = 0 };
+            sheet[65003] = new Lumina.Excel.Sheets.Knockback { Distance = 0, Speed = 40 };
+            using (var scheduler = new SimScheduler())
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
+                foreach (var id in new ushort[] { 65001, 65002, 65003 })
+                {
+                    var rejected = false;
+                    try
+                    {
+                        actor.KnockbackFromEffect(0, id);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        rejected = true;
+                    }
+                    Assert(rejected && actor.Entity.NativeKnockbackCalls == 0 && !actor.IsMoving,
+                        "缺失行、零速度或零距离必须明确拒绝，不能用猜测的时长启动击退。");
+                }
+            }
+            sheet.Remove(65002);
+            sheet.Remove(65003);
+        }
+
         public static void KnockbackUsesNetworkTrajectoryAndKeepsLocalPlayerNative()
         {
             Exception failure = null;

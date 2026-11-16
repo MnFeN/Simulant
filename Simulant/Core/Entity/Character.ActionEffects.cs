@@ -7,7 +7,10 @@ namespace Simulant.Core.Entity
 {
     public sealed partial class Character
     {
-        /// <summary>播放无目标、带落点的原生技能演出。坐标采用 ACT XYZ（Z 为高度），不额外修改实体位置。</summary>
+        /// <summary>
+        /// 播放无目标、带落点的原生技能演出。坐标采用 ACT XYZ（Z 为高度），不修改实体位置或面向。
+        /// heading 仅写入技能包；依赖施法者面向的动画，调用前还需通过 ActorMove 同步实体面向。
+        /// </summary>
         public void ExecuteActionEffectAt(uint actionId, Vector3 position, float heading, float animationLock = 0)
         {
             var native = Native;
@@ -24,6 +27,10 @@ namespace Simulant.Core.Entity
 
         /// <summary>播放带目标的原生技能演出，不产生伤害或状态。调用前应结束对应读条；瞬发演出可以与移动并行。</summary>
         public void ExecuteActionEffect(uint actionId, Character target)
+            => ExecuteActionEffect(actionId, target, null);
+
+        /// <summary>显式指定演出面向，避免转向包尚在插值时，把上一刻的面向再次写入技能包；不代替 ActorMove。</summary>
+        public void ExecuteActionEffect(uint actionId, Character target, float? heading)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
@@ -38,7 +45,7 @@ namespace Simulant.Core.Entity
                 sourceIndex >= 200 || sourceIndex % 2 != 0 || targetIndex >= 200 || targetIndex % 2 != 0)
                 throw new InvalidOperationException("带目标的技能演出只支持战斗实体列表中的网络角色。");
 
-            ActionEffectHandler.ReceiveVisual(Id, sourceNative.Ptr, actionId, sourceNative.Rotation,
+            ActionEffectHandler.ReceiveVisual(Id, sourceNative.Ptr, actionId, heading ?? sourceNative.Rotation,
                 targetNative.Position, new GameObjectId
                 {
                     ObjectId = target.Id

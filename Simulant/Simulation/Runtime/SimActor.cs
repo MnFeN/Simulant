@@ -1,4 +1,5 @@
 using Simulant.Core.Entity;
+using Simulant.Game.Data;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Timeline;
 using System;
@@ -158,16 +159,17 @@ namespace Simulant.Simulation.Runtime
         /// northHeading 是本机制相对北的场地朝向；接收指令时固定下来，不随其他机制改变。
         /// 紧急移动立即直达，不绕路、贪刀或等待读条；Vector2 可直接作为零容差点位传入。
         /// 目标时间仅用于规划和冲刺，赶不上时继续移动；机制是否成功由实际参与情况判定。
+        /// gapClose 允许 T 和近战先突进当前 Boss，再前往安全范围；会等待击退等强制移动结束。
         /// </summary>
         public void MoveForMechanic(SimPosition destination, double arriveBy, double? holdUntil = null,
-            bool urgent = false, double northHeading = Math.PI)
+            bool urgent = false, double northHeading = Math.PI, bool gapClose = false)
         {
             EnsureActive();
 
             if (BehaviorController == null)
                 throw new InvalidOperationException("机制走位只支持本会话生成的网络假玩家。");
 
-            BehaviorController.MoveForMechanic(this, destination, arriveBy, holdUntil ?? arriveBy, urgent, northHeading);
+            BehaviorController.MoveForMechanic(this, destination, arriveBy, holdUntil ?? arriveBy, urgent, northHeading, gapClose);
         }
 
         /// <summary>
@@ -209,6 +211,23 @@ namespace Simulant.Simulation.Runtime
                 return;
 
             _movement.Knockback(this, heading, distance, duration);
+        }
+
+        /// <summary>
+        /// 按 ActionEffect 的 0x1F 效果查表施加击退：knockbackId 为 Value，additionalDistance 为 Param0。
+        /// 方向由调用方提供；距离与持续时间统一按 Knockback 表计算，本机和假玩家共用。
+        /// </summary>
+        public void KnockbackFromEffect(float heading, ushort knockbackId, byte additionalDistance = 0, bool ignoreImmunity = false)
+        {
+            EnsureActive();
+            if (!GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Knockback>().TryGetRow(knockbackId, out var row))
+                throw new InvalidOperationException(FormattableString.Invariant($"击退效果引用的 Knockback 行 {knockbackId} 不存在。"));
+
+            var distance = row.Distance + additionalDistance;
+            if (row.Speed == 0 || distance == 0)
+                throw new InvalidOperationException(FormattableString.Invariant($"Knockback 行 {knockbackId} 的击退距离或速度为零。"));
+
+            Knockback(heading, distance, distance / (float)row.Speed, ignoreImmunity);
         }
 
         /// <summary>

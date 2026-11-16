@@ -60,6 +60,11 @@ namespace Lumina.Excel
 
 namespace Lumina.Excel.Sheets
 {
+    public struct Knockback : IExcelRow<Knockback>
+    {
+        public byte Distance, Speed;
+    }
+
     public struct Status : IExcelRow<Status>
     {
         public bool LockMovement, LockActions;

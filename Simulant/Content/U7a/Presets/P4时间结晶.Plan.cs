@@ -389,9 +389,9 @@ namespace Simulant.Content.U7a.Presets
             => order.Take(IsY && wave == 1 ? 2 : 1).All(slot => slot < 2);
 
         internal static int SpiritTakerTarget(Vector2[] positions, int self, ActionArea area,
-            Vector2 crystal, float crystalRadius, Random random)
+            Vector2? crystal, float crystalRadius, Random random)
         {
-            if (area.IntersectsCircle(crystal, crystalRadius, positions[self]))
+            if (crystal.HasValue && area.IntersectsCircle(crystal.Value, crystalRadius, positions[self]))
                 return self;
 
             var nearby = Enumerable.Range(0, positions.Length)

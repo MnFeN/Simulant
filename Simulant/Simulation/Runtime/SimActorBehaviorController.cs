@@ -209,7 +209,7 @@ namespace Simulant.Simulation.Runtime
                         continue;
                     }
 
-                    if (now < state.SuspendedUntil)
+                    if (!CanResumeMovement(state, now))
                         continue;
 
                     if (!state.Initialized)
@@ -260,6 +260,10 @@ namespace Simulant.Simulation.Runtime
                 QueueTick();
             }
         }
+
+        // 击退按实际到达落点恢复；原生插值尚未结束时不覆盖轨迹，也不额外追加固定等待。
+        private bool CanResumeMovement(State state, double now)
+            => now >= state.SuspendedUntil && !_movement.IsKnockingBack(state.Actor);
 
         private void RefreshCombat(State state, double now, bool inCombat, bool targetable)
         {

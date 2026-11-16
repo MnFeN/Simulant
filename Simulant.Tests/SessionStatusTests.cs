@@ -9,6 +9,20 @@ namespace Simulant.Tests
 {
     internal static class SessionStatusTests
     {
+        public static void UnderfilledStacksApplyMortalityToActualParticipantsOnly()
+        {
+            using (var scene = new Scene())
+            {
+                var actors = new[] { scene.Player, scene.Source };
+                scene.Manager.MarkUnderfilledStack(actors, 2, scene.Source);
+                Assert(!scene.Player.Entity.HasStatus(4372), "足额分摊不应附加死亡刻印。");
+                scene.Manager.MarkUnderfilledStack(new[] { scene.Player }, 4, scene.Source);
+                Assert(scene.Player.Entity.HasStatus(4372) && !scene.Source.Entity.HasStatus(4372), "人数不足只惩罚实际参与者。");
+                scene.Manager.MarkUnderfilledStack(new[] { scene.Player }, 4, scene.Source);
+                Assert(scene.Statuses.GetStatus(0).Param.Get() == 2, "重复人数不足应增加死亡刻印层数。");
+            }
+        }
+
         public static void LocalActionsRespectStunFromOtherManagersAndStatusRemoval()
         {
             Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>()[4163] =
