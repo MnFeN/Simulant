@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using ActionRow = Lumina.Excel.Sheets.Action;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Simulation.Runtime
 {
@@ -352,7 +353,7 @@ namespace Simulant.Simulation.Runtime
                 return;
 
             state.NextIdle = now + 4 + _random.NextDouble() * 4;
-            var angle = _random.NextDouble() * Math.PI * 2;
+            var angle = Deg(_random.NextDouble() * 360);
             var radius = (float)(state.Options.IdleRadius * (0.3 + _random.NextDouble() * 0.7));
             var position = state.Anchor + new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * radius;
 

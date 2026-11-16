@@ -5,6 +5,7 @@ using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation.Runtime;
 using System;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant
 {
@@ -23,7 +24,7 @@ namespace Simulant
             var forward = new Vector2((float)Math.Sin(heading), (float)Math.Cos(heading));
             var start = new Vector3(new Vector2(origin.X, origin.Y) + forward * 5, origin.Z);
             var target = new Vector3(new Vector2(start.X, start.Y) + forward * 8, origin.Z);
-            var moveHeading = heading + (float)Math.PI / 4;
+            var moveHeading = heading + (float)Deg(45);
             var spec = new NetworkNpcSpawnSpec
             {
                 BNpcBaseId = 4909,

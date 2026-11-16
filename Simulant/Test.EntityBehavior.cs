@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
 using ActionRow = Lumina.Excel.Sheets.Action;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant
 {
@@ -161,7 +162,7 @@ namespace Simulant
             var c = run.Actors[2];
             var targetA = a.Pos + forward * 10;
             var targetB = b.Pos + forward * 10;
-            b.Heading = heading + (float)Math.PI / 2;
+            b.Heading = heading + (float)Deg(90);
             var preservedHeading = b.Heading;
             var movementStartedAt = run.Scheduler.ElapsedSeconds;
             var aArrived = false;

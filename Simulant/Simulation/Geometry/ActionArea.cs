@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Simulation.Geometry
 {
@@ -46,7 +47,7 @@ namespace Simulant.Simulation.Geometry
             if (fullAngleDegrees > 360)
                 throw new ArgumentOutOfRangeException(nameof(fullAngleDegrees), "扇形完整张角不能超过 360 度。");
 
-            return new ActionArea(AreaKind.Cone, radius, halfAngleCosine: Math.Cos(fullAngleDegrees * Math.PI / 360));
+            return new ActionArea(AreaKind.Cone, radius, halfAngleCosine: Math.Cos(Deg(fullAngleDegrees / 2.0)));
         }
 
         /// <summary>从原点向前延伸 length、左右各延伸 width/2 的矩形。</summary>

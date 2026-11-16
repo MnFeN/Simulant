@@ -530,7 +530,7 @@ namespace Simulant.Tests
             using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
             {
                 var actor = CreateActor(behavior, movement, casts);
-                actor.Knockback((float)Math.PI / 2, 20, 0.3f);
+                actor.Knockback((float)Deg(90), 20, 0.3f);
                 scheduler.Schedule(0.1, () => actor.MoveForMechanic(new Vector2(22, 0), 1.5, 2, urgent: true));
                 scheduler.Schedule(0.45, () => Assert(Vector2.Distance(actor.Pos, new Vector2(20, 0)) < 0.025,
                     "击退期间收到下一条移动指令，仍须先到击退落点，不能截断轨迹。"));
@@ -787,10 +787,10 @@ namespace Simulant.Tests
                             var step = point - previous;
                             var ahead = Vector2.Dot(step, forward);
                             var sideways = Vector2.Dot(step, side);
-                            var heading = Math.Atan2(Math.Abs(sideways), ahead) * 180 / Math.PI;
+                            var heading = ToDegrees(Math.Atan2(Math.Abs(sideways), ahead));
                             Assert(ahead >= -0.0001 && heading <= angle + 0.02,
                         "路线每一段都应向目标推进，且偏角不超过配置上限。");
-                            Assert(Math.Abs(Vector2.Dot(point - origin, side)) <= distance * 0.3 * Math.Sin(angle * Math.PI / 180) + 0.0001,
+                            Assert(Math.Abs(Vector2.Dot(point - origin, side)) <= distance * 0.3 * Math.Sin(Deg(angle)) + 0.0001,
                         "绕路偏移应随路程和角度缩小，不能让短距离移动绕出大圈。");
                             previous = point;
                         }

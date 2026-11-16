@@ -12,15 +12,22 @@ namespace Simulant.Game.FFCS.Client.Game
 
         /// <summary>一次读取状态表，避免采样时反复调用游戏线程。</summary>
         public bool ReadKnockbackImmunity()
+            => (ReadDefensiveStatuses() & 1) != 0;
+
+        /// <summary>一次读取状态表：位 0 为防击退，位 1 为坦克无敌。</summary>
+        public byte ReadDefensiveStatuses()
         {
             var statuses = Ptr.ReadBytes(60 * 0x10, 0x8);
+            byte flags = 0;
             for (var offset = 0; offset < statuses.Length; offset += 0x10)
             {
                 var id = BitConverter.ToUInt16(statuses, offset);
                 if (id == 160 || id == 1209)
-                    return true;
+                    flags |= 1;
+                if (id == 82 || id == 409 || id == 810 || id == 811 || id == 1836)
+                    flags |= 2;
             }
-            return false;
+            return flags;
         }
 
         [SigPattern("E8 * * * * C6 43 2D 00")]

@@ -9,7 +9,7 @@ namespace Simulant.UI
     internal sealed partial class QuickControlForm : Form
     {
         private readonly Action[] _actions;
-        private readonly bool[] _enabled = new bool[4];
+        private readonly bool[] _enabled = new bool[5];
         private int _hover = -1;
         private int _pressed = -1;
         private Point _mouseOrigin;
@@ -24,7 +24,7 @@ namespace Simulant.UI
             Func<uint, Core.SimActionCooldown> cooldown)
         {
             _actions = new[] { start, stop, () => command("ac 冲刺"),
-                () => command(_surecast ? "ac 沉稳咏唱" : "ac 亲疏自行") };
+                () => command(_surecast ? "ac 沉稳咏唱" : "ac 亲疏自行"), () => command("ac 无敌") };
             _logWarning = logWarning;
             _cooldown = cooldown;
             _animationTimer = new Timer { Interval = 33 };
@@ -65,10 +65,12 @@ namespace Simulant.UI
             }
         }
 
-        internal void UpdateState(bool canStart, bool canStop, bool? surecast)
+        internal void UpdateState(bool canStart, bool canStop, bool? surecast, uint invulnerability = 0)
         {
-            var skillStateChanged = _enabled[2] != surecast.HasValue || (surecast.HasValue && _surecast != surecast.Value);
+            var skillStateChanged = _invulnerability != invulnerability || _enabled[2] != surecast.HasValue || (surecast.HasValue && _surecast != surecast.Value);
+            _invulnerability = invulnerability;
             _enabled[2] = _enabled[3] = surecast.HasValue;
+            _enabled[4] = surecast.HasValue && invulnerability != 0;
             if (surecast.HasValue)
                 _surecast = surecast.Value;
             if (skillStateChanged)
@@ -95,18 +97,20 @@ namespace Simulant.UI
 
         private float Inset => Math.Min(ClientSize.Width / 2f, ClientSize.Height / 2f) * 0.12f;
 
+        private int ButtonCount => _invulnerability == 0 ? 4 : 5;
+
         private RectangleF ButtonBounds(int index)
         {
-            var half = ClientSize.Width / 2f;
+            var width = ClientSize.Width / (float)(index < 2 ? 2 : ButtonCount - 2);
             var topHeight = ClientSize.Height * 0.36f;
             var top = index < 2 ? 0 : topHeight;
             var height = index < 2 ? topHeight : ClientSize.Height - topHeight;
-            return new RectangleF(index % 2 * half + Inset, top + Inset, half - Inset * 2, height - Inset * 2);
+            return new RectangleF((index < 2 ? index : index - 2) * width + Inset, top + Inset, width - Inset * 2, height - Inset * 2);
         }
 
         private int ButtonAt(Point point)
         {
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < ButtonCount; i++)
                 if (ButtonBounds(i).Contains(point))
                     return i;
             return -1;
@@ -128,7 +132,7 @@ namespace Simulant.UI
         {
             base.OnPaint(e);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < ButtonCount; i++)
             {
                 var bounds = ButtonBounds(i);
                 var active = CanClick(i);

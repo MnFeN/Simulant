@@ -6,6 +6,7 @@ using Simulant.Game.FFCS.Client.Game;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Simulant.Core
 {
@@ -22,7 +23,8 @@ namespace Simulant.Core
         {
             _player = player;
             _process = NamazuInterop.Plugin.Memory.ProcessHandle;
-            foreach (var action in new uint[] { 3, 7548, 7559 })
+            foreach (var action in Simulation.Runtime.SimEntityManager.LocalActions.Where(a => a == 3 || a == 7548 || a == 7559 ||
+                a == Simulation.Runtime.SimEntityManager.InvulnerabilityAction(player.Job)))
             {
                 _durations[action] = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().GetRow(action).Recast100ms / 10f;
                 var manager = ActionManager.Instance;

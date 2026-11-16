@@ -10,6 +10,59 @@ namespace Simulant.Tests
 {
     internal static class U7aExerciseTests
     {
+        public static void RelativityAssignmentsAndFirePositionsWorkForAllOptions()
+        {
+            var random = new Random(5758);
+            foreach (RelativitySolution solution in Enum.GetValues(typeof(RelativitySolution)))
+                foreach (RelativityDebuff initial in Enum.GetValues(typeof(RelativityDebuff)))
+                    for (var self = 0; self < 8; self++)
+                        for (var sample = 0; sample < 20; sample++)
+                        {
+                            var plan = new RelativityPlan(self, initial, solution, ExerciseDirection.Random, random);
+                            if (initial != RelativityDebuff.Random)
+                                Check(RelativityPlan.Kind(plan.Codes[self]) == (int)initial, "指定点名必须落在自身。");
+                            Check(plan.Codes.Distinct().Count() == 8 && plan.StackTargets.Distinct().Count() == 3, "点名分工与三轮神圣必须唯一。");
+                            for (var wave = 0; wave < 3; wave++)
+                            {
+                                var points = Enumerable.Range(0, 8).Select(i => plan.FirePosition(i, wave).Sample(random)).ToArray();
+                                foreach (var target in Enumerable.Range(0, 8).Where(i => plan.HasFire(i, wave)))
+                                    Check(points.Where((_, i) => i != target).All(point => Vector2.Distance(point, points[target]) > 8), "火分散容差不得波及队友。");
+                                var stack = plan.StackTargets[wave];
+                                Check(!plan.HasFire(stack, wave), "分摊点名不能与同轮火重叠。");
+                                Check(points.Count(point => Vector2.Distance(point, points[stack]) <= 6) >= 5, "神圣必须留有五人分摊。");
+                                var baits = Enumerable.Range(0, 8).Select(i => plan.Between(i, wave).Sample(random)).ToArray();
+                                foreach (var target in Enumerable.Range(0, 8).Where(i => plan.LaserWave(i) == wave))
+                                {
+                                    var glass = plan.Hourglass(plan.DirectionIndex(target));
+                                    Check(Math.Abs(Vector2.Distance(glass, baits[target]) - 1) < 0.0001, "引导点必须距沙漏一米且没有容差。");
+                                    Check(Enumerable.Range(0, 8).OrderBy(i => Vector2.DistanceSquared(glass, baits[i])).First() == target, "沙漏最近目标必须正确。");
+                                }
+                            }
+                        }
+        }
+
+        public static void RelativityFixedRepeatedDebuffsKeepTheirPartnersUniform()
+        {
+            foreach (var self in new[] { 1, 5 })
+            {
+                var random = new Random(110117 + self);
+                var kind = self < 4 ? RelativityDebuff.LongFire : RelativityDebuff.ShortFire;
+                var start = self < 4 ? 0 : 4;
+                var counts = new int[8];
+                const int samples = 6000;
+                for (var sample = 0; sample < samples; sample++)
+                {
+                    var plan = new RelativityPlan(self, kind, RelativitySolution.CN, ExerciseDirection.N, random);
+                    Check(RelativityPlan.Kind(plan.Codes[self]) == (int)kind, "修正偏差后仍必须满足指定自身点名。");
+                    var partner = Enumerable.Range(start, 4).Single(slot => slot != self && RelativityPlan.Kind(plan.Codes[slot]) == (int)kind);
+                    counts[partner]++;
+                }
+                foreach (var slot in Enumerable.Range(start, 4).Where(slot => slot != self))
+                    Check(Math.Abs(counts[slot] / (double)samples - 1.0 / 3) < 0.03,
+                        "指定重复点名后，同组队友应等概率成为同点名者，不能偏向下标靠后的玩家。");
+            }
+        }
+
         public static void ApocalypseEqualGroupsPreserveEveryPriorityAndFixedDebuff()
         {
             foreach (ApocalypseSolution solution in Enum.GetValues(typeof(ApocalypseSolution)))
@@ -117,6 +170,44 @@ namespace Simulant.Tests
                                         Check(plan.Explosions(volley).All(center => Vector2.Distance(points[i], center) > 9), "分散点必须避开前两轮地火。");
                                 }
                             }
+        }
+
+        public static void DarklitAllStrategiesKeepTowersProteansAndWaterValid()
+        {
+            var random = new Random(110111);
+            foreach (DarklitSolution solution in Enum.GetValues(typeof(DarklitSolution)))
+                foreach (DiagonalSwap diagonal in Enum.GetValues(typeof(DiagonalSwap)))
+                    foreach (SideSwap side in Enum.GetValues(typeof(SideSwap)))
+                        for (var self = 0; self < 8; self++)
+                            foreach (DarklitDebuff initial in Enum.GetValues(typeof(DarklitDebuff)))
+                                for (var sample = 0; sample < 8; sample++)
+                                {
+                                    var plan = new DarklitPlan(self, initial, solution, diagonal, side, SomberDanceBait.MTThenST, WingSide.Random, random);
+                                    Check(plan.Soakers.Concat(plan.Baiters).Distinct().Count() == 8, "双塔与四扇形必须覆盖八人且不重复。");
+                                    Check(plan.Cycle.Count(i => i < 2) == 1 && plan.Cycle.Count(i => i >= 2 && i < 4) == 1, "连线固定一坦、一奶、两输出。");
+                                    Check(plan.Cycle.Contains(plan.Waters[0]) && !plan.Cycle.Contains(plan.Waters[1]), "水必须一名连线、一名无线。");
+                                    Check(plan.Quadrants[plan.Waters[0]] / 2 != plan.Quadrants[plan.Waters[1]] / 2, "两名水必须分属南北两组。");
+                                    if (initial != DarklitDebuff.Random)
+                                    {
+                                        Check(plan.Cycle.Contains(self) == (initial == DarklitDebuff.Chain || initial == DarklitDebuff.ChainWater), "指定连线点名应生效。");
+                                        Check(plan.Waters.Contains(self) == (initial == DarklitDebuff.ChainWater || initial == DarklitDebuff.ProteanWater), "指定水点名应生效。");
+                                    }
+                                    var points = Enumerable.Range(0, 8).Select(i => plan.TowerOrBait(i).Sample(random)).ToArray();
+                                    for (var tower = 0; tower < 2; tower++)
+                                        Check(points.Count(point => Vector2.Distance(point, plan.Tower(tower)) <= 4) == 2, "塔必须保持两人。");
+                                    foreach (var bait in plan.Baiters)
+                                    {
+                                        var heading = (float)Math.Atan2(points[bait].X - 100, points[bait].Y - 100);
+                                        Check(Enumerable.Range(0, 8).Count(i => ActionArea.Cone(60, 60).Contains(points[i], new Vector2(100, 100), heading)) == 1,
+                                            "引导扇形不可覆盖队友或双塔。");
+                                    }
+                                    var spread = Enumerable.Range(0, 8).Select(i => plan.Spread(i).Sample(random)).ToArray();
+                                    for (var i = 0; i < 8; i++)
+                                    {
+                                        Check(spread.Where((_, j) => i != j).All(point => Vector2.Distance(point, spread[i]) > 5), "跳跃分散不可重叠。");
+                                        Check(Vector2.Distance(spread[i], new Vector2(100, 82)) > 8.5f, "跳跃分散不可击中北侧水晶。");
+                                    }
+                                }
         }
 
         public static void ApocalypseEverySingleGroupKeepsTheCounterpartsPositions()
@@ -423,6 +514,79 @@ namespace Simulant.Tests
                         var gather = plan.AfterFinalStack(landing);
                         Check(gather.DeviationRadius == 3 && Vector2.Distance(gather.Midpoint(), landing + 7 * ApocalypsePlan.Direction(heading + Math.PI)) < 0.0001,
                             "分摊后应集合在 Boss 正后方七米、容差三米的圆内。");
+                    }
+        }
+
+        public static void DarklitWingOriginMatchesTheAttackedHalf()
+        {
+            var center = new Vector2(100, 100);
+            var area = ActionArea.Rectangle(80, 40);
+            foreach (var wing in new[] { WingSide.Left, WingSide.Right })
+                foreach (DarklitSolution solution in Enum.GetValues(typeof(DarklitSolution)))
+                {
+                    var plan = new DarklitPlan(0, DarklitDebuff.ChainWater, solution, DiagonalSwap.Anti, SideSwap.Left,
+                        SomberDanceBait.MTThenST, wing, new Random(40228));
+                    Check(plan.WingAction == (wing == WingSide.Left ? 40227u : 40228u), "左右刀应使用各自的技能。");
+                    for (var x = -19; x <= 19; x += 2)
+                        for (var y = -19; y <= 19; y += 2)
+                        {
+                            if (x * x + y * y >= 400)
+                                continue;
+                            var point = center + new Vector2(x, y);
+                            Check(area.Contains(point, plan.WingOrigin, (float)Math.PI) == (wing == WingSide.Left ? x < 0 : x > 0),
+                                "使用读条技能坐标作为矩形原点，应准确覆盖左右半场；不能将原点当成希瓦位置。");
+                        }
+                    for (var slot = 0; slot < 8; slot++)
+                    {
+                        var region = plan.Stack(slot, new Vector2(100, 82), 9.5f);
+                        Check(!area.Contains(region.Midpoint(), plan.WingOrigin, (float)Math.PI), "两组分摊的标准站位应避开半场刀。");
+                    }
+                }
+        }
+
+        public static void DarklitNorthStackTeachesTheTargetToStepInward()
+        {
+            var random = new Random(40301);
+            var crystal = new Vector2(100, 82);
+            const float crystalRadius = 3.5f;
+            var area = ActionArea.Circle(6);
+            var safeDistance = 6 + crystalRadius;
+            foreach (DarklitSolution solution in Enum.GetValues(typeof(DarklitSolution)))
+                foreach (WingSide wing in new[] { WingSide.Left, WingSide.Right })
+                    for (var sample = 0; sample < 64; sample++)
+                    {
+                        var plan = new DarklitPlan(0, DarklitDebuff.Random, solution, DiagonalSwap.Anti, SideSwap.Left,
+                            SomberDanceBait.MTThenST, wing, random);
+                        var regions = Enumerable.Range(0, 8).Select(slot => plan.Stack(slot, crystal, safeDistance)).ToArray();
+                        var positions = regions.Select(region => region.Sample(random)).ToArray();
+                        for (var slot = 0; slot < 8; slot++)
+                        {
+                            Check((plan.RightSafe ? positions[slot].X - 100 : 100 - positions[slot].X) > 0,
+                                "南北两组分摊的整个范围均应处于半场刀安全侧。");
+                            if (plan.Quadrants[slot] < 2)
+                            {
+                                var radius = Vector2.Distance(positions[slot], crystal);
+                                var targeted = plan.Waters.Contains(slot);
+                                Check(targeted ? radius >= safeDistance + 0.0999f && radius <= safeDistance + 1.0001f :
+                                    radius >= safeDistance - 1.5001f && radius <= safeDistance - 0.4999f,
+                                    "北侧分摊点名者和参与者必须分别使用指定的两层径向范围。");
+                                Check(area.IntersectsCircle(crystal, crystalRadius, positions[slot]) != targeted,
+                                    "北侧点名者在自身范围内应安全；若跟到参与者的范围，则必定击中水晶。");
+                            }
+                            else
+                            {
+                                Check(Math.Abs(regions[slot].DeviationRadius - 2) < 0.0001 && Math.Abs(regions[slot].Midpoint().Y - 109) < 0.0001,
+                                    "南侧全员应使用中心偏南九米、半径两米的相同站位范围。");
+                            }
+                        }
+                        foreach (var target in plan.Waters)
+                            for (var slot = 0; slot < 8; slot++)
+                            {
+                                var distance = Vector2.Distance(regions[target].Midpoint(), regions[slot].Midpoint());
+                                var tolerance = regions[target].DeviationRadius + regions[slot].DeviationRadius;
+                                Check(plan.Quadrants[target] / 2 == plan.Quadrants[slot] / 2 ? distance + tolerance < 6 : distance - tolerance > 6,
+                                    "南北分摊的完整容差范围必须恰好包含本组四人，且不波及另一组。");
+                            }
                     }
         }
 

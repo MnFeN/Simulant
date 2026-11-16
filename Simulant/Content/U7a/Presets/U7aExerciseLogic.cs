@@ -11,7 +11,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7a.Presets
 {
@@ -321,7 +320,6 @@ namespace Simulant.Content.U7a.Presets
             var area = ActionArea.FromAction(40289);
             var target = CrystallizeTimePlan.SpiritTakerTarget(
                 positions, Self, area, Crystal?.Pos, Crystal?.Entity.HitboxRadius ?? 0, Random);
-            var immune = Party.Select(p => p.JudgementKnockbackImmune).ToArray();
             var center = positions[target];
             var mechanic = Spread("碎灵一击分散", target, 40289, false);
             mechanic.LockedSnapshot = snapshot;
@@ -336,13 +334,8 @@ namespace Simulant.Content.U7a.Presets
             };
             mechanic.Visual = result =>
             {
-                foreach (var member in result.Participants.Where(p => p.Slot != target && !immune[p.Slot]))
-                {
-                    var direction = Party[member.Slot].Pos - center;
-                    if (direction.LengthSquared() < 0.0001f)
-                        direction = Direction(Deg(member.Slot * 45));
-                    Party[member.Slot].Knockback(Heading(direction), 40, 0.8f, ignoreImmunity: true);
-                }
+                foreach (var member in result.Participants.Where(p => p.Slot != target))
+                    Party[member.Slot].KnockbackFrom(center, 40, 0.8f);
             };
             Run(ProtectCrystal(mechanic, target));
         }

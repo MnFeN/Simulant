@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Simulant.Simulation.Geometry;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Simulation.Runtime
 {
@@ -459,7 +460,7 @@ namespace Simulant.Simulation.Runtime
 
             var direction = delta / distance;
             var perpendicular = new Vector2(-direction.Y, direction.X);
-            var angle = random.NextDouble() * angleDegrees * Math.PI / 180;
+            var angle = Deg(random.NextDouble() * angleDegrees);
             var side = random.Next(2) == 0 ? -1 : 1;
             var lead = distance * (0.2 + random.NextDouble() * 0.1);
             var lateral = (float)(lead * Math.Sin(angle) * side);

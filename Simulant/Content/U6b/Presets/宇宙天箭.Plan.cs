@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U6b.Presets
 {
@@ -97,7 +98,7 @@ namespace Simulant.Content.U6b.Presets
             };
             return offsets.SelectMany(offset => new[]
             {
-                new Shot(new Vector2(80, 100 + offset), (float)Math.PI / 2, 0x7BA3),
+                new Shot(new Vector2(80, 100 + offset), (float)Deg(90), 0x7BA3),
                 new Shot(new Vector2(100 + offset, 80), 0, 0x7BA3),
             }).ToArray();
         }
@@ -130,7 +131,7 @@ namespace Simulant.Content.U6b.Presets
 
                 )
                 {
-                    shots.Add(new Shot(new Vector2(80, 100 + sign * offset), (float)Math.PI / 2, 0x7BA4));
+                    shots.Add(new Shot(new Vector2(80, 100 + sign * offset), (float)Deg(90), 0x7BA4));
                     shots.Add(new Shot(new Vector2(100 + sign * offset, 80), 0, 0x7BA4));
                 }
             }
@@ -145,7 +146,7 @@ namespace Simulant.Content.U6b.Presets
         internal static SimPosition SafeCell(Vector2 position)
         {
             var offset = position - Center;
-            return SimPosition.AnnularSector(Center, offset.Length(), Math.Atan2(offset.X, offset.Y), 1.5f, Math.PI / 180);
+            return SimPosition.AnnularSector(Center, offset.Length(), Math.Atan2(offset.X, offset.Y), 1.5f, Deg(1));
         }
 
         internal static Move[] Route(ArrowMode mode, ArrowOccurrence occurrence, int slot)
@@ -198,8 +199,8 @@ namespace Simulant.Content.U6b.Presets
                     : new Vector2(-4 - slot, 4 + slot)), 1);
 
             // 人群在左下分散站进同一个扇环；第二次收窄角度，保证任意队员被点名时全员仍在线内。
-            return SimPosition.AnnularSector(Center, 12, -Math.PI / 4, 1,
-                (occurrence == ArrowOccurrence.First ? 8 : 5) * Math.PI / 180);
+            return SimPosition.AnnularSector(Center, 12, Deg(-45), 1,
+                Deg(occurrence == ArrowOccurrence.First ? 8 : 5));
         }
 
         /// <summary>用于归责的参考站位；只判断这些站位对应的技能范围，不按距导航点的距离画叉。</summary>

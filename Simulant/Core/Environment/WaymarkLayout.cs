@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Numerics;
 using System.Text;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Core.Environment
 {
@@ -91,7 +92,7 @@ namespace Simulant.Core.Environment
 
             for (var i = 0; i < order.Length; i++)
                 Polar(order[i].ToString(), radii[i % radii.Length],
-                    Math.PI + 2 * Math.PI * (i + (startFromNorth ? 0 : 0.5)) / order.Length);
+                    Math.PI + Deg(360 * (i + (startFromNorth ? 0 : 0.5)) / order.Length));
 
             return this;
         }

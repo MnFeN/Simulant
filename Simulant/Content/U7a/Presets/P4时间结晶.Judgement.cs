@@ -23,7 +23,15 @@ namespace Simulant.Content.U7a.Presets
                 Area = shape,
                 RequiredPlayers = expected.Length,
                 CenterAtResolve = snapshot => snapshot.Get(target).Position,
-                Visual = visual ?? (result => Effect(helper, action, target)),
+                Visual = result =>
+                {
+                    if (action == 40271 || action == 40277)
+                        EntityManager.MarkUnderfilledStack(result.Participants.Select(m => m.Actor).ToArray(), expected.Length, _gaia);
+                    if (visual != null)
+                        visual(result);
+                    else
+                        Effect(helper, action, target);
+                },
                 Failed = result => Report(result.DescribeFailure(name, expected, target)
                     .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null), result),
                 Check = members => members.Select(m => m.Slot).OrderBy(i => i).SequenceEqual(expected.OrderBy(i => i))
@@ -187,13 +195,8 @@ namespace Simulant.Content.U7a.Presets
                         {
                             var actor = Party[member.Slot];
                             // 受击名单使用历史判定，实际击退从当前站位向外展开。
-                            var direction = actor.Pos - center;
-
-                            if (direction.LengthSquared() < 0.0001f)
-                                direction = Vector2.UnitY;
-
                             actor.SuspendBehavior(0.9);
-                            actor.Knockback(Heading(direction), 30, 0.8f);
+                            actor.KnockbackFrom(center, 30, 0.8f);
                         }
                     };
 
@@ -404,26 +407,14 @@ namespace Simulant.Content.U7a.Presets
             var target = CrystallizeTimePlan.SpiritTakerTarget(Enumerable.Range(0, Party.Count).Select(slot => snapshot.Get(slot).Position).ToArray(), Self,
                 area, _crystal.Pos, _crystal.Entity.HitboxRadius, _random);
             var center = Party[target].Pos;
-            var immune = Party.Select(actor => actor.JudgementKnockbackImmune).ToArray();
             var mechanic = Targeted("碎灵一击分散", 40289, target, new[]
             {
                 target
             }, 0, area, result =>
             {
-                // 主目标承受跳跃，范围内的其他人向外击退 40 米；使用选人时锁定的免疫结果。
-                foreach (var member in result.Participants.Where(member => member.Slot != target && !immune[member.Slot]))
-                {
-                    var position = Party[member.Slot].Pos;
-                    var direction = position - center;
-
-                    if (direction.LengthSquared() < 0.0001f)
-                        direction = position - Center;
-
-                    if (direction.LengthSquared() < 0.0001f)
-                        direction = Vector2.UnitY;
-
-                    Party[member.Slot].Knockback(Heading(direction), 40, 0.8f, ignoreImmunity: true);
-                }
+                // 主目标承受跳跃；其他受击者交由实体层按当前坐标和防击退状态处理。
+                foreach (var member in result.Participants.Where(member => member.Slot != target))
+                    Party[member.Slot].KnockbackFrom(center, 40, 0.8f);
             });
             // 回放：47.375 秒演出包，48.309 秒伤害结算；波及队友的记录也是约 0.935 秒后结算。
             // 锁定站位后先播放跳跃，落地才击退并报错，避免失败中断取消尚未执行的击退。
@@ -437,18 +428,17 @@ namespace Simulant.Content.U7a.Presets
         {
             var positions = Party.Select(actor => actor.JudgementPosition).ToArray();
             var order = CrystallizeTimePlan.FrontFour(positions, wave, wave == 0 ? _plan.FirstSide : _plan.SecondSide);
-            var immune = Party.Select(actor => actor.JudgementKnockbackImmune).ToArray();
             _shiva.Execute(40332);
 
             foreach (var actor in Party)
                 actor.SuspendBehavior(wave == 0 ? 6.9 : 2.4);
 
             // 回放：ActionEffect 为 53.241 / 57.697 秒，击退移动从 54.625 / 59.065 秒开始。
-            // 先锁定此次技能的排队和免疫结果，等翅膀打下来再位移，期间状态到期不改变结果。
-            Scheduler.ScheduleAfter(wave == 0 ? 1.384 : 1.368, () => ResolveWing(wave, order, immune), "圣翼命中与击退");
+            // 只锁定伤害排队；击退应用时由实体层检查当前防击退状态。
+            Scheduler.Schedule(_origin + (wave == 0 ? 54.625 : 59.065), () => ResolveWing(wave, order), "圣翼命中与击退");
         }
 
-        private void ResolveWing(int wave, int[] order, bool[] immune)
+        private void ResolveWing(int wave, int[] order)
         {
             var front = order.Take(4).ToArray();
             var tankCount = _plan.IsY && wave == 1 ? 2 : 1;
@@ -463,8 +453,8 @@ namespace Simulant.Content.U7a.Presets
                 Status(slot, 2941, 6);
 
             for (var slot = 0; slot < Party.Count; slot++)
-                if (!immune[slot])
-                    Party[slot].Knockback(Heading(_plan.WaveDirection(wave)), 20, 0.8f, ignoreImmunity: true);
+                // 两次技能 40332 的击退效果均为 Value=108、Param0=0；距离 20，Speed=40。
+                Party[slot].KnockbackFromEffect(Heading(_plan.WaveDirection(wave)), 108);
 
             // 先提交全队击退动画，再报告排队错误。
             if (wrongTank || repeated.Length != 0)

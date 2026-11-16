@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.Numerics;
 using static Simulant.Content.U7b.Presets.ForsakenTiming;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7b.Presets
 {
@@ -113,7 +114,7 @@ namespace Simulant.Content.U7b.Presets
             var expectedHeading = Heading(positions[source], positions[expectedTarget]);
             // 比较同一轮世界坐标中的方向，取跨越正负 π 后的最小夹角。
             var difference = (double)result.Heading - expectedHeading;
-            var degrees = Math.Abs(Math.Atan2(Math.Sin(difference), Math.Cos(difference))) * 180 / Math.PI;
+            var degrees = ToDegrees(Math.Abs(Math.Atan2(Math.Sin(difference), Math.Cos(difference))));
 
             if (degrees <= 30)
                 return null;

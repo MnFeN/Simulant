@@ -798,6 +798,22 @@ namespace Simulant.Tests
             Assert(selected.Length == 8, "自身既不威胁水晶也不重叠时，应保留八人随机点名。");
         }
 
+        public static void SpiritTakerWithoutCrystalStillPrioritizesOverlap()
+        {
+            var random = new Random(40289);
+            var area = ActionArea.Circle(5);
+            var positions = Enumerable.Range(0, 8).Select(i => new Vector2(100 + 10 * i, 110)).ToArray();
+            positions[1] = positions[0] + new Vector2(5, 0);
+            for (var sample = 0; sample < 32; sample++)
+                Assert(CrystallizeTimePlan.SpiritTakerTarget(positions, 0, area, null, 0, random) == 1,
+                    "没有水晶时，自身靠近队友仍应必定点队友，让自身受到波及击退。");
+
+            positions[1] = new Vector2(110, 110);
+            var selected = Enumerable.Range(0, 256)
+                .Select(_ => CrystallizeTimePlan.SpiritTakerTarget(positions, 0, area, null, 0, random)).Distinct().ToArray();
+            Assert(selected.Length == 8, "没有水晶且自身未与队友重叠时，应保留八人随机点名。");
+        }
+
         public static void BothSolutionsKeepFullSpreadAreasSafeAndYTankOrderCorrect()
         {
             var random = new Random(7362);

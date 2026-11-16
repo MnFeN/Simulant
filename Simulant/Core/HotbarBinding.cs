@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Simulant.Core
 {
@@ -54,7 +55,7 @@ namespace Simulant.Core
                         default:
                             continue;
                     }
-                    if (action != 3 && action != 7548 && action != 7559)
+                    if (!Simulation.Runtime.SimEntityManager.LocalActions.Contains(action))
                         continue;
                     for (var binding = 0; binding < 2; binding++)
                     {

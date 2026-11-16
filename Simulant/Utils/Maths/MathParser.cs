@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Utils.Maths
 {
@@ -85,8 +86,8 @@ namespace Simulant.Utils.Maths
             LocalFunctions.Add("arctan", x => Math.Atan(x[0]));
             LocalFunctions.Add("arctan2", x => Math.Atan2(x[0], x[1]));
             LocalFunctions.Add("atan2", x => Math.Atan2(x[0], x[1]));
-            LocalFunctions.Add("radtodeg", x => x[0] / Math.PI * 180.0);
-            LocalFunctions.Add("degtorad", x => x[0] / 180.0 * Math.PI);
+            LocalFunctions.Add("radtodeg", x => ToDegrees(x[0]));
+            LocalFunctions.Add("degtorad", x => Deg(x[0]));
             LocalFunctions.Add("DirToRad", DirectionToRadFunction);
             LocalFunctions.Add("dir2rad", DirectionToRadFunction); // old name
             LocalFunctions.Add("distance", DistanceFunction);
@@ -102,8 +103,8 @@ namespace Simulant.Utils.Maths
             LocalFunctions.Add("ispointinray", IsPointInRayFunction);
             LocalFunctions.Add("angle", x => Math.Atan2(x[2] - x[0], x[3] - x[1]));
             LocalFunctions.Add("θ", x => Math.Atan2(x[2] - x[0], x[3] - x[1]));
-            LocalFunctions.Add("relangle", x => ModFunction(x[1] - x[0] + Math.PI, 2 * Math.PI) - Math.PI);
-            LocalFunctions.Add("relθ", x => ModFunction(x[1] - x[0] + Math.PI, 2 * Math.PI) - Math.PI);
+            LocalFunctions.Add("relangle", x => ModFunction(x[1] - x[0] + Math.PI, Deg(360)) - Math.PI);
+            LocalFunctions.Add("relθ", x => ModFunction(x[1] - x[0] + Math.PI, Deg(360)) - Math.PI);
             LocalFunctions.Add("isanglebetween", IsAngleBetweenFunction);
             LocalFunctions.Add("isθbetween", IsAngleBetweenFunction);
             LocalFunctions.Add("RadToDir", RoundirFunction);
@@ -154,12 +155,12 @@ namespace Simulant.Utils.Maths
             // local variables such as pi can also be added into the parser.
             LocalVariables.Add("pi", Math.PI);
             LocalVariables.Add("π", Math.PI);
-            LocalVariables.Add("pi2", Math.PI * 2);
-            LocalVariables.Add("pi05", Math.PI / 2);
-            LocalVariables.Add("pi025", Math.PI / 4);
-            LocalVariables.Add("pi0125", Math.PI / 8);
-            LocalVariables.Add("pitorad", 180.0 / Math.PI);
-            LocalVariables.Add("piofrad", Math.PI / 180.0);
+            LocalVariables.Add("pi2", Deg(360));
+            LocalVariables.Add("pi05", Deg(90));
+            LocalVariables.Add("pi025", Deg(45));
+            LocalVariables.Add("pi0125", Deg(22.5));
+            LocalVariables.Add("pitorad", ToDegrees(1));
+            LocalVariables.Add("piofrad", Deg(1));
             // to-do:
             // hex2dec(e) 按现在的逻辑会将 e 处理为常数而报错。
             // 鉴于 Math.E 在 FF14 触发器中几乎不会使用，且 hex2dec() 进制转换方法已有 "0x" 前缀替代，
@@ -441,7 +442,7 @@ namespace Simulant.Utils.Maths
                 direction += 0.5;
             }
 
-            return -Math.PI + 2 * Math.PI * ModFunction(direction / segments, 1);
+            return -Math.PI + Deg(360 * ModFunction(direction / segments, 1));
         }
 
         /// <summary>
@@ -456,9 +457,9 @@ namespace Simulant.Utils.Maths
             switch (input.Length)
             {
                 case 3:
-                    var θ = ModFunction(input[0] + Math.PI, 2 * Math.PI) /*- Math.PI*/;
-                    var θ1 = ModFunction(input[1] + Math.PI, 2 * Math.PI) /*- Math.PI*/;
-                    var θ2 = ModFunction(input[2] + Math.PI, 2 * Math.PI) /*- Math.PI*/;
+                    var θ = ModFunction(input[0] + Math.PI, Deg(360)) /*- Math.PI*/;
+                    var θ1 = ModFunction(input[1] + Math.PI, Deg(360)) /*- Math.PI*/;
+                    var θ2 = ModFunction(input[2] + Math.PI, Deg(360)) /*- Math.PI*/;
                     bool inRange = θ1 <= θ2 ? θ1 <= θ && θ <= θ2 : θ1 <= θ || θ <= θ2;
                     return inRange ? 1 : 0;
                 default:
@@ -548,7 +549,7 @@ namespace Simulant.Utils.Maths
             double b = input[1];
             double t = input[2];
 
-            return NormalizeRad(a - ModFunction(a - b, 2 * Math.PI) * t);
+            return NormalizeRad(a - ModFunction(a - b, Deg(360)) * t);
         }
 
         public static double LerpAngleCCWFunction(double[] input)
@@ -557,12 +558,12 @@ namespace Simulant.Utils.Maths
             double b = input[1];
             double t = input[2];
 
-            return NormalizeRad(a + ModFunction(b - a, 2 * Math.PI) * t);
+            return NormalizeRad(a + ModFunction(b - a, Deg(360)) * t);
         }
 
         private static double NormalizeRad(double rad)
         {
-            return ModFunction(rad + Math.PI, 2 * Math.PI) - Math.PI;
+            return ModFunction(rad + Math.PI, Deg(360)) - Math.PI;
         }
 
         public static double LerpDirFunction(double[] input)
@@ -872,7 +873,7 @@ namespace Simulant.Utils.Maths
             expr = expr.Replace(" ", "").Replace("\r", "").Replace("\n", "").Replace("⏎", "");
 
             // degree → rad
-            expr = expr.Replace("°", "*0.01745329251994329576923690768488612");
+            expr = expr.Replace("°", "*" + Deg(1).ToString("R", CultureInfo.InvariantCulture));
 
             // replace continuous +/- to a single +/- base on the count of "-"
             expr = MultiplePlusMinus.Replace(expr, match => match.Value.Count(c => c == '-') % 2 == 0 ? "+" : "-");

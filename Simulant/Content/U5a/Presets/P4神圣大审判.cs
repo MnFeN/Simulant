@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U5a.Presets
 {
@@ -34,15 +35,15 @@ namespace Simulant.Content.U5a.Presets
             new ComboBoxOption<JudgmentOrder>(
                 nameof(P4神圣大审判Logic.FlareOrder), "地火刷新模式", JudgmentOrder.Random,
                 new Map<JudgmentOrder>
-            {
-                [JudgmentOrder.Random] = "随机",
+                {
+                    [JudgmentOrder.Random] = "随机",
                     [JudgmentOrder.LeftMiddleRight] = "左 - 中 - 右",
                     [JudgmentOrder.LeftRightMiddle] = "左 - 右 - 中",
                     [JudgmentOrder.MiddleLeftRight] = "中 - 左 - 右",
                     [JudgmentOrder.MiddleRightLeft] = "中 - 右 - 左",
                     [JudgmentOrder.RightLeftMiddle] = "右 - 左 - 中",
                     [JudgmentOrder.RightMiddleLeft] = "右 - 中 - 左",
-            }),
+                }),
         };
     }
 
@@ -179,7 +180,7 @@ namespace Simulant.Content.U5a.Presets
                 return;
 
             var heading = (float)Math.Atan2(direction.X, direction.Y);
-            var difference = Math.IEEERemainder(heading - boss.Heading, 2 * Math.PI);
+            var difference = Math.IEEERemainder(heading - boss.Heading, Deg(360));
 
             if (Math.Abs(difference) > 0.01)
                 boss.FaceNetwork(heading);

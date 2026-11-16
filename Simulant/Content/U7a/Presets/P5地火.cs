@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using static System.Math;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7a.Presets
 {
@@ -149,7 +150,7 @@ namespace Simulant.Content.U7a.Presets
                                Play(SingleTimelineStartFromGlowing(lines[group * 2 + 1]));
                            }, "地火分组发光");
 
-                           mechanic.At(20, () => boss.FaceNetwork((float)((int)CenterDir4 / 2.0 * PI - PI)), "本体转向安全点");
+                           mechanic.At(20, () => boss.FaceNetwork((float)(Deg((int)CenterDir4 * 90 - 180))), "本体转向安全点");
                            mechanic.At(25, () => boss.Cast(0x9D76), "双分摊读条");
                            mechanic.At(42, () => EntityManager.Delete(boss), "回收本体");
                            Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体就绪后开始地火");
@@ -217,7 +218,7 @@ namespace Simulant.Content.U7a.Presets
             int firstLineDir8 = (int)FirstLineDir4 * 2;
 
             // 八角星中心方向（0~3）
-            double theta4 = centerDir4 * (PI / 2) - PI;
+            double theta4 = Deg(centerDir4 * 90 - 180);
             Vector2 octagonCenter = 7.0711f * new Vector2((float)Sin(theta4), (float)Cos(theta4)); // 八角星中心距离场地中心 5√2
 
             var result = new (Vector3 pos, float heading)[6];
@@ -226,7 +227,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 // 当前方向（未取余至 0-7）
                 int eObjDir8Raw = firstLineDir8 + (isClockWise ? -i : i);
-                double eObjHeading = eObjDir8Raw * (PI / 4) - PI;
+                double eObjHeading = Deg(eObjDir8Raw * 45 - 180);
 
                 var sin = (float)Sin(eObjHeading);
                 var cos = (float)Cos(eObjHeading);

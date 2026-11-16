@@ -99,7 +99,7 @@ namespace Simulant.Core
             }
         }
 
-        internal static uint ParseAction(string command)
+        internal static uint ParseAction(string command, Game.FFCS.Client.Game.Character.Job job = Game.FFCS.Client.Game.Character.Job.ADV)
         {
             var parts = (command ?? "").Split(new[]
             {
@@ -116,6 +116,16 @@ namespace Simulant.Core
                     return 7548;
                 case "冲刺":
                     return 3;
+                case "无敌":
+                    return SimEntityManager.InvulnerabilityAction(job);
+                case "神圣领域":
+                    return 30;
+                case "死斗":
+                    return 43;
+                case "行尸走肉":
+                    return 3638;
+                case "超火流星":
+                    return 16152;
                 default:
                     return 0;
             }
@@ -123,7 +133,7 @@ namespace Simulant.Core
 
         internal void Receive(string command)
         {
-            var action = ParseAction(command);
+            var action = ParseAction(command, _host.EntityProvider.GetMyself()?.Job ?? Game.FFCS.Client.Game.Character.Job.ADV);
             if (action == 0)
                 return;
 

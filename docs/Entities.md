@@ -179,6 +179,8 @@ boss.MoveTo(new Vector2(100, 90), speed: 6, animationId: 13,
 
 `SimActor.Knockback` 默认检查这两种模拟状态；不受免疫影响的击退可传 `ignoreImmunity: true`。回返传送不属于击退，仍正常执行。状态到期、移除或槽位被替换后立即失去免疫，重复使用则刷新期限，不会被旧的到期节点提前清除。
 
+所有击退均为本地处理，公共入口在实际位移应用时读取当前位置与当前防击退状态，不受“模拟判定延迟”影响。径向击退使用 `KnockbackFrom(center, distance, duration)`，或传中心坐标的 `KnockbackFromEffect(center, knockbackId)` 查表版本；固定方向仍传角度。副本只提供中心或方向、效果参数及应用时间，不缓存历史角度或免疫结果。技能命中、分摊、前排伤害等服务器判定仍各自保留原来的站位快照。
+
 ## 身份与失效
 
 宿主的 `EntityProvider`、`EntitySpawner` 共享一个 `EntityRegistry`。同一原生实例的查询和生成结果使用同一包装。`EntityIdentity` 由世界代次、对象槽位和实例代次构成；游戏 `Id` 和地址只是元数据，不单独用作实例身份。

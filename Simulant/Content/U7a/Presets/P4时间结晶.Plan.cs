@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7a.Presets
 {
@@ -172,10 +173,10 @@ namespace Simulant.Content.U7a.Presets
         internal static string Label(CrystalDebuff kind) => kind == CrystalDebuff.RedWind ? "红风" : kind == CrystalDebuff.RedIce ? "红冰" :
             kind == CrystalDebuff.BlueWater ? "蓝水" : kind == CrystalDebuff.BlueEarth ? "蓝土" : kind == CrystalDebuff.BlueDark ? "蓝暗" : "蓝冰";
         internal static Vector2 Polar(float radius, double degrees) => Center + Direction(degrees) * radius;
-        internal static Vector2 Direction(double degrees) => new Vector2((float)Math.Sin(degrees * Math.PI / 180), (float)Math.Cos(degrees * Math.PI / 180));
+        internal static Vector2 Direction(double degrees) => new Vector2((float)Math.Sin(Deg(degrees)), (float)Math.Cos(Deg(degrees)));
         internal static SimPosition Circle(Vector2 point, float tolerance = 1) => SimPosition.Ellipse(point, tolerance);
         internal static SimPosition Sector(float radius, double degrees, float dr = 0.3f, double dtheta = 0.6)
-            => SimPosition.AnnularSector(Center, radius, degrees * Math.PI / 180, dr, dtheta * Math.PI / 180);
+            => SimPosition.AnnularSector(Center, radius, Deg(degrees), dr, Deg(dtheta));
 
         internal SimPosition Initial(int slot)
         {
@@ -204,8 +205,8 @@ namespace Simulant.Content.U7a.Presets
         internal SimPosition WindRider(Vector2 wind)
         {
             // 随实际红风位置平移，中轴固定朝场内，不随红风偏离预设中心而转向。
-            return SimPosition.AnnularSector(wind, 2, Math.PI - 35 * NorthSlowSide * Math.PI / 180,
-                0.9f, 15 * Math.PI / 180);
+            return SimPosition.AnnularSector(wind, 2, Math.PI - Deg(35 * NorthSlowSide),
+                0.9f, Deg(15));
         }
         internal SimPosition RedAfterIce(int side)
         {

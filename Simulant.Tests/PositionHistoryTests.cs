@@ -56,6 +56,16 @@ namespace Simulant.Tests
             }
         }
 
+        public static void GazeHeadingAndInvulnerabilityUseTheSameHistoricalSample()
+        {
+            var history = new PositionHistory();
+            history.Add(0, Vector3.Zero, false, 0);
+            history.Add(0.2, Vector3.One, true, 3);
+            history.Add(0.4, Vector3.Zero, false, 1);
+            if (!history.InvulnerabilityAt(0.25) || history.HeadingAt(0.25) != 3 || history.InvulnerabilityAt(0.45))
+                throw new Exception("石化朝向和伤害无敌应取同一历史时刻；防击退不属于历史判定。");
+        }
+
         public static void SamplesEarlierPositionWithoutInterpolatingTeleports()
         {
             var history = new PositionHistory();

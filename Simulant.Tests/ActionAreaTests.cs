@@ -4,6 +4,7 @@ using Simulant.Simulation.Geometry;
 using System;
 using System.Numerics;
 using ActionRow = Lumina.Excel.Sheets.Action;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
@@ -27,7 +28,7 @@ namespace Simulant.Tests
             var rectangle = ActionArea.Rectangle(10, 4);
             Assert(rectangle.IntersectsCircle(origin + new Vector2(3, 11), 1.5f, origin), "矩形角附近按实际圆弧距离判定。");
             Assert(!rectangle.IntersectsCircle(origin + new Vector2(3, 11), 1.4f, origin), "不能把矩形简单扩宽后误算角外位置。");
-            Assert(rectangle.IntersectsCircle(origin + new Vector2(11, -3), 1.5f, origin, (float)Math.PI / 2), "碰撞判定应服从技能朝向。");
+            Assert(rectangle.IntersectsCircle(origin + new Vector2(11, -3), 1.5f, origin, (float)Deg(90)), "碰撞判定应服从技能朝向。");
 
             var cone = ActionArea.Cone(10, 90);
             Assert(cone.IntersectsCircle(origin + new Vector2(5, 4), 0.71f, origin), "扇形侧边应与碰撞圆相交。");
@@ -78,7 +79,7 @@ namespace Simulant.Tests
             Assert(!rectangle.Contains(new Vector2(100, 108.001f), origin, 0), "矩形长度参数是向前长度，不能翻倍。");
             Assert(!rectangle.Contains(new Vector2(100, 99.999f), origin, 0), "矩形不能延伸到原点后方。");
 
-            var east = (float)(Math.PI / 2);
+            var east = (float)Deg(90);
             Assert(rectangle.Contains(new Vector2(108, 102), origin, east), "ACT 的 π/2 朝向应使矩形向 +X 延伸。");
             Assert(rectangle.Contains(new Vector2(100, 98), origin, east), "旋转后的后边界须容纳浮点朝向舍入误差。");
             Assert(!rectangle.Contains(new Vector2(99.999f, 100), origin, east), "旋转后的原点后方不得命中。");
@@ -96,7 +97,7 @@ namespace Simulant.Tests
             Assert(cone.Contains(new Vector2(100, 110), origin, 0), "扇形半径边界必须命中。");
             Assert(!cone.Contains(new Vector2(100, 110.001f), origin, 0), "角度正确但超过扇形半径的点不得命中。");
             Assert(!cone.Contains(new Vector2(100, 99), origin, 0), "锐角扇形后方不得命中。");
-            Assert(cone.Contains(new Vector2(110, 100), origin, (float)(Math.PI / 2)), "扇形必须遵循 ACT 朝向。");
+            Assert(cone.Contains(new Vector2(110, 100), origin, (float)Deg(90)), "扇形必须遵循 ACT 朝向。");
 
             var halfPlane = ActionArea.Cone(10, 180);
             Assert(halfPlane.Contains(new Vector2(110, 100), origin, 0), "180 度扇形应包含右侧边界。");

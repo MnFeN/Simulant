@@ -1,6 +1,7 @@
 using Simulant.Utils.Maths;
 using System;
 using System.Globalization;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
@@ -27,8 +28,8 @@ namespace Simulant.Tests
             Check("rem(7,4)", -1);
             Check("lerp(2,10,0.25)", 4);
             Check("lerpangle(170°, -170°, 0.5)", -Math.PI);
-            Check("lerpanglecw(0, pi05, 0.5)", -3 * Math.PI / 4);
-            Check("lerpangleccw(0, pi05, 0.5)", Math.PI / 4);
+            Check("lerpanglecw(0, pi05, 0.5)", Deg(-135));
+            Check("lerpangleccw(0, pi05, 0.5)", Deg(45));
             Check("lerpdir(7,1,8,0.5)", 0);
             Check("lerpdircw(7,1,8,0.5)", 4);
             Check("lerpdirccw(7,1,8,0.5)", 0);
@@ -48,7 +49,7 @@ namespace Simulant.Tests
                 Check("2.5", 2.5);
                 Check("2.5 + 3", 5.5);
                 Check("1 ⏎ +\n2", 3);
-                Check("pi2 + pi05 + pi025 + pi0125", Math.PI * 2.875);
+                Check("pi2 + pi05 + pi025 + pi0125", Deg(517.5));
                 Check("pitorad * piofrad", 1);
                 Check("-2^2", -4);
                 Check("2^3^2", 512);

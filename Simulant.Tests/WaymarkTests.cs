@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Threading;
 using System.Web.Script.Serialization;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
@@ -46,11 +47,11 @@ namespace Simulant.Tests
             Near(U5a.Waymarks["3"], 115.5f, 98);
             Near(U5a.Waymarks["4"], 115.5f, 102);
 
-            var rotated = WaymarkLayout.Center(10, 20, 3).Rotate(Math.PI / 2).Circle("ABCD", true, 2);
+            var rotated = WaymarkLayout.Center(10, 20, 3).Rotate(Deg(90)).Circle("ABCD", true, 2);
             Near(rotated["A"], 12, 20, 3);
             Near(rotated["B"], 10, 18, 3);
-            var points = WaymarkLayout.Center(10, 20, 3).At("A", 0, -2).Polar("B", 2, -Math.PI / 2);
-            points.Rotate(Math.PI / 2);
+            var points = WaymarkLayout.Center(10, 20, 3).At("A", 0, -2).Polar("B", 2, Deg(-90));
+            points.Rotate(Deg(90));
             Near(points["A"], 12, 20, 3);
             Near(points["B"], 10, 18, 3);
             points.Rotate(Math.PI);
@@ -60,7 +61,7 @@ namespace Simulant.Tests
             var between = WaymarkLayout.Center(10, 20, 3).Circle("ABCD", false, Math.Sqrt(2));
             Near(between["A"], 9, 19, 3);
             Near(between["D"], 11, 19, 3);
-            between.Rotate(Math.PI / 2);
+            between.Rotate(Deg(90));
             Near(between["A"], 11, 19, 3);
             Near(between["D"], 11, 21, 3);
 

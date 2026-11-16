@@ -9,6 +9,33 @@ namespace Simulant.Tests
 {
     internal static class SessionStatusTests
     {
+        public static void InvulnerabilityUsesEachTankJobAndDoesNotBypassMechanicFailures()
+        {
+            var jobs = new[] { Simulant.Game.FFCS.Client.Game.Character.Job.PLD,
+                Simulant.Game.FFCS.Client.Game.Character.Job.WAR, Simulant.Game.FFCS.Client.Game.Character.Job.DRK,
+                Simulant.Game.FFCS.Client.Game.Character.Job.GNB };
+            var actions = new uint[] { 30, 43, 3638, 16152 };
+            var statuses = new ushort[] { 82, 409, 810, 1836 };
+            using (var scene = new Scene())
+                for (var i = 0; i < jobs.Length; i++)
+                {
+                    scene.Player.Job = jobs[i];
+                    Assert(Simulant.Core.SimActionService.ParseAction("ac 无敌", jobs[i]) == actions[i], "通用无敌命令应按职业选择技能。");
+                    Assert(scene.Manager.UseInvulnerability(scene.Player), "坦克应能使用本职业无敌。");
+                    Assert(scene.Player.IsInvulnerable && scene.Statuses.GetStatus(0).StatusId.Get() == statuses[i], "四个坦克应获得各自的无敌状态。");
+                    var mechanic = new Simulant.Simulation.Mechanics.AreaMechanic
+                    {
+                        Area = Simulant.Simulation.Geometry.ActionArea.Circle(2),
+                        MaxPlayers = 0
+                    };
+                    mechanic.Claim(new Simulant.Simulation.Mechanics.MechanicContext(scene.Manager, scene._scheduler, new[] { scene.Player }));
+                    Assert(!mechanic.EvaluateForGroup(Simulant.Simulation.Mechanics.PartySnapshot.Capture(new[] { scene.Player })).Success,
+                        "无敌不能让普通机制判定自动免错。");
+                    mechanic.Stop();
+                    scene.Manager.RemoveStatus(scene.Player, statuses[i]);
+                }
+        }
+
         public static void UnderfilledStacksApplyMortalityToActualParticipantsOnly()
         {
             using (var scene = new Scene())

@@ -3,7 +3,6 @@ using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
 using Simulant.Game;
-using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Simulation;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
@@ -14,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7a.Presets
 {
@@ -209,66 +209,12 @@ namespace Simulant.Content.U7a.Presets
         }
 
         private void PrepareCrystal(Action ready)
-        {
-            // 水晶、琳和盖娅是三个独立实体；幻影先播放回放中的动作，再切换冻结姿势。
-            var crystal = CrystallizeTimePlan.Crystal;
-            var specs = new[]
+            => U7aCrystal.Spawn(EntityManager, Scheduler, actor =>
             {
-                new NetworkNpcSpawnSpec
-                {
-                    BNpcBaseId = 17841, BNpcNameId = 13559, LayoutId = 0xA55C07,
-                    Pos = new Vector3(crystal, 0), Heading = 0,
-                    MaxHealthPoints = 201481, HealthPoints = 169245, DisplayFlags = 0x40003
-                },
-                new NetworkNpcSpawnSpec
-                {
-                    BNpcBaseId = 17844, BNpcNameId = 9829, LayoutId = 0xA5AF23,
-                    Pos = new Vector3(crystal + new Vector2(0.7124f, 0), 0), Heading = -0.837806f,
-                    MaxHealthPoints = 188300, ModelState = 7, Targetable = false
-                },
-                new NetworkNpcSpawnSpec
-                {
-                    BNpcBaseId = 17845, BNpcNameId = 9830, LayoutId = 0xA5AF24,
-                    Pos = new Vector3(crystal - new Vector2(0.7124f, 0), 0), Heading = 1.221691f,
-                    MaxHealthPoints = 188300, ModelState = 121, Targetable = false
-                }
-            };
-
-            foreach (var spec in specs)
-            {
-                spec.Level = 100;
-                spec.CharacterDataFlags = 1;
-
-                // 回放中的实体高度约为 0，视觉抬升由永久「浮空」状态控制
-                if (spec.BNpcBaseId != 17841)
-                    spec.InitialStatuses = new[]
-                    {
-                        new CommonSpawnData.StatusEffect
-                        {
-                            StatusId = 1390, Param = 200, SourceObjectId = 0xE0000000
-                        }
-                    };
-
-                EntityManager.SpawnNetworkBNpc(spec, actor =>
-                {
-                    if (spec.BNpcBaseId == 17841)
-                    {
-                        _crystal = actor;
-                        ready();
-                        return;
-                    }
-
-                    // 不继承前一阶段的显示标志；保留不可选中，但让人物正常绘制。
-                    var ryne = spec.BNpcBaseId == 17844;
-                    actor.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, ryne ? 11415u : 3207u);
-                    Scheduler.ScheduleAfter(1.084, () =>
-                    {
-                        actor.Entity.ActorControl(ActorControlCategory.SetModelState, ryne ? 5u : 31u);
-                        ready();
-                    }, "冻结水晶内的幻影");
-                });
-            }
-        }
+                if (actor.Entity.Native.BaseId.Get() == 17841)
+                    _crystal = actor;
+                ready();
+            });
 
         private void BeginEncounter()
         {
@@ -303,7 +249,7 @@ namespace Simulant.Content.U7a.Presets
                     Level = 100,
                     Targetable = false,
                     Pos = new Vector3(i == 0 ? 98 : 102, 87, 0),
-                    Heading = i == 0 ? -(float)Math.PI / 2 : (float)Math.PI / 2
+                    Heading = (float)Deg(i == 0 ? -90 : 90)
                 }, actor => _heads[index] = actor, timeoutSeconds: 3);
             }
         }

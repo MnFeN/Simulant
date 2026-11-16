@@ -30,6 +30,8 @@ namespace Simulant.Simulation.Runtime
         /// <summary>是否有本会话管理的本地或网络移动；不反映直接调用 Entity.ActorMove 后的状态。</summary>
         public bool IsMoving => _movement.IsMoving(this);
         public bool IsKnockbackImmune => IsActive && (Entity.HasStatus(160) || Entity.HasStatus(1209));
+        public bool IsInvulnerable => IsActive && (Entity.HasStatus(82) || Entity.HasStatus(409) ||
+            Entity.HasStatus(810) || Entity.HasStatus(811) || Entity.HasStatus(1836));
         public uint Id => Entity.Id;
         public IntPtr Address => Entity.Address;
 
@@ -41,7 +43,8 @@ namespace Simulant.Simulation.Runtime
         /// <summary>判定专用坐标；仅自身使用历史位置，移动和演出仍读取 Pos。</summary>
         public Vector2 JudgementPosition => _judgementHistory?.At(_judgementClock.ElapsedSeconds - _judgementAdvance) ?? Pos;
         public Vector3 JudgementPosition3D => _judgementHistory?.PositionAt(_judgementClock.ElapsedSeconds - _judgementAdvance) ?? Pos3D;
-        public bool JudgementKnockbackImmune => _judgementHistory?.ImmunityAt(_judgementClock.ElapsedSeconds - _judgementAdvance) ?? IsKnockbackImmune;
+        public bool JudgementInvulnerable => _judgementHistory?.InvulnerabilityAt(_judgementClock.ElapsedSeconds - _judgementAdvance) ?? IsInvulnerable;
+        public float JudgementHeading => _judgementHistory?.HeadingAt(_judgementClock.ElapsedSeconds - _judgementAdvance) ?? Heading;
 
         internal void StartJudgementSampling(SimScheduler scheduler, double advance)
         {
@@ -58,8 +61,8 @@ namespace Simulant.Simulation.Runtime
 
             // 状态表一次读取，不在高频采样中调用原生 HasStatus 函数。
             var position = Entity.Pos3D;
-            var immune = Entity.Native.StatusManager.ReadKnockbackImmunity();
-            _judgementHistory.Add(_judgementClock.ElapsedSeconds, position, immune);
+            var defenses = Entity.Native.StatusManager.ReadDefensiveStatuses();
+            _judgementHistory.Add(_judgementClock.ElapsedSeconds, position, (defenses & 2) != 0, Entity.Heading);
             _judgementSample = _judgementClock.ScheduleAfter(0.02, SampleJudgementPosition, "记录自身判定位置");
         }
 
@@ -203,21 +206,35 @@ namespace Simulant.Simulation.Runtime
             _movement.Stop(this);
         }
 
-        /// <summary>施加击退并暂停自动行为；默认受防击退状态影响。自身用原生击退，假玩家同步击退轨迹。</summary>
+        /// <summary>施加本地击退并暂停自动行为；坐标和防击退使用当前值，不参与模拟判定延迟。自身用原生击退，假玩家同步轨迹。</summary>
         public void Knockback(float heading, float distance, float duration, bool ignoreImmunity = false)
+            => ApplyKnockback(heading, null, distance, duration, ignoreImmunity);
+
+        private void ApplyKnockback(float heading, Vector2? center, float distance, float duration, bool ignoreImmunity)
         {
             EnsureActive();
-            if (!ignoreImmunity && JudgementKnockbackImmune)
+            if (!ignoreImmunity && IsKnockbackImmune)
                 return;
 
-            _movement.Knockback(this, heading, distance, duration);
+            _movement.Knockback(this, heading, distance, duration, center);
         }
+
+        /// <summary>从指定中心径向击退；方向与落点使用位移应用时的当前坐标，不使用模拟判定延迟的历史位置。</summary>
+        public void KnockbackFrom(Vector2 center, float distance, float duration, bool ignoreImmunity = false)
+            => ApplyKnockback(0, center, distance, duration, ignoreImmunity);
+
+        /// <summary>按效果查表径向击退；在实际位移开始时调用，以当前位置计算方向与落点。</summary>
+        public void KnockbackFromEffect(Vector2 center, ushort knockbackId, byte additionalDistance = 0, bool ignoreImmunity = false)
+            => ApplyKnockbackEffect(0, center, knockbackId, additionalDistance, ignoreImmunity);
 
         /// <summary>
         /// 按 ActionEffect 的 0x1F 效果查表施加击退：knockbackId 为 Value，additionalDistance 为 Param0。
         /// 方向由调用方提供；距离与持续时间统一按 Knockback 表计算，本机和假玩家共用。
         /// </summary>
         public void KnockbackFromEffect(float heading, ushort knockbackId, byte additionalDistance = 0, bool ignoreImmunity = false)
+            => ApplyKnockbackEffect(heading, null, knockbackId, additionalDistance, ignoreImmunity);
+
+        private void ApplyKnockbackEffect(float heading, Vector2? center, ushort knockbackId, byte additionalDistance, bool ignoreImmunity)
         {
             EnsureActive();
             if (!GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Knockback>().TryGetRow(knockbackId, out var row))
@@ -227,7 +244,7 @@ namespace Simulant.Simulation.Runtime
             if (row.Speed == 0 || distance == 0)
                 throw new InvalidOperationException(FormattableString.Invariant($"Knockback 行 {knockbackId} 的击退距离或速度为零。"));
 
-            Knockback(heading, distance, distance / (float)row.Speed, ignoreImmunity);
+            ApplyKnockback(heading, center, distance, distance / (float)row.Speed, ignoreImmunity);
         }
 
         /// <summary>

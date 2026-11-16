@@ -1,5 +1,6 @@
 using Simulant.Game;
 using System;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
@@ -68,7 +69,7 @@ namespace Simulant.Tests
 
             for (var turns = -8; turns <= 8; turns++)
             {
-                var wrapped = PacketCodec.EncodeUShortHeading((float)(heading + turns * Math.PI * 2));
+                var wrapped = PacketCodec.EncodeUShortHeading((float)(heading + Deg(turns * 360)));
                 Assert(Math.Abs(wrapped - expected) <= 1, "增加整圈后的朝向应保持相同，允许单格浮点量化误差。");
             }
         }

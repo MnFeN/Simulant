@@ -1,11 +1,38 @@
 using Simulant.Game.Data;
 using System;
 using System.Linq;
+using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Simulation.Runtime
 {
     public sealed partial class SimEntityManager
     {
+        internal static readonly uint[] LocalActions = { 3, 7548, 7559, 30, 43, 3638, 16152 };
+
+        public static uint InvulnerabilityAction(Job job)
+        {
+            switch (job)
+            {
+                case Job.PLD:
+                    return 30;
+                case Job.WAR:
+                    return 43;
+                case Job.DRK:
+                    return 3638;
+                case Job.GNB:
+                    return 16152;
+                default:
+                    return 0;
+            }
+        }
+
+        /// <summary>只演出本职业无敌；伤害判定必须显式允许无敌，不能全局免除机制错误。</summary>
+        public bool UseInvulnerability(SimActor actor)
+        {
+            var action = InvulnerabilityAction(actor.Job);
+            return action != 0 && UseLocalAction(actor, action);
+        }
+
         /// <summary>四人水分摊、五人神圣等人数不足时，所有实际参与者获得死亡刻印。</summary>
         public void MarkUnderfilledStack(SimActor[] participants, int required, SimActor source)
         {
@@ -36,6 +63,8 @@ namespace Simulant.Simulation.Runtime
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
+            if (actionId != 3 && actionId != 7548 && actionId != 7559 && actionId != InvulnerabilityAction(actor.Job))
+                return false;
 
             ushort id;
             switch (actionId)
@@ -48,6 +77,18 @@ namespace Simulant.Simulation.Runtime
                     break;
                 case 3:
                     id = 50;
+                    break;
+                case 30:
+                    id = 82;
+                    break;
+                case 43:
+                    id = 409;
+                    break;
+                case 3638:
+                    id = 810;
+                    break;
+                case 16152:
+                    id = 1836;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(actionId), "不支持的模拟技能。");
@@ -67,7 +108,7 @@ namespace Simulant.Simulation.Runtime
                         return false;
                 }
 
-                var seconds = actionId == 3 ? 10 : 6;
+                var seconds = actionId == 7548 || actionId == 7559 ? 6 : 10;
                 // 冲刺的 Param 是加速百分比；回放中的状态 50 使用 30，填 0 只显示图标、不加速。
                 var param = actionId == 3 ? (ushort)30 : (ushort)0;
                 SetStatus(actor, id, seconds, param, actor);

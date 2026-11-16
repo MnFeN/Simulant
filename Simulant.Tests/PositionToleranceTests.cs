@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Numerics;
 using static Simulant.Content.U7b.Presets.ForsakenTiming;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
@@ -12,12 +13,12 @@ namespace Simulant.Tests
         public static void AnnularSectorUsesMidRadiusAndRelativeHeading()
         {
             var center = new Vector2(100, 100);
-            var sector = SimPosition.AnnularSector(center, 4.5f, Math.PI / 2, 0.4f, Math.PI / 12);
+            var sector = SimPosition.AnnularSector(center, 4.5f, Deg(90), 0.4f, Deg(15));
 
             for (var direction = 0; direction < 8; direction++)
             {
-                var north = Math.PI - direction * Math.PI / 4;
-                var heading = north - Math.PI / 2;
+                var north = Math.PI - Deg(direction * 45);
+                var heading = north - Deg(90);
                 var middle = center + Direction(heading) * 4.5f;
                 Assert(Vector2.Distance(sector.Midpoint(north), middle) < 0.0001f, "扇环代表落点必须位于中间半径和相对中轴上。");
 
@@ -40,13 +41,13 @@ namespace Simulant.Tests
                     {
                         var point = sector.Sample(new FixedSample(radial, angular), north);
                         Assert(sector.Contains(point, north), "扇环边界取点必须落在同一相对北的范围内。");
-                        var expected = center + Direction(heading + (angular * 2 - 1) * Math.PI / 12) * (float)(4.1 + radial * 0.8);
+                        var expected = center + Direction(heading + Deg((angular * 2 - 1) * 15)) * (float)(4.1 + radial * 0.8);
                         Assert(Vector2.Distance(point, expected) < 0.0001f, "扇环必须按半径与角度各自的正负半宽取点。");
                     }
 
                 Assert(!sector.Contains(center + Direction(heading) * 4.099f, north), "内边界外的点不应被接纳。");
                 Assert(!sector.Contains(center + Direction(heading) * 4.901f, north), "外边界外的点不应被接纳。");
-                Assert(!sector.Contains(center + Direction(heading + Math.PI / 12 + 0.001) * 4.5f, north), "角边界外的点不应被接纳。");
+                Assert(!sector.Contains(center + Direction(heading + Deg(15) + 0.001) * 4.5f, north), "角边界外的点不应被接纳。");
                 var shift = new Vector2(7, -9);
                 Assert(Vector2.Distance(sector.WithPosition(center + shift).Midpoint(north), middle + shift) < 0.0001f,
                     "替换中心坐标不能再次旋转范围角度。");
@@ -179,7 +180,7 @@ namespace Simulant.Tests
                             var offset = area.Sample(new FixedSample(radial, angular)) - ForsakenPlan.Center;
                             Assert(Math.Abs(offset.Length() - (radius - 1 + 2 * radial)) < 0.0001f, "初始扇环的径向半宽必须为一米。");
                             var heading = Math.Atan2(offset.X, offset.Y);
-                            Assert(Math.Abs(Math.Abs(heading - area.Heading) * 180 / Math.PI - 8.5) < 0.001,
+                            Assert(Math.Abs(ToDegrees(Math.Abs(heading - area.Heading)) - 8.5) < 0.001,
                                 "初始扇环的角度半宽必须为八点五度。");
                         }
                 }
@@ -250,7 +251,7 @@ namespace Simulant.Tests
                                     var offset = point - ForsakenPlan.Center;
                                     var radius = melee ? 7 + radial * 2 : 8 + radial * 3;
                                     Assert(Math.Abs(offset.Length() - radius) < 0.0001f, "近战集合半径应为七至九米，远程应为八至十一米。");
-                                    Assert(Math.Abs(Vector2.Dot(Vector2.Normalize(offset), expectedDirection) - Math.Cos(8 * Math.PI / 180)) < 0.0001,
+                                    Assert(Math.Abs(Vector2.Dot(Vector2.Normalize(offset), expectedDirection) - Math.Cos(Deg(8))) < 0.0001,
                                         "集合扇环的角度半宽必须为八度。");
                                 }
                         }

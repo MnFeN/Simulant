@@ -50,7 +50,9 @@
     <Compile Include="CosmoArrowTests.cs" />
     <Compile Include="U7aExerciseTests.cs" />
     <Compile Include="AssignmentRandomTests.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P3时间压缩.Plan.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\P3启示.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P4光暗龙诗.Plan.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\U7aExerciseOptions.cs" />
     <Compile Include="CrystallizeTimeTests.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\P4时间结晶.Plan.cs">

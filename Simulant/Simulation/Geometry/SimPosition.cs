@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Simulation.Geometry
 {
@@ -34,7 +35,7 @@ namespace Simulant.Simulation.Geometry
             Pos = pos;
             _extent = extent;
             _secondary = secondary;
-            Heading = Math.IEEERemainder(heading, 2 * Math.PI);
+            Heading = Math.IEEERemainder(heading, Deg(360));
             _halfAngle = halfAngle;
         }
 
@@ -174,7 +175,7 @@ namespace Simulant.Simulation.Geometry
                     break;
                 default:
                     var scale = first;
-                    var angle = second * 2 * Math.PI;
+                    var angle = Deg(second * 360);
                     forward = _extent * scale * Math.Cos(angle);
                     lateral = _secondary * scale * Math.Sin(angle);
                     break;
@@ -220,7 +221,7 @@ namespace Simulant.Simulation.Geometry
         private double WorldHeading(double northHeading)
         {
             RequireFinite(northHeading, nameof(northHeading));
-            return Math.IEEERemainder(northHeading, 2 * Math.PI) + Heading - Math.PI;
+            return Math.IEEERemainder(northHeading, Deg(360)) + Heading - Math.PI;
         }
 
         private static void RequirePosition(Vector2 pos)

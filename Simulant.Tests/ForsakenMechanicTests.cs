@@ -13,6 +13,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 using ActionRow = Lumina.Excel.Sheets.Action;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
@@ -61,7 +62,7 @@ namespace Simulant.Tests
                                     Assert(result.Participants.All(member => member.Actor != scene.Party[source]), description + "扇形不能把来源自己算作受击者。");
                                     var intended = round.Positions[expected.Single()] - round.Positions[source];
                                     var expectedHeading = Math.Atan2(intended.X, intended.Y);
-                                    Assert(Math.Abs(Math.IEEERemainder(result.Heading - expectedHeading, 2 * Math.PI)) <= Math.PI / 6,
+                                    Assert(Math.Abs(Math.IEEERemainder(result.Heading - expectedHeading, Deg(360))) <= Deg(30),
                                     description + "容差内独立取点不应触发三十度扇形偏离报错。");
                                 }
 

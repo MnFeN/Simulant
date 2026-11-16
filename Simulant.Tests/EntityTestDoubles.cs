@@ -62,7 +62,7 @@ namespace Simulant.Core.Entity
         internal int PositionReads;
         internal readonly List<NetworkMove> NetworkMoves = new List<NetworkMove>();
         internal int NativeKnockbackCalls;
-        internal float NativeKnockbackDistance, NativeKnockbackDuration;
+        internal float NativeKnockbackHeading, NativeKnockbackDistance, NativeKnockbackDuration;
         internal Action<Vector3, float, byte> OnActorMove;
         internal readonly List<uint> CastStarts = new List<uint>();
         internal readonly List<uint> FinalizedCasts = new List<uint>();
@@ -215,6 +215,7 @@ namespace Simulant.Core.Entity
         public void Knockback(float heading, float distance, float duration)
         {
             NativeKnockbackCalls++;
+            NativeKnockbackHeading = heading;
             NativeKnockbackDistance = distance;
             NativeKnockbackDuration = duration;
         }
@@ -363,6 +364,8 @@ namespace Simulant.Game.FFCS.Client.Game
 
         public Status GetStatus(int index) => _values[index];
         public bool ReadKnockbackImmunity() => _values.Any(status => status.StatusId.Get() == 160 || status.StatusId.Get() == 1209);
+        public byte ReadDefensiveStatuses() => (byte)((ReadKnockbackImmunity() ? 1 : 0) |
+            (_values.Any(status => new ushort[] { 82, 409, 810, 811, 1836 }.Contains(status.StatusId.Get())) ? 2 : 0));
         public bool SetStatus(int index, ushort id, float remaining, ushort param, Object.GameObjectId source, bool refresh)
         {
             SetCalls++;

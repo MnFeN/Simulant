@@ -3,6 +3,7 @@ using Simulant.Simulation.Options;
 using System;
 using System.Linq;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7b.Presets
 {
@@ -46,7 +47,7 @@ namespace Simulant.Content.U7b.Presets
         };
 
         // 参考点 (94.16974, 105.0749)、(95.60394, 103.6675) 的平均方向取最近的三度倍数。
-        private const double InitialDirection = -51 * Math.PI / 180;
+        private static readonly double InitialDirection = Deg(-51);
 
         internal static SimPosition InitialPosition(int slot, bool melee)
         {
@@ -171,7 +172,7 @@ namespace Simulant.Content.U7b.Presets
             if (towards.HasValue)
             {
                 var other = towards.Value - center;
-                var difference = Math.IEEERemainder(Math.Atan2(other.X, other.Y) - heading, 2 * Math.PI);
+                var difference = Math.IEEERemainder(Math.Atan2(other.X, other.Y) - heading, Deg(360));
                 heading += Math.Sign(difference) * halfAngle;
             }
 
@@ -211,7 +212,7 @@ namespace Simulant.Content.U7b.Presets
                     // 缩角时仍固定踩一、踩二外侧的角边界，不能悄悄离开原点位对应的射线。
                     var edge = EvenLeftOffsets[slot] - LocalTowerCenters[0];
                     var angle = Math.Atan2(edge.X, edge.Y);
-                    heading = angle + Math.IEEERemainder(position.Heading - angle, 2 * Math.PI) * scales[slot];
+                    heading = angle + Math.IEEERemainder(position.Heading - angle, Deg(360)) * scales[slot];
                 }
 
                 return position.ScaleTolerance(scales[slot], heading);
@@ -321,7 +322,7 @@ namespace Simulant.Content.U7b.Presets
 
                     var angle = Math.Abs(Math.Atan2(direction.X * other.Y - direction.Y * other.X, Vector2.Dot(direction, other)));
 
-                    if (uncertainty >= distance || angle <= Math.PI / 4 + baitAngle + Math.Asin(uncertainty / distance) + 0.001)
+                    if (uncertainty >= distance || angle <= Deg(45) + baitAngle + Math.Asin(uncertainty / distance) + 0.001)
                         return false;
                 }
             }
@@ -523,7 +524,7 @@ namespace Simulant.Content.U7b.Presets
         /// <summary>局部坐标的上方为 Boss，左右塔位于下方；返回游戏水平 XY 坐标。</summary>
         internal static Vector2 Transform(Vector2 position, int northDirection)
         {
-            var angle = NormalizeDirection(northDirection) * Math.PI / 4;
+            var angle = Deg(NormalizeDirection(northDirection) * 45);
             var cosine = (float)Math.Cos(angle);
             var sine = (float)Math.Sin(angle);
             return Center + new Vector2(position.X * cosine - position.Y * sine, position.X * sine + position.Y * cosine);
@@ -550,7 +551,7 @@ namespace Simulant.Content.U7b.Presets
         internal int Number { get; }
         internal int NorthDirection { get; }
         /// <summary>本轮相对北在场地中的 ACT 朝向；点位范围使用它解释相对角度。</summary>
-        internal double NorthHeading => Math.PI - NorthDirection * Math.PI / 4;
+        internal double NorthHeading => Math.PI - Deg(NorthDirection * 45);
         internal int[] Soakers { get; }
         internal int[] TowerBySlot { get; }
         /// <summary>实际移动使用的容差范围；角度相对于 NorthHeading，不随中心坐标重复旋转。</summary>
@@ -574,7 +575,7 @@ namespace Simulant.Content.U7b.Presets
                 return SimPosition.Ellipse(FinalDodgePosition, 3);
 
             var heading = Number == 8 || FutureEnd ? Math.PI : 0;
-            return SimPosition.AnnularSector(ForsakenPlan.Center, melee ? 8 : 9.5f, heading, melee ? 1 : 1.5f, 8 * Math.PI / 180);
+            return SimPosition.AnnularSector(ForsakenPlan.Center, melee ? 8 : 9.5f, heading, melee ? 1 : 1.5f, Deg(8));
         }
 
         internal ForsakenRoundPlan(int number, int northDirection, int[] soakers, int[] towerBySlot,

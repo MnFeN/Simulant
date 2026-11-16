@@ -146,7 +146,7 @@ namespace Simulant.Simulation.Runtime
             StartNetworkMovement(actor, target, speed, (byte)Math.Max(1, Math.Min(255, speed * 10)), false, null);
         }
 
-        internal void Knockback(SimActor actor, float heading, float distance, float duration)
+        internal void Knockback(SimActor actor, float heading, float distance, float duration, Vector2? center = null)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -160,7 +160,15 @@ namespace Simulant.Simulation.Runtime
             ValidateSpeed(speed);
             var slot = actor.Entity.Identity.Slot;
             var network = slot >= 2 && slot < 200 && (slot & 1) == 0;
-            var target = actor.Pos + new Vector2((float)Math.Sin(heading), (float)Math.Cos(heading)) * distance;
+            // 所有击退只在应用时读取一次当前位置；径向方向与终点共用，禁止使用历史判定快照。
+            var position = actor.Pos;
+            if (center.HasValue)
+            {
+                ValidatePosition(center.Value, nameof(center));
+                var direction = position - center.Value;
+                heading = (float)Math.Atan2(direction.X, direction.Y);
+            }
+            var target = position + new Vector2((float)Math.Sin(heading), (float)Math.Cos(heading)) * distance;
             ValidatePosition(target, nameof(target));
 
             if (network && (Math.Abs(target.X) > 1000 || Math.Abs(target.Y) > 1000))

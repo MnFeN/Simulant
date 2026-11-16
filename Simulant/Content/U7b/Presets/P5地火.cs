@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using static System.Math;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7b.Presets
 {
@@ -305,7 +306,7 @@ namespace Simulant.Content.U7b.Presets
                    ? new Vector3(100 - 35 + 5 * lineIdx, 100 - 5 * lineIdx, 0)
                    : new Vector3(100 + 5 * lineIdx, 100 - 35 + 5 * lineIdx, 0);
 
-            var heading = (float)PI * (isTopLeft ? 1f : -1f) / 4f;
+            var heading = (float)Deg(isTopLeft ? 45 : -45);
 
             var dPos = isTopLeft
                 ? new Vector3(5, 5, 0)

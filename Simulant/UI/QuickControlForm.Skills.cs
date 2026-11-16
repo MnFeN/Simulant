@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.UI
 {
@@ -14,8 +15,10 @@ namespace Simulant.UI
         private readonly Action<string> _logWarning;
         private Bitmap[] _skillIcons;
         private bool _surecast;
+        private uint _invulnerability;
+        private static readonly uint[] SkillActions = Simulation.Runtime.SimEntityManager.LocalActions;
 
-        private uint SkillAction(int index) => index == 2 ? 3u : _surecast ? 7559u : 7548u;
+        private uint SkillAction(int index) => index == 2 ? 3u : index == 4 ? _invulnerability : _surecast ? 7559u : 7548u;
 
         private bool CanClick(int index) => _enabled[index] && (index < 2 ||
             (_skillIcons != null && _cooldown(SkillAction(index)).Remaining <= 0));
@@ -28,10 +31,10 @@ namespace Simulant.UI
                 var data = GameDataService.Instance;
                 var icons = await Task.Run(() =>
                 {
-                    var result = new Bitmap[3];
+                    var result = new Bitmap[SkillActions.Length];
                     try
                     {
-                        var actions = new uint[] { 3, 7548, 7559 };
+                        var actions = SkillActions;
                         for (var i = 0; i < actions.Length; i++)
                             result[i] = GameIcon.LoadAction(data, actions[i]);
                         return result;
@@ -66,7 +69,7 @@ namespace Simulant.UI
             var size = Math.Min(bounds.Width, bounds.Height);
             var square = new RectangleF(bounds.Left + (bounds.Width - size) / 2,
                 bounds.Top + (bounds.Height - size) / 2, size, size);
-            var icon = _skillIcons[index == 2 ? 0 : _surecast ? 2 : 1];
+            var icon = _skillIcons[Array.IndexOf(SkillActions, SkillAction(index))];
             var state = graphics.Save();
             using (var outline = RoundedRectangle(square, Inset))
             {
@@ -103,7 +106,7 @@ namespace Simulant.UI
             var size = square.Width;
             // GDI+ 在极小圆弧上会误报内存不足；不足一个像素的尾段已不可辨认，直接略过。
             if (!(size > 0 && angle > 0) || float.IsInfinity(angle) ||
-                size * 0.92 * Math.PI * angle / 360 < 1)
+                size * 0.92 / 2 * Deg(angle) < 1)
                 return;
             using (var shade = new SolidBrush(Color.FromArgb(185, 12, 17, 27)))
                 graphics.FillPie(shade, square.X - size / 2, square.Y - size / 2,

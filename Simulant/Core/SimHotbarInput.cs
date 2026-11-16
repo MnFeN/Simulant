@@ -22,7 +22,7 @@ namespace Simulant.Core
             _processId = NamazuInterop.Plugin.Memory.Process.Id;
             var data = GameDataService.Instance;
             var icons = new Dictionary<uint, uint>();
-            foreach (var action in new uint[] { 3, 7548, 7559 })
+            foreach (var action in Simulation.Runtime.SimEntityManager.LocalActions)
                 icons[data.GetSheet<Lumina.Excel.Sheets.Action>().GetRow(action).Icon] = action;
             var general = data.GetSheet<Lumina.Excel.Sheets.GeneralAction>();
             _bindings = HotbarBinding.Read(_input.ReadHotbarKeybinds(), ui.HotbarModule.ReadStandardHotbars(),

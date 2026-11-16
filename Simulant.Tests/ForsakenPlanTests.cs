@@ -2,6 +2,7 @@ using Simulant.Content.U7b.Presets;
 using System;
 using System.Linq;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
@@ -47,7 +48,7 @@ namespace Simulant.Tests
                 for (var index = 0; index < positions.Length; index++)
                 {
                     var offset = positions[index] - ForsakenPlan.Center;
-                    Assert(Math.Abs(Math.Atan2(offset.X, offset.Y) * 180 / Math.PI - directions[group]) < 0.001,
+                    Assert(Math.Abs(ToDegrees(Math.Atan2(offset.X, offset.Y)) - directions[group]) < 0.001,
                         "四组队员应分别集中在负五十一、五十一、负十七、十七度方向。");
                     Assert(Math.Abs(offset.Length() - (index == 0 ? 5 : 7)) < 0.0001f, "近战和远程代表点应分别距离场中五米、七米。");
                 }
@@ -185,7 +186,7 @@ namespace Simulant.Tests
                     if (previous == null)
                         continue;
 
-                    var angle = previous.NorthDirection * Math.PI / 4;
+                    var angle = Deg(previous.NorthDirection * 45);
                     var right = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
 
                     foreach (var duplicate in round.Soakers.GroupBy(slot => round.MarkersBefore[slot]).Where(group => group.Count() > 1))
@@ -211,7 +212,7 @@ namespace Simulant.Tests
                 {
                     for (var tower = 0; tower < 2; tower++)
                     {
-                        var angle = (round.TowerMapIndices[tower] - 1) * Math.PI / 4;
+                        var angle = Deg((round.TowerMapIndices[tower] - 1) * 45);
                         var expected = ForsakenPlan.Center + new Vector2((float)Math.Sin(angle) * 8, -(float)Math.Cos(angle) * 8);
                         Assert(Vector2.Distance(expected, round.TowerCenters[tower]) < 0.001f, "地图塔索引必须与几何判定的塔心一致。");
                     }

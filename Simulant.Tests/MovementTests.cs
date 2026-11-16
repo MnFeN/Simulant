@@ -7,11 +7,76 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Tests
 {
     internal static class MovementTests
     {
+        public static void EveryKnockbackEntryUsesCurrentImmunityInsteadOfHistory()
+        {
+            GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Knockback>()[201] = new Lumina.Excel.Sheets.Knockback
+            {
+                Distance = 21,
+                Speed = 40
+            };
+            var apply = new Action<SimActor>[]
+            {
+                actor => actor.Knockback(0, 8, 0.2f),
+                actor => actor.KnockbackFrom(Vector2.Zero, 8, 0.2f),
+                actor => actor.KnockbackFromEffect(0, 201),
+                actor => actor.KnockbackFromEffect(Vector2.Zero, 201)
+            };
+            using (var scheduler = new SimScheduler())
+            using (var movement = new SimMovementController(scheduler))
+                foreach (var knockback in apply)
+                    foreach (var initiallyImmune in new[] { false, true })
+                    {
+                        var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
+                        var status = actor.Entity.Native.StatusManager.GetStatus(0).StatusId;
+                        status.Value = initiallyImmune ? (ushort)160 : (ushort)0;
+                        actor.StartJudgementSampling(scheduler, 0.35);
+                        status.Value = 1209;
+                        knockback(actor);
+                        Assert(actor.Entity.NativeKnockbackCalls == 0, "所有击退入口都应立即认可当前防击退状态，不能等待历史记录。");
+                        status.Value = 0;
+                        knockback(actor);
+                        Assert(actor.Entity.NativeKnockbackCalls == 1, "防击退消失后，所有击退入口都应立即恢复，不能沿用历史免疫。");
+                    }
+        }
+
+        public static void RadialKnockbackUsesCurrentPositionDespiteJudgementHistory()
+        {
+            GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Knockback>()[201] = new Lumina.Excel.Sheets.Knockback
+            {
+                Distance = 21,
+                Speed = 40
+            };
+            using (var scheduler = new SimScheduler())
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var local = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
+                var remote = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                local.Pos = new Vector2(0, -4);
+                local.StartJudgementSampling(scheduler, 0.35);
+                local.Pos = remote.Pos = new Vector2(4, 0);
+                Assert(local.JudgementPosition == new Vector2(0, -4), "检查应保留与当前坐标不同的历史判定位置。");
+
+                local.KnockbackFromEffect(Vector2.Zero, 201);
+                remote.KnockbackFromEffect(Vector2.Zero, 201);
+                Assert(Math.Abs(local.Entity.NativeKnockbackHeading - Math.PI / 2) < 0.00001 &&
+                    local.Entity.NativeKnockbackDistance == 21 && Math.Abs(local.Entity.NativeKnockbackDuration - 0.525f) < 0.00001,
+                    "自身查表径向击退必须从当前位置向东，不能按历史位置向北。");
+                Near(new Vector2(25, 0), movement.PositionAfterKnockback(remote));
+
+                local.Pos = new Vector2(0, 4);
+                local.KnockbackFrom(Vector2.Zero, 8, 0.2f);
+                Assert(local.Entity.NativeKnockbackCalls == 2 && local.Entity.NativeKnockbackHeading == 0 &&
+                    local.Entity.NativeKnockbackDistance == 8 && local.JudgementPosition == new Vector2(0, -4),
+                    "直接指定距离的径向击退也应使用当前坐标，并保留普通伤害使用的历史记录。");
+            }
+        }
+
         public static void KnockbackEffectsUseTableSpeedForLocalAndRemotePlayers()
         {
             var sheet = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Knockback>();
@@ -122,8 +187,8 @@ namespace Simulant.Tests
                     sentAt.Add(scheduler.ElapsedSeconds);
                 };
 
-                local.Knockback((float)Math.PI / 2, 20, 0.8f);
-                remote.Knockback((float)Math.PI / 2, 20, 0.8f);
+                local.Knockback((float)Deg(90), 20, 0.8f);
+                remote.Knockback((float)Deg(90), 20, 0.8f);
                 Assert(local.Entity.NativeKnockbackCalls == 1 && local.Entity.NetworkMoves.Count == 0,
                     "自身必须保留已实测正常的原生击退，不能发送不生效的 ActorMove。");
                 Assert(scheduler.PendingCount == 1, "击退轨迹必须复用移动控制器的单个更新节点。");

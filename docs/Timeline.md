@@ -58,6 +58,8 @@ public override WaymarkLayout Waymarks => U7b.Waymarks;
 `WaymarkLayout.Center(x, y, z)` 创建布局，标点名称统一使用字符串 `"A"`～`"D"`、`"1"`～`"4"`：
 
 ```csharp
+using static Simulant.Utils.Maths.Angles;
+
 // 北起逆时针 A、1、D、4、C、3、B、2；正点 12 米，斜点 12√2 米。
 var circle = WaymarkLayout.Center(100, 100, 0)
     .Circle("A1D4C3B2", true, 12, 12 * Math.Sqrt(2));
@@ -70,13 +72,15 @@ var between = WaymarkLayout.Center(100, 100, 0).Circle("ABCD", false, 10, 12, 14
 
 // 相对于给定原点的直角坐标、极坐标，可混用。
 var custom = WaymarkLayout.Center(100, 100, 0)
-    .Rotate(Math.PI / 2)
+    .Rotate(Deg(90))
     .At("A", 0, -13.75f)
     .At("1", 6, 0, -1)
-    .Polar("B", 10, Math.PI / 2);
+    .Polar("B", 10, Deg(90));
 ```
 
 坐标与模拟实体一致：XY 是地面、Z 是高度；角度用弧度，0 朝南、π 朝北，正向为逆时针。`Rotate` 设置整套布局的相对北朝向，默认 π，可省略；无论放在点位定义前后都对整套布局生效，重复调用替换朝向。`At`、`Polar` 使用布局内的相对坐标。`Circle(order, startFromNorth, params radii)` 的排列和起点方式必填，至少提供一个半径，按顺序循环使用；`true` 时首点在相对北，`false` 时首点向逆时针偏移半个间隔，相对北位于首末两点之间的角平分线上。`ToPlaceJson()` 统一转换成 PostNamazu 的 X、Y 高度、Z 地面坐标，使用不受区域设置影响的小数格式，显式设置 `LocalOnly: true`、`Log: false`，未设置的标点以 `Active: false` 清除。
+
+角度换算统一引用 `using static Simulant.Utils.Maths.Angles;`，使用 `Deg(30)`、`Deg(direction * 45)` 表示弧度，反向显示使用 `ToDegrees(radian)`。内部保持 `double`，原生接口需要时才写 `(float)Deg(90)`；不在各调用处重复乘除 π 和换算系数。直接表示半圈及默认参数的 `Math.PI` 可以保留。
 
 现有布局：绝欧半径 13 米、顺序 `A4D3C2B1`；绝伊甸半径 10 米、顺序 `A1D4C3B2`；绝妖星正点 12 米、斜点 12√2 米、顺序同绝伊甸。绝亚的非规则布局保存在 `U5a.Waymarks` 中，标点高度为 0；P4 神圣大审判预设直接引用这套布局。
 
@@ -94,7 +98,7 @@ var custom = WaymarkLayout.Center(100, 100, 0)
 
 `ActionEffect` 到达不代表角色此时开始移动。跳跃、击退应分别记录目标锁定、技能演出、Boss 落点同步和玩家位移开始；从录制者高频 ActorMove 的击退标志与坐标变化核对位移起点，不能把其他队员较晚收到的位置同步当作统一延迟。不同技能使用各自的回放间隔，不能统一套用某个固定值。
 
-例如，绝伊甸 P3 启示以黑暗狂水开始读条为零点，至黑之舞的跳跃技能为 36.812 秒、Boss 落点同步为 37.832 秒；击退技能为 39.599 秒，录制者首个击退移动包为 40.350 秒。因此先播放击退演出并锁定方向与免疫结果，再过 0.751 秒开始玩家位移。时间结晶的两次神圣之翼则分别间隔 1.384、1.368 秒。它们与配置中的“模拟判定延迟”是两件事，不应互相抵消或再次叠加。
+例如，绝伊甸 P3 启示以黑暗狂水开始读条为零点，至黑之舞的跳跃技能为 36.812 秒、Boss 落点同步为 37.832 秒；击退技能为 39.599 秒，录制者首个击退移动包为 40.350 秒。因此先播放击退演出，再过 0.751 秒开始玩家位移。所有击退的方向、落点及免疫均由实体公共入口按应用时的当前值处理，不使用历史判定坐标或免疫快照。时间结晶的两次神圣之翼则分别间隔 1.384、1.368 秒。它们与配置中的“模拟判定延迟”是两件事，不应互相抵消或再次叠加。
 
 普通击退从 ActionEffect 的 `Type=0x1F` 效果项取得 `Value`（Knockback 行号）和 `Param0`（追加距离），通过 `SimActor.KnockbackFromEffect` 查表：距离为 `Distance + Param0`，持续时间为距离除以 `Speed`。启示使用第 201 行，21 米除以 40 得到 0.525 秒；时间结晶的两次神圣之翼使用第 108 行，20 米除以 40 得到 0.5 秒。本机原生击退与假队员轨迹共用计算结果；缺失行或零速度应明确报错，不回退到猜测的时长。
 

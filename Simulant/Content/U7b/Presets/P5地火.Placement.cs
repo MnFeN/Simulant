@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7b.Presets
 {
@@ -19,7 +20,7 @@ namespace Simulant.Content.U7b.Presets
 
                 for (var attempt = 0; attempt < maxAttemptsPerMember; attempt++)
                 {
-                    var angle = random.NextDouble() * Math.PI * 2;
+                    var angle = Deg(random.NextDouble() * 360);
                     var distance = Math.Sqrt(random.NextDouble()) * 15;
                     var pos = myPos + new Vector2((float)(Math.Cos(angle) * distance), (float)(Math.Sin(angle) * distance));
 

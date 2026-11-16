@@ -267,20 +267,24 @@ namespace Simulant.UI
             }
 
             bool? surecast = null;
+            uint invulnerability = 0;
             if (!_host.IsSwitchingTerritory)
             {
                 try
                 {
                     var player = _host.EntityProvider.GetMyself();
                     if (player != null && player.IsAlive && player.HP != 0)
+                    {
                         surecast = SimJobActions.For(player.Job)?.Caster == true;
+                        invulnerability = SimEntityManager.InvulnerabilityAction(player.Job);
+                    }
                 }
                 catch (InvalidOperationException)
                 {
                     // 换图或掉线时身份可能已失效，保留窗口但禁用技能。
                 }
             }
-            _quickControls.UpdateState(btnStart.Enabled, btnEnd.Enabled, surecast);
+            _quickControls.UpdateState(btnStart.Enabled, btnEnd.Enabled, surecast, invulnerability);
         }
 
     }

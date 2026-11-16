@@ -1,6 +1,7 @@
 ﻿using System;
 
 using System.Text;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Game
 {
@@ -36,7 +37,7 @@ namespace Simulant.Game
 
         private const double CoordScale = 3.0518043 * 0.0099999998;
         private const double HeadingScale = 0.009587526 * 0.0099999998;
-        private const double TwoPi = Math.PI * 2.0;
+        private static readonly double TwoPi = Deg(360);
 
         /// <summary>
         /// Decodes a packet coordinate encoded as UInt16.
