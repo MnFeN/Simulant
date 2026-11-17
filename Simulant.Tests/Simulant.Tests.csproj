@@ -93,6 +93,7 @@
       <Link>Core\SimActionService.cs</Link>
     </Compile>
     <Compile Include="WaymarkTests.cs" />
+    <Compile Include="..\Simulant\Core\Entity\Character.Defenses.cs" />
     <Compile Include="..\Simulant\Core\Environment\WaymarkLayout.cs">
       <Link>Environment\WaymarkLayout.cs</Link>
     </Compile>

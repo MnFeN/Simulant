@@ -39,7 +39,7 @@ namespace Simulant.Core.Entity
         }
     }
 
-    public sealed class Character : EntityBase
+    public sealed partial class Character : EntityBase
     {
         private readonly StatusTestCharacter _native = new StatusTestCharacter();
         internal StatusTestCharacter Native
@@ -363,9 +363,17 @@ namespace Simulant.Game.FFCS.Client.Game
         }
 
         public Status GetStatus(int index) => _values[index];
-        public bool ReadKnockbackImmunity() => _values.Any(status => status.StatusId.Get() == 160 || status.StatusId.Get() == 1209);
-        public byte ReadDefensiveStatuses() => (byte)((ReadKnockbackImmunity() ? 1 : 0) |
-            (_values.Any(status => new ushort[] { 82, 409, 810, 811, 1836 }.Contains(status.StatusId.Get())) ? 2 : 0));
+        internal const int StatusSize = 0x10;
+        internal byte[] ReadStatusTable()
+        {
+            var table = new byte[_values.Length * StatusSize];
+            for (var i = 0; i < _values.Length; i++)
+                BitConverter.GetBytes(_values[i].StatusId.Get()).CopyTo(table, i * StatusSize);
+
+            return table;
+        }
+
+        internal static ushort ReadStatusId(byte[] table, int offset) => BitConverter.ToUInt16(table, offset);
         public bool SetStatus(int index, ushort id, float remaining, ushort param, Object.GameObjectId source, bool refresh)
         {
             SetCalls++;
@@ -513,17 +521,20 @@ namespace Simulant.Core
     }
 }
 
-namespace Simulant.Game.FFCS.Client.Game.UI
+namespace Simulant.Core.Environment
 {
-    internal sealed class MarkingController
+    internal static class GameMarkers
     {
-        public static MarkingController Instance { get; } = new MarkingController();
         internal static readonly List<Vector3?[]> WaymarkCommands = new List<Vector3?[]>();
         internal static Action<Vector3?[]> OnWaymarkCommand;
 
-        public void SetFieldMarkers(Func<int, Vector3?> getPosition)
+        public static void PlaceWaymarks(WaymarkLayout layout)
+            => Record(Enumerable.Range(0, 8).Select(layout.Position).ToArray());
+
+        public static void ClearWaymarks() => Record(null);
+
+        private static void Record(Vector3?[] markers)
         {
-            var markers = getPosition == null ? null : Enumerable.Range(0, 8).Select(getPosition).ToArray();
             WaymarkCommands.Add(markers);
             OnWaymarkCommand?.Invoke(markers);
         }

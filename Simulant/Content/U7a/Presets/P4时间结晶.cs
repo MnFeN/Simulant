@@ -304,7 +304,7 @@ namespace Simulant.Content.U7a.Presets
         }
 
         private static void Mark(int number, uint id)
-            => MarkingController.Instance.SetLocalMarker((MarkerType)(number - 1), id);
+            => GameMarkers.Mark((MarkerType)(number - 1), id);
 
         private void Map(uint index, ushort animation)
         {
@@ -325,7 +325,7 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 1; i <= 4; i++)
                     try
                     {
-                        Mark(i, MarkingController.NoTarget);
+                        GameMarkers.ClearMarker((MarkerType)(i - 1));
                     }
                     catch (Exception ex)
                     {

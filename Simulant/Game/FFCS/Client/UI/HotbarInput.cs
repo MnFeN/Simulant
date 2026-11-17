@@ -39,22 +39,17 @@ namespace Simulant.Game.FFCS.Client.UI
         [SigPattern("E8 * * * * 48 8B F8 41 B0 01")]
         public static IntPtr GetAddonByNameFuncPtr { get; set; }
 
-        public byte CurrentHotbar()
+        public IntPtr GetAddonByName(string name, int index)
         {
-            var memory = NamazuInterop.Plugin.Memory;
-            var name = memory.AllocateMemory(16);
-            try
-            {
-                name.WriteBytes(Encoding.ASCII.GetBytes("_ActionBar\0"));
-                var addon = GetAddonByNameFuncPtr.Call<IntPtr>(Ptr.ReadPtr(0x2C0), name, 1);
-                if (addon == IntPtr.Zero)
-                    throw new InvalidOperationException("游戏主快捷栏尚未就绪。");
-                return addon.Read<byte>(0x2CB);
-            }
-            finally
-            {
-                memory.FreeMemory(name);
-            }
+            var ptr = Ptr;
+            return NamazuInterop.Plugin.Memory.WithAllocatedString(name, Encoding.ASCII,
+                namePtr => GetAddonByNameFuncPtr.Call<IntPtr>(ptr.ReadPtr(0x2C0), namePtr, index));
         }
+    }
+
+    public struct AddonActionBar : IMemoryObject
+    {
+        public IntPtr Ptr { get; set; }
+        public MemoryField<byte> CurrentPage => Ptr.Field<byte>(0x2CB);
     }
 }

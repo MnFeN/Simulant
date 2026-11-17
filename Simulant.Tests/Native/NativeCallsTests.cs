@@ -10,11 +10,21 @@ namespace Simulant.Tests.Native
     using System.Collections.Generic;
     using System.Linq;
     using System.Numerics;
+    using System.Reflection;
     using System.Runtime.InteropServices;
     using CoreCharacter = Simulant.Core.Entity.Character;
 
     internal static class NativeCallsTests
     {
+        private static readonly Action<uint, IntPtr, uint, float, Vector3, GameObjectId, float> ReceiveActionVisual =
+            (Action<uint, IntPtr, uint, float, Vector3, GameObjectId, float>)Delegate.CreateDelegate(
+                typeof(Action<uint, IntPtr, uint, float, Vector3, GameObjectId, float>),
+                typeof(CoreCharacter).GetMethod("ReceiveVisual", BindingFlags.Static | BindingFlags.NonPublic));
+
+        private static void ReceiveVisual(uint casterId, IntPtr caster, uint actionId, float heading,
+            Vector3 position, GameObjectId target)
+            => ReceiveActionVisual(casterId, caster, actionId, heading, position, target, 0);
+
         private static int Main()
         {
             try
@@ -49,7 +59,7 @@ namespace Simulant.Tests.Native
                     Type = 2
                 };
                 var position = new Vector3(100, 7, 105);
-                ActionEffectHandler.ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD6, -1.25f, position, target);
+                ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD6, -1.25f, position, target);
                 var header = scene.Plugin.Headers.Single();
                 Assert(header.AnimationTargetId.Id == target.Id && scene.Plugin.Targets.Single() == target.Id,
                     "主目标和目标数组必须保留完整 64 位身份。");
@@ -61,9 +71,9 @@ namespace Simulant.Tests.Native
                     "纯演出不得伪造玩家技能序号或强制玩家动画锁。");
                 Assert(scene.Plugin.Positions.Single() == position, "原生坐标必须保持 XYZ，不能再次交换高度。");
                 Assert(scene.Memory.Bytes.Freed.SequenceEqual(scene.Memory.Bytes.Allocations), "成功后必须释放远程缓冲区。");
-                ActionEffectHandler.ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD9, 0, position, target);
+                ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD9, 0, position, target);
                 Assert(scene.Plugin.Headers[1].GlobalSequence != header.GlobalSequence, "连续演出应使用不同结算序号。");
-                ActionEffectHandler.ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD9, 0, position,
+                ReceiveVisual(0x40FF2222, new IntPtr(0x330000), 0xBAD9, 0, position,
                     new GameObjectId
                     {
                         ObjectId = 0xE0000000
@@ -115,7 +125,7 @@ namespace Simulant.Tests.Native
                     ObjectId = 123
                 };
                 Action<uint, IntPtr, uint, float, Vector3, GameObjectId> send = (caster, address, action, heading, position, id)
-                    => ActionEffectHandler.ReceiveVisual(caster, address, action, heading, position, id);
+                    => ReceiveVisual(caster, address, action, heading, position, id);
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 0, 0, Vector3.Zero, target));
                 Throws<ArgumentOutOfRangeException>(() => send(1, new IntPtr(1), 65536, 0, Vector3.Zero, target));
                 Throws<ArgumentException>(() => send(0, new IntPtr(1), 1, 0, Vector3.Zero, target));
@@ -149,7 +159,7 @@ namespace Simulant.Tests.Native
                 {
                     scene.Memory.Failure = failure;
                     scene.Plugin.FailCall = failure == "原生调用";
-                    Throws<InvalidOperationException>(() => ActionEffectHandler.ReceiveVisual(1, new IntPtr(1), 1, 0,
+                    Throws<InvalidOperationException>(() => ReceiveVisual(1, new IntPtr(1), 1, 0,
                         Vector3.Zero, new GameObjectId
                         {
                             ObjectId = 2

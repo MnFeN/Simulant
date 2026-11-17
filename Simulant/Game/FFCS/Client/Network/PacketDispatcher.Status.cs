@@ -17,9 +17,6 @@ namespace Simulant.Game.FFCS.Client.Network
             if (function == IntPtr.Zero)
                 throw new InvalidOperationException("原生角色状态更新函数尚未定位。");
 
-            if (packet.CurrentHP > packet.MaxHP || packet.CurrentMP > packet.MaxMP)
-                throw new ArgumentOutOfRangeException(nameof(packet), "当前血量和魔力不能超过上限。");
-
             var memory = Memory;
             var packetPtr = IntPtr.Zero;
 

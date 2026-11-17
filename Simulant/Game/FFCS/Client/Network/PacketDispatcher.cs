@@ -74,11 +74,8 @@ namespace Simulant.Game.FFCS.Client.Network
         [SigPattern("48 89 5C 24 ?? 57 48 83 EC 40 0F B6 1A")]
         public static IntPtr HandleDespawnCharacterPacketFuncPtr { get; set; }
 
-        public static void HandleDespawnCharacterPacket(byte index)
+        public static void HandleDespawnCharacterPacket(DespawnCharacterPacket packet)
         {
-            if (index == 0 || index >= 100)
-                throw new ArgumentOutOfRangeException(nameof(index), "模拟角色的网络槽位必须为 1-99。");
-
             if (HandleDespawnCharacterPacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络角色回收函数尚未定位。");
 
@@ -87,10 +84,7 @@ namespace Simulant.Game.FFCS.Client.Network
             try
             {
                 packetPtr = Memory.AllocateMemory(1);
-                Memory.Write(packetPtr, new DespawnCharacterPacket
-                {
-                    Index = index
-                });
+                Memory.Write(packetPtr, packet);
                 HandleDespawnCharacterPacketFuncPtr.Call(0ul, packetPtr);
             }
             finally

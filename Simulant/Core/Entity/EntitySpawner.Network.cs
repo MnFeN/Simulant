@@ -1,5 +1,6 @@
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.Character;
+using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Game.FFCS.Client.Network;
 using System;
@@ -218,6 +219,9 @@ namespace Simulant.Core.Entity
             if (!IsCurrentNetworkRequest(request))
                 return;
 
+            if (request.Index == 0 || request.Index >= NetworkCharacterCapacity)
+                throw new ArgumentOutOfRangeException(nameof(request), "无效的模拟角色网络槽位。");
+
             request.CancellationRequested = true;
             EnsureNetworkDespawnFunction();
             var manager = CharacterManager.Instance();
@@ -242,7 +246,7 @@ namespace Simulant.Core.Entity
             if (request.Entity != null)
                 _registry.Invalidate(request.Entity);
 
-            PacketDispatcher.HandleDespawnCharacterPacket(request.Index);
+            PacketDispatcher.HandleDespawnCharacterPacket(new DespawnCharacterPacket { Index = request.Index });
 
             if (manager.GetBattleCharaPtr(request.Index) != IntPtr.Zero ||
                 !objects[objectSlot].IsNull() || !objects[objectSlot + 1].IsNull())

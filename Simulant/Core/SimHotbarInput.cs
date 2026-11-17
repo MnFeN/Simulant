@@ -1,4 +1,5 @@
 using Simulant.ACT;
+using Simulant.Game;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.System.Framework;
 using Simulant.Game.FFCS.Client.UI;
@@ -26,9 +27,13 @@ namespace Simulant.Core
                 icons[data.GetSheet<Lumina.Excel.Sheets.Action>().GetRow(action).Icon] = action;
             var general = data.GetSheet<Lumina.Excel.Sheets.GeneralAction>();
             _bindings = HotbarBinding.Read(_input.ReadHotbarKeybinds(), ui.HotbarModule.ReadStandardHotbars(),
-                ui.AtkModule.CurrentHotbar(), id => general.TryGetRow(id, out var row) ? row.Action.RowId : 0, icons);
+                ReadCurrentHotbarPage(ui.AtkModule), id => general.TryGetRow(id, out var row) ? row.Action.RowId : 0, icons);
             Poll(_ => { });
         }
+
+        private static byte ReadCurrentHotbarPage(AtkModule atk)
+            => atk.GetAddonByName("_ActionBar", 1).As<AddonActionBar>()
+                .ThrowIfNull("游戏主快捷栏尚未就绪。").CurrentPage.Get();
 
         internal void Poll(Action<uint> execute)
         {

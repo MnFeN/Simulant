@@ -8,7 +8,6 @@ using Simulant.Simulation.Runtime;
 using System;
 using System.Linq;
 using System.Numerics;
-using Simulant.Game.FFCS.Client.Game.UI;
 using System.Threading;
 using static Simulant.Utils.Maths.Angles;
 
@@ -86,7 +85,7 @@ namespace Simulant.Tests
 
         public static void SessionOwnsPlacementAndIdempotentCleanup()
         {
-            MarkingController.Reset();
+            GameMarkers.Reset();
 
             try
             {
@@ -98,20 +97,20 @@ namespace Simulant.Tests
                 )
                 using (var session = new SimSession(new PluginHost(), new SessionTestPreset(probe)))
                 {
-                    probe.StartAction = () => Assert(MarkingController.WaymarkCommands.Count == 1,
+                    probe.StartAction = () => Assert(GameMarkers.WaymarkCommands.Count == 1,
                         "首个机制节点前应已提交初始标点。");
                     session.Start();
                     SessionTests.Wait(probe.Started, "标点后的模拟初始化");
                     session.Stop();
                     session.Stop();
-                    Assert(MarkingController.WaymarkCommands.Count == 2 &&
-                        MarkingController.WaymarkCommands[0].SequenceEqual(Enumerable.Range(0, 8).Select(U7a.Waymarks.Position)) &&
-                        MarkingController.WaymarkCommands[1] == null && !session.HasPendingCleanup,
+                    Assert(GameMarkers.WaymarkCommands.Count == 2 &&
+                        GameMarkers.WaymarkCommands[0].SequenceEqual(Enumerable.Range(0, 8).Select(U7a.Waymarks.Position)) &&
+                        GameMarkers.WaymarkCommands[1] == null && !session.HasPendingCleanup,
                         "停止应清除标点，重复停止不能再次提交清理。");
                     probe.StartAction = null;
                     session.Start();
                     session.Dispose();
-                    Assert(MarkingController.WaymarkCommands.Count == 4 && !session.HasPendingCleanup,
+                    Assert(GameMarkers.WaymarkCommands.Count == 4 && !session.HasPendingCleanup,
                         "再次开始应重新放置，立即取消也必须清除标点。");
                 }
 
@@ -120,18 +119,18 @@ namespace Simulant.Tests
                 {
                     session.Start();
                     session.Stop();
-                    Assert(MarkingController.WaymarkCommands.Count == 4, "没有布局的预设不能修改或删除场地标点。");
+                    Assert(GameMarkers.WaymarkCommands.Count == 4, "没有布局的预设不能修改或删除场地标点。");
                 }
             }
             finally
             {
-                MarkingController.Reset();
+                GameMarkers.Reset();
             }
         }
 
         public static void FailedPlacementAndCleanupRetainRetryResponsibility()
         {
-            MarkingController.Reset();
+            GameMarkers.Reset();
 
             try
             {
@@ -143,31 +142,31 @@ namespace Simulant.Tests
                 )
                 using (var session = new SimSession(new PluginHost(), new SessionTestPreset(probe)))
                 {
-                    MarkingController.OnWaymarkCommand = _ =>
+                    GameMarkers.OnWaymarkCommand = _ =>
                     {
                         throw new InvalidOperationException("模拟标点回调失败。");
                     };
 
                     Throws<InvalidOperationException>(session.Start);
                     Assert(probe.StartCount == 0 && probe.StopCount == 1 && session.HasPendingCleanup &&
-                        MarkingController.WaymarkCommands.Count == 2,
+                        GameMarkers.WaymarkCommands.Count == 2,
                         "部分放置失败要立即回滚；清理仍失败时保留责任，不能启动机制。");
                     Throws<InvalidOperationException>(session.Start);
                     Assert(probe.StartCount == 0 && probe.StopCount == 1, "标点未清理完不能重启或重复预设停止逻辑。");
-                    MarkingController.OnWaymarkCommand = null;
+                    GameMarkers.OnWaymarkCommand = null;
                     session.Stop();
                     Assert(!session.HasPendingCleanup && probe.StopCount == 1, "再次停止应只重试剩余标点清理。");
                 }
             }
             finally
             {
-                MarkingController.Reset();
+                GameMarkers.Reset();
             }
         }
 
         public static void InterruptedSceneKeepsWaymarksUntilExplicitStop()
         {
-            MarkingController.Reset();
+            GameMarkers.Reset();
 
             try
             {
@@ -188,22 +187,22 @@ namespace Simulant.Tests
                     GameChat.OnChatCommand = _ => reported.Set();
                     session.Start();
                     SessionTests.Wait(reported, "机制异常后保留现场");
-                    Assert(MarkingController.WaymarkCommands.Count == 1 && session.HasPendingCleanup,
+                    Assert(GameMarkers.WaymarkCommands.Count == 1 && session.HasPendingCleanup,
                         "机制中断只能停止流程，不能提前删除用于复盘的场地标点。");
                     session.Stop();
-                    Assert(MarkingController.WaymarkCommands.Count == 2 && !session.HasPendingCleanup,
+                    Assert(GameMarkers.WaymarkCommands.Count == 2 && !session.HasPendingCleanup,
                         "显式停止时必须清理保留的场地标点。");
                 }
             }
             finally
             {
-                MarkingController.Reset();
+                GameMarkers.Reset();
             }
         }
 
         public static void SessionDoesNotClearWaymarksAfterWorldChange()
         {
-            MarkingController.Reset();
+            GameMarkers.Reset();
             try
             {
                 using (var probe = new SessionProbe { Waymarks = U7a.Waymarks })
@@ -214,14 +213,14 @@ namespace Simulant.Tests
                         session.Start();
                         host.WorldGeneration++;
                         session.Stop();
-                        Assert(MarkingController.WaymarkCommands.Count == 1 && !session.HasPendingCleanup,
+                        Assert(GameMarkers.WaymarkCommands.Count == 1 && !session.HasPendingCleanup,
                             "外部切图后必须放弃旧场地标点的清理责任，避免清除新地图的标点。");
                     }
                 }
             }
             finally
             {
-                MarkingController.Reset();
+                GameMarkers.Reset();
             }
         }
 

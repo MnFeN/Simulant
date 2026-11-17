@@ -13,19 +13,8 @@ namespace Simulant.Game.FFCS.Client.Network
         /// <summary>通知客户端更新指定目标的小队仇恨；只传目标编号和远程包地址。</summary>
         public static void HandleUpdateHatePacket(uint targetId, UpdateHatePacket packet)
         {
-            if (targetId == 0 || targetId == 0xE0000000)
-                throw new ArgumentOutOfRangeException(nameof(targetId), "目标仇恨更新必须指定有效实体编号。");
-
             if (packet.MemberCount > UpdateHatePacket.Capacity)
                 throw new ArgumentOutOfRangeException(nameof(packet), "目标仇恨包最多包含 8 名成员。");
-
-            for (var i = 0; i < packet.MemberCount; i++)
-            {
-                var member = packet.GetMember(i);
-
-                if (member.EntityId == 0 || member.EntityId == 0xE0000000 || member.Enmity > 100)
-                    throw new ArgumentException("仇恨成员必须具有有效实体编号，百分比范围为 0-100。", nameof(packet));
-            }
 
             var function = HandleUpdateHatePacketFuncPtr;
 

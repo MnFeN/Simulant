@@ -1,5 +1,6 @@
 using Simulant.Core;
 using Simulant.Core.Entity;
+using Simulant.Core.Environment;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Simulation;
@@ -165,11 +166,8 @@ namespace Simulant.Content.U7a.Presets
             if (_partyMarks.Count == 0)
                 _partyMarksWorld = _host.WorldGeneration;
             _partyMarks.Add(markType);
-            SetPartyMark(markType, Party[slot].Id);
+            GameMarkers.Mark(markType, Party[slot].Id);
         }
-
-        private static void SetPartyMark(MarkerType markType, uint id)
-            => MarkingController.Instance.SetLocalMarker(markType, id);
 
         protected void ClearPartyMarks()
         {
@@ -183,7 +181,7 @@ namespace Simulant.Content.U7a.Presets
             foreach (var markType in _partyMarks.ToArray())
                 try
                 {
-                    SetPartyMark(markType, MarkingController.NoTarget);
+                    GameMarkers.ClearMarker(markType);
                     _partyMarks.Remove(markType);
                 }
                 catch (Exception ex)

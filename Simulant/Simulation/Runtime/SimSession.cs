@@ -1,5 +1,5 @@
 using Simulant.Core;
-using Simulant.Game.FFCS.Client.Game.UI;
+using Simulant.Core.Environment;
 using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Timeline;
 using System;
@@ -81,7 +81,7 @@ namespace Simulant.Simulation.Runtime
                         // 写入中途失败也要清理标点。
                         _waymarkWorld = _host.WorldGeneration;
                         _waymarksPendingCleanup = true;
-                        MarkingController.Instance.SetFieldMarkers(waymarks.Position);
+                        GameMarkers.PlaceWaymarks(waymarks);
                     }
 
                     _scheduler.Schedule(0, _logic.Start, "初始化模拟");
@@ -183,7 +183,7 @@ namespace Simulant.Simulation.Runtime
                     try
                     {
                         if (_waymarkWorld == _host.WorldGeneration)
-                            MarkingController.Instance.SetFieldMarkers(null);
+                            GameMarkers.ClearWaymarks();
                         _waymarksPendingCleanup = false;
                     }
                     catch (Exception ex)

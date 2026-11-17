@@ -1,7 +1,9 @@
+using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.Character;
 using Simulant.Game.FFCS.Client.Game.Object;
 using System;
 using System.Numerics;
+using System.Threading;
 
 namespace Simulant.Core.Entity
 {
@@ -18,7 +20,7 @@ namespace Simulant.Core.Entity
             if ((ObjectKind != ObjectKind.Pc && ObjectKind != ObjectKind.BattleNpc) || index >= 200 || index % 2 != 0)
                 throw new InvalidOperationException("指定位置的技能演出只支持战斗实体列表中的网络角色。");
 
-            ActionEffectHandler.ReceiveVisual(Id, native.Ptr, actionId, heading,
+            ReceiveVisual(Id, native.Ptr, actionId, heading,
                 new Vector3(position.X, position.Z, position.Y), new GameObjectId
                 {
                     ObjectId = 0xE0000000
@@ -45,11 +47,59 @@ namespace Simulant.Core.Entity
                 sourceIndex >= 200 || sourceIndex % 2 != 0 || targetIndex >= 200 || targetIndex % 2 != 0)
                 throw new InvalidOperationException("带目标的技能演出只支持战斗实体列表中的网络角色。");
 
-            ActionEffectHandler.ReceiveVisual(Id, sourceNative.Ptr, actionId, heading ?? sourceNative.Rotation,
+            ReceiveVisual(Id, sourceNative.Ptr, actionId, heading ?? sourceNative.Rotation,
                 targetNative.Position, new GameObjectId
                 {
                     ObjectId = target.Id
                 });
         }
+
+        private static int _globalSequence;
+
+        /// <summary>向原生入口提供演出坐标及空的八项效果；目标 0xE0000000 表示无目标。坐标采用游戏原生 XYZ（Y 为高度）。</summary>
+        internal static void ReceiveVisual(uint casterEntityId, IntPtr casterPtr, uint actionId, float heading,
+            Vector3 targetPosition, GameObjectId targetId, float animationLock = 0)
+        {
+            if (ActionEffectHandler.ReceiveFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("原生技能结算接收函数尚未定位。");
+
+            if (casterPtr == IntPtr.Zero || casterEntityId == 0 || casterEntityId == 0xE0000000)
+                throw new ArgumentException("技能演出的施法者身份或地址无效。", nameof(casterEntityId));
+
+            if (targetId.ObjectId == 0)
+                throw new ArgumentException("技能演出的目标身份无效。", nameof(targetId));
+
+            if (actionId == 0 || actionId > ushort.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(actionId), "技能编号必须能够写入演出技能字段。");
+
+            if (!IsFinite(targetPosition.X) || !IsFinite(targetPosition.Y) || !IsFinite(targetPosition.Z))
+                throw new ArgumentOutOfRangeException(nameof(targetPosition), "技能目标坐标必须为有限数。");
+
+            if (!IsFinite(animationLock) || animationLock < 0)
+                throw new ArgumentOutOfRangeException(nameof(animationLock), "技能动画锁时长必须为非负有限数。");
+
+            var rotation = PacketCodec.EncodeUShortHeading(heading);
+            var sequence = unchecked((uint)Interlocked.Increment(ref _globalSequence));
+
+            if (sequence == 0)
+                sequence = unchecked((uint)Interlocked.Increment(ref _globalSequence));
+
+            var header = new ActionEffectHandler.Header
+            {
+                AnimationTargetId = targetId,
+                ActionId = actionId,
+                GlobalSequence = sequence,
+                AnimationLock = animationLock,
+                BallistaEntityId = 0xE0000000,
+                RotationInt = rotation,
+                SpellId = (ushort)actionId,
+                ActionType = 1,
+                NumTargets = (byte)(targetId.ObjectId == 0xE0000000 ? 0 : 1),
+            };
+
+            ActionEffectHandler.Receive(casterEntityId, casterPtr, targetPosition, header, targetId);
+        }
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

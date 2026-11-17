@@ -1,4 +1,5 @@
 using Simulant.ACT;
+using Simulant.Game;
 using Simulant.Game.FFCS.Client.Graphics.Scene;
 using System;
 using System.Collections.Generic;
@@ -30,7 +31,9 @@ namespace Simulant.Core
             {
                 cancellation.ThrowIfCancellationRequested();
                 CheckProcess();
-                var native = VfxObject.CreateStatic("vfx/omen/eff/" + name + ".avfx");
+                GameFunctions.CheckStatus(VfxObject.RunFuncPtr, VfxObject.FadeOutFuncPtr);
+                const string pool = "Client.System.Scheduler.Instance.VfxObject";
+                var native = VfxObject.CreateStatic("vfx/omen/eff/" + name + ".avfx", pool);
                 if (native.Ptr == IntPtr.Zero)
                     throw new InvalidOperationException("无法创建预兆：" + name);
 
@@ -44,8 +47,13 @@ namespace Simulant.Core
 
                 try
                 {
-                    native.Configure(position, heading, scale, color);
-                    native.Run();
+                    var rotation = Quaternion.CreateFromYawPitchRoll(0, 0, heading);
+                    native.Position.Set(new Vector3(position.X, position.Z, position.Y));
+                    native.Rotation.Set(new Quaternion(rotation.X, rotation.Z, rotation.Y, rotation.W));
+                    native.Scale.Set(new Vector3(scale.X, scale.Z, scale.Y));
+                    if (color.HasValue)
+                        native.Color.Set(color.Value);
+                    native.Run(0f, -1);
                     effect.ExpiresAt = DateTime.UtcNow.AddSeconds(duration);
                 }
                 catch
@@ -61,9 +69,12 @@ namespace Simulant.Core
 
         public static void ShowActor(string path, IntPtr source, IntPtr target)
         {
+            if (string.IsNullOrEmpty(path) || !path.EndsWith(".avfx", StringComparison.OrdinalIgnoreCase) || path.IndexOf('\0') >= 0)
+                throw new ArgumentException("实体特效需要有效的 .avfx 资源路径。", nameof(path));
+
             // 当前的点名和实体预览由游戏自行结束。
             lock (Gate)
-                if (VfxObject.CreateActor(path, source, target).Ptr == IntPtr.Zero)
+                if (VfxObject.CreateActor(path, source, target, -1f, 0, 0, 0).Ptr == IntPtr.Zero)
                     throw new InvalidOperationException("无法创建实体特效：" + path);
         }
 
@@ -155,7 +166,7 @@ namespace Simulant.Core
             {
                 try
                 {
-                    effect.Native.FadeOut();
+                    effect.Native.FadeOut(10f);
                     Effects.Remove(effect);
                 }
                 catch (Exception error)

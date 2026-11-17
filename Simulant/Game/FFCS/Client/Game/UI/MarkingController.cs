@@ -25,7 +25,7 @@ namespace Simulant.Game.FFCS.Client.Game.UI
         }
 
         [StructLayout(LayoutKind.Explicit, Size = 0x20)]
-        private struct FieldMarker
+        internal struct FieldMarker
         {
             [FieldOffset(0x00)] public Vector3 Position;
             [FieldOffset(0x10)] public int X;
@@ -34,7 +34,9 @@ namespace Simulant.Game.FFCS.Client.Game.UI
             [FieldOffset(0x1C)] public byte Active;
         }
 
-        public void SetFieldMarkers(Func<int, Vector3?> getPosition)
+        internal delegate void FieldMarkerUpdate(Span<FieldMarker> markers);
+
+        internal void UpdateFieldMarkers(FieldMarkerUpdate update)
         {
             GameFunctions.CheckStatus(Ptr);
             var memory = NamazuInterop.Plugin.Memory;
@@ -44,18 +46,7 @@ namespace Simulant.Game.FFCS.Client.Game.UI
             if (bytes == null || bytes.Length != size)
                 throw new InvalidOperationException("未能完整读取场地标点。");
 
-            var markers = MemoryMarshal.Cast<byte, FieldMarker>(bytes.AsSpan());
-            for (var slot = 0; slot < markers.Length; slot++)
-            {
-                var position = getPosition?.Invoke(slot);
-                var p = position.GetValueOrDefault();
-                ref var marker = ref markers[slot];
-                marker.Position = new Vector3(p.X, p.Z, p.Y);
-                marker.X = (int)(p.X * 1000);
-                marker.Y = (int)(p.Z * 1000);
-                marker.Z = (int)(p.Y * 1000);
-                marker.Active = position.HasValue ? (byte)1 : (byte)0;
-            }
+            update(MemoryMarshal.Cast<byte, FieldMarker>(bytes.AsSpan()));
 
             if (memory.WriteBytes(start, bytes) != bytes.Length)
                 throw new InvalidOperationException("未能完整写入场地标点。");

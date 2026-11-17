@@ -1,4 +1,5 @@
 using Simulant.Game;
+using Simulant.Game.FFCS.Client.Game;
 using Simulant.Game.FFCS.Client.Game.Character;
 using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Game.FFCS.Client.Game.Object;
@@ -77,17 +78,17 @@ namespace Simulant.Core.Entity
                 DamageShield = native.ShieldValue
             };
             // 状态内存每槽 16 字节，包内每槽 12 字节；来源在网络包中使用实体 ID。
-            var statuses = native.StatusManager.Ptr.ReadBytes(StatusEffectListDoublePacket.StatusCount * 0x10, 8);
+            var statuses = native.StatusManager.ReadStatusTable();
 
-            if (statuses == null || statuses.Length != StatusEffectListDoublePacket.StatusCount * 0x10)
+            if (statuses == null || statuses.Length != StatusEffectListDoublePacket.StatusCount * StatusManager.StatusSize)
                 throw new InvalidOperationException("读取角色完整状态失败，未发送血量更新。");
 
             for (var i = 0; i < StatusEffectListDoublePacket.StatusCount; i++)
             {
-                var offset = i * 0x10;
+                var offset = i * StatusManager.StatusSize;
                 packet.SetStatus(i, new StatusEffectListStatus
                 {
-                    StatusId = BitConverter.ToUInt16(statuses, offset),
+                    StatusId = StatusManager.ReadStatusId(statuses, offset),
                     Param = BitConverter.ToUInt16(statuses, offset + 2),
                     RemainingTime = BitConverter.ToSingle(statuses, offset + 4),
                     SourceEntityId = BitConverter.ToUInt32(statuses, offset + 8)

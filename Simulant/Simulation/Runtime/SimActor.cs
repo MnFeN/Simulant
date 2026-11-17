@@ -29,9 +29,8 @@ namespace Simulant.Simulation.Runtime
         public bool IsActive => Volatile.Read(ref _detached) == 0 && Entity.IsAlive;
         /// <summary>是否有本会话管理的本地或网络移动；不反映直接调用 Entity.ActorMove 后的状态。</summary>
         public bool IsMoving => _movement.IsMoving(this);
-        public bool IsKnockbackImmune => IsActive && (Entity.HasStatus(160) || Entity.HasStatus(1209));
-        public bool IsInvulnerable => IsActive && (Entity.HasStatus(82) || Entity.HasStatus(409) ||
-            Entity.HasStatus(810) || Entity.HasStatus(811) || Entity.HasStatus(1836));
+        public bool IsKnockbackImmune => IsActive && Entity.IsKnockbackImmune;
+        public bool IsInvulnerable => IsActive && Entity.IsInvulnerable;
         public uint Id => Entity.Id;
         public IntPtr Address => Entity.Address;
 
@@ -61,8 +60,7 @@ namespace Simulant.Simulation.Runtime
 
             // 状态表一次读取，不在高频采样中调用原生 HasStatus 函数。
             var position = Entity.Pos3D;
-            var defenses = Entity.Native.StatusManager.ReadDefensiveStatuses();
-            _judgementHistory.Add(_judgementClock.ElapsedSeconds, position, (defenses & 2) != 0, Entity.Heading);
+            _judgementHistory.Add(_judgementClock.ElapsedSeconds, position, Entity.ReadInvulnerability(), Entity.Heading);
             _judgementSample = _judgementClock.ScheduleAfter(0.02, SampleJudgementPosition, "记录自身判定位置");
         }
 

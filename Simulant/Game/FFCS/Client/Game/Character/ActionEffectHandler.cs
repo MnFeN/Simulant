@@ -3,11 +3,10 @@ using Simulant.Game.FFCS.Client.Game.Object;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace Simulant.Game.FFCS.Client.Game.Character
 {
-    /// <summary>FFCS 的技能结算接收入口；封装指定位置或单个目标、没有伤害效果的演出调用。</summary>
+    /// <summary>原生技能结算接收入口和参数布局。</summary>
     public static class ActionEffectHandler
     {
         // 来源：FFXIVClientStructs/FFXIV/Client/Game/Character/ActionEffectHandler.cs。
@@ -43,48 +42,13 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         [SigPattern("E8 * * * * 48 8B 8D ?? ?? ?? ?? 48 33 CC E8 ?? ?? ?? ?? 48 81 C4 00 05 00 00")]
         public static IntPtr ReceiveFuncPtr { get; set; }
 
-        private static int _globalSequence;
-
-        /// <summary>向原生入口提供演出坐标及空的八项效果；目标 0xE0000000 表示无目标。坐标采用游戏原生 XYZ（Y 为高度）。</summary>
-        public static void ReceiveVisual(uint casterEntityId, IntPtr casterPtr, uint actionId, float heading,
-            Vector3 targetPosition, GameObjectId targetId, float animationLock = 0)
+        internal static void Receive(uint casterEntityId, IntPtr casterPtr, Vector3 targetPosition, Header header,
+            GameObjectId targetId, ulong[] targetEffects = null)
         {
-            if (ReceiveFuncPtr == IntPtr.Zero)
-                throw new InvalidOperationException("原生技能结算接收函数尚未定位。");
-
-            if (casterPtr == IntPtr.Zero || casterEntityId == 0 || casterEntityId == 0xE0000000)
-                throw new ArgumentException("技能演出的施法者身份或地址无效。", nameof(casterEntityId));
-
-            if (targetId.ObjectId == 0)
-                throw new ArgumentException("技能演出的目标身份无效。", nameof(targetId));
-
-            if (actionId == 0 || actionId > ushort.MaxValue)
-                throw new ArgumentOutOfRangeException(nameof(actionId), "技能编号必须能够写入演出技能字段。");
-
-            if (!IsFinite(targetPosition.X) || !IsFinite(targetPosition.Y) || !IsFinite(targetPosition.Z))
-                throw new ArgumentOutOfRangeException(nameof(targetPosition), "技能目标坐标必须为有限数。");
-
-            if (!IsFinite(animationLock) || animationLock < 0)
-                throw new ArgumentOutOfRangeException(nameof(animationLock), "技能动画锁时长必须为非负有限数。");
-
-            var rotation = PacketCodec.EncodeUShortHeading(heading);
-            var sequence = unchecked((uint)Interlocked.Increment(ref _globalSequence));
-
-            if (sequence == 0)
-                sequence = unchecked((uint)Interlocked.Increment(ref _globalSequence));
-
-            var header = new Header
-            {
-                AnimationTargetId = targetId,
-                ActionId = actionId,
-                GlobalSequence = sequence,
-                AnimationLock = animationLock,
-                BallistaEntityId = 0xE0000000,
-                RotationInt = rotation,
-                SpellId = (ushort)actionId,
-                ActionType = 1,
-                NumTargets = (byte)(targetId.ObjectId == 0xE0000000 ? 0 : 1),
-            };
+            if (header.NumTargets > 1)
+                throw new ArgumentOutOfRangeException(nameof(header));
+            if (targetEffects != null && targetEffects.Length != 8)
+                throw new ArgumentException("原生技能结算每个目标有八个效果槽。", nameof(targetEffects));
 
             var memory = NamazuInterop.Plugin.Memory;
             var buffer = IntPtr.Zero;
@@ -95,17 +59,21 @@ namespace Simulant.Game.FFCS.Client.Game.Character
                 buffer = memory.AllocateMemory(0x80);
 
                 if (buffer == IntPtr.Zero)
-                    throw new InvalidOperationException("无法分配技能演出的远程参数内存。");
+                    throw new InvalidOperationException("无法分配技能结算的远程参数内存。");
 
-                if (memory.WriteBytes(buffer, new byte[0x80]) != 0x80)
-                    throw new InvalidOperationException("技能演出的远程参数内存清零不完整。");
+                var bytes = new byte[0x80];
+                if (targetEffects != null)
+                    Buffer.BlockCopy(targetEffects, 0, bytes, 0x38, targetEffects.Length * sizeof(ulong));
+
+                if (memory.WriteBytes(buffer, bytes) != bytes.Length)
+                    throw new InvalidOperationException("技能结算的远程参数内存初始化不完整。");
 
                 memory.Write(buffer, targetPosition);
                 memory.Write(buffer + 0x10, header);
                 if (header.NumTargets != 0)
                     memory.Write(buffer + 0x78, targetId.Id);
                 // 自定义结构体仅写入远程内存，绝不作为 GreyMagic 的按值调用参数。
-                ReceiveFuncPtr.Call(casterEntityId, casterPtr, buffer, buffer + 0x10, buffer + 0x38, buffer + 0x78);
+                ActionEffectHandler.ReceiveFuncPtr.Call(casterEntityId, casterPtr, buffer, buffer + 0x10, buffer + 0x38, buffer + 0x78);
             }
             finally
             {
@@ -113,7 +81,5 @@ namespace Simulant.Game.FFCS.Client.Game.Character
                     memory.FreeMemory(buffer);
             }
         }
-
-        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

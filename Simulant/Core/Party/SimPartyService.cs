@@ -67,7 +67,7 @@ namespace Simulant.Core.Party
                 if (_owner != null && !ReferenceEquals(_owner, owner))
                     throw new InvalidOperationException("已有另一场模拟占用原生小队列表，请先停止它。");
 
-                if (members == null || members.Count < 2 || members.Count > 8)
+                if (members == null || members.Count < 2 || members.Count > UpdateHatePacket.Capacity)
                     throw new ArgumentException("模拟小队必须包含自己及队员，共 2-8 人。", nameof(members));
 
                 var self = _host.EntityProvider.GetMyself();
@@ -283,7 +283,7 @@ namespace Simulant.Core.Party
                 if ((targetId & 0xFFFF0000) != 0x40FF0000 || !_host.EntityProvider.GetCharacters().Any(e => e.Id == targetId && e.IsAlive))
                     throw new ArgumentException("仇恨目标必须是有效的模拟战斗实体。", nameof(targetId));
 
-                if (members == null || enmity == null || members.Count != enmity.Count || members.Count > 8)
+                if (members == null || enmity == null || members.Count != enmity.Count || members.Count > UpdateHatePacket.Capacity)
                     throw new ArgumentException("仇恨值必须与小队成员一一对应。");
 
                 var ids = new HashSet<uint>();
@@ -293,7 +293,8 @@ namespace Simulant.Core.Party
                 {
                     var actor = members[i];
 
-                    if (actor == null || !actor.IsActive || !actor.Entity.IsAlive || !ids.Add(actor.Id) ||
+                    if (actor == null || !actor.IsActive || !actor.Entity.IsAlive ||
+                        actor.Id == 0 || actor.Id == 0xE0000000 || !ids.Add(actor.Id) ||
                         !Enumerable.Range(0, _shown.MemberCount).Any(j => _shown.GetMember(j).EntityId == actor.Id) ||
                         enmity[i] < 0 || enmity[i] > 100)
                         throw new ArgumentException("仇恨成员必须在本小队中且不重复，数值范围为 0-100。");

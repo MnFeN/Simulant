@@ -7,31 +7,18 @@ namespace Simulant.Game.FFCS.Client.Game
     {
         public IntPtr Ptr { get; set; }
 
-        // [FieldOffset(0x8), FixedSizeArray] internal FixedSizeArray60<Status> _status;
-        public Status GetStatus(int index) => Ptr.As<Status>(0x8 + index * 0x10); // temp until we implement the array struct
+        internal const int StatusCount = 60;
+        internal const int StatusSize = 0x10;
+
+        public Status GetStatus(int index) => Ptr.As<Status>(0x8 + index * StatusSize);
 
         /// <summary>主、副状态循环特效当前使用的 VFX 行号缓存，不是 StatusLoopVFX 行号。</summary>
         public MemoryField<ushort> GetLoopVfxId(bool secondary = false) => Ptr.Field<ushort>(secondary ? 0x3D6 : 0x3D4);
 
-        /// <summary>一次读取状态表，避免采样时反复调用游戏线程。</summary>
-        public bool ReadKnockbackImmunity()
-            => (ReadDefensiveStatuses() & 1) != 0;
+        /// <summary>Read all native status entries in a single memory read.</summary>
+        internal byte[] ReadStatusTable() => Ptr.ReadBytes(StatusCount * StatusSize, 0x8);
 
-        /// <summary>一次读取状态表：位 0 为防击退，位 1 为坦克无敌。</summary>
-        public byte ReadDefensiveStatuses()
-        {
-            var statuses = Ptr.ReadBytes(60 * 0x10, 0x8);
-            byte flags = 0;
-            for (var offset = 0; offset < statuses.Length; offset += 0x10)
-            {
-                var id = BitConverter.ToUInt16(statuses, offset);
-                if (id == 160 || id == 1209)
-                    flags |= 1;
-                if (id == 82 || id == 409 || id == 810 || id == 811 || id == 1836)
-                    flags |= 2;
-            }
-            return flags;
-        }
+        internal static ushort ReadStatusId(byte[] table, int offset) => BitConverter.ToUInt16(table, offset);
 
         [SigPattern("E8 * * * * C6 43 2D 00")]
         public static IntPtr HasStatusFuncPtr { get; set; }

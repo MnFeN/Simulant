@@ -1,5 +1,7 @@
 using Simulant.ACT;
+using Simulant.Core.Environment;
 using Simulant.Game.FFCS.Client.System.Framework;
+using Simulant.Game.FFCS.Client.UI;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -28,6 +30,7 @@ namespace Simulant.Tests.Native
                     VerifyChat(plugin);
                     VerifyMarkers(plugin);
                     VerifyVfx(plugin);
+                    VerifyHotbar(plugin);
                     Console.WriteLine("本地消息、标点和特效调用验证通过。");
                     return 0;
                 }
@@ -65,9 +68,10 @@ namespace Simulant.Tests.Native
             var controller = new IntPtr(0x40000);
             SetAddress(type, "InstancePtr", controller);
             SetAddress(type, "SetLocalMarkerFuncPtr", PresentationPlugin.Mark);
-            var instance = type.GetProperty("Instance").GetValue(null);
+            var markers = GameType("Core.Environment.GameMarkers");
             var markerType = GameType("Game.FFCS.Client.Game.UI.MarkerType");
-            type.GetMethod("SetLocalMarker").Invoke(instance, new object[] { Enum.Parse(markerType, "Square"), 0x10000001u });
+            markers.GetMethod("Mark", BindingFlags.Static | BindingFlags.NonPublic)
+                .Invoke(null, new object[] { Enum.Parse(markerType, "Square"), 0x10000001u });
             Assert(plugin.MarkerArguments.SequenceEqual(new object[] { controller, 10u, 0x10000001u, 0u }),
                 "实体标记必须使用本地函数及原生编号。");
 
@@ -75,14 +79,14 @@ namespace Simulant.Tests.Native
             var one = start + 4 * 0x20;
             plugin.Memory.Write(start + 0x1C, (byte)1);
             plugin.Memory.Write(one + 0x0C, 0xABCDu);
-            var method = type.GetMethod("SetFieldMarkers");
-            method.Invoke(instance, new object[] { (Func<int, Vector3?>)(slot => slot == 4 ? new Vector3(12.5f, -3.25f, 4) : (Vector3?)null) });
+            var layout = WaymarkLayout.Center(0, 0).At("1", 12.5f, -3.25f, 4);
+            markers.GetMethod("PlaceWaymarks").Invoke(null, new object[] { layout });
             Assert(plugin.Memory.Read<Vector3>(one) == new Vector3(12.5f, 4, -3.25f) &&
                 plugin.Memory.Read<int>(one + 0x10) == 12500 && plugin.Memory.Read<int>(one + 0x14) == 4000 &&
                 plugin.Memory.Read<int>(one + 0x18) == -3250 && plugin.Memory.Read<byte>(one + 0x1C) == 1 &&
                 plugin.Memory.Read<byte>(start + 0x1C) == 0 && plugin.Memory.Read<uint>(one + 0x0C) == 0xABCDu,
                 "场地标点应更新两种坐标和启用位，同时保留未知字段并清除未使用槽。");
-            method.Invoke(instance, new object[] { null });
+            markers.GetMethod("ClearWaymarks").Invoke(null, null);
             Assert(plugin.Memory.Read<byte>(one + 0x1C) == 0, "清理应关闭已启用槽。");
         }
 
@@ -120,6 +124,28 @@ namespace Simulant.Tests.Native
             manager.GetMethod("Clear").Invoke(null, null);
         }
 
+        private static void VerifyHotbar(PresentationPlugin plugin)
+        {
+            var previousFunction = AtkModule.GetAddonByNameFuncPtr;
+            try
+            {
+                AtkModule.GetAddonByNameFuncPtr = PresentationPlugin.GetAddon;
+                var atk = new AtkModule { Ptr = new IntPtr(0x90000) };
+                var unitManager = new IntPtr(0x91000);
+                plugin.Memory.Write(atk.Ptr + 0x2C0, unitManager);
+                plugin.Memory.Write(plugin.Hotbar + 0x2CB, (byte)5);
+                var page = GameType("Core.SimHotbarInput").GetMethod("ReadCurrentHotbarPage",
+                    BindingFlags.Static | BindingFlags.NonPublic);
+                Assert((byte)page.Invoke(null, new object[] { atk }) == 5 &&
+                    plugin.HotbarName == "_ActionBar" && plugin.HotbarManager == unitManager && plugin.HotbarIndex == 1,
+                    "The hotbar page must come from the primary native action bar.");
+            }
+            finally
+            {
+                AtkModule.GetAddonByNameFuncPtr = previousFunction;
+            }
+        }
+
         private static void SetAddress(Type type, string name, IntPtr value) => type.GetProperty(name).SetValue(null, value);
 
         private static void Assert(bool condition, string message)
@@ -148,7 +174,9 @@ namespace Simulant.Tests.Native
     public sealed class PresentationPlugin : IDisposable
     {
         public static readonly IntPtr GetShell = new IntPtr(0x10), Chat = new IntPtr(0x11), Mark = new IntPtr(0x12),
-            Create = new IntPtr(0x13), Run = new IntPtr(0x14), Fade = new IntPtr(0x15), Actor = new IntPtr(0x16);
+            Create = new IntPtr(0x13), Run = new IntPtr(0x14), Fade = new IntPtr(0x15), Actor = new IntPtr(0x16),
+            GetAddon = new IntPtr(0x17);
+        public readonly IntPtr Hotbar = new IntPtr(0x92000);
         private int _vfxCount;
         public string State => "Ready";
         public readonly object CallScheduler = new object();
@@ -159,7 +187,9 @@ namespace Simulant.Tests.Native
         public string Message;
         public object[] MarkerArguments;
         public object[] ActorArguments;
-        public string ActorPath;
+        public string ActorPath, HotbarName;
+        public IntPtr HotbarManager;
+        public int HotbarIndex;
 
         public T Call<T>(IntPtr function, params object[] args) where T : struct
         {
@@ -174,6 +204,14 @@ namespace Simulant.Tests.Native
                 var bytes = Memory.ReadBytes((IntPtr)args[0], 64);
                 ActorPath = Encoding.UTF8.GetString(bytes, 0, Array.IndexOf(bytes, (byte)0));
                 result = new IntPtr(0x80000);
+            }
+            else if (function == GetAddon)
+            {
+                HotbarManager = (IntPtr)args[0];
+                var bytes = Memory.ReadBytes((IntPtr)args[1], 16);
+                HotbarName = Encoding.ASCII.GetString(bytes, 0, Array.IndexOf(bytes, (byte)0));
+                HotbarIndex = (int)args[2];
+                result = Hotbar;
             }
             else
             {
