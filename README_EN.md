@@ -29,13 +29,9 @@ Work in progress. Collaboration is welcome.
 - The plugin currently depends on the following ACT plugins:
 
   - FFXIV Parsing Plugin
-  - [OverlayPlugin](https://github.com/OverlayPlugin/OverlayPlugin)
-  - [Triggernometry](https://github.com/MnFeN/Triggernometry) (v2.0 or above)
-  - [PostNamazu](https://github.com/Natsukage/PostNamazu)
+  - [PostNamazu](https://github.com/Natsukage/PostNamazu) (1.3.6.7 or later)
 
-  Installation instructions for the latter two can be found at [this link](https://www.bilibili.com/opus/998425290402168834).
-
-  If you have already installed my Triggernometry bundle, you can skip this step.
+  See the [Triggernometry project README](https://github.com/MnFeN/Triggernometry/blob/new/readme.md) for PostNamazu installation and updates. PostNamazu can be loaded on its own in ACT for Simulant.
 
 > [!WARNING]
 > This plugin is still under active development. It is currently only a demo for testing whether this idea is feasible.

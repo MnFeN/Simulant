@@ -10,6 +10,8 @@ namespace Simulant.Game.FFCS.Client.UI
         public AgentModule AgentModule
             => Ptr.CallVFunc<IntPtr>(37).As<AgentModule>();
 
+        internal RaptureShellModule ShellModule => Ptr.CallVFunc<IntPtr>(9).As<RaptureShellModule>();
+
         public AtkModule AtkModule => Ptr.CallVFunc<IntPtr>(7).As<AtkModule>();
         public RaptureHotbarModule HotbarModule => Ptr.CallVFunc<IntPtr>(13).As<RaptureHotbarModule>();
         public UIInputData InputData => Ptr.CallVFunc<IntPtr>(81).As<UIInputData>();

@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
@@ -307,7 +306,7 @@ namespace Simulant.Content.U7b.Presets
                 if (slot < 0 || slot >= Party.Count || !Party[slot].IsActive)
                     return;
 
-                TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[slot].Address}, {marker}");
+                VfxManager.ShowLockOn(Party[slot].Address, marker);
             }
             catch (Exception error)
             {

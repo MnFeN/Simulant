@@ -104,6 +104,8 @@ namespace Simulant.Core
         private int? _entityProcessId;
         private int _entityProcessGeneration;
         private uint? _entityZoneId;
+        private int _worldGeneration;
+        internal int WorldGeneration => Volatile.Read(ref _worldGeneration);
 
         internal bool HasPendingDebugEntityCleanup
         {
@@ -284,10 +286,13 @@ namespace Simulant.Core
 
             Cleanup(() => _ui?.StopCurrentSession());
             Cleanup(StopDebugEntities);
+            Cleanup(VfxManager.Clear);
             Cleanup(() => PlayerActions?.Reset());
             Cleanup(() => PartyService?.RestoreAll());
             Cleanup(() => EntitySpawner?.Clear());
             EntitySpawner?.ResetWorld();
+            VfxManager.InvalidateWorld();
+            Interlocked.Increment(ref _worldGeneration);
             // 本地切图已经在这里清理；稍后到达的相同区域通知不应停止新会话。
             _entityZoneId = nextZoneId ?? XivPluginInterop.plugin?.DataRepository.GetCurrentTerritoryID();
         }
@@ -589,9 +594,6 @@ namespace Simulant.Core
                 LogRuntime("正在绑定鲶鱼精邮差……");
                 await Task.Run(() => NamazuInterop.Init());
 
-                LogRuntime("正在绑定 Triggernometry……");
-                await Task.Run(() => TriggernometryInterop.Init());
-
                 LogRuntime("正在扫描地址……");
                 var scanResult = await Task.Run(() => SigAddressScanner.Scan());
 
@@ -717,6 +719,7 @@ namespace Simulant.Core
                     TryCleanup("卸载时停止调试失败", StopDebugEntities);
                     TryCleanup("卸载时清理模拟技能失败", () => PlayerActions?.Reset());
                     TryCleanup("卸载时恢复小队失败", () => PartyService?.RestoreAll());
+                    TryCleanup("卸载时清理特效失败", VfxManager.Clear);
                     TryCleanup("卸载时释放实体资源失败", () => EntitySpawner?.Dispose());
 
                     var returned = false;
@@ -862,6 +865,8 @@ namespace Simulant.Core
 
                 _entityProcessId = processId;
                 _entityProcessGeneration++;
+                Interlocked.Increment(ref _worldGeneration);
+                VfxManager.InvalidateWorld();
                 _entityZoneId = XivPluginInterop.plugin?.DataRepository.GetCurrentTerritoryID();
                 // 旧进程可能已经退出；先使引用失效，绝不能尝试在新进程中删除旧地址。
                 PluginReady = false;
@@ -899,6 +904,8 @@ namespace Simulant.Core
                     return;
 
                 _entityZoneId = zoneId;
+                Interlocked.Increment(ref _worldGeneration);
+                VfxManager.InvalidateWorld();
                 ZoneService?.InvalidateWorld();
                 PartyService?.InvalidateWorld();
                 // 外部换图发生后只能失效旧引用，不能再尝试释放上一场景的内存。

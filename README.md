@@ -48,13 +48,9 @@ Work in progress.
 - 目前依赖以下 ACT 插件：
 
   - FFXIV 解析插件
-  - [OverlayPlugin](https://github.com/OverlayPlugin/OverlayPlugin)
-  - [Triggernometry](https://github.com/MnFeN/Triggernometry) (v2.0 以上)
-  - [PostNamazu](https://github.com/Natsukage/PostNamazu)
+  - [PostNamazu](https://github.com/Natsukage/PostNamazu)（1.3.6.7 或以上）
 
-  前两者为任意整合版本 ACT 自带的插件，后两者的安装说明见[此链接](https://www.bilibili.com/opus/998425290402168834)。
-
-  如果你安装过我的 Triggernometry 整合，可以跳过此步骤。
+  PostNamazu 的安装及更新说明见 [Triggernometry 项目 README](https://github.com/MnFeN/Triggernometry/blob/new/readme.md)。Simulant 可在 ACT 中单独加载 PostNamazu 使用。
 
 - 将此插件 dll 加载至 ACT 的插件列表即可完成加载，可置于列表中比较靠后的位置。
 

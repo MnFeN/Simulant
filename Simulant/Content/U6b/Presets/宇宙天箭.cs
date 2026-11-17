@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
@@ -241,7 +240,7 @@ namespace Simulant.Content.U6b.Presets
 
             try
             {
-                TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + message);
+                GameChat.SendEcho(message, playSound: true);
             }
             catch (Exception errorSending)
             {
@@ -253,7 +252,7 @@ namespace Simulant.Content.U6b.Presets
         {
             try
             {
-                TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[slot].Address}, {marker}");
+                VfxManager.ShowLockOn(Party[slot].Address, marker);
             }
             catch (Exception error)
             {

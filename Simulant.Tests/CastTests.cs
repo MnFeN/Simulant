@@ -1,4 +1,4 @@
-using Simulant.ACT;
+using Simulant.Core;
 using Simulant.Game.Data;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
@@ -34,7 +34,7 @@ namespace Simulant.Tests
                     "缩短后的读条必须按新期限完成并播放技能。");
                 Assert(normal.Entity.CastingActionId == 1 && normal.Entity.PlayedTimelines.Count == 0,
                     "同技能的普通读条不应被加速。");
-                Assert(TriggernometryInterop.Commands.Count == 0,
+                Assert(VfxManager.Commands.Count == 0,
                     "超过新咏唱期限的延迟预兆不应出现。");
             }
         }
@@ -107,7 +107,7 @@ namespace Simulant.Tests
                 {
                     102
                 }), "只有替换后的读条可以播放完成动作。");
-                Assert(TriggernometryInterop.Commands.Count == 0, "已取消的延迟预兆不得出现。");
+                Assert(VfxManager.Commands.Count == 0, "已取消的延迟预兆不得出现。");
             }
         }
 
@@ -130,8 +130,8 @@ namespace Simulant.Tests
                 visible.Cast(1);
                 Assert(scene.Scheduler.PendingCount == 0, "已释放的读条控制器不得接受后续模拟角色回调。");
                 scene.RunPast(0.08);
-                Assert(TriggernometryInterop.Commands.Count(command => !IsRemoval(command)) == 1 &&
-                    TriggernometryInterop.Commands.Count(IsRemoval) == 1,
+                Assert(VfxManager.Commands.Count(command => !IsRemoval(command)) == 1 &&
+                    VfxManager.Commands.Count(IsRemoval) == 1,
                     "只能显示已可见的预兆，并恰好移除一次。");
                 Assert(visible.Entity.PlayedTimelines.Count == 0 && delayed.Entity.PlayedTimelines.Count == 0,
                     "已取消的读条不得播放完成动作。");
@@ -171,8 +171,8 @@ namespace Simulant.Tests
                     102
                 }),
                     "停止后必须能重新读条，且只有新读条可以播放完成动作。");
-                Assert(TriggernometryInterop.Commands.Count(command => !IsRemoval(command)) == 1 &&
-                    TriggernometryInterop.Commands.Count(IsRemoval) == 1,
+                Assert(VfxManager.Commands.Count(command => !IsRemoval(command)) == 1 &&
+                    VfxManager.Commands.Count(IsRemoval) == 1,
                     "重复停止只能移除一次旧读条的预兆。");
             }
         }
@@ -186,14 +186,14 @@ namespace Simulant.Tests
                 actor.Pos = new Vector2(100, 100);
                 actor.Heading = 0;
                 actor.Cast(1, omenPosition: new Vector3(87, 92, 3), omenHeading: 1.25f);
-                var command = TriggernometryInterop.Commands.Single();
-                Assert(command.Contains("O: 87, 92, 3\n") && command.Contains("θ: 1.25\n"),
+                var command = VfxManager.Commands.Single();
+                Assert(command.Position == new Vector3(87, 92, 3) && command.Heading == 1.25f,
                     "实体仍在场中朝南时，光波预兆也必须使用调用者指定的落点与方向。");
                 actor.StopCasting();
                 actor.Pos = new Vector2(101, 102);
                 actor.Cast(1);
-                command = TriggernometryInterop.Commands.Last();
-                Assert(command.Contains("O: 101, 102, 0\n") && command.Contains("θ: 0\n"),
+                command = VfxManager.Commands.Last();
+                Assert(command.Position == new Vector3(101, 102, 0) && command.Heading == 0,
                     "下一次未指定位置的读条必须恢复读取实体当前位置，不能继承旧预兆的覆盖值。");
             }
         }
@@ -207,18 +207,18 @@ namespace Simulant.Tests
                 var second = scene.Actor(1);
                 first.Cast(1);
                 second.Cast(1);
-                var shows = TriggernometryInterop.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
+                var shows = VfxManager.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
                 Assert(shows.Length == 2 && shows.Distinct().Count() == 2, "两个模拟角色不得共享预兆移除标签。");
                 first.StopCasting();
-                Assert(TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[]
+                Assert(VfxManager.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[]
                 {
                     shows[0]
                 }),
                     "取消一个模拟角色的读条时，只能移除该角色的预兆。");
                 second.Cast(1);
-                var newShows = TriggernometryInterop.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
+                var newShows = VfxManager.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
                 Assert(newShows.Distinct().Count() == 3, "重新读条必须使用新标签，不得复用上次读条的标签。");
-                Assert(TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(shows),
+                Assert(VfxManager.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(shows),
                     "重新读条必须移除旧预兆，且不得影响新预兆。");
             }
         }
@@ -259,7 +259,7 @@ namespace Simulant.Tests
                 var expected = new InvalidOperationException("旧外部回调失败");
                 var replaced = false;
 
-                TriggernometryInterop.OnCommand = command =>
+                VfxManager.OnCommand = command =>
                 {
                     if (IsRemoval(command) || replaced)
                         return;
@@ -279,9 +279,9 @@ namespace Simulant.Tests
                     Assert(ReferenceEquals(error, expected), "失败的旧回调必须保留原始错误。");
                 }
 
-                TriggernometryInterop.OnCommand = null;
-                var shown = TriggernometryInterop.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
-                var removed = TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).ToArray();
+                VfxManager.OnCommand = null;
+                var shown = VfxManager.Commands.Where(command => !IsRemoval(command)).Select(Tag).ToArray();
+                var removed = VfxManager.Commands.Where(IsRemoval).Select(Tag).ToArray();
                 Assert(shown.Length == 2 && removed.SequenceEqual(new[]
                 {
                     shown[0]
@@ -301,9 +301,9 @@ namespace Simulant.Tests
                 scene.AddAction(2, 1);
                 var actor = scene.Actor(0);
                 actor.Cast(1);
-                var oldTag = Tag(TriggernometryInterop.Commands.Single());
+                var oldTag = Tag(VfxManager.Commands.Single());
 
-                TriggernometryInterop.OnCommand = command =>
+                VfxManager.OnCommand = command =>
                 {
                     if (!IsRemoval(command) || Tag(command) != oldTag)
                         return;
@@ -338,9 +338,9 @@ namespace Simulant.Tests
                     scene.AddAction(3, 1);
                     var actor = scene.Actor(0);
                     actor.Cast(1);
-                    var oldTag = Tag(TriggernometryInterop.Commands.Single());
+                    var oldTag = Tag(VfxManager.Commands.Single());
 
-                    TriggernometryInterop.OnCommand = command =>
+                    VfxManager.OnCommand = command =>
                     {
                         if (IsRemoval(command) && Tag(command) == oldTag)
                             actor.Cast(3);
@@ -383,9 +383,9 @@ namespace Simulant.Tests
                         scene.AddAction(2, 1);
                         var actor = scene.Actor(0);
                         actor.Cast(1);
-                        var oldTag = Tag(TriggernometryInterop.Commands.Single());
+                        var oldTag = Tag(VfxManager.Commands.Single());
 
-                        TriggernometryInterop.OnCommand = command =>
+                        VfxManager.OnCommand = command =>
                         {
                             if (!IsRemoval(command) || Tag(command) != oldTag)
                                 return;
@@ -420,9 +420,9 @@ namespace Simulant.Tests
                 scene.AddAction(1, 0.4f, omen: true);
                 var actor = scene.Actor(0);
                 actor.Cast(1);
-                var oldTag = Tag(TriggernometryInterop.Commands.Single());
+                var oldTag = Tag(VfxManager.Commands.Single());
 
-                TriggernometryInterop.OnCommand = command =>
+                VfxManager.OnCommand = command =>
                 {
                     if (!IsRemoval(command) || Tag(command) != oldTag)
                         return;
@@ -445,16 +445,16 @@ namespace Simulant.Tests
             }
         }
 
-        public static void DelayedOmenSamplesCurrentPositionWithInvariantNumbers()
+        public static void DelayedOmenSamplesCurrentPosition()
         {
             using (var scene = new CastTestScene())
             using (var shown = new ManualResetEventSlim())
             {
                 scene.AddAction(1, 1, omen: true);
                 var actor = scene.Actor(0);
-                string command = null;
+                VfxManager.Call command = null;
 
-                TriggernometryInterop.OnCommand = value =>
+                VfxManager.OnCommand = value =>
                 {
                     if (IsRemoval(value))
                         return;
@@ -476,12 +476,12 @@ namespace Simulant.Tests
                 Assert(shown.Wait(5000), "延迟预兆未出现。");
                 scene.Scheduler.Dispose();
                 scene.AssertNoFailure();
-                Assert(command.Contains("O: 1.5, 2.5, 3.5") && command.Contains("θ: 0.5"),
-                    "延迟渲染必须采样当前位置和朝向，并使用不受区域设置影响的小数点。");
+                Assert(command.Position == new Vector3(1.5f, 2.5f, 3.5f) && command.Heading == 0.5f,
+                    "延迟渲染必须采样当前位置和朝向。");
             }
         }
 
-        public static void OmenDurationHeadingAndScaleUseInvariantNumbers()
+        public static void OmenPassesDurationHeadingAndScale()
         {
             NumericCultureTests.InCommaCultures(() =>
             {
@@ -494,10 +494,10 @@ namespace Simulant.Tests
                     var actor = scene.Actor(0);
                     new SimOmenRenderer().Show(actor, action, 3.7, "区域设置验证",
                         new Vector3(100.25f, -2.5f, 0.75f), -0.7853982f);
-                    var command = TriggernometryInterop.Commands.Single();
-                    Assert(command.Contains("t: 3.7\n") && command.Contains("θ: -0.7853982\n")
-                        && command.Contains("O: 100.25, -2.5, 0.75\n") && command.Contains("Scale: 3.5, "),
-                        "预兆时长、负角度、坐标和缩放必须使用点号小数。");
+                    var command = VfxManager.Commands.Single();
+                    Assert(command.Duration == 3.7 && command.Heading == -0.7853982f
+                         && command.Position == new Vector3(100.25f, -2.5f, 0.75f) && command.Scale.X == 3.5f,
+                        "应向 VFX 传入预兆时长、负角度、坐标和线条半宽。");
                 }
             });
         }
@@ -513,7 +513,7 @@ namespace Simulant.Tests
                 second.Cast(1);
                 var removalCount = 0;
 
-                TriggernometryInterop.OnCommand = command =>
+                VfxManager.OnCommand = command =>
                 {
                     if (IsRemoval(command) && ++removalCount == 1)
                         throw new InvalidOperationException("一个回调失败");
@@ -529,11 +529,11 @@ namespace Simulant.Tests
                     Assert(error.InnerExceptions.Count == 1, "只应报告失败的回调。");
                 }
 
-                TriggernometryInterop.OnCommand = null;
+                VfxManager.OnCommand = null;
                 Assert(scene.Scheduler.PendingCount == 0 && first.Entity.CastingActionId == 0 && second.Entity.CastingActionId == 0 &&
                     removalCount == 2, "一次外部清理失败后，不得让另一模拟角色的读条或预兆继续运行。");
                 scene.Casts.Dispose();
-                Assert(TriggernometryInterop.Commands.Count(IsRemoval) == 2, "重复释放不得重复执行清理回调。");
+                Assert(VfxManager.Commands.Count(IsRemoval) == 2, "重复释放不得重复执行清理回调。");
             }
         }
 
@@ -544,7 +544,7 @@ namespace Simulant.Tests
                 scene.AddAction(1, 0.4f, omen: true);
                 var actor = scene.Actor(0);
                 actor.Cast(1);
-                var shownTag = Tag(TriggernometryInterop.Commands.Single());
+                var shownTag = Tag(VfxManager.Commands.Single());
                 var expected = new InvalidOperationException("访问读条信息时实体消失");
 
                 actor.Entity.BeforeCastingActionIdRead = () =>
@@ -558,7 +558,7 @@ namespace Simulant.Tests
                     "完成节点未触发模拟的原生读取错误。");
                 scene.Scheduler.Dispose();
                 Assert(ReferenceEquals(scene.Failure, expected), "调度器必须报告原始的原生读取错误。");
-                Assert(TriggernometryInterop.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[]
+                Assert(VfxManager.Commands.Where(IsRemoval).Select(Tag).SequenceEqual(new[]
                 {
                     shownTag
                 }),
@@ -566,14 +566,13 @@ namespace Simulant.Tests
                 Assert(actor.Entity.FinalizedCasts.Count == 0 && actor.Entity.PlayedTimelines.Count == 0,
                     "读取失败后不得写入已消失的实体。");
                 scene.Casts.Dispose();
-                Assert(scene.Scheduler.PendingCount == 0 && TriggernometryInterop.Commands.Count(IsRemoval) == 1,
+                Assert(scene.Scheduler.PendingCount == 0 && VfxManager.Commands.Count(IsRemoval) == 1,
                     "完成操作必须移除自身状态，避免后续释放重复清理或遗留排队任务。");
             }
         }
 
-        private static bool IsRemoval(string command) => command.StartsWith("Action: Remove", StringComparison.Ordinal);
-        private static string Tag(string command)
-            => command.Split('\n').Single(line => line.StartsWith("Tag: ", StringComparison.Ordinal)).Substring(5).Trim();
+        private static bool IsRemoval(VfxManager.Call command) => command.IsRemoval;
+        private static string Tag(VfxManager.Call command) => command.Tag;
         private static void Assert(bool condition, string message)
         {
             if (!condition)
@@ -591,7 +590,7 @@ namespace Simulant.Tests
 
             internal CastTestScene()
             {
-                TriggernometryInterop.Reset();
+                VfxManager.Reset();
                 GameDataService.Instance.GetSheet<ActionRow>().Clear();
                 Scheduler = new SimScheduler((error, _) => _failure = error);
                 Casts = new SimCastController(Scheduler);
@@ -636,7 +635,7 @@ namespace Simulant.Tests
             public void Dispose()
             {
                 Scheduler.Dispose();
-                TriggernometryInterop.OnCommand = null;
+                VfxManager.OnCommand = null;
 
                 try
                 {
@@ -645,7 +644,7 @@ namespace Simulant.Tests
                 finally
                 {
                     Movement.Dispose();
-                    TriggernometryInterop.Reset();
+                    VfxManager.Reset();
                 }
             }
         }

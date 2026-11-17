@@ -1,7 +1,5 @@
-using Simulant.ACT;
-using System.Globalization;
+using Simulant.Core;
 using System.Numerics;
-using System.Text;
 using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Simulation.Runtime
@@ -45,17 +43,12 @@ namespace Simulant.Simulation.Runtime
             // 未指定时在绘制时读取；同帧发出的移动包尚未消费时，可传入已知的技能落点。
             var center = position ?? actor.Entity.Pos3D;
             var heading = rotation ?? actor.Entity.Heading;
-            var command = new StringBuilder();
-            command.AppendLine("Tag: " + tag);
-            command.AppendLine("Omen: " + action.Omen.Value.Path.ExtractText());
-            command.AppendFormat(CultureInfo.InvariantCulture,
-                "t: {0}\nO: {1}, {2}, {3}\nθ: {4}\nScale: {5}, {6}, 1\n",
-                sustain, center.X, center.Y, center.Z, heading, x, y);
-            TriggernometryInterop.InvokeNamedCallback("PictoACT", command.ToString());
+            VfxManager.ShowOmen(action.Omen.Value.Path.ExtractText(), center, heading,
+                new Vector3(x, y, 1), sustain, tag);
             return true;
         }
 
         public void Remove(string tag)
-            => TriggernometryInterop.InvokeNamedCallback("PictoACT", "Action: Remove\nTag: " + tag);
+            => VfxManager.Remove(tag);
     }
 }

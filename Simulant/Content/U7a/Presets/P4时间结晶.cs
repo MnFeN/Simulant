@@ -1,4 +1,4 @@
-using Simulant.ACT;
+using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
@@ -303,8 +303,8 @@ namespace Simulant.Content.U7a.Presets
             MoveAll(_plan.Initial, CrystallizeTimePlan.SandHits[0] - 1.2);
         }
 
-        private static void Mark(int number, uint id) => TriggernometryInterop.InvokeNamedCallback("mark",
-            "{\"ActorID\":" + id + ",\"MarkType\":\"attack" + number + "\",\"LocalOnly\":true}");
+        private static void Mark(int number, uint id)
+            => MarkingController.Instance.SetLocalMarker((MarkerType)(number - 1), id);
 
         private void Map(uint index, ushort animation)
         {
@@ -325,7 +325,7 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 1; i <= 4; i++)
                     try
                     {
-                        Mark(i, 0xE0000000);
+                        Mark(i, MarkingController.NoTarget);
                     }
                     catch (Exception ex)
                     {
@@ -355,14 +355,14 @@ namespace Simulant.Content.U7a.Presets
 
             foreach (var slot in error.Offenders)
                 if (_marked.Add(slot))
-                    TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[slot].Address}, m0489trg_b0c");
+                    VfxManager.ShowLockOn(Party[slot].Address, "m0489trg_b0c");
 
             var message = FormattableString.Invariant($"[时间结晶] {Now:0.000} 秒：") + error.Format(Self, slot => CrystallizeTimePlan.Roles[slot]);
             _host.LogWarning(message);
 
             try
             {
-                TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + message);
+                GameChat.SendEcho(message, playSound: true);
                 if (result != null)
                     result.FailureReported = true;
             }

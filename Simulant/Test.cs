@@ -1,5 +1,4 @@
-﻿using Simulant.ACT;
-using Simulant.Core;
+﻿using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
 using Simulant.Game;
@@ -55,17 +54,13 @@ namespace Simulant
 
                     if (agent.Ptr == IntPtr.Zero)
                     {
-                        TriggernometryInterop.InvokeNamedCallback(
-                            "command",
-                            $"/e PF [{n + 1}/{count}] AgentLookingForGroup = null");
+                        GameChat.SendEcho($"PF [{n + 1}/{count}] AgentLookingForGroup = null");
                     }
                     else
                     {
                         var listing = agent.LastViewedListing;
 
-                        TriggernometryInterop.InvokeNamedCallback(
-                            "command",
-                            $"/e PF [{n + 1}/{count}] Agent=0x{agent.Ptr.Hex()}, OpenCID={agent.ListingContentId}, ListingId={listing.ListingId}, LeaderCID={listing.LeaderContentId}, Duty={listing.DutyId}, Slots={listing.SlotsFilled}/{listing.TotalSlots}, World={listing.World}, Home={listing.HomeWorld}, Current={listing.CurrentWorld}");
+                        GameChat.SendEcho($"PF [{n + 1}/{count}] Agent=0x{agent.Ptr.Hex()}, OpenCID={agent.ListingContentId}, ListingId={listing.ListingId}, LeaderCID={listing.LeaderContentId}, Duty={listing.DutyId}, Slots={listing.SlotsFilled}/{listing.TotalSlots}, World={listing.World}, Home={listing.HomeWorld}, Current={listing.CurrentWorld}");
 
                         var hasMember = false;
 
@@ -78,24 +73,18 @@ namespace Simulant
 
                             hasMember = true;
 
-                            TriggernometryInterop.InvokeNamedCallback(
-                                "command",
-                                $"/e PF Member {i}: CID={contentId}, Job={listing.GetJob(i)}");
+                            GameChat.SendEcho($"PF Member {i}: CID={contentId}, Job={listing.GetJob(i)}");
                         }
 
                         if (!hasMember)
                         {
-                            TriggernometryInterop.InvokeNamedCallback(
-                                "command",
-                                "/e PF Members: none");
+                            GameChat.SendEcho("PF Members: none");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    TriggernometryInterop.InvokeNamedCallback(
-                        "command",
-                        $"/e PF [{n + 1}/{count}] ERROR: {ex.GetType().Name}: {ex.Message}");
+                    GameChat.SendEcho($"PF [{n + 1}/{count}] ERROR: {ex.GetType().Name}: {ex.Message}");
                 }
 
                 if (n + 1 < count && !_host.Disposed)
@@ -123,7 +112,7 @@ namespace Simulant
                     break;
 
                 eobj.SetSharedTimelineState(i);
-                TriggernometryInterop.InvokeNamedCallback("command", $"/e Timeline {i} = {i:X2}");
+                GameChat.SendEcho($"Timeline {i} = {i:X2}");
 
                 if (i == 0xFF || _host.Disposed)
                     break;
@@ -152,7 +141,7 @@ namespace Simulant
                 data.TargetableFlags = i;
                 data.Pos = _host.EntityProvider.GetMyself().Pos3D;
                 var eobj = _host.DebugEntities.SpawnEObj(data);
-                TriggernometryInterop.InvokeNamedCallback("command", $"/e {i}");
+                GameChat.SendEcho($"{i}");
 
                 if (i == 0xFF || _host.Disposed)
                     break;

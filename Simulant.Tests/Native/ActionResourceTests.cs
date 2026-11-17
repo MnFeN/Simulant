@@ -118,48 +118,6 @@ namespace Simulant.Tests.Native
             }
         }
 
-        public static void AuxiliaryLineCommandsKeepTwoCoordinatesInCommaCultures()
-        {
-            var method = typeof(GameDataService).Assembly.GetType("Simulant.Content.U7b.Presets.P5地火Logic", true)
-                .GetMethod("AuxiliaryLinePictoACTCommand", BindingFlags.Static | BindingFlags.NonPublic);
-            var original = CultureInfo.CurrentCulture;
-
-            try
-            {
-                foreach (var culture in new[]
-                {
-                    "fr-FR", "de-DE"
-                })
-                {
-                    CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
-                    for (var index = 1; index <= 6; index++)
-                    {
-                        foreach (var left in new[]
-                        {
-                            true, false
-                        })
-                        {
-                            var command = (string)method.Invoke(null, new object[]
-                            {
-                                index, left
-                            });
-                            var position = command.Split('\n').Single(line => line.StartsWith("Pos: ")).Substring(5);
-                            var coordinates = Simulant.Utils.ArgHelper.ParseArgs<double, double>(position);
-                            Assert(position.Count(c => c == ',') == 1,
-                                "辅助线必须只有两个坐标，小数不能产生额外的逗号。");
-                            Assert(Math.Abs(coordinates.Item1 - (index - 3.5) * 5 * Math.Sqrt(2)) < 0.00001
-                                && Math.Abs(coordinates.Item2 + 17.5 * Math.Sqrt(2)) < 0.00001,
-                                "所有方向的辅助线坐标必须保持原值。");
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                CultureInfo.CurrentCulture = original;
-            }
-        }
-
         public static void TemplateEscapesXmlAndSupportsMissingOmen()
         {
             var row = Samples()[0];

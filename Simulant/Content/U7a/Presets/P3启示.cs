@@ -1,3 +1,4 @@
+using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
@@ -127,8 +128,8 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(5.54, () =>
             {
                 for (var slot = 0; slot < 8; slot++)
-                    if (_plan.GroupMarkers[slot] != null)
-                        MarkPartyMember(slot, _plan.GroupMarkers[slot]);
+                    if (_plan.GroupMarkers[slot] is MarkerType marker)
+                        MarkPartyMember(slot, marker);
 
                 for (var i = 0; i < 8; i++)
                     if (_plan.Orders[i] != 0)

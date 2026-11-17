@@ -53,7 +53,7 @@ internal sealed class ExampleTimelineLogic : SimLogicBase
 public override WaymarkLayout Waymarks => U7b.Waymarks;
 ```
 
-`SimSession` 在第一个时间轴节点之前，通过 Triggernometry 的 `place` 回调放置整套本地标点；停止、取消或释放会话时统一清除。机制错误保留现场时也保留标点，直到手动停止。放置中途抛错会尝试清理，清理回调失败时保留责任，下一次停止重试。未声明布局的预设不操作标点，O8S 异三角采用这一方式。
+`SimSession` 在第一个时间轴节点之前，通过游戏的本地标点表放置整套本地标点；停止、取消或释放会话时统一清除。机制错误保留现场时也保留标点，直到手动停止。放置中途抛错会尝试清理，清理失败时保留责任，下一次停止重试。外部换图或切换进程后会放弃上一场景的清理记录。未声明布局的预设不操作标点，O8S 异三角采用这一方式。
 
 `WaymarkLayout.Center(x, y, z)` 创建布局，标点名称统一使用字符串 `"A"`～`"D"`、`"1"`～`"4"`：
 
@@ -78,7 +78,7 @@ var custom = WaymarkLayout.Center(100, 100, 0)
     .Polar("B", 10, Deg(90));
 ```
 
-坐标与模拟实体一致：XY 是地面、Z 是高度；角度用弧度，0 朝南、π 朝北，正向为逆时针。`Rotate` 设置整套布局的相对北朝向，默认 π，可省略；无论放在点位定义前后都对整套布局生效，重复调用替换朝向。`At`、`Polar` 使用布局内的相对坐标。`Circle(order, startFromNorth, params radii)` 的排列和起点方式必填，至少提供一个半径，按顺序循环使用；`true` 时首点在相对北，`false` 时首点向逆时针偏移半个间隔，相对北位于首末两点之间的角平分线上。`ToPlaceJson()` 统一转换成 PostNamazu 的 X、Y 高度、Z 地面坐标，使用不受区域设置影响的小数格式，显式设置 `LocalOnly: true`、`Log: false`，未设置的标点以 `Active: false` 清除。
+坐标与模拟实体一致：XY 是地面、Z 是高度；角度用弧度，0 朝南、π 朝北，正向为逆时针。`Rotate` 设置整套布局的相对北朝向，默认 π，可省略；无论放在点位定义前后都对整套布局生效，重复调用替换朝向。`At`、`Polar` 使用布局内的相对坐标。`Circle(order, startFromNorth, params radii)` 的排列和起点方式必填，至少提供一个半径，按顺序循环使用；`true` 时首点在相对北，`false` 时首点向逆时针偏移半个间隔，相对北位于首末两点之间的角平分线上。写入游戏内的标点时统一交换 Y、Z，并同时更新原生的整数坐标及启用状态。布局中未设置的标点会被关闭。
 
 角度换算统一引用 `using static Simulant.Utils.Maths.Angles;`，使用 `Deg(30)`、`Deg(direction * 45)` 表示弧度，反向显示使用 `ToDegrees(radian)`。内部保持 `double`，原生接口需要时才写 `(float)Deg(90)`；不在各调用处重复乘除 π 和换算系数。直接表示半圈及默认参数的 `Math.PI` 可以保留。
 

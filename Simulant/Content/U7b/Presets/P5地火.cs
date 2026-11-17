@@ -1,5 +1,4 @@
-﻿using Simulant.ACT;
-using Simulant.Core;
+﻿using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
 using Simulant.Game.FFCS.Client.Game.Object;
@@ -165,15 +164,8 @@ namespace Simulant.Content.U7b.Presets
                 CreateAuxiliaryLines();
             }
 
-            LogExecute(boss, 0xC654);
-
             var mechanic = new SimTimeline();
-
-            mechanic.At(0, () =>
-            {
-                boss.Cast(0xBB3B); // 混沌末世 本体读条
-                LogCast(boss, 0xBB3B, boss.Pos3D, boss.Heading);
-            }, "混沌末世读条");
+            mechanic.At(0, () => boss.Cast(0xBB3B), "混沌末世读条");
 
             // 左右各三组，每组两条，左右交替间隔 2.5 秒。
             for (int group = 0; group < 3; group++)
@@ -183,15 +175,14 @@ namespace Simulant.Content.U7b.Presets
 
                 for (int line = group * 2; line < group * 2 + 2; line++)
                 {
-                    mechanic.At(leftTime, SingleExaFlare(boss, leftOrder[line], true));
-                    mechanic.At(rightTime, SingleExaFlare(boss, rightOrder[line], false));
+                    mechanic.At(leftTime, SingleExaFlare(leftOrder[line], true));
+                    mechanic.At(rightTime, SingleExaFlare(rightOrder[line], false));
                 }
             }
 
             mechanic.At(16.2, () =>
             {
                 boss.Cast(0xBB3E); // 混沌末世 本体读条
-                LogCast(boss, 0xBB3E, boss.Pos3D, boss.Heading);
 
                 if (UseSpreadDummies)
                 {
@@ -300,11 +291,9 @@ namespace Simulant.Content.U7b.Presets
         /// <param name="lineIdx"> 面向地火源头方向，从左至右记为 1-6。</param>
         /// <param name="isTopLeft"> 是左上方的地火，反之为右上方。</param>
         /// <returns></returns>
-        private SimTimeline SingleExaFlare(SimActor boss, int lineIdx, bool isTopLeft)
+        private SimTimeline SingleExaFlare(int lineIdx, bool isTopLeft)
         {
-            var initPos = isTopLeft
-                   ? new Vector3(100 - 35 + 5 * lineIdx, 100 - 5 * lineIdx, 0)
-                   : new Vector3(100 + 5 * lineIdx, 100 - 35 + 5 * lineIdx, 0);
+            var initPos = LineStart(lineIdx, isTopLeft);
 
             var heading = (float)Deg(isTopLeft ? 45 : -45);
 
@@ -319,11 +308,7 @@ namespace Simulant.Content.U7b.Presets
                 "地火前进判定");
             var timeline = new SimTimeline();
 
-            timeline.At(0, () => DummyCast(initPos, heading, 0xBB3C, 6f, onCast: () =>
-            {
-                LogCast(boss, 0xBB3C, initPos, heading);
-                Play(steps);
-            }), "地火初始预兆");
+            timeline.At(0, () => DummyCast(initPos, heading, 0xBB3C, 6f, onCast: () => Play(steps)), "地火初始预兆");
 
             return timeline;
         }
@@ -376,35 +361,31 @@ namespace Simulant.Content.U7b.Presets
                 return;
 
             _feedbackDue = false;
-            TriggernometryInterop.InvokeNamedCallback("LockOn",
-                $"{_host.EntityProvider.GetMyself().Address}, m0489trg_a0c");
+            VfxManager.ShowLockOn(_host.EntityProvider.GetMyself().Address, "m0489trg_a0c");
         }
 
-        const string AuxiliaryLineTag = "Simulant_AuxiliaryLine";
-        private static string AuxiliaryLinePictoACTCommand(int lineIdx, bool isTopLeft) => FormattableString.Invariant($@"
-Omen: m131om_setu0f
-Tag: {AuxiliaryLineTag}
-t: 30
-O: 100, 100
-DirN4: {(isTopLeft ? 0 : 3)}
-Pos: {lineIdx - 3.5} * 5 * √2, -17.5 * √2
-Angle: 0
-Scale: 0.03, 35 * √2, 0.05
-Color: 1, 1, 1, 0.5");
+        private static Vector3 LineStart(int line, bool isTopLeft)
+        {
+            var offset = 5 * line;
+            return isTopLeft
+                ? new Vector3(100 - 35 + offset, 100 - offset, 0)
+                : new Vector3(100 + offset, 100 - 35 + offset, 0);
+        }
 
         private void CreateAuxiliaryLines()
         {
-            for (int lineIdx = 1; lineIdx <= 6; lineIdx++)
+            var scale = new Vector3(0.03f, 35 * (float)Sqrt(2), 0.05f);
+            var color = new Vector4(1, 1, 1, 0.5f);
+            for (var line = 1; line <= 6; line++)
             {
-                TriggernometryInterop.InvokeNamedCallback("PictoACT", AuxiliaryLinePictoACTCommand(lineIdx, true));
-                TriggernometryInterop.InvokeNamedCallback("PictoACT", AuxiliaryLinePictoACTCommand(lineIdx, false));
+                VfxManager.ShowOmen("m131om_setu0f", LineStart(line, true),
+                    (float)Deg(45), scale, 30, this, color);
+                VfxManager.ShowOmen("m131om_setu0f", LineStart(line, false),
+                    (float)Deg(-45), scale, 30, this, color);
             }
         }
 
-        private void RemoveAuxiliaryLines()
-        {
-            TriggernometryInterop.InvokeNamedCallback("PictoACT", $"Action: Remove\nTag: {AuxiliaryLineTag}");
-        }
+        private void RemoveAuxiliaryLines() => VfxManager.Remove(this);
 
         private int GetFakePartyIndex(Character me)
         {
@@ -460,18 +441,6 @@ Color: 1, 1, 1, 0.5");
                     member.Heading = (float)(PI + Atan2(pos.X - myPos.X, pos.Y - myPos.Y));
                 }
             }
-        }
-
-        private static void LogCast(SimActor src, uint actionId, Vector3 pos, float heading)
-        {
-            TriggernometryInterop.QueueACTLogEvent(FormattableString.Invariant($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 14:{src.Id:X8}:casterName:{actionId:X2}:actionName:"));
-            TriggernometryInterop.QueueACTLogEvent(FormattableString.Invariant($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 107:{src.Id:X8}:{actionId:X2}:{pos.X}:{pos.Y}:{pos.Z}:{heading}"));
-        }
-
-        private static void LogExecute(SimActor src, uint actionId)
-        {
-            TriggernometryInterop.QueueACTLogEvent(FormattableString.Invariant($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 15:{src.Id:X8}:casterName:{actionId:X2}:actionName:"));
-            TriggernometryInterop.QueueACTLogEvent(FormattableString.Invariant($"[{DateTime.Now:HH:mm:ss.fff}] SimulantLog 108:{src.Id:X8}:{actionId:X2}:00000000:0::::"));
         }
     }
 }

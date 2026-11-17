@@ -1,3 +1,4 @@
+using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
@@ -42,7 +43,7 @@ namespace Simulant.Content.U7a.Presets
         internal readonly int[] StackGroups = new int[8];
         internal readonly int[] SpreadGroups = new int[8];
         internal readonly int[] SpreadIndices = new int[8];
-        internal readonly string[] GroupMarkers = new string[8];
+        internal readonly MarkerType?[] GroupMarkers = new MarkerType?[8];
         /// <summary>点名后的站位编号：普通单分组继承换位对象，标点分组改用组内头标顺序。</summary>
         internal readonly int[] PositionOwners = Enumerable.Range(0, 8).ToArray();
         internal readonly int StartDirection;
@@ -81,7 +82,8 @@ namespace Simulant.Content.U7a.Presets
                 StackGroups[ordered[i]] = i % 2;
             if (solution == ApocalypseSolution.SingleBalanced)
             {
-                var markers = new[] { "attack1", "attack2", "attack3", "attack4", "bind1", "bind2", "bind3", "square" };
+                var markers = new[] { MarkerType.Attack1, MarkerType.Attack2, MarkerType.Attack3, MarkerType.Attack4,
+                    MarkerType.Bind1, MarkerType.Bind2, MarkerType.Bind3, MarkerType.Square };
                 for (var group = 0; group < 2; group++)
                 {
                     var members = prio.Where(slot => StackGroups[slot] == group).ToArray();

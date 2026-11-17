@@ -984,7 +984,7 @@ namespace Simulant.Tests
             var world = new EntityTestWorld();
             var entity = world.CreateCharacter(0);
             var expected = new InvalidOperationException("读条清理失败");
-            Simulant.ACT.TriggernometryInterop.Reset();
+            Simulant.Core.VfxManager.Reset();
             Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>()[1] =
                 new Lumina.Excel.Sheets.Action
                 {
@@ -1011,9 +1011,9 @@ namespace Simulant.Tests
                 actor.MoveTo(Vector2.One);
                 Assert(actor.IsActive && actor.IsMoving, "新关联的模拟角色必须能够控制自身移动。");
 
-                Simulant.ACT.TriggernometryInterop.OnCommand = command =>
+                Simulant.Core.VfxManager.OnCommand = command =>
                 {
-                    if (command.StartsWith("Action: Remove"))
+                    if (command.IsRemoval)
                         throw expected;
                 };
 
@@ -1031,7 +1031,7 @@ namespace Simulant.Tests
                 }
                 finally
                 {
-                    Simulant.ACT.TriggernometryInterop.OnCommand = null;
+                    Simulant.Core.VfxManager.OnCommand = null;
                 }
 
                 Assert(!actor.IsActive && !actor.IsMoving && scheduler.PendingCount == 0,
@@ -1039,7 +1039,7 @@ namespace Simulant.Tests
                 Assert(entity.IsAlive, "解除模拟角色关联不得销毁底层游戏实体或使其失效。");
                 actor.Dispose();
                 Assert(entity.FinalizedCasts.Count == 1 &&
-                    Simulant.ACT.TriggernometryInterop.Commands.Count(command => command.StartsWith("Action: Remove")) == 1,
+                    Simulant.Core.VfxManager.Commands.Count(command => command.IsRemoval) == 1,
                     "重复释放不得重复清理行为。");
                 Throws<InvalidOperationException>(() => actor.Pos = Vector2.One);
                 actor.MoveTo(Vector2.One);

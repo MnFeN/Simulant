@@ -4,7 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 
-// 仅替换原生适配器、游戏数据行和外部 PictoACT 回调；测试
+// 仅替换原生适配器、游戏数据行和特效和标记边界；测试
 // 链接实际的注册表、模拟角色、读条、预兆和移动控制器，以及调度器。
 namespace Simulant.Core.Entity
 {
@@ -454,35 +454,30 @@ namespace Simulant.Core.Party
     }
 }
 
-namespace Simulant.ACT
+namespace Simulant.Core
 {
-    public static class TriggernometryInterop
+    internal static class VfxManager
     {
-        internal static readonly List<string> Commands = new List<string>();
-        internal static Action<string> OnCommand;
-        internal static readonly List<string> ChatCommands = new List<string>();
-        internal static Action<string> OnChatCommand;
-        internal static readonly List<string> WaymarkCommands = new List<string>();
-        internal static Action<string> OnWaymarkCommand;
-        public static void InvokeNamedCallback(string name, string command)
+        internal sealed class Call
         {
-            if (name == "place")
-            {
-                WaymarkCommands.Add(command);
-                OnWaymarkCommand?.Invoke(command);
-                return;
-            }
+            public string Tag;
+            public bool IsRemoval;
+            public Vector3 Position;
+            public float Heading;
+            public Vector3 Scale;
+            public double Duration;
+        }
 
-            if (name == "command")
-            {
-                ChatCommands.Add(command);
-                OnChatCommand?.Invoke(command);
-                return;
-            }
+        internal static readonly List<Call> Commands = new List<Call>();
+        internal static Action<Call> OnCommand;
 
-            if (name != "PictoACT")
-                throw new InvalidOperationException("非预期的回调：" + name);
+        public static void ShowOmen(string name, Vector3 position, float heading, Vector3 scale, double duration, object owner)
+            => Record(new Call { Tag = (string)owner, Position = position, Heading = heading, Scale = scale, Duration = duration });
 
+        public static void Remove(object owner) => Record(new Call { Tag = (string)owner, IsRemoval = true });
+
+        private static void Record(Call command)
+        {
             Commands.Add(command);
             OnCommand?.Invoke(command);
         }
@@ -491,10 +486,53 @@ namespace Simulant.ACT
         {
             Commands.Clear();
             OnCommand = null;
+        }
+    }
+}
+
+namespace Simulant.Core
+{
+    internal static class GameChat
+    {
+        internal static readonly List<string> ChatCommands = new List<string>();
+        internal static Action<string> OnChatCommand;
+
+        public static void SendEcho(string text, bool playSound = false)
+        {
+            if (!playSound)
+                throw new InvalidOperationException("会话错误提示应播放提示音。");
+            ChatCommands.Add(text);
+            OnChatCommand?.Invoke(text);
+        }
+
+        public static void Reset()
+        {
             ChatCommands.Clear();
             OnChatCommand = null;
+        }
+    }
+}
+
+namespace Simulant.Game.FFCS.Client.Game.UI
+{
+    internal sealed class MarkingController
+    {
+        public static MarkingController Instance { get; } = new MarkingController();
+        internal static readonly List<Vector3?[]> WaymarkCommands = new List<Vector3?[]>();
+        internal static Action<Vector3?[]> OnWaymarkCommand;
+
+        public void SetFieldMarkers(Func<int, Vector3?> getPosition)
+        {
+            var markers = getPosition == null ? null : Enumerable.Range(0, 8).Select(getPosition).ToArray();
+            WaymarkCommands.Add(markers);
+            OnWaymarkCommand?.Invoke(markers);
+        }
+
+        public static void Reset()
+        {
             WaymarkCommands.Clear();
             OnWaymarkCommand = null;
+            Simulant.Core.GameChat.Reset();
         }
     }
 }

@@ -21,7 +21,6 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Xml" />
-    <Reference Include="System.Web.Extensions" />
     <Compile Include="Program.cs" />
     <Compile Include="PositionHistoryTests.cs" />
     <Compile Include="..\Simulant\Simulation\Runtime\PositionHistory.cs" />
@@ -49,6 +48,7 @@
     </Compile>
     <Compile Include="CosmoArrowTests.cs" />
     <Compile Include="U7aExerciseTests.cs" />
+    <Compile Include="..\Simulant\Game\FFCS\Client\Game\UI\MarkerType.cs" />
     <Compile Include="AssignmentRandomTests.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\P3时间压缩.Plan.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\P3启示.Plan.cs" />

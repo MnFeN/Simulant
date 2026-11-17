@@ -1,7 +1,7 @@
-using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Game;
+using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Simulation;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
@@ -34,7 +34,8 @@ namespace Simulant.Content.U7a.Presets
         protected virtual double OpeningAdvance => 0;
         private readonly HashSet<uint> _mapChanges = new HashSet<uint>();
         private readonly HashSet<int> _marked = new HashSet<int>();
-        private readonly HashSet<string> _partyMarks = new HashSet<string>();
+        private readonly HashSet<MarkerType> _partyMarks = new HashSet<MarkerType>();
+        private int _partyMarksWorld;
         private bool _failedSelf;
         private bool _complete;
         private bool _crystalBroken;
@@ -158,24 +159,31 @@ namespace Simulant.Content.U7a.Presets
         protected void ClearStatus(int slot, ushort status) => EntityManager.RemoveStatus(Party[slot], status);
         protected void Icon(int slot, uint icon) => Party[slot].Entity.ActorControl(ActorControlCategory.TargetIcon, icon, Party[slot].Id);
 
-        protected void MarkPartyMember(int slot, string markType)
+        protected void MarkPartyMember(int slot, MarkerType markType)
         {
-            // 先记录清理责任，回调部分成功后抛错时仍能在停止模拟时清除。
+            // 写入前登记标记，调用失败后仍可在停止时清除。
+            if (_partyMarks.Count == 0)
+                _partyMarksWorld = _host.WorldGeneration;
             _partyMarks.Add(markType);
             SetPartyMark(markType, Party[slot].Id);
         }
 
-        private static void SetPartyMark(string markType, uint id)
-            => TriggernometryInterop.InvokeNamedCallback("mark",
-                FormattableString.Invariant($"{{\"ActorID\":{id},\"MarkType\":\"{markType}\",\"LocalOnly\":true}}"));
+        private static void SetPartyMark(MarkerType markType, uint id)
+            => MarkingController.Instance.SetLocalMarker(markType, id);
 
         protected void ClearPartyMarks()
         {
+            if (_partyMarksWorld != _host.WorldGeneration)
+            {
+                _partyMarks.Clear();
+                return;
+            }
+
             var failures = new List<Exception>();
             foreach (var markType in _partyMarks.ToArray())
                 try
                 {
-                    SetPartyMark(markType, 0xE0000000);
+                    SetPartyMark(markType, MarkingController.NoTarget);
                     _partyMarks.Remove(markType);
                 }
                 catch (Exception ex)
@@ -397,11 +405,11 @@ namespace Simulant.Content.U7a.Presets
             {
                 _failedSelf |= slot == Self;
                 if (_marked.Add(slot))
-                    TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[slot].Address}, m0489trg_b0c");
+                    VfxManager.ShowLockOn(Party[slot].Address, "m0489trg_b0c");
             }
             var message = FormattableString.Invariant($"[{_preset.Name}] {Now:0.000} 秒：") + error.Format(Self, s => Roles[s]);
             _host.LogWarning(message);
-            TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + message);
+            GameChat.SendEcho(message, playSound: true);
             if (result != null)
                 result.FailureReported = true;
         }
@@ -410,7 +418,7 @@ namespace Simulant.Content.U7a.Presets
         {
             _complete = true;
             if (!_failedSelf)
-                TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[Self].Address}, m0489trg_a0c");
+                VfxManager.ShowLockOn(Party[Self].Address, "m0489trg_a0c");
             _host.LogSim("本轮机制已结束，可停止或重新开始模拟。");
         }
     }

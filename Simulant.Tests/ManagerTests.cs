@@ -1,4 +1,4 @@
-using Simulant.ACT;
+using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game.Object;
@@ -426,7 +426,7 @@ namespace Simulant.Tests
 
         public static void ManagerDeletingOneActorPreservesOtherMovementAndCast()
         {
-            TriggernometryInterop.Reset();
+            VfxManager.Reset();
             GameDataService.Instance.GetSheet<ActionRow>().Clear();
             AddCombinedAction(1, 0.4f, true);
             AddCombinedAction(2, 0.4f, true);
@@ -459,7 +459,7 @@ namespace Simulant.Tests
                     second.MoveTo(new Vector2(0, 1000), 10);
                     first.Cast(1);
                     second.Cast(2);
-                    var shownTags = TriggernometryInterop.Commands.Select(OmenTag).ToArray();
+                    var shownTags = VfxManager.Commands.Select(OmenTag).ToArray();
                     Assert(scheduler.PendingCount == 5,
                         "两次读条应各有一个读条完成节点和一个结算节点，两个角色共用一个移动更新节点。");
 
@@ -470,7 +470,7 @@ namespace Simulant.Tests
                         deleted = true;
                         Assert(second.IsActive && second.IsMoving && second.Entity.CastingActionId == 2,
                             "删除一个角色不得停止另一角色的移动或读条。");
-                        Assert(TriggernometryInterop.Commands.Where(IsOmenRemoval).Select(OmenTag)
+                        Assert(VfxManager.Commands.Where(IsOmenRemoval).Select(OmenTag)
                             .SequenceEqual(new[]
                         {
                             shownTags[0]
@@ -490,7 +490,7 @@ namespace Simulant.Tests
                         102
                     }),
                         "保留角色必须独立完成读条并恰好播放一次完成动作。");
-                    Assert(TriggernometryInterop.Commands.Where(IsOmenRemoval).Select(OmenTag).SequenceEqual(shownTags),
+                    Assert(VfxManager.Commands.Where(IsOmenRemoval).Select(OmenTag).SequenceEqual(shownTags),
                         "两个角色的预兆必须分别在删除和自然完成时移除。");
                     manager.Clear();
                     Assert(spawner.Deleted.Count == 2 && !second.IsActive,
@@ -500,14 +500,14 @@ namespace Simulant.Tests
                 {
                     scheduler.Dispose();
                     manager.Clear();
-                    TriggernometryInterop.Reset();
+                    VfxManager.Reset();
                 }
             }
         }
 
         public static void ManagerStopAndRestartDiscardAllPreviousBehaviors()
         {
-            TriggernometryInterop.Reset();
+            VfxManager.Reset();
             GameDataService.Instance.GetSheet<ActionRow>().Clear();
             AddCombinedAction(1, 0.4f, true);
             AddCombinedAction(2, 0.04f, false);
@@ -562,7 +562,7 @@ namespace Simulant.Tests
                     Assert(!visible.IsActive && !delayed.IsActive && !visible.IsMoving && !delayed.IsMoving &&
                         visible.Entity.CastingActionId == 0 && delayed.Entity.CastingActionId == 0,
                         "停止后必须解除所有角色并清除其读条和移动状态。");
-                    var commands = TriggernometryInterop.Commands.ToArray();
+                    var commands = VfxManager.Commands.ToArray();
                     Assert(commands.Length == 2 && !IsOmenRemoval(commands[0]) && IsOmenRemoval(commands[1]) &&
                         OmenTag(commands[0]) == OmenTag(commands[1]),
                         "已显示的预兆必须清理，尚未显示的延迟预兆不得执行。");
@@ -585,7 +585,7 @@ namespace Simulant.Tests
                         "重启后的角色必须能独立完成移动与读条：" + failure);
                     Assert(visible.Entity.PositionWrites.Count == visibleWrites && delayed.Entity.PositionWrites.Count == delayedWrites &&
                         visible.Entity.PlayedTimelines.Count == 0 && delayed.Entity.PlayedTimelines.Count == 0 &&
-                        TriggernometryInterop.Commands.SequenceEqual(commands),
+                        VfxManager.Commands.SequenceEqual(commands),
                         "重启后不得触发旧移动写入、读条完成或延迟预兆。");
                     manager.Clear();
                     Assert(spawner.Deleted.Count == 3, "两次运行创建的三个实体必须各回收一次。");
@@ -596,7 +596,7 @@ namespace Simulant.Tests
                     firstScheduler.Dispose();
                     secondScheduler.Dispose();
                     manager.Clear();
-                    TriggernometryInterop.Reset();
+                    VfxManager.Reset();
                 }
             }
         }
@@ -740,11 +740,8 @@ namespace Simulant.Tests
             };
         }
 
-        private static bool IsOmenRemoval(string command)
-            => command.StartsWith("Action: Remove", StringComparison.Ordinal);
-
-        private static string OmenTag(string command)
-            => command.Split('\n').Single(line => line.StartsWith("Tag: ", StringComparison.Ordinal)).Substring(5).Trim();
+        private static bool IsOmenRemoval(VfxManager.Call command) => command.IsRemoval;
+        private static string OmenTag(VfxManager.Call command) => command.Tag;
 
         private static void Assert(bool condition, string message)
         {

@@ -112,7 +112,7 @@ namespace Simulant.Tests
                         RequiredPlayers = 1,
                         Failed = result =>
                         {
-                            TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n已经输出完整错误");
+                            GameChat.SendEcho("已经输出完整错误", playSound: true);
                             result.FailureReported = true;
                         }
                     });
@@ -123,8 +123,8 @@ namespace Simulant.Tests
                     Assert(SpinWait.SpinUntil(() => !session.IsRunning && session.HasPendingCleanup, TimeoutMs),
                         "已报告的机制错误仍应立即中断流程并保留现场。");
                     session.Stop();
-                    Assert(TriggernometryInterop.ChatCommands.Count == 1 &&
-                        TriggernometryInterop.ChatCommands[0].Contains("已经输出完整错误"),
+                    Assert(GameChat.ChatCommands.Count == 1 &&
+                        GameChat.ChatCommands[0].Contains("已经输出完整错误"),
                         "详细报告已经发送后，不应再补发一条人数判定的简略错误。");
                 }
             }
@@ -153,14 +153,14 @@ namespace Simulant.Tests
 
                 using (var session = CreateSession(host, probe))
                 {
-                    TriggernometryInterop.OnChatCommand = _ => displaying.Set();
+                    GameChat.OnChatCommand = _ => displaying.Set();
                     session.Start();
                     Wait(displaying, "机制失败的聊天提示");
                     Assert(!session.IsRunning && session.HasPendingCleanup && actor.Entity.IsAlive && probe.StopCount == 0,
                         "异常后应取消战斗时间轴，但保留实体让已提交的技能继续演出。");
                     Assert(probe.Logic.Scheduler.PendingCount == 0, "保留演出时不得继续执行后续战斗节点。");
-                    Assert(TriggernometryInterop.ChatCommands.Count == 1 &&
-                        TriggernometryInterop.ChatCommands[0] == "/e <se.11>\n塔内人数错误。",
+                    Assert(GameChat.ChatCommands.Count == 1 &&
+                        GameChat.ChatCommands[0] == "塔内人数错误。",
                         "机制失败应通过 command 回调发送一条包含提示音、换行和原始原因的消息。");
                     Assert(!probe.Cleaned.Wait(150) && host.EntitySpawner.Deleted.Count == 0,
                         "中断后不得自动清场，必须等待显式停止。");
@@ -194,7 +194,7 @@ namespace Simulant.Tests
 
                     using (var session = CreateSession(host, probe))
                     {
-                        TriggernometryInterop.OnChatCommand = _ => displaying.Set();
+                        GameChat.OnChatCommand = _ => displaying.Set();
                         session.Start();
                         Wait(displaying, "等待显式停止的中断现场");
                         var elapsed = System.Diagnostics.Stopwatch.StartNew();
@@ -234,7 +234,7 @@ namespace Simulant.Tests
 
                 using (var session = CreateSession(host, probe))
                 {
-                    TriggernometryInterop.OnChatCommand = _ => reported.Set();
+                    GameChat.OnChatCommand = _ => reported.Set();
                     session.Start();
                     Wait(reported, "异常中断的聊天提示");
                     session.Stop();
@@ -300,13 +300,13 @@ namespace Simulant.Tests
 
                 using (var session = CreateSession(host, probe))
                 {
-                    TriggernometryInterop.OnChatCommand = _ => reported.Set();
+                    GameChat.OnChatCommand = _ => reported.Set();
                     session.Start();
                     Wait(reported, "初始化失败的聊天提示");
                     Assert(!session.IsRunning && session.HasPendingCleanup && probe.StopCount == 0,
                         "初始化失败即使没有生成实体，也要保留停止入口和清理责任。");
-                    Assert(TriggernometryInterop.ChatCommands.Count == 1 &&
-                        TriggernometryInterop.ChatCommands[0] == "/e <se.11>\n节点「初始化模拟」执行失败：initialization failed",
+                    Assert(GameChat.ChatCommands.Count == 1 &&
+                        GameChat.ChatCommands[0] == "节点「初始化模拟」执行失败：initialization failed",
                         "非机制异常的聊天提示应包含节点名称和原始原因。");
                     session.Stop();
                     Assert(probe.StartCount == 1 && probe.StartThreadId != callerThread,
@@ -347,7 +347,7 @@ namespace Simulant.Tests
 
                 using (var session = CreateSession(host, probe))
                 {
-                    TriggernometryInterop.OnChatCommand = _ =>
+                    GameChat.OnChatCommand = _ =>
                     {
                         throw new InvalidOperationException("回调暂时不可用。");
                     };
@@ -874,8 +874,7 @@ namespace Simulant.Tests
 
         private static SimSession CreateSession(PluginHost host, SessionProbe probe)
         {
-            TriggernometryInterop.ChatCommands.Clear();
-            TriggernometryInterop.OnChatCommand = null;
+            GameChat.Reset();
             return new SimSession(host, new SessionTestPreset(probe));
         }
 
@@ -986,6 +985,8 @@ namespace Simulant.Core
 {
     public sealed class PluginHost
     {
+        internal int WorldGeneration { get; set; }
+
         internal Configuration Configuration { get; set; } = new Configuration();
         internal SimCommandListener Commands { get; } = new SimCommandListener(_ => { });
         internal SimActionService PlayerActions { get; }

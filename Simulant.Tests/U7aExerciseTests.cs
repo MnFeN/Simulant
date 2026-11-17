@@ -1,4 +1,5 @@
-﻿using Simulant.Content.U7a.Presets;
+﻿using Simulant.Game.FFCS.Client.Game.UI;
+using Simulant.Content.U7a.Presets;
 using Simulant.Simulation.Geometry;
 using System;
 using System.Collections.Generic;
@@ -351,7 +352,8 @@ namespace Simulant.Tests
         public static void ApocalypseBalancedMarkersMatchGroupsAndSpreadPositions()
         {
             var priority = new[] { 0, 1, 4, 5, 2, 3, 6, 7 };
-            var marks = new[] { "attack1", "attack2", "attack3", "attack4", "bind1", "bind2", "bind3", "square" };
+            var marks = new[] { MarkerType.Attack1, MarkerType.Attack2, MarkerType.Attack3, MarkerType.Attack4,
+                MarkerType.Bind1, MarkerType.Bind2, MarkerType.Bind3, MarkerType.Square };
             foreach (var swap in new[] { false, true })
                 for (var seed = 0; seed < 128; seed++)
                 {

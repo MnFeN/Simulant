@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game.Control;
@@ -6,6 +5,7 @@ using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -367,15 +367,16 @@ namespace Simulant.UI
                     var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("没有找到当前玩家。");
                     var pos = me.Pos3D;
                     row.GetScales(out var x, out var y);
-                    var text = string.Format(CultureInfo.InvariantCulture,
-                        "Omen: {0}\nt: 10\nO: {1}, {2}, {3}\nθ: {4}\nScale: {5}, {6}, 1\nAngle: -π",
-                        row.Omen, pos.X, pos.Y, pos.Z, me.Heading, x, y);
-                    TriggernometryInterop.InvokeNamedCallback("PictoACT", text);
+                    var heading = me.Heading;
+                    var scale = new Vector3(x, y, 1);
+                    VfxManager.ShowOmen(row.Omen, pos, heading, scale, 10, this, cancellation: _lifetimeToken);
 
                     if (row.Shape == 11)
-                        TriggernometryInterop.InvokeNamedCallback("PictoACT", text + "/2");
+                        VfxManager.ShowOmen(row.Omen, pos, heading + (float)(Math.PI / 2), scale, 10, this, cancellation: _lifetimeToken);
 
-                    return text;
+                    return string.Format(CultureInfo.InvariantCulture,
+                        "Omen: {0}\nt: 10\nO: {1}, {2}, {3}\nθ: {4}\nScale: {5}, {6}, 1\nAngle: -π",
+                        row.Omen, pos.X, pos.Y, pos.Z, heading, x, y);
                 }, _lifetimeToken);
 
                 if (!_lifetimeToken.IsCancellationRequested)
@@ -413,7 +414,7 @@ namespace Simulant.UI
                     foreach (var path in paths)
                     {
                         _lifetimeToken.ThrowIfCancellationRequested();
-                        TriggernometryInterop.InvokeNamedCallback("ActorVfx", $"{target.Address}, {target.Address}, {path}, -1");
+                        VfxManager.ShowActor(path, target.Address, target.Address);
                     }
                 }, _lifetimeToken);
             }
@@ -445,6 +446,14 @@ namespace Simulant.UI
             _lifetime.Cancel();
             _search?.Cancel();
             _lifetime.Dispose();
+            try
+            {
+                VfxManager.Remove(this);
+            }
+            catch (Exception error)
+            {
+                _host?.LogWarning("清理技能预览失败：" + error.Message);
+            }
         }
     }
 }

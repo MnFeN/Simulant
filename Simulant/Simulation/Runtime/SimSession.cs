@@ -1,6 +1,5 @@
-using Simulant.ACT;
 using Simulant.Core;
-using Simulant.Core.Environment;
+using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Timeline;
 using System;
@@ -19,6 +18,7 @@ namespace Simulant.Simulation.Runtime
         private int _cleanupRequired;
         private int _failureRetained;
         private volatile bool _waymarksPendingCleanup;
+        private int _waymarkWorld;
         private volatile bool _disposed;
 
         public bool IsRunning => _scheduler?.IsRunning == true;
@@ -78,10 +78,10 @@ namespace Simulant.Simulation.Runtime
 
                     if (waymarks != null)
                     {
-                        var payload = waymarks.ToPlaceJson();
-                        // 回调可能只完成部分写入就抛错，因此在调用前承担清理责任。
+                        // 写入中途失败也要清理标点。
+                        _waymarkWorld = _host.WorldGeneration;
                         _waymarksPendingCleanup = true;
-                        TriggernometryInterop.InvokeNamedCallback("place", payload);
+                        MarkingController.Instance.SetFieldMarkers(waymarks.Position);
                     }
 
                     _scheduler.Schedule(0, _logic.Start, "初始化模拟");
@@ -119,7 +119,7 @@ namespace Simulant.Simulation.Runtime
                     try
                     {
                         if (!alreadyReported)
-                            TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + reason);
+                            GameChat.SendEcho(reason, playSound: true);
                     }
                     catch (Exception chatError)
                     {
@@ -182,7 +182,8 @@ namespace Simulant.Simulation.Runtime
                 {
                     try
                     {
-                        TriggernometryInterop.InvokeNamedCallback("place", WaymarkLayout.ClearJson);
+                        if (_waymarkWorld == _host.WorldGeneration)
+                            MarkingController.Instance.SetFieldMarkers(null);
                         _waymarksPendingCleanup = false;
                     }
                     catch (Exception ex)

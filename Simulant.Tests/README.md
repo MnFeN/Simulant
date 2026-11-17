@@ -1,6 +1,6 @@
 # 时间轴与实体回归测试
 
-独立 .NET Framework 4.8 / C# 7.3 控制台程序，直接链接时间轴核心、`SimSession`、`EntityRegistry`、`EntityIdentity`、`SimActor`、`SimMovementController`、`SimCastController` 和 `SimOmenRenderer` 的真实源文件，不引用主插件、ACT、游戏进程或 NuGet 包。会话测试用最小替身隔离宿主和逻辑；实体测试以可控对象表观察、内存中的角色替身、游戏数据行和外部 PictoACT 回调替身隔离游戏环境。需要 Windows、.NET Framework 4.8 开发包及 Visual Studio MSBuild。
+独立 .NET Framework 4.8 / C# 7.3 控制台程序，直接链接时间轴核心、`SimSession`、`EntityRegistry`、`EntityIdentity`、`SimActor`、`SimMovementController`、`SimCastController` 和 `SimOmenRenderer` 的真实源文件，不引用主插件、ACT、游戏进程或 NuGet 包。会话测试用最小替身隔离宿主和逻辑；实体测试以可控对象表观察、内存中的角色替身、游戏数据行和特效和标记替身隔离游戏环境。需要 Windows、.NET Framework 4.8 开发包及 Visual Studio MSBuild。
 
 在仓库根目录的 PowerShell 中执行：
 
@@ -66,5 +66,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ./Simulant.Tests/Run-NativeT
 - ID 分配组覆盖 17 项：从客户端同前缀的最大残留编号续增、玩家和非玩家区间隔离、回收后不倒退、区间用尽拒绝分配，以及隐藏 EObj、待完成网络请求、失败创建、扫描失败无原生副作用、可选角色表和重复指针读取去重。
 - 小队组覆盖 21 项：包布局、状态调用以 `ulong` 传递完整来源身份、血蓝更新保留全部 60 槽状态、非法输入与短读拒绝、远程包异常释放、原名单和状态完整恢复、原生指针不被快照覆盖、姓名/坐标/护盾恢复、短写与原生调用部分失败、所有者隔离及换图失效保护。仇恨测试验证降序收包、原有入战状态保留、退战失败重试、硬/软目标切换按需补发，以及收包途中切到队友不误报失败、重新选中 Boss 后仅补发一次。移除成员时验证仇恨条目同步删除，并重新采集留下队员的当前血蓝和状态，避免回滚到初次入队快照。调用替身拒绝直接传入自定义结构体，避免漏掉 GreyMagic 的参数类型限制。独立回归另验证管理器先恢复名单再删除队员、失败时保留资源，以及多个仇恨更新共用一个刷新节点、停止后取消刷新。
 - 卸载组覆盖 9 项：通过真实 `PluginMain.DeInitPlugin` 停止预设与调试、清理实体、返回原地图和位置、恢复 BGM，最后关闭防火墙；进入模拟中途失败也必须先返回。另向实体回收、地图加载、区域设置、位置恢复、BGM 恢复、收包恢复和代码洞释放注入失败，验证保留宿主及清理记录，后续禁用可重试完成。
+
+本地提示与特效组用离线内存验证聊天缓冲、本地实体标记、场地标点坐标，以及地火辅助线和预兆到期清理。
 
 这些检查运行真实生成器、实体目录、卸载调用链和 PostNamazu 包装代码，但使用模拟内存和函数结果；不能据此确认国服客户端的偏移、原生函数行为或游戏画面。

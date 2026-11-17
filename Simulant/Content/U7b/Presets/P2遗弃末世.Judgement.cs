@@ -1,4 +1,4 @@
-using Simulant.ACT;
+using Simulant.Core;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
 using System;
@@ -135,7 +135,7 @@ namespace Simulant.Content.U7b.Presets
 
             try
             {
-                TriggernometryInterop.InvokeNamedCallback("command", "/e <se.11>\n" + message);
+                GameChat.SendEcho(message, playSound: true);
             }
             catch (Exception chatError)
             {

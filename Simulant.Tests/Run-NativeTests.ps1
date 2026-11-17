@@ -91,6 +91,7 @@ try {
         @{ Name = 'PluginUnloadTests'; Label = '退出模拟并卸载插件'; Sources = @($localTestsPath, $unloadTestsPath) },
         @{ Name = 'PartyServiceTests'; Label = '模拟小队与仇恨恢复'; Sources = @($partyTestsPath) },
         @{ Name = 'NativeCallsTests'; Label = '技能演出参数与远程内存释放'; Sources = @($partyTestsPath, $nativeCallsTestsPath) },
+        @{ Name = 'PresentationTests'; Label = '本地提示、标点和特效'; Sources = @($partyTestsPath, (Join-Path $PSScriptRoot 'Native\PresentationTests.cs')) },
         @{ Name = 'NameTests'; Label = '玩家临时改名与原名恢复'; Sources = @($partyTestsPath, $nameTestsPath) }
     )
 

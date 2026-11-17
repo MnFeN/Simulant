@@ -1,4 +1,4 @@
-using Simulant.ACT;
+using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
@@ -478,7 +478,7 @@ namespace Simulant.Content.U7a.Presets
 
                     try
                     {
-                        TriggernometryInterop.InvokeNamedCallback("LockOn", $"{Party[Self].Address}, m0489trg_a0c");
+                        VfxManager.ShowLockOn(Party[Self].Address, "m0489trg_a0c");
                     }
                     catch (Exception ex)
                     {

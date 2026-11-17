@@ -1,26 +1,13 @@
 using System;
-using System.Globalization;
 using System.Numerics;
-using System.Text;
 using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Core.Environment
 {
-    /// <summary>场地标点布局。坐标沿用模拟器约定：XY 为地面，Z 为高度；输出 place 参数时统一交换 Y/Z。</summary>
+    /// <summary>场地标点布局。坐标沿用模拟器约定：XY 为地面，Z 为高度。</summary>
     public sealed class WaymarkLayout
     {
         private const string Marks = "ABCD1234";
-        private static readonly string[] PlaceNames =
-        {
-            "A",
-            "B",
-            "C",
-            "D",
-            "One",
-            "Two",
-            "Three",
-            "Four"
-        };
         private readonly Vector3 _origin;
         private readonly Vector3?[] _positions = new Vector3?[8];
         private double _northHeading = Math.PI;
@@ -97,34 +84,7 @@ namespace Simulant.Core.Environment
             return this;
         }
 
-        /// <summary>生成 PostNamazu place 的完整本地布局；一次提交八个标点，不保留上一套布局的残留。</summary>
-        public string ToPlaceJson()
-        {
-            var json = new StringBuilder("{\"LocalOnly\":true,\"Log\":false");
-
-            for (var i = 0; i < _positions.Length; i++)
-            {
-                json.Append(",\"").Append(PlaceNames[i]).Append("\":{");
-
-                if (Position(i) is Vector3 position)
-                {
-                    json.Append("\"X\":").Append(position.X.ToString("R", CultureInfo.InvariantCulture))
-                        .Append(",\"Y\":").Append(position.Z.ToString("R", CultureInfo.InvariantCulture))
-                        .Append(",\"Z\":").Append(position.Y.ToString("R", CultureInfo.InvariantCulture))
-                        .Append(",\"Active\":true");
-                }
-                else
-                    json.Append("\"Active\":false");
-
-                json.Append('}');
-            }
-
-            return json.Append('}').ToString();
-        }
-
-        public static string ClearJson { get; } = Center(0, 0).ToPlaceJson();
-
-        private Vector3? Position(int index)
+        internal Vector3? Position(int index)
             => _positions[index].HasValue ? ToWorld(_positions[index].Value, _northHeading) : (Vector3?)null;
 
         private Vector3 ToWorld(Vector3 offset, double northHeading)
