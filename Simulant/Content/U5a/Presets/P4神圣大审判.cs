@@ -15,6 +15,7 @@ using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U5a.Presets
 {
+    [PhaseSelectionOrder(4)]
     internal sealed class P4神圣大审判 : SimPresetBase
     {
         public override int TerritoryId => 887;

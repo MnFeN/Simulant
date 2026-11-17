@@ -15,6 +15,7 @@ using System.Numerics;
 
 namespace Simulant.Content.U7a.Presets
 {
+    [PhaseSelectionOrder(4.1)]
     internal sealed class P4光暗龙诗 : SimPresetBase
     {
         public override int TerritoryId => 1238;

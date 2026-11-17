@@ -8,17 +8,17 @@ namespace Simulant.Content.U6b
     {
         public static readonly WaymarkLayout Waymarks = WaymarkLayout.Center(100, 100, 0).Circle("A4D3C2B1", true, 13);
 
-        [Phase(10)]
+        [PhaseSelectionOrder(1)]
         public static readonly PhaseData P1;
-        [Phase(20)]
+        [PhaseSelectionOrder(2)]
         public static readonly PhaseData P2;
-        [Phase(30)]
+        [PhaseSelectionOrder(3)]
         public static readonly PhaseData P3;
-        [Phase(40)]
+        [PhaseSelectionOrder(4)]
         public static readonly PhaseData P4;
-        [Phase(50)]
+        [PhaseSelectionOrder(5)]
         public static readonly PhaseData P5;
-        [Phase(60)]
+        [PhaseSelectionOrder(6)]
         public static readonly PhaseData P6;
 
         static U6b()

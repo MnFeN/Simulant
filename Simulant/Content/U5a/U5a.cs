@@ -15,15 +15,15 @@ namespace Simulant.Content.U5a
             .At("3", 15.5, -2)
             .At("4", 15.5, 2);
 
-        [Phase(10)]
+        [PhaseSelectionOrder(1)]
         public static readonly PhaseData P1;
-        [Phase(20)]
+        [PhaseSelectionOrder(2)]
         public static readonly PhaseData P2;
-        [Phase(30)]
+        [PhaseSelectionOrder(3)]
         public static readonly PhaseData P3;
-        [Phase(31)]
+        [PhaseSelectionOrder(3.1)]
         public static readonly PhaseData P3时停;
-        [Phase(40)]
+        [PhaseSelectionOrder(4)]
         public static readonly PhaseData P4;
 
         static U5a()

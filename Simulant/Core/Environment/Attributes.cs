@@ -13,12 +13,13 @@ namespace Simulant.Core.Environment
         }
     }
 
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
-    public sealed class PhaseAttribute : Attribute
+    /// <summary>在选择阶段的界面中指定“阶段”或“模拟”的显示顺序。</summary>
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+    public sealed class PhaseSelectionOrderAttribute : Attribute
     {
-        public int SortIndex { get; }
+        public double SortIndex { get; }
 
-        public PhaseAttribute(int sortIndex)
+        public PhaseSelectionOrderAttribute(double sortIndex)
         {
             SortIndex = sortIndex;
         }

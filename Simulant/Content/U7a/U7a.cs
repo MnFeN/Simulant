@@ -8,21 +8,21 @@ namespace Simulant.Content.U7a
     {
         public static readonly WaymarkLayout Waymarks = WaymarkLayout.Center(100, 100, 0).Circle("A1D4C3B2", true, 10);
 
-        [Phase(10)]
+        [PhaseSelectionOrder(1)]
         public static readonly PhaseData P1;
-        [Phase(15)]
+        [PhaseSelectionOrder(1.5)]
         public static readonly PhaseData P1_Fog;
-        [Phase(20)]
+        [PhaseSelectionOrder(2)]
         public static readonly PhaseData P2;
-        [Phase(25)]
+        [PhaseSelectionOrder(2.5)]
         public static readonly PhaseData P25;
-        [Phase(30)]
+        [PhaseSelectionOrder(3)]
         public static readonly PhaseData P3;
-        [Phase(40)]
+        [PhaseSelectionOrder(4)]
         public static readonly PhaseData P4;
-        [Phase(50)]
+        [PhaseSelectionOrder(5)]
         public static readonly PhaseData P5;
-        [Phase(999)]
+        [PhaseSelectionOrder(99.9)]
         public static readonly PhaseData Complete;
 
         static U7a()

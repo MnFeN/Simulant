@@ -426,9 +426,11 @@ namespace Simulant.UI
                         && type.GetConstructor(Type.EmptyTypes) != null)
                     .Select(type => (SimPresetBase)Activator.CreateInstance(type))
                     .Where(preset => preset.TerritoryId == _selectedTerritoryId)
-                    .OrderBy(preset => preset.Name) // to-do: 用 attribute 排序
-                .ToList();
-                cbxPhase.Items.AddRange(sims.Cast<object>().ToArray());
+                    .OrderBy(preset => preset.GetType().GetCustomAttribute<PhaseSelectionOrderAttribute>()?.SortIndex
+                        ?? double.PositiveInfinity)
+                    .ThenBy(preset => preset.Name)
+                    .ToArray();
+                cbxPhase.Items.AddRange(sims);
                 cbxPhase.SelectedIndex = cbxPhase.Items.Count > 0 ? 0 : -1;
             }
             finally

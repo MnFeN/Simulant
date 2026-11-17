@@ -6,13 +6,13 @@ namespace Simulant.Content.S4b
     [SimTerritory(755)]
     public static class O8s
     {
-        [Phase(0)]
+        [PhaseSelectionOrder(0)]
         public static readonly PhaseData 门神P1;
-        [Phase(50)]
+        [PhaseSelectionOrder(5)]
         public static readonly PhaseData 门神P2;
-        [Phase(100)]
+        [PhaseSelectionOrder(10)]
         public static readonly PhaseData 本体P1;
-        [Phase(150)]
+        [PhaseSelectionOrder(15)]
         public static readonly PhaseData 本体P2;
 
         static O8s()

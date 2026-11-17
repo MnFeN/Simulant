@@ -13,6 +13,7 @@ using System.Numerics;
 
 namespace Simulant.Content.U7b.Presets
 {
+    [PhaseSelectionOrder(2.5)]
     internal sealed class P2遗弃末世 : SimPresetBase
     {
         public override int TerritoryId => 1363;

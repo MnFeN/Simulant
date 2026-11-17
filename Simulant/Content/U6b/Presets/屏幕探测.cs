@@ -10,6 +10,7 @@ using System.Data;
 
 namespace Simulant.Content.U6b.Presets
 {
+    [PhaseSelectionOrder(3)]
     internal class 屏幕探测 : SimPresetBase
     {
         public override int TerritoryId { get; } = 1122;

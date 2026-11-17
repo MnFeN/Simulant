@@ -9,19 +9,19 @@ namespace Simulant.Content.U7b
         public static readonly WaymarkLayout Waymarks = WaymarkLayout.Center(100, 100, 0)
             .Circle("A1D4C3B2", true, 12, 12 * System.Math.Sqrt(2));
 
-        [Phase(10)]
+        [PhaseSelectionOrder(1)]
         public static readonly PhaseData P1_1;
-        [Phase(15)]
+        [PhaseSelectionOrder(1.5)]
         public static readonly PhaseData P1_2;
-        [Phase(20)]
+        [PhaseSelectionOrder(2)]
         public static readonly PhaseData P2_1;
-        [Phase(25)]
+        [PhaseSelectionOrder(2.5)]
         public static readonly PhaseData P2_2;
-        [Phase(30)]
+        [PhaseSelectionOrder(3)]
         public static readonly PhaseData P34;
-        [Phase(50)]
+        [PhaseSelectionOrder(5)]
         public static readonly PhaseData P5;
-        [Phase(999)]
+        [PhaseSelectionOrder(99.9)]
         public static readonly PhaseData Complete;
 
         static U7b()

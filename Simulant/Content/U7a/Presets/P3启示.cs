@@ -18,6 +18,7 @@ using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7a.Presets
 {
+    [PhaseSelectionOrder(3.2)]
     internal sealed class P3启示 : SimPresetBase
     {
         public override int TerritoryId => 1238;

@@ -14,6 +14,7 @@ using System.Numerics;
 
 namespace Simulant.Content.U6b.Presets
 {
+    [PhaseSelectionOrder(6)]
     internal class 宇宙天箭 : SimPresetBase
     {
         public override int TerritoryId => 1122;

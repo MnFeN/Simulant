@@ -12,6 +12,7 @@ using System.Numerics;
 
 namespace Simulant.Content.S4b.Presets
 {
+    [PhaseSelectionOrder(10.1)]
     internal class 异三角 : SimPresetBase
     {
         public override int TerritoryId { get; } = 755;
