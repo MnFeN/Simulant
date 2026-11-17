@@ -71,27 +71,42 @@ EntityManager.SetPartyEnmity(boss, 100, 80, 20, 15, 40, 35, 30, 25);
 
 ## ActorControl 分类
 
-`Simulant.Game.ActorControlCategory : ushort` 统一保存控制子类别。`EntityBase.ActorControl` 与 `PacketDispatcher.HandleActorControl` 都直接接收这个枚举，原生调用前统一转换成 `ushort`，不把枚举对象交给 GreyMagic。已有业务调用的类别编号、参数顺序及数值保持原样。
+[`Simulant.Game.ActorControlCategory : ushort`](../Simulant/Game/ActorControlCategory.cs) 统一保存控制子类别。类别编号属于包内 `category`，不是网络 opcode。当前定义按 **7.58 国服，构建号 `2026.11.03.0000.0000`** 的客户端研究核对，并补充了角色、战斗、副本、移动和表现相关类别。每项 XML 注释列出已确认的用途、参数和必要条件；标为“待确认”的字段不能当作未使用。
 
 ```csharp
 using Simulant.Game;
 
 boss.Entity.ActorControl(ActorControlCategory.SetBattle, 1);
-boss.Entity.ActorControl(ActorControlCategory.TargetIcon, markerId);
+boss.Entity.ActorControl(ActorControlCategory.TargetIcon, markerId, boss.Id);
 eventObject.ActorControl(ActorControlCategory.SetEventState, eventState);
 eventObject.ActorControl(ActorControlCategory.SetSharedGroupTimelineState, timelineState);
 ```
 
-普通实体入口提供四个参数。需要 `ActorControlSelf` 的额外参数、或 `ActorControlTarget` 的目标 ID 时，使用完整的 `PacketDispatcher.HandleActorControl` 入口；例如 `SetTarget` 的目标应传入 `targetId`，不能误放到 `a1`。未知类别可显式转换为 `(ActorControlCategory)rawCategory`，方便后续回放解析；是否能够执行仍取决于对应版本的参数布局。
+`EntityBase.ActorControl` 与 `PacketDispatcher.HandleActorControl` 直接接收枚举，调用原生函数前转换为 `ushort`。现有业务调用使用的类别编号保持不变。`SetBattle`、`SetEventState`、`SetSharedGroupTimelineState`、`PlaySharedGroupTimeline` 和 `Knockback` 保留为对应类别的别名。
+
+普通 ActorControl 包提供 `a1–a4`，当前 ActorControlSelf 提供 `a1–a8`，ActorControlTarget 提供 `a1–a4` 和独立的 64 位 `targetId`。三种包最终使用共同的处理入口，Self 的名称不限制操作对象必须是本机角色；使用时仍须满足该类别的本机／远端限制和前置状态。
+
+`EntityBase.ActorControl` 只提供四参入口，额外参数默认补零。例如 `ForcedMovement` 的时长在 `a5`，`PositionVFX` 的强制回收时间和关联角色在 `a5/a6`，均应通过完整的 `PacketDispatcher.HandleActorControl` 入口传入；不能把普通包尾部当作 `a5`。`SetTarget` 的目标应传入独立 `targetId`，不能误放到 `a1`。当前包装层的 `targetId` 仍是 `uint`，可传 EntityId，无法表达高 32 位非零的完整对象标识。
+
+旧定义中有几组编号或名称容易混淆，已按实际含义修正：
+
+- `SetMovementSpeedMultiplier = 0x001B` 设置移动倍率，旧名为 `Flee`；不指定逃跑方向。
+- `SetMountSpeed = 0x03A0` 设置坐骑地面基础速度；`0x039F` 是 `PvpQuickChat`。
+- `Dismount = 0x03A2`、`BeginReplayAck = 0x03A3`、`EndReplayAck = 0x03A4`；原来三个操作均错放在前一个编号。
+- `SetDutyActionAvailability = 0x05EC` 设置职责技能可用性；`SetDutyActionCharges = 0x05ED` 设置当前充能数。
+- `MonkChakraConsumptionEffect = 0x0600` 是武僧脉轮量谱演出；`IncrementRecast = 0x0601` 才是推进冷却计时。
+- `SetFateState = 0x0931` 与 `SetFateProgress = 0x093C` 对应已确认的 FATE 状态和进度；旧的 `0x0074`、`0x009B` 改用 `LegacyFateState`、`LegacyFateProgress` 保留，当前用途待确认。
+
+`GainEffect` 通知状态获得表现，不创建真实状态槽；`ClassJobChange` 播放职业切换特效，不设置职业。`LoseEffect` 的 `a4=0` 路径可以移除匹配状态，`DamageEffect` 同时更新当前 HP，不能把所有提示或特效类别一概当作纯表现。`KnockBack` 的 `a2` 是距离、`a3` 是持续时间，均除以 10000 后分别得到米和秒。
+
+未知类别可显式转换为 `(ActorControlCategory)rawCategory` 供回放解析。历史名称或枚举中存在某个编号，都不证明该功能在当前版本有效。使用其他版本时须重新核对 opcode、包长及参数；历史六参 Self 布局不能直接套用当前八参布局。
 
 协议参考：
 
-- [BossMod 控制分类](https://github.com/awgil/ffxiv_bossmod/blob/master/BossMod/Network/ServerIPC.cs)：用于交叉核对类别编号。
-- [Sapphire 控制分类](https://github.com/SapphireServer/Sapphire/blob/master/src/common/Network/CommonActorControl.h)：用于核对常用操作名称和参数说明；它对应的客户端版本不能直接等同于国服 7.57。
-- [FFXIV-Packet-Dissector 枚举](https://github.com/zhyupe/FFXIV-Packet-Dissector/blob/3d9c3b6b0e0067e626a0b75f958c5ac21e65a835/src/ffxiv_enum.lua)：核对历史分类名称与数值。
-- [Machina 国际服定义](https://github.com/ravahn/machina/blob/2bd9a7d291e1e54ce523a4c31daa93919e1c44fa/Machina.FFXIV/Headers/Global/Server_ActorControl.cs)：注明持续治疗与持续伤害从 7.10 起使用 `0x604`、`0x605`。[同提交的国服定义](https://github.com/ravahn/machina/blob/2bd9a7d291e1e54ce523a4c31daa93919e1c44fa/Machina.FFXIV/Headers/Chinese/Server_ActorControl.cs) 仍保留旧 `0x17`；因此保留三项，不据此宣称新参数已在国服实测。
-
-不同来源的命名冲突保留区分：`SetMaxGearSets = 0x230` 与 `SetMaxGearSetsSapphire = 0x320` 不是别名；Sapphire 所称的 `SetDutyActionActive = 0x5EA` 对应这里的 `SetDutyActionPresent`，这里的 `SetDutyActionActive` 使用 `0x5EB`。`GainEffect` 等提示类别不能代替真实状态列表或血量同步。枚举属于包内子类别，不是回放文件中需要按版本识别的顶层 opcode。
+- [ActorControl 分类与参数](https://github.com/MnFeN/ACT_Tech_Guide/blob/main/ActorControl/README.md)：当前客户端的逐类语义、包体区别、子协议和研究附注。
+- [BossMod 控制分类](https://github.com/awgil/ffxiv_bossmod/blob/master/BossMod/Network/ServerIPC.cs)：交叉核对类别编号。
+- [Sapphire 控制分类](https://github.com/SapphireServer/Sapphire/blob/master/src/common/Network/CommonActorControl.h)：参考历史命名和发送参数；客户端版本及其定义不能直接等同于当前国服。
+- [FFXIV-Packet-Dissector 枚举](https://github.com/zhyupe/FFXIV-Packet-Dissector/blob/3d9c3b6b0e0067e626a0b75f958c5ac21e65a835/src/ffxiv_enum.lua)、[Machina 国际服定义](https://github.com/ravahn/machina/blob/2bd9a7d291e1e54ce523a4c31daa93919e1c44fa/Machina.FFXIV/Headers/Global/Server_ActorControl.cs)：核对历史分类名称和持续伤害／治疗的版本变化。当前客户端对 `HotDot = 0x0017`、`HoT = 0x0604`、`DoT = 0x0605` 均有处理，分别保留其参数说明。
 
 ## 会话回收
 
