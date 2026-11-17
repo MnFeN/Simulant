@@ -1,5 +1,6 @@
-using Simulant.ACT;
+using SimuMagic;
 using Simulant.Core.Environment;
+using Simulant.Game;
 using Simulant.Game.FFCS.Client.System.Framework;
 using Simulant.Game.FFCS.Client.UI;
 using System;
@@ -16,14 +17,13 @@ namespace Simulant.Tests.Native
 {
     internal static class PresentationTests
     {
-        private static Type GameType(string name) => typeof(NamazuInterop).Assembly.GetType("Simulant." + name, true);
+        private static Type GameType(string name) => typeof(GameInterop).Assembly.GetType("Simulant." + name, true);
 
         private static int Main()
         {
             using (var plugin = new PresentationPlugin())
             {
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true)
-                    .Invoke(null, new object[] { new NamazuPlugin(plugin) });
+                NativeTestContext.Use(plugin.Memory, plugin);
 
                 try
                 {
@@ -31,6 +31,7 @@ namespace Simulant.Tests.Native
                     VerifyMarkers(plugin);
                     VerifyVfx(plugin);
                     VerifyHotbar(plugin);
+                    VerifyTemporaryArguments(plugin);
                     Console.WriteLine("本地消息、标点和特效调用验证通过。");
                     return 0;
                 }
@@ -146,6 +147,86 @@ namespace Simulant.Tests.Native
             }
         }
 
+        private static void VerifyTemporaryArguments(PresentationPlugin plugin)
+        {
+            var memory = plugin.Memory.Bytes;
+            var initialAllocationCount = memory.Allocations.Count;
+            var value = new Vector3(1.5f, -2f, 3f);
+            var original = value;
+            var wrappedVector = RemoteInput.Struct(value);
+            var remote = new IntPtr(0x78000);
+            int calls = 0;
+            plugin.Probe = args =>
+            {
+                calls++;
+                var input = (IntPtr)args[1];
+                var text = (IntPtr)args[2];
+                var empty = (IntPtr)args[3];
+                var scalarInput = (IntPtr)args[4];
+                var bytes = Encoding.UTF8.GetBytes("路径\0");
+
+                Assert((IntPtr)args[0] == remote && (IntPtr)args[5] == IntPtr.Zero,
+                    "Existing game addresses and null pointers must retain their values.");
+                Assert(memory.Read<Vector3>(input) == original && memory.Read<uint>(scalarInput) == 23u,
+                    "A wrapped input must be copied by its unmanaged size.");
+                Assert(memory.ReadBytes(text, bytes.Length).SequenceEqual(bytes) && memory.Read<byte>(empty) == 0,
+                    "UTF-8 arguments and empty strings must be terminated.");
+                Assert(memory.Allocations.Count == initialAllocationCount + 1 &&
+                    !memory.Freed.Contains(input) && input != text && text != empty,
+                    "A call must keep distinct argument addresses live through dispatch.");
+
+                memory.Put(input, Vector3.Zero);
+                return remote;
+            };
+
+            var result = PresentationPlugin.BufferProbe.Call<IntPtr>(remote, wrappedVector,
+                RemoteInput.CString("路径"), RemoteInput.CString(""), RemoteInput.Struct(23u), IntPtr.Zero);
+            Assert(calls == 1 && result == remote && value == original,
+                "The native result must be preserved and input copies must not write back.");
+            Assert(memory.Freed.SequenceEqual(memory.Allocations),
+                "Temporary input must be released after dispatch.");
+
+            foreach (var raw in new object[] { "raw string", value })
+            {
+                try
+                {
+                    PresentationPlugin.BufferProbe.Call<IntPtr>(RemoteInput.CString("valid"), raw);
+                    throw new InvalidOperationException("Unwrapped pointer inputs must be rejected.");
+                }
+                catch (ArgumentException)
+                {
+                    Assert(calls == 1 && memory.Allocations.Count == initialAllocationCount + 1,
+                        "Invalid arguments must be rejected before allocation or dispatch.");
+                }
+            }
+
+            plugin.Memory.ShortNextWrite = true;
+            var rejected = false;
+            try
+            {
+                PresentationPlugin.BufferProbe.Call<IntPtr>(RemoteInput.CString("short write"));
+            }
+            catch (InvalidOperationException)
+            {
+                rejected = true;
+            }
+
+            Assert(rejected && calls == 1 && memory.Freed.SequenceEqual(memory.Allocations),
+                "A short write must prevent dispatch and release the whole buffer.");
+
+            plugin.Probe = _ => throw new ApplicationException("Native call failed.");
+            try
+            {
+                PresentationPlugin.BufferProbe.Call<IntPtr>(RemoteInput.CString("failure"));
+                throw new InvalidOperationException("The native exception was lost.");
+            }
+            catch (ApplicationException)
+            {
+                Assert(memory.Freed.SequenceEqual(memory.Allocations),
+                    "Native call failure must release the temporary arguments.");
+            }
+        }
+
         private static void SetAddress(Type type, string name, IntPtr value) => type.GetProperty(name).SetValue(null, value);
 
         private static void Assert(bool condition, string message)
@@ -155,32 +236,36 @@ namespace Simulant.Tests.Native
         }
     }
 
-    public sealed class PresentationMemory
+    public sealed class PresentationMemory : ExternalProcessMemory
     {
         public readonly PartyMemory Bytes = new PartyMemory();
-        public Process Process { get; } = Process.GetCurrentProcess();
-        public bool IsProcessOpen => Bytes.IsProcessOpen;
-        public IntPtr ProcessHandle => Bytes.ProcessHandle;
-        public IntPtr AllocateMemory(int size) => Bytes.AllocateMemory(size);
-        public bool FreeMemory(IntPtr address) => Bytes.FreeMemory(address);
-        public T Read<T>(IntPtr address) where T : struct => Bytes.Read<T>(address);
-        public byte[] ReadBytes(IntPtr address, int size) => Bytes.ReadBytes(address, size);
-        public void Write<T>(IntPtr address, T value) where T : struct => Bytes.Write(address, value);
-        public int WriteBytes(IntPtr address, byte[] bytes) => Bytes.WriteBytes(address, bytes);
-        public bool WriteString(IntPtr address, string text, Encoding encoding)
-            => WriteBytes(address, encoding.GetBytes(text + '\0')) > 0;
+        public bool ShortNextWrite;
+        public override Process Process { get; } = Process.GetCurrentProcess();
+        public override bool IsProcessOpen => Bytes.IsProcessOpen;
+        public override IntPtr ProcessHandle => Bytes.ProcessHandle;
+        public override IntPtr AllocateMemory(int size) => Bytes.AllocateMemory(size);
+        public override bool FreeMemory(IntPtr address) => Bytes.FreeMemory(address);
+        public override T Read<T>(IntPtr address) => Bytes.Read<T>(address);
+        public override byte[] ReadBytes(IntPtr address, int size) => Bytes.ReadBytes(address, size);
+        public override void Write<T>(IntPtr address, T value) => Bytes.Write(address, value);
+        public override int WriteBytes(IntPtr address, byte[] bytes)
+        {
+            if (!ShortNextWrite)
+                return Bytes.WriteBytes(address, bytes);
+
+            ShortNextWrite = false;
+            return Bytes.WriteBytes(address, bytes.Take(bytes.Length - 1).ToArray());
+        }
     }
 
-    public sealed class PresentationPlugin : IDisposable
+    public sealed class PresentationPlugin : INativeCalls, IDisposable
     {
         public static readonly IntPtr GetShell = new IntPtr(0x10), Chat = new IntPtr(0x11), Mark = new IntPtr(0x12),
             Create = new IntPtr(0x13), Run = new IntPtr(0x14), Fade = new IntPtr(0x15), Actor = new IntPtr(0x16),
-            GetAddon = new IntPtr(0x17);
+            GetAddon = new IntPtr(0x17), BufferProbe = new IntPtr(0x18);
         public readonly IntPtr Hotbar = new IntPtr(0x92000);
         private int _vfxCount;
         public string State => "Ready";
-        public readonly object CallScheduler = new object();
-        public readonly object SigScanner = new object();
         public readonly PresentationMemory Memory = new PresentationMemory();
         public readonly ConcurrentQueue<IntPtr> Started = new ConcurrentQueue<IntPtr>();
         public readonly ConcurrentQueue<IntPtr> Faded = new ConcurrentQueue<IntPtr>();
@@ -190,11 +275,14 @@ namespace Simulant.Tests.Native
         public string ActorPath, HotbarName;
         public IntPtr HotbarManager;
         public int HotbarIndex;
+        public Func<object[], IntPtr> Probe;
 
         public T Call<T>(IntPtr function, params object[] args) where T : struct
         {
             IntPtr result;
-            if (function == GetShell)
+            if (function == BufferProbe)
+                result = Probe(args);
+            else if (function == GetShell)
                 result = new IntPtr(0x20200);
             else if (function == Create)
                 result = new IntPtr(0x50000 + ++_vfxCount * 0x400);

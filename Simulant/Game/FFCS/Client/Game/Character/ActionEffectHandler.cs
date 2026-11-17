@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using Simulant.Game.FFCS.Client.Game.Object;
 using System;
 using System.Numerics;
@@ -50,7 +49,7 @@ namespace Simulant.Game.FFCS.Client.Game.Character
             if (targetEffects != null && targetEffects.Length != 8)
                 throw new ArgumentException("原生技能结算每个目标有八个效果槽。", nameof(targetEffects));
 
-            var memory = NamazuInterop.Plugin.Memory;
+            var memory = GameInterop.Connection.Memory;
             var buffer = IntPtr.Zero;
 
             try

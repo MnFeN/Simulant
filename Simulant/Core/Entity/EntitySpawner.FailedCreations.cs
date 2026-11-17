@@ -1,6 +1,6 @@
-using Simulant.ACT;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.Object;
+using SimuMagic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +12,7 @@ namespace Simulant.Core.Entity
         private sealed class LocalCharacterCreation
         {
             internal long WorldGeneration;
-            internal GreyMagicExternalProcessMemory Memory;
+            internal ExternalProcessMemory Memory;
             internal IntPtr ProcessHandle;
             internal IntPtr ManagerAddress;
             internal IntPtr ObjectManagerAddress;
@@ -54,7 +54,7 @@ namespace Simulant.Core.Entity
 
         private LocalCharacterCreation CaptureLocalCreationContext(ClientObjectManager manager)
         {
-            var memory = NamazuInterop.Plugin?.Memory
+            var memory = GameInterop.Connection?.Memory
                 ?? throw new InvalidOperationException("本地角色创建无法访问当前游戏进程。");
             var creation = new LocalCharacterCreation
             {
@@ -70,10 +70,10 @@ namespace Simulant.Core.Entity
 
         private void EnsureLocalCreationContext(LocalCharacterCreation creation)
         {
-            var memory = NamazuInterop.Plugin?.Memory;
+            var memory = GameInterop.Connection?.Memory;
 
             if (creation.WorldGeneration != _localCreationGeneration ||
-                memory == null || !ReferenceEquals(memory.RawMemory, creation.Memory.RawMemory) ||
+                memory == null || !ReferenceEquals(memory, creation.Memory) ||
                 !creation.Memory.IsProcessOpen || creation.ProcessHandle == IntPtr.Zero ||
                 creation.Memory.ProcessHandle != creation.ProcessHandle || memory.ProcessHandle != creation.ProcessHandle ||
                 creation.ManagerAddress == IntPtr.Zero || ClientObjectManager.InstancePtr != creation.ManagerAddress ||

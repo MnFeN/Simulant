@@ -1,6 +1,6 @@
-using Simulant.ACT;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Graphics.Scene;
+using SimuMagic;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -19,7 +19,7 @@ namespace Simulant.Core
 
         private static readonly object Gate = new object();
         private static readonly List<Effect> Effects = new List<Effect>();
-        private static GreyMagicExternalProcessMemory _memory;
+        private static ExternalProcessMemory _memory;
         private static IntPtr _processHandle;
         private static Timer _timer;
         private static long _world;
@@ -110,9 +110,9 @@ namespace Simulant.Core
 
         private static void CheckProcess()
         {
-            var memory = NamazuInterop.Plugin?.Memory;
+            var memory = GameInterop.Connection?.Memory;
             var handle = memory?.IsProcessOpen == true ? memory.ProcessHandle : IntPtr.Zero;
-            if (ReferenceEquals(memory?.RawMemory, _memory?.RawMemory) && handle == _processHandle)
+            if (ReferenceEquals(memory, _memory) && handle == _processHandle)
                 return;
 
             Reset();

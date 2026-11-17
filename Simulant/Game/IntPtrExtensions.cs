@@ -1,5 +1,4 @@
-﻿using Simulant.ACT;
-using System;
+﻿using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -24,21 +23,21 @@ namespace Simulant.Game
             where T : struct
         {
             ptr.ThrowIfZero(callerName, offset, "读取");
-            return NamazuInterop.Plugin.Memory.Read<T>(ptr + offset);
+            return GameInterop.Connection.Memory.Read<T>(ptr + offset);
         }
 
         public static IntPtr ReadPtr(this IntPtr ptr, int offset = 0,
             [CallerMemberName] string callerName = "")
         {
             ptr.ThrowIfZero(callerName, offset, "读取 IntPtr ");
-            return NamazuInterop.Plugin.Memory.Read<IntPtr>(ptr + offset);
+            return GameInterop.Connection.Memory.Read<IntPtr>(ptr + offset);
         }
 
         public static byte[] ReadBytes(this IntPtr ptr, int count, int offset = 0,
             [CallerMemberName] string callerName = "")
         {
             ptr.ThrowIfZero(callerName, offset, "读取字节数组");
-            return NamazuInterop.Plugin.Memory.ReadBytes(ptr + offset, count);
+            return GameInterop.Connection.Memory.ReadBytes(ptr + offset, count);
         }
 
         public static MemoryField<T> Field<T>(this IntPtr ptr, int offset)
@@ -67,31 +66,31 @@ namespace Simulant.Game
             where T : struct
         {
             ptr.ThrowIfZero(callerName, offset, "写入");
-            NamazuInterop.Plugin.Memory.Write<T>(ptr + offset, value);
+            GameInterop.Connection.Memory.Write<T>(ptr + offset, value);
         }
 
         public static void WriteBytes(this IntPtr ptr, byte[] data, int offset = 0,
             [CallerMemberName] string callerName = "")
         {
             ptr.ThrowIfZero(callerName, offset, "写入字节数组");
-            NamazuInterop.Plugin.Memory.WriteBytes(ptr + offset, data);
+            GameInterop.Connection.Memory.WriteBytes(ptr + offset, data);
         }
 
-        /// <summary> 使用自动复用的 FrameLock 窗口，在指定的函数地址调用 CallInjected64。</summary>
+        /// <summary>调用此地址处的游戏函数并等待执行完成。</summary>
         public static void Call(this IntPtr ptr, params object[] args)
         {
             ptr.ThrowIfZero("Call", 0, "调用函数");
 
-            NamazuInterop.Plugin.Call(ptr, args);
+            GameInterop.Connection.Call(ptr, args);
         }
 
-        /// <summary> 使用自动复用的 FrameLock 窗口，在指定的函数地址调用 CallInjected64。</summary>
+        /// <summary>调用此地址处的游戏函数，并以 <typeparamref name="T"/> 类型返回结果。</summary>
         public static T Call<T>(this IntPtr ptr, params object[] args)
             where T : struct
         {
             ptr.ThrowIfZero("Call", 0, "调用函数");
 
-            return NamazuInterop.Plugin.Call<T>(ptr, args);
+            return GameInterop.Connection.Call<T>(ptr, args);
         }
 
         public static IntPtr GetVFuncPtr(this IntPtr objectPtr, int idx, [CallerMemberName] string callerName = "")

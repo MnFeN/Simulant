@@ -1,5 +1,4 @@
-﻿using Simulant.ACT;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,15 +7,16 @@ namespace Simulant.Game
 {
     internal static class SigAddressScanner
     {
+        /// <summary>清除缓存地址，解析标有 <see cref="SigPatternAttribute"/> 的属性，并报告失败项。</summary>
         public static Dictionary<string, string> Scan()
         {
             var ptrProps = GetSigPatternProperties().ToList();
             ClearPtrs(ptrProps);
 
-            var scanner = NamazuInterop.Plugin?.SigScanner;
+            var scanner = GameInterop.Connection?.Scanner;
 
-            if (!NamazuInterop.IsReady || scanner == null)
-                throw new Exception("[AddressStore] Namazu scanner 未就绪。");
+            if (!GameInterop.IsReady || scanner == null)
+                throw new Exception("[AddressStore] 游戏地址扫描器未就绪。");
 
             Dictionary<string, string> result = new Dictionary<string, string>();
 
@@ -86,7 +86,7 @@ namespace Simulant.Game
             return ptrProp.DeclaringType.FullName + "." + ptrProp.Name;
         }
 
-        private static void ScanGeneralPtrs(List<PropertyInfo> ptrProps, NamazuScanner scanner, Dictionary<string, string> result)
+        private static void ScanGeneralPtrs(List<PropertyInfo> ptrProps, GameImageScanner scanner, Dictionary<string, string> result)
         {
             foreach (var ptrProp in ptrProps)
             {
@@ -99,7 +99,7 @@ namespace Simulant.Game
                     continue;
 
                 var key = GetPropKey(ptrProp);
-                var ptr = scanner.TryScanMultiple(sigs, key);
+                var ptr = scanner.Find(sigs);
 
                 if (ptr == IntPtr.Zero)
                 {

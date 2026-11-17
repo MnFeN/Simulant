@@ -21,24 +21,7 @@ namespace Simulant.Game.FFCS.Client.Network
             if (function == IntPtr.Zero)
                 throw new InvalidOperationException("原生目标仇恨更新函数尚未定位。");
 
-            var memory = Memory;
-            var packetPtr = IntPtr.Zero;
-
-            try
-            {
-                packetPtr = memory.AllocateMemory(UpdateHatePacket.Size);
-
-                if (packetPtr == IntPtr.Zero)
-                    throw new InvalidOperationException("无法分配目标仇恨更新包的内存。");
-
-                memory.Write(packetPtr, packet);
-                function.Call<long>(targetId, packetPtr);
-            }
-            finally
-            {
-                if (packetPtr != IntPtr.Zero)
-                    memory.FreeMemory(packetPtr);
-            }
+            function.Call<long>(targetId, RemoteInput.Struct(packet));
         }
     }
 }

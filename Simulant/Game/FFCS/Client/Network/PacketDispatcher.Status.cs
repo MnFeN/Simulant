@@ -17,24 +17,7 @@ namespace Simulant.Game.FFCS.Client.Network
             if (function == IntPtr.Zero)
                 throw new InvalidOperationException("原生角色状态更新函数尚未定位。");
 
-            var memory = Memory;
-            var packetPtr = IntPtr.Zero;
-
-            try
-            {
-                packetPtr = memory.AllocateMemory(StatusEffectListDoublePacket.Size);
-
-                if (packetPtr == IntPtr.Zero)
-                    throw new InvalidOperationException("无法分配角色状态更新包的内存。");
-
-                memory.Write(packetPtr, packet);
-                function.Call(entityId, packetPtr, (byte)0);
-            }
-            finally
-            {
-                if (packetPtr != IntPtr.Zero)
-                    memory.FreeMemory(packetPtr);
-            }
+            function.Call(entityId, RemoteInput.Struct(packet), (byte)0);
         }
     }
 }

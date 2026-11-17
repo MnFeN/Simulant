@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.System.Framework;
 using Simulant.Game.FFCS.Client.System.String;
@@ -22,7 +21,7 @@ namespace Simulant.Core
             GameFunctions.CheckStatus(RaptureShellModule.ProcessChatBoxFuncPtr);
             var ui = Framework.Instance.UIModule;
             var shell = ui.ShellModule.ThrowIfNull();
-            var memory = NamazuInterop.Plugin.Memory;
+            var memory = GameInterop.Connection.Memory;
             var text = Encoding.UTF8.GetBytes(command + '\0');
             var size = Marshal.SizeOf<Utf8String>();
             var capacity = Math.Max(text.Length, 0x40);

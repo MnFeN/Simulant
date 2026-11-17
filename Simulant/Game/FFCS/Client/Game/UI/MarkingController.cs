@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -39,7 +38,7 @@ namespace Simulant.Game.FFCS.Client.Game.UI
         internal void UpdateFieldMarkers(FieldMarkerUpdate update)
         {
             GameFunctions.CheckStatus(Ptr);
-            var memory = NamazuInterop.Plugin.Memory;
+            var memory = GameInterop.Connection.Memory;
             var start = Ptr + 0x1E0;
             var size = 8 * Marshal.SizeOf<FieldMarker>();
             var bytes = memory.ReadBytes(start, size);

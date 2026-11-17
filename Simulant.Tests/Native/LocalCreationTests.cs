@@ -1,6 +1,7 @@
 ﻿namespace Simulant.Tests.Native
 {
-    using Simulant.ACT;
+    using Simulant.Game;
+using SimuMagic;
     using Simulant.Core.Entity;
     using Simulant.Game.FFCS.Client.Game.Character;
     using Simulant.Game.FFCS.Client.Game.Object;
@@ -12,7 +13,7 @@
     using System.Linq;
     using System.Reflection;
 
-    // 引用真实插件 DLL，只替换 PostNamazu 的原生读写与调用边界；不会连接 ACT 或游戏。
+    // 引用真实插件 DLL，只替换游戏连接的原生读写与调用边界；不会连接 ACT 或游戏。
     internal static class LocalCreationTests
     {
         private static int _passed;
@@ -62,9 +63,13 @@
             Check("对象种类变化时拒绝删除", () => VerifyChanged(scene => scene.Memory.Put(scene.Native + 0x90, ObjectKind.Pc), false));
             Check("本地管理器变化时不访问旧内存", () => VerifyChanged(scene => ClientObjectManager.InstancePtr = new IntPtr(0x60000), true));
             Check("对象管理器变化时不访问旧内存", () => VerifyChanged(scene => GameObjectManager.InstancePtr = new IntPtr(0x70000), true));
-            Check("进程句柄变化时不访问旧内存", () => VerifyChanged(scene => scene.Memory.ProcessHandle = new IntPtr(202), true));
-            Check("进程关闭后不访问旧内存", () => VerifyChanged(scene => scene.Memory.IsProcessOpen = false, true));
-            Check("内存实例变化时不访问新旧内存", () => VerifyChanged(scene => scene.Plugin.Memory = new FakeLocalMemory(), true));
+            Check("进程句柄变化时不访问旧内存", () => VerifyChanged(scene => scene.Memory.CurrentProcessHandle = new IntPtr(202), true));
+            Check("进程关闭后不访问旧内存", () => VerifyChanged(scene => scene.Memory.ProcessOpen = false, true));
+            Check("内存实例变化时不访问新旧内存", () => VerifyChanged(scene =>
+            {
+                scene.Plugin.Memory = new FakeLocalMemory();
+                NativeTestContext.Use(scene.Plugin.Memory, scene.Plugin);
+            }, true));
             Check("未知身份不能在后续重试时认领", VerifyUnknownIdentity);
             Check("世界重置只丢弃记录，不访问旧内存", VerifyWorldReset);
             Check("初始化时两表替换不得首次删除新对象", () => VerifySetupConflict(scene => scene.SetIdentity(new IntPtr(0x50000), 999u)));
@@ -409,10 +414,7 @@
             internal Scene()
             {
                 Plugin = new FakeLocalPlugin(Memory);
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
-                {
-                    new NamazuPlugin(Plugin)
-                });
+                NativeTestContext.Use(Memory, Plugin);
                 ClientObjectManager.InstancePtr = new IntPtr(0x10000);
                 GameObjectManager.InstancePtr = new IntPtr(0x20000);
                 CharacterManager.InstancePtr = IntPtr.Zero;
@@ -465,12 +467,13 @@
         }
     }
 
-    // dynamic 包装跨程序集访问要求替身类型及入口公开。
-    public sealed class FakeLocalMemory
+    public sealed class FakeLocalMemory : ExternalProcessMemory
     {
         private readonly Dictionary<long, object> _values = new Dictionary<long, object>();
-        public IntPtr ProcessHandle = new IntPtr(101);
-        public bool IsProcessOpen = true;
+        public IntPtr CurrentProcessHandle = new IntPtr(101);
+        public override IntPtr ProcessHandle => CurrentProcessHandle;
+        public bool ProcessOpen = true;
+        public override bool IsProcessOpen => ProcessOpen;
         public bool FailRead;
         public bool FailWrite;
         public int ReadCalls;
@@ -490,8 +493,7 @@
             _values[address.ToInt64()] = value;
         }
 
-        public T Read<T>(IntPtr address)
-            where T : struct
+        public override T Read<T>(IntPtr address)
         {
             ReadCalls++;
             int count;
@@ -505,8 +507,7 @@
             return _values.TryGetValue(address.ToInt64(), out value) ? (T)value : default(T);
         }
 
-        public void Write<T>(IntPtr address, T value)
-            where T : struct
+        public override void Write<T>(IntPtr address, T value)
         {
             WriteCalls++;
 
@@ -519,7 +520,7 @@
             Put(address, value);
         }
 
-        public byte[] ReadBytes(IntPtr address, int count)
+        public override byte[] ReadBytes(IntPtr address, int count)
         {
             ReadBytesCalls++;
 
@@ -542,13 +543,13 @@
             return bytes;
         }
 
-        public IntPtr AllocateMemory(int size)
+        public override IntPtr AllocateMemory(int size)
         {
             AllocateCalls++;
             return new IntPtr(0xF00000 + ++_allocationIndex * 0x10000);
         }
 
-        public bool FreeMemory(IntPtr address)
+        public override bool FreeMemory(IntPtr address)
         {
             FreeCalls++;
             _values.Remove(address.ToInt64());
@@ -556,12 +557,8 @@
         }
     }
 
-    public sealed class FakeLocalPlugin
+    public sealed class FakeLocalPlugin : INativeCalls
     {
-        public string State => "Ready";
-
-        public readonly object CallScheduler = new object();
-        private object PluginUi;
         public static readonly IntPtr CreateFunction = new IntPtr(0x101);
         public static readonly IntPtr GetFunction = new IntPtr(0x102);
         public static readonly IntPtr DeleteFunction = new IntPtr(0x103);
@@ -593,7 +590,6 @@
         public FakeLocalPlugin(FakeLocalMemory memory)
         {
             Memory = memory;
-            PluginUi = new object();
         }
 
         public T Call<T>(IntPtr function, params object[] args)

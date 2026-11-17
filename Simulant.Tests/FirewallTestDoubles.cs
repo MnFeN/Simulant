@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Simulant.Game.FFCS.Client.System.Framework;
+using SimuMagic;
 
 // 保留真实解析插件的私有字段结构，验证反射修改与原实例恢复。
 namespace FFXIV_ACT_Plugin
@@ -31,9 +32,9 @@ namespace FFXIV_ACT_Plugin
 }
 
 // 防火墙测试链接实际服务，仅替换外部进程内存、入口地址解析和日志宿主。
-namespace Simulant.ACT
+namespace SimuMagic
 {
-    public sealed class GreyMagicExternalProcessMemory
+    public sealed class ExternalProcessMemory
     {
         internal sealed class WriteAttempt
         {
@@ -55,7 +56,6 @@ namespace Simulant.ACT
         internal int ReadCalls;
         private long _nextAllocation = 0x4000;
 
-        public object RawMemory => this;
         public IntPtr ProcessHandle { get; set; } = new IntPtr(1);
         public System.Diagnostics.Process Process { get; set; } = System.Diagnostics.Process.GetCurrentProcess();
         public bool IsProcessOpen { get; set; } = true;
@@ -130,19 +130,20 @@ namespace Simulant.ACT
         }
     }
 
-    public sealed class NamazuPlugin
-    {
-        public GreyMagicExternalProcessMemory Memory { get; set; }
-    }
-
-    public static class NamazuInterop
-    {
-        public static NamazuPlugin Plugin { get; set; }
-    }
 }
 
 namespace Simulant.Game
 {
+    public sealed class GameConnection
+    {
+        public ExternalProcessMemory Memory { get; set; }
+    }
+
+    public static class GameInterop
+    {
+        public static GameConnection Connection { get; set; }
+    }
+
     internal static class AddressStore
     {
         public static IntPtr OnSendPacketFuncPtr { get; set; }

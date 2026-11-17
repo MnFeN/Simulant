@@ -9,6 +9,7 @@ using TerritoryType = Lumina.Excel.Sheets.TerritoryType;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using Simulant.UI;
+using SimuMagic;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,7 +29,7 @@ namespace Simulant.Core
             set;
         } // 仅为了调试方便
 
-        public GreyMagicExternalProcessMemory Memory => NamazuInterop.Plugin.Memory;
+        public ExternalProcessMemory Memory => GameInterop.Connection.Memory;
 
         private readonly Label _statusLabel;
         private readonly SimulantUI _ui;
@@ -591,11 +592,34 @@ namespace Simulant.Core
                 if (!GameDataReady)
                     return;
 
-                LogRuntime("正在绑定鲶鱼精邮差……");
-                await Task.Run(() => NamazuInterop.Init());
+                LogRuntime("正在连接游戏进程并扫描地址……");
+                var scanResult = await Task.Run(() =>
+                {
+                    lock (_initLock)
+                    {
+                        EnsureInitProcess(processGeneration);
+                        var process = XivPluginInterop.plugin?.DataRepository.GetCurrentFFXIVProcess();
+                        if (FirewallService?.HasPendingCleanup == true && !GameInterop.IsConnectedTo(process))
+                            FirewallService.ResetProcess();
 
-                LogRuntime("正在扫描地址……");
-                var scanResult = await Task.Run(() => SigAddressScanner.Scan());
+                        if (!System.Environment.Is64BitProcess)
+                            throw new InvalidOperationException("模拟器需要 64 位 ACT。");
+                        if (process == null || process.HasExited)
+                            throw new InvalidOperationException("FFXIV 解析插件尚未识别游戏进程。");
+
+                        var openedConnection = GameInterop.Connect(process, LogWarning);
+                        try
+                        {
+                            return SigAddressScanner.Scan();
+                        }
+                        catch
+                        {
+                            if (openedConnection)
+                                GameInterop.Disconnect();
+                            throw;
+                        }
+                    }
+                });
 
                 var errorLines = scanResult
                     .Where(x => !string.IsNullOrEmpty(x.Value))
@@ -611,8 +635,7 @@ namespace Simulant.Core
 
                 lock (_initLock)
                 {
-                    if (Disposed || processGeneration != _entityProcessGeneration)
-                        throw new InvalidOperationException("初始化期间游戏进程发生变化，请重新初始化插件。");
+                    EnsureInitProcess(processGeneration);
 
                     EntitySpawner.ResumeWorld();
                     lock (_subscriptionGate)
@@ -641,6 +664,12 @@ namespace Simulant.Core
 
                 _ui?.UpdateControlStates();
             }
+        }
+
+        private void EnsureInitProcess(int generation)
+        {
+            if (Disposed || generation != _entityProcessGeneration)
+                throw new InvalidOperationException("初始化期间游戏进程发生变化，请重新初始化插件。");
         }
 
         public bool Disposed { get; private set; }
@@ -762,6 +791,7 @@ namespace Simulant.Core
 
                     ThrowIfFailed();
 
+                    GameInterop.Disconnect();
                     _gameData?.Dispose();
                     _gameData = null;
                     GameDataReady = false;
@@ -878,6 +908,7 @@ namespace Simulant.Core
                 try
                 {
                     FirewallService?.ResetProcess();
+                    GameInterop.Disconnect();
                 }
                 catch (Exception error)
                 {

@@ -1,7 +1,5 @@
-using Simulant.ACT;
 using System;
 using System.Numerics;
-using System.Text;
 
 namespace Simulant.Game.FFCS.Client.Graphics.Scene
 {
@@ -30,15 +28,13 @@ namespace Simulant.Game.FFCS.Client.Graphics.Scene
         public static VfxObject CreateStatic(string path, string pool)
         {
             GameFunctions.CheckStatus(CreateStaticFuncPtr);
-            return NamazuInterop.Plugin.Memory.WithAllocatedString2(path, pool, Encoding.UTF8,
-                (pathPtr, poolPtr) => CreateStaticFuncPtr.Call<IntPtr>(pathPtr, poolPtr)).As<VfxObject>();
+            return CreateStaticFuncPtr.Call<IntPtr>(RemoteInput.CString(path), RemoteInput.CString(pool)).As<VfxObject>();
         }
 
         public static VfxObject CreateActor(string path, IntPtr source, IntPtr target, float a4, byte a5, int a6, byte a7)
         {
             GameFunctions.CheckStatus(CreateActorFuncPtr, source, target);
-            return NamazuInterop.Plugin.Memory.WithAllocatedString(path, Encoding.UTF8,
-                pathPtr => CreateActorFuncPtr.Call<IntPtr>(pathPtr, source, target, a4, a5, a6, a7)).As<VfxObject>();
+            return CreateActorFuncPtr.Call<IntPtr>(RemoteInput.CString(path), source, target, a4, a5, a6, a7).As<VfxObject>();
         }
 
         public void Run(float a2, int a3) => RunFuncPtr.Call<IntPtr>(Ptr, a2, a3);

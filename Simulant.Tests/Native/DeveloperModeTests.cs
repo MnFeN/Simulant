@@ -1,4 +1,4 @@
-using Simulant.ACT;
+using Simulant.Game;
 using Simulant.Core;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
@@ -17,14 +17,11 @@ namespace Simulant.Tests.Native
 
         private static int Main(string[] args)
         {
-            var previousPlugin = NamazuInterop.Plugin;
+            var previousPlugin = GameInterop.Connection;
             var previousGame = GameMain.InstancePtr;
             try
             {
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
-                {
-                    new NamazuPlugin(new FakeLocalPlugin(Memory))
-                });
+                NativeTestContext.Use(Memory, new FakeLocalPlugin(Memory));
                 GameMain.InstancePtr = new IntPtr(0x10000);
                 using (var data = new GameDataService(args[0]))
                 {
@@ -47,7 +44,7 @@ namespace Simulant.Tests.Native
             finally
             {
                 GameMain.InstancePtr = previousGame;
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
+                typeof(GameInterop).GetProperty("Connection").GetSetMethod(true).Invoke(null, new object[]
                 {
                     previousPlugin
                 });

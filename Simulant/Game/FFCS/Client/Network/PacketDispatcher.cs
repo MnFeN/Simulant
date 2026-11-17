@@ -1,5 +1,5 @@
-﻿using Simulant.ACT;
-using Simulant.Game.FFCS.Client.Game.Network;
+﻿using Simulant.Game.FFCS.Client.Game.Network;
+using SimuMagic;
 using System;
 
 namespace Simulant.Game.FFCS.Client.Network
@@ -8,7 +8,7 @@ namespace Simulant.Game.FFCS.Client.Network
     {
         public IntPtr Ptr { get; set; }
 
-        static GreyMagicExternalProcessMemory Memory => NamazuInterop.Plugin.Memory;
+        static ExternalProcessMemory Memory => GameInterop.Connection.Memory;
 
         // 收包函数 SpawnPlayer 分支调用的函数
         [SigPattern(
@@ -156,7 +156,7 @@ namespace Simulant.Game.FFCS.Client.Network
             if (HandleActorMovePacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("网络角色移动函数尚未定位。");
 
-            var memory = NamazuInterop.Plugin.Memory;
+            var memory = GameInterop.Connection.Memory;
             IntPtr actorMovePayloadPtr = default;
 
             try

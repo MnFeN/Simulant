@@ -1,7 +1,8 @@
 namespace Simulant.Tests.Native
 {
     using Simulant;
-    using Simulant.ACT;
+    using Simulant.Game;
+    using SimuMagic;
     using Simulant.Core;
     using Simulant.Core.Entity;
     using Simulant.Core.Environment;
@@ -151,7 +152,10 @@ namespace Simulant.Tests.Native
                 if (failure == "回收实体")
                     scene.Memory.Failure = failure;
                 else
+                {
+                    Set(scene.Session, "_waymarkWorld", Get(scene.Host, "_worldGeneration"));
                     Set(scene.Session, "_waymarksPendingCleanup", true);
+                }
 
                 Invoke(scene.UI, "TryDisableFirewall");
                 Assert(!scene.PendingReturn && !scene.FirewallPending && scene.Events.Contains("恢复收包") &&
@@ -267,10 +271,7 @@ namespace Simulant.Tests.Native
                         "回收实体前必须停止预设和调试调度器。");
                     _entityPresent = false;
                 });
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
-                {
-                    new NamazuPlugin(native)
-                });
+                NativeTestContext.Use(Memory, native);
                 GameMain.InstancePtr = UnloadMemory.Game;
                 GameMain.LoadZoneFuncPtr = UnloadPlugin.LoadFunction;
                 LayoutWorld.InstancePtrPtr = UnloadMemory.LayoutPointer;
@@ -364,7 +365,7 @@ namespace Simulant.Tests.Native
             private void SeedHook(string field, IntPtr target, bool cave)
             {
                 var state = Activator.CreateInstance(_firewall.GetType().GetNestedType("HookState", BindingFlags.NonPublic), true);
-                Set(state, "Memory", NamazuInterop.Plugin.Memory);
+                Set(state, "Memory", GameInterop.Connection.Memory);
                 Set(state, "ProcessHandle", Memory.ProcessHandle);
                 Set(state, "Target", target);
                 Set(state, "Original", new byte[cave ? 15 : 5]);
@@ -432,7 +433,7 @@ namespace Simulant.Tests.Native
     }
 
     // 复用本地实体故障注入的内存储存，不接触真实进程。
-    public sealed class UnloadMemory
+    public sealed class UnloadMemory : ExternalProcessMemory
     {
         public static readonly IntPtr Game = new IntPtr(0x100000), EventPointer = new IntPtr(0x200000),
             BgmPointer = new IntPtr(0x300000), Scene = new IntPtr(0x320000), Player = new IntPtr(0x40000),
@@ -441,8 +442,8 @@ namespace Simulant.Tests.Native
         private readonly FakeLocalMemory _storage = new FakeLocalMemory();
         private readonly List<string> _events;
         public string Failure;
-        public IntPtr ProcessHandle => new IntPtr(101);
-        public bool IsProcessOpen => true;
+        public override IntPtr ProcessHandle => new IntPtr(101);
+        public override bool IsProcessOpen => true;
 
         public UnloadMemory(List<string> events)
         {
@@ -470,11 +471,9 @@ namespace Simulant.Tests.Native
 
         public void Put<T>(IntPtr address, T value)
             where T : struct => _storage.Put(address, value);
-        public T Read<T>(IntPtr address)
-            where T : struct => _storage.Read<T>(address);
-        public byte[] ReadBytes(IntPtr address, int length) => _storage.ReadBytes(address, length);
-        public void Write<T>(IntPtr address, T value)
-            where T : struct
+        public override T Read<T>(IntPtr address) => _storage.Read<T>(address);
+        public override byte[] ReadBytes(IntPtr address, int length) => _storage.ReadBytes(address, length);
+        public override void Write<T>(IntPtr address, T value)
         {
             if (address == Player + 0xB0)
                 Step("恢复位置");
@@ -485,14 +484,14 @@ namespace Simulant.Tests.Native
             Put(address, value);
         }
 
-        public int WriteBytes(IntPtr address, byte[] bytes)
+        public override int WriteBytes(IntPtr address, byte[] bytes)
         {
             PluginUnloadTests.Assert(address == Receive || address == Send, "不能恢复不属于本次宿主的函数入口。");
             Step(address == Receive ? "恢复收包" : "恢复发包");
             return bytes.Length;
         }
 
-        public bool FreeMemory(IntPtr address)
+        public override bool FreeMemory(IntPtr address)
         {
             PluginUnloadTests.Assert(address == Cave, "不能释放不属于本次宿主的代码洞。");
             Step("释放代码洞");
@@ -500,12 +499,8 @@ namespace Simulant.Tests.Native
         }
     }
 
-    public sealed class UnloadPlugin
+    public sealed class UnloadPlugin : INativeCalls
     {
-        public string State => "Ready";
-
-        public readonly object CallScheduler = new object();
-        private readonly object PluginUi = new object();
         public static readonly IntPtr LoadFunction = new IntPtr(0x101), TerritoryFunction = new IntPtr(0x102),
             SetupFunction = new IntPtr(0x103), FinalizeFunction = new IntPtr(0x104), DeleteFunction = new IntPtr(0x105),
             PositionFunction = new IntPtr(0x106);

@@ -7,6 +7,7 @@ using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Game.FFCS.Client.Network;
 using Simulant.Simulation.Runtime;
+using SimuMagic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace Simulant.Core.Party
         private readonly PluginHost _host;
         private readonly object _gate = new object();
         private object _owner;
-        private GreyMagicExternalProcessMemory _memory;
+        private ExternalProcessMemory _memory;
         private IntPtr _process, _group, _uiState;
         private UpdatePartyPacket _original, _shown;
         private SimActor[] _shownActors;
@@ -152,7 +153,7 @@ namespace Simulant.Core.Party
         private unsafe void Capture(int worldVersion)
         {
             _snapshotVersion = worldVersion;
-            _memory = NamazuInterop.Plugin?.Memory ?? throw new InvalidOperationException("无法访问游戏内存。");
+            _memory = GameInterop.Connection?.Memory ?? throw new InvalidOperationException("无法访问游戏内存。");
             _process = _memory.ProcessHandle;
             _group = GroupManager.InstancePtr;
             _uiState = UIState.InstancePtr;
@@ -512,10 +513,10 @@ namespace Simulant.Core.Party
 
         private void EnsureContext()
         {
-            var current = NamazuInterop.Plugin?.Memory;
+            var current = GameInterop.Connection?.Memory;
 
             if (_snapshotVersion != Volatile.Read(ref _worldVersion) ||
-                _memory == null || current == null || !ReferenceEquals(_memory.RawMemory, current.RawMemory) ||
+                _memory == null || current == null || !ReferenceEquals(_memory, current) ||
                 !_memory.IsProcessOpen || _process == IntPtr.Zero || current.ProcessHandle != _process || _memory.ProcessHandle != _process ||
                 _group == IntPtr.Zero || GroupManager.InstancePtr != _group || _uiState == IntPtr.Zero || UIState.InstancePtr != _uiState)
                 throw new InvalidOperationException("模拟小队所属的进程或原生结构已变化，不能写回旧快照。");

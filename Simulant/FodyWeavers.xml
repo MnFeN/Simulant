@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
+  <Costura DisableCleanup="true">
+    <ExcludeAssemblies>
+      Advanced Combat Tracker
+      FFXIV_ACT_Plugin
+      FFXIV_ACT_Plugin.Common
+      FFXIV_ACT_Plugin.Config
+      FFXIV_ACT_Plugin.Logfile
+      FFXIV_ACT_Plugin.Memory
+      FFXIV_ACT_Plugin.Network
+      FFXIV_ACT_Plugin.Parse
+      FFXIV_ACT_Plugin.Resource
+      Machina
+      Machina.FFXIV
+      Lumina.ACT.Core
+      BCnEncoder
+      CommunityToolkit.HighPerformance
+      Microsoft.Bcl.HashCode
+      Microsoft.Bcl.Numerics
+      System.Buffers
+      System.Memory
+      System.Numerics.Vectors
+      System.Runtime.CompilerServices.Unsafe
+      System.Threading.Tasks.Extensions
+    </ExcludeAssemblies>
+    <Unmanaged64Assemblies>SimuMagic</Unmanaged64Assemblies>
+  </Costura>
+</Weavers>

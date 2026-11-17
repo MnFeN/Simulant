@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.Object;
 using System;
@@ -25,7 +24,7 @@ namespace Simulant.Core.Entity
             if (GameObject.SetNameFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("玩家改名函数尚未定位，请重新初始化。");
 
-            var memory = NamazuInterop.Plugin.Memory;
+            var memory = GameInterop.Connection.Memory;
             var buffer = IntPtr.Zero;
 
             try

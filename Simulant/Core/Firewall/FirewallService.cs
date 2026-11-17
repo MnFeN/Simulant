@@ -1,6 +1,7 @@
 ﻿using Simulant.ACT;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.System.Framework;
+using SimuMagic;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +13,7 @@ namespace Simulant.Core.Firewall
     {
         private sealed class HookState
         {
-            internal GreyMagicExternalProcessMemory Memory;
+            internal ExternalProcessMemory Memory;
             internal IntPtr ProcessHandle;
             internal Process Process;
             internal IntPtr Target;
@@ -481,28 +482,28 @@ namespace Simulant.Core.Firewall
             LogSafely(() => _host.LogRuntime("发包 Hook 已关闭，恢复正常发包。"));
         }
 
-        private GreyMagicExternalProcessMemory CaptureMemory()
+        private ExternalProcessMemory CaptureMemory()
         {
-            var memory = NamazuInterop.Plugin?.Memory;
+            var memory = GameInterop.Connection?.Memory;
 
             if (memory == null || !memory.IsProcessOpen || memory.ProcessHandle == IntPtr.Zero)
                 throw new InvalidOperationException("防火墙无法访问当前游戏进程。");
 
             var existing = _receive ?? _send;
 
-            if (existing != null && (!ReferenceEquals(existing.Memory.RawMemory, memory.RawMemory) ||
+            if (existing != null && (!ReferenceEquals(existing.Memory, memory) ||
                 existing.ProcessHandle != memory.ProcessHandle))
                 throw new InvalidOperationException("防火墙仍持有另一进程的记录，请先完成旧进程清理或重置归属。");
 
             return memory;
         }
 
-        private static HookState CaptureHook(GreyMagicExternalProcessMemory memory, IntPtr processHandle, IntPtr target, int length)
+        private static HookState CaptureHook(ExternalProcessMemory memory, IntPtr processHandle, IntPtr target, int length)
         {
             if (target == IntPtr.Zero)
                 throw new InvalidOperationException("防火墙函数入口地址无效。");
 
-            if (!ReferenceEquals(memory.RawMemory, NamazuInterop.Plugin?.Memory?.RawMemory))
+            if (!ReferenceEquals(memory, GameInterop.Connection?.Memory))
                 throw new InvalidOperationException("定位防火墙入口期间内存实例已变化，本次未写入补丁。");
 
             var state = new HookState

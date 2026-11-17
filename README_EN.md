@@ -26,12 +26,7 @@ Work in progress. Collaboration is welcome.
 > [!TIP]
 > **When downloading, get the latest released `dll` from the Release section on the right. Do not download the source code from the top of the page.**
 
-- The plugin currently depends on the following ACT plugins:
-
-  - FFXIV Parsing Plugin
-  - [PostNamazu](https://github.com/Natsukage/PostNamazu) (1.3.6.7 or later)
-
-  See the [Triggernometry project README](https://github.com/MnFeN/Triggernometry/blob/new/readme.md) for PostNamazu installation and updates. PostNamazu can be loaded on its own in ACT for Simulant.
+- Requires 64-bit ACT and the FFXIV Parsing Plugin.
 
 > [!WARNING]
 > This plugin is still under active development. It is currently only a demo for testing whether this idea is feasible.

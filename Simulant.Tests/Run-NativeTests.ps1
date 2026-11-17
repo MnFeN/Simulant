@@ -1,8 +1,8 @@
 ﻿<#
 .SYNOPSIS
-构建插件，并用真实 DLL 验证本地创建清理、实体 ID 分配、插件卸载、模拟小队与技能演出。
+验证正式 DLL 加载，并用独立测试构建验证实体创建、插件卸载、小队与技能演出。
 .DESCRIPTION
-仅替换 PostNamazu 的原生读写与调用边界，不会启动或连接 ACT、游戏。
+仅在测试构建中替换游戏连接的原生读写与调用边界。测试无需启动或连接 ACT、游戏。
 各组入口分别运行，避免静态状态互相影响；任一构建、编译或验证失败均返回非零退出码。
 .PARAMETER MSBuildPath
 可选的 MSBuild.exe 路径；省略时通过 Visual Studio 的 vswhere 自动定位。
@@ -65,10 +65,22 @@ try {
     # 隔离目录只放插件本体及 ACT 已有的宿主组件，防止构建目录中的依赖掩盖单 DLL 加载失败。
     New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
     Copy-Item -LiteralPath $builtPluginPath -Destination $outputPath
-    Get-ChildItem -LiteralPath $buildOutputPath -File | Where-Object {
+    $hostAssemblies = Get-ChildItem -LiteralPath $buildOutputPath -File | Where-Object {
         $_.Name -eq 'Advanced Combat Tracker.dll' -or $_.Name -like 'FFXIV_ACT_Plugin*.dll' -or $_.Name -like 'Machina*.dll'
-    } | Copy-Item -Destination $outputPath
-    $pluginPath = Join-Path $outputPath 'Simulant.dll'
+    }
+    $hostAssemblies | Copy-Item -Destination $outputPath
+
+    Write-Host ('构建原生边界测试目标：' + $Configuration)
+    & $resolvedMSBuildPath $projectPath /nologo /verbosity:minimal "/p:Configuration=$Configuration" /p:Platform=AnyCPU /p:UseSharedCompilation=false /p:NativeTestBuild=true
+    if ($LASTEXITCODE -ne 0) { throw ('测试目标构建失败，退出码：' + $LASTEXITCODE) }
+
+    $testDllName = 'Simulant.NativeTestTarget.dll'
+    $testBuildPath = Join-Path $repositoryPath ('Simulant\bin\NativeTests\' + $Configuration)
+    $testOutputPath = Join-Path $outputPath 'fault-injection'
+    New-Item -ItemType Directory -Path $testOutputPath -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $testBuildPath $testDllName) -Destination $testOutputPath
+    $hostAssemblies | Copy-Item -Destination $testOutputPath
+
     $localTestsPath = Join-Path $PSScriptRoot 'Native\LocalCreationTests.cs'
     $idTestsPath = Join-Path $PSScriptRoot 'Native\EntityIdAllocationTests.cs'
     $unloadTestsPath = Join-Path $PSScriptRoot 'Native\PluginUnloadTests.cs'
@@ -96,16 +108,26 @@ try {
     )
 
     foreach ($entry in $entries) {
-        $executablePath = Join-Path $outputPath ('Simulant.NativeTests.' + $entry.Name + '.exe')
+        $sources = $entry.Sources
+        if ($entry.Name -in @('GameDataTests', 'ActionResourceTests', 'ExdResourceTests')) {
+            $entryOutputPath = $outputPath
+            $pluginPath = Join-Path $entryOutputPath 'Simulant.dll'
+        }
+        else {
+            $entryOutputPath = $testOutputPath
+            $pluginPath = Join-Path $entryOutputPath $testDllName
+            $sources += Join-Path $PSScriptRoot 'Native\NativeTestContext.cs'
+        }
+        $executablePath = Join-Path $entryOutputPath ('Simulant.NativeTests.' + $entry.Name + '.exe')
         $compilerArguments = @(
             '/nologo', '/utf8output', '/codepage:65001', '/langversion:7.3', '/target:exe', '/platform:x64',
             ('/main:Simulant.Tests.Native.' + $entry.Name),
             ('/out:' + $executablePath),
             ('/reference:' + $pluginPath),
-            '/reference:System.Core.dll', '/reference:Microsoft.CSharp.dll', '/reference:System.Numerics.dll',
+            '/reference:System.Core.dll', '/reference:System.Numerics.dll',
             '/reference:System.Windows.Forms.dll', '/reference:System.Drawing.dll', '/reference:System.Xml.Linq.dll',
-            ('/reference:' + (Join-Path $outputPath 'Advanced Combat Tracker.dll'))
-        ) + $entry.Sources
+            ('/reference:' + (Join-Path $entryOutputPath 'Advanced Combat Tracker.dll'))
+        ) + $sources
         Write-Host ('编译故障注入入口：' + $entry.Label)
         & $compilerPath @compilerArguments
         if ($LASTEXITCODE -ne 0) { throw ($entry.Label + '编译失败，退出码：' + $LASTEXITCODE) }
@@ -114,7 +136,7 @@ try {
         & $executablePath $GamePath
         if ($LASTEXITCODE -ne 0) { throw ($entry.Label + '验证失败，退出码：' + $LASTEXITCODE) }
     }
-    Write-Host '客户端数据、技能检索及六组真实 DLL 故障注入验证全部通过。'
+    Write-Host '正式 DLL 加载、客户端数据及原生边界故障注入验证全部通过。'
     exit 0
 }
 catch {

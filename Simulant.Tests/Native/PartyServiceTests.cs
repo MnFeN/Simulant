@@ -1,6 +1,7 @@
 namespace Simulant.Tests.Native
 {
-    using Simulant.ACT;
+    using Simulant.Game;
+    using SimuMagic;
     using Simulant.Core;
     using Simulant.Core.Entity;
     using Simulant.Game.FFCS.Client.Game;
@@ -342,13 +343,16 @@ namespace Simulant.Tests.Native
                     var packets = scene.Plugin.Packets.Count;
 
                     if (change == "进程句柄")
-                        scene.Memory.ProcessHandle = new IntPtr(202);
+                        scene.Memory.CurrentProcessHandle = new IntPtr(202);
 
                     if (change == "进程关闭")
-                        scene.Memory.IsProcessOpen = false;
+                        scene.Memory.ProcessOpen = false;
 
                     if (change == "内存实例")
+                    {
                         scene.Plugin.Memory = new PartyMemory();
+                        NativeTestContext.Use(scene.Plugin.Memory, scene.Plugin);
+                    }
 
                     if (change == "小队地址")
                         GroupManager.InstancePtr += 0x1000;
@@ -378,7 +382,7 @@ namespace Simulant.Tests.Native
             using (var invalidated = new ManualResetEventSlim())
             {
                 scene.Show();
-                var writes = scene.Memory.WriteBytesCount;
+                var writesAtDispatch = -1;
                 Exception invalidateFailure = null;
                 Thread invalidator = null;
                 var versionField = scene.Service.GetType().GetField("_worldVersion", Members);
@@ -386,6 +390,7 @@ namespace Simulant.Tests.Native
 
                 scene.Plugin.BeforeUpdateReturn = () =>
                 {
+                    writesAtDispatch = scene.Memory.WriteBytesCount;
                     invalidator = new Thread(() =>
                     {
                         try
@@ -414,7 +419,7 @@ namespace Simulant.Tests.Native
                 Throws<InvalidOperationException>(() => scene.Invoke("Restore", scene.Owner));
                 Assert(invalidated.Wait(5000) && invalidator.Join(5000) && invalidateFailure == null,
                     "恢复退出后世界失效必须完成，不能互相死锁。");
-                Assert(scene.Memory.WriteBytesCount == writes && !scene.Owned,
+                Assert(scene.Memory.WriteBytesCount == writesAtDispatch && !scene.Owned,
                     "原生收包期间已发生世界失效，返回后不能再恢复状态或仇恨快照。");
                 var packets = scene.Plugin.Packets.Count;
                 scene.Invoke("RestoreAll");
@@ -816,10 +821,7 @@ namespace Simulant.Tests.Native
             internal Scene()
             {
                 Plugin = new PartyPlugin(Memory, MainGroup);
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
-                {
-                    new NamazuPlugin(Plugin)
-                });
+                NativeTestContext.Use(Memory, Plugin);
                 GroupManager.InstancePtr = GroupAddress;
                 UIState.InstancePtr = UIAddress;
                 TargetSystem.InstancePtr = TargetAddress;
@@ -990,11 +992,13 @@ namespace Simulant.Tests.Native
     }
 
     // 按字节存储离线数据，保证同一片区域的值型读取与快照读写看到相同内容。
-    public sealed class PartyMemory
+    public sealed class PartyMemory : ExternalProcessMemory
     {
         private readonly Dictionary<long, byte> _bytes = new Dictionary<long, byte>();
-        public IntPtr ProcessHandle = new IntPtr(101);
-        public bool IsProcessOpen = true;
+        public IntPtr CurrentProcessHandle = new IntPtr(101);
+        public override IntPtr ProcessHandle => CurrentProcessHandle;
+        public bool ProcessOpen = true;
+        public override bool IsProcessOpen => ProcessOpen;
         public IntPtr ShortReadAddress;
         public IntPtr ShortWriteAddress;
         public int WriteCount;
@@ -1009,7 +1013,7 @@ namespace Simulant.Tests.Native
                 _bytes[address.ToInt64() + i] = data[i];
         }
 
-        public byte[] ReadBytes(IntPtr address, int count)
+        public override byte[] ReadBytes(IntPtr address, int count)
         {
             var data = new byte[address == ShortReadAddress ? count - 1 : count];
 
@@ -1019,8 +1023,7 @@ namespace Simulant.Tests.Native
             return data;
         }
 
-        public T Read<T>(IntPtr address)
-            where T : struct
+        public override T Read<T>(IntPtr address)
         {
             var type = typeof(T);
             var valueType = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
@@ -1063,14 +1066,13 @@ namespace Simulant.Tests.Native
             }
         }
 
-        public void Write<T>(IntPtr address, T value)
-            where T : struct
+        public override void Write<T>(IntPtr address, T value)
         {
             WriteCount++;
             Put(address, value);
         }
 
-        public int WriteBytes(IntPtr address, byte[] data)
+        public override int WriteBytes(IntPtr address, byte[] data)
         {
             WriteCount++;
             WriteBytesCount++;
@@ -1079,26 +1081,22 @@ namespace Simulant.Tests.Native
             return bytes.Length;
         }
 
-        public IntPtr AllocateMemory(int size)
+        public override IntPtr AllocateMemory(int size)
         {
             var address = new IntPtr(0x900000 + ++_allocations * 0x10000);
             Allocations.Add(address);
             return address;
         }
 
-        public bool FreeMemory(IntPtr address)
+        public override bool FreeMemory(IntPtr address)
         {
             Freed.Add(address);
             return true;
         }
     }
 
-    public sealed class PartyPlugin
+    public sealed class PartyPlugin : INativeCalls
     {
-        public string State => "Ready";
-
-        public readonly object CallScheduler = new object();
-        private readonly object PluginUi = new object();
         public static readonly IntPtr NameFunction = new IntPtr(0x101), UpdateFunction = new IntPtr(0x102),
             StatusFunction = new IntPtr(0x103), VitalsFunction = new IntPtr(0x104),
             HateFunction = new IntPtr(0x105), ControlFunction = new IntPtr(0x106);
@@ -1272,7 +1270,7 @@ namespace Simulant.Tests.Native
 
         private static void ValidateArguments(object[] args)
         {
-            // 与 PostNamazu 的调用边界一致：基础数值、指针、布尔和枚举可归一化，自定义结构体不可直接传入。
+            // 与游戏连接的调用边界一致：基础数值、指针、布尔和枚举可归一化，自定义结构体不可直接传入。
             foreach (var arg in args)
             {
                 if (arg != null && (arg.GetType().IsEnum || arg is bool || arg is UIntPtr || arg is IntPtr ||

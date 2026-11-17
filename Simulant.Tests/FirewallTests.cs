@@ -1,4 +1,5 @@
 using Simulant.ACT;
+using SimuMagic;
 using Simulant.Core;
 using Simulant.Core.Firewall;
 using Simulant.Game;
@@ -561,7 +562,7 @@ namespace Simulant.Tests
 
             using (var scene = new FirewallScene())
             {
-                GreyMagicExternalProcessMemory nextMemory = null;
+                ExternalProcessMemory nextMemory = null;
                 Framework.BeforeResolve = () => nextMemory = scene.SwitchCurrentProcess();
                 Throws<InvalidOperationException>(scene.Service.Enable);
                 Assert(scene.Memory.Writes.Count == 0 && !scene.Service.HasPendingCleanup,
@@ -574,11 +575,11 @@ namespace Simulant.Tests
         {
             using (var scene = new FirewallScene())
             {
-                GreyMagicExternalProcessMemory nextMemory = null;
+                ExternalProcessMemory nextMemory = null;
 
                 scene.Memory.AllocateResult = () =>
                 {
-                    nextMemory = new GreyMagicExternalProcessMemory
+                    nextMemory = new ExternalProcessMemory
                     {
                         ProcessHandle = new IntPtr(2)
                     };
@@ -587,7 +588,7 @@ namespace Simulant.Tests
                         0x78,
                         0x56
                     };
-                    NamazuInterop.Plugin = new NamazuPlugin
+                    GameInterop.Connection = new GameConnection
                     {
                         Memory = nextMemory
                     };
@@ -603,7 +604,7 @@ namespace Simulant.Tests
             }
         }
 
-        private static void AssertUntouched(GreyMagicExternalProcessMemory memory)
+        private static void AssertUntouched(ExternalProcessMemory memory)
             => Assert(memory != null && memory.ReadCalls == 0 && memory.Writes.Count == 0 &&
                 memory.AllocateCalls == 0 && memory.FreeAttempts.Count == 0,
                 "旧归属的清理不能读取、写入、分配或释放新进程的内存。");
@@ -682,7 +683,7 @@ namespace Simulant.Tests
                 0x24,
                 0x18
             };
-            internal readonly GreyMagicExternalProcessMemory Memory = new GreyMagicExternalProcessMemory();
+            internal readonly ExternalProcessMemory Memory = new ExternalProcessMemory();
             internal readonly PluginHost Host = new PluginHost();
             internal readonly FFXIV_ACT_Plugin.FFXIV_ACT_Plugin Parser = new FFXIV_ACT_Plugin.FFXIV_ACT_Plugin();
             internal readonly FirewallService Service;
@@ -696,7 +697,7 @@ namespace Simulant.Tests
                     0x34,
                     0x12
                 };
-                NamazuInterop.Plugin = new NamazuPlugin
+                GameInterop.Connection = new GameConnection
                 {
                     Memory = Memory
                 };
@@ -708,13 +709,13 @@ namespace Simulant.Tests
                 Service = new FirewallService(Host);
             }
 
-            internal GreyMagicExternalProcessMemory SwitchCurrentProcess()
+            internal ExternalProcessMemory SwitchCurrentProcess()
             {
-                var next = new GreyMagicExternalProcessMemory
+                var next = new ExternalProcessMemory
                 {
                     ProcessHandle = new IntPtr(2)
                 };
-                NamazuInterop.Plugin = new NamazuPlugin
+                GameInterop.Connection = new GameConnection
                 {
                     Memory = next
                 };
@@ -735,7 +736,7 @@ namespace Simulant.Tests
                 Memory.FreeResult = null;
                 Framework.BeforeResolve = null;
                 Service.ResetProcess();
-                NamazuInterop.Plugin = null;
+                GameInterop.Connection = null;
                 XivPluginInterop.plugin = null;
                 AddressStore.OnSendPacketFuncPtr = IntPtr.Zero;
                 AddressStore.HeartBeatOpcodeLocatePtr = IntPtr.Zero;

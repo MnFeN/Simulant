@@ -1,5 +1,4 @@
-﻿using Simulant.ACT;
-using System;
+﻿using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using static Simulant.Game.AddressStore;
@@ -22,8 +21,8 @@ namespace Simulant.Game
             => CheckStatusCore(callerNameAuto, ptr1, ptr2, ptr3, ptr4);
         private static void CheckStatusCore([CallerMemberName] string callerNameAuto = null, params IntPtr[] ptrs)
         {
-            if (!NamazuInterop.IsReady || NamazuInterop.Plugin?.Memory == null)
-                throw new InvalidOperationException($"{callerNameAuto} 函数执行时 NamazuInterop 未就绪。");
+            if (!GameInterop.IsReady || GameInterop.Connection?.Memory == null)
+                throw new InvalidOperationException($"{callerNameAuto} 函数执行时 GameInterop 未就绪。");
 
             if (ptrs.Any(ptr => ptr == IntPtr.Zero))
                 throw new InvalidOperationException($"{callerNameAuto} 函数执行所需的指针为空。");

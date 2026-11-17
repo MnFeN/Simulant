@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using Simulant.Game;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.System.Framework;
@@ -20,7 +19,7 @@ namespace Simulant.Core
         {
             var ui = Framework.Instance.UIModule;
             _input = ui.InputData;
-            _processId = NamazuInterop.Plugin.Memory.Process.Id;
+            _processId = GameInterop.Connection.Memory.Process.Id;
             var data = GameDataService.Instance;
             var icons = new Dictionary<uint, uint>();
             foreach (var action in Simulation.Runtime.SimEntityManager.LocalActions)

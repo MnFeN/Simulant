@@ -32,6 +32,9 @@ namespace Simulant.Tests.Native
                 var entry = plugin.GetTypes().Single(type => type.GetInterfaces().Any(i => i.FullName == "Advanced_Combat_Tracker.IActPluginV1"));
                 Check(entry.FullName == "Simulant.PluginMain" && Activator.CreateInstance(entry) != null,
                     "只提供插件 DLL 时，ACT 应能先扫描类型，再创建唯一插件入口。");
+                var memoryType = plugin.GetType("Simulant.Game.GameConnection", true).GetProperty("Memory").PropertyType;
+                Check(memoryType.FullName == "SimuMagic.ExternalProcessMemory" && memoryType.Assembly.GetName().Name == "SimuMagic",
+                    "正式插件应直接加载内嵌的 SimuMagic 类型。");
                 Check(!plugin.GetManifestResourceNames().Any(name => name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)),
                     "正式插件不应再嵌入游戏表 CSV 资源。");
                 Run(args[0]);

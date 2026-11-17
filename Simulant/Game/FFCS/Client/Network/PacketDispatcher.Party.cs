@@ -23,24 +23,7 @@ namespace Simulant.Game.FFCS.Client.Network
             if (function == IntPtr.Zero)
                 throw new InvalidOperationException("原生小队更新函数尚未定位。");
 
-            var memory = Memory;
-            var packetPtr = IntPtr.Zero;
-
-            try
-            {
-                packetPtr = memory.AllocateMemory(UpdatePartyPacket.Size);
-
-                if (packetPtr == IntPtr.Zero)
-                    throw new InvalidOperationException("无法分配小队更新包的内存。");
-
-                memory.Write(packetPtr, packet);
-                function.Call(0u, packetPtr, (byte)0);
-            }
-            finally
-            {
-                if (packetPtr != IntPtr.Zero)
-                    memory.FreeMemory(packetPtr);
-            }
+            function.Call(0u, RemoteInput.Struct(packet), (byte)0);
         }
     }
 }

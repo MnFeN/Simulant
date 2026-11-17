@@ -1,6 +1,6 @@
 namespace Simulant.Tests.Native
 {
-    using Simulant.ACT;
+    using SimuMagic;
     using Simulant.Core.Entity;
     using Simulant.Game;
     using Simulant.Game.FFCS.Client.Game.Character;
@@ -230,20 +230,17 @@ namespace Simulant.Tests.Native
         {
             internal readonly ActionEffectMemory Memory = new ActionEffectMemory();
             internal readonly ActionEffectPlugin Plugin;
-            private readonly NamazuPlugin _previousPlugin;
+            private readonly GameConnection _previousPlugin;
             private readonly IntPtr _previousFunction;
             private readonly IntPtr _previousControlFunction;
 
             internal Scene()
             {
-                _previousPlugin = NamazuInterop.Plugin;
+                _previousPlugin = GameInterop.Connection;
                 _previousFunction = ActionEffectHandler.ReceiveFuncPtr;
                 _previousControlFunction = PacketDispatcher.HandleActorControlFuncPtr;
                 Plugin = new ActionEffectPlugin(Memory);
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
-                {
-                    new NamazuPlugin(Plugin)
-                });
+                NativeTestContext.Use(Memory, Plugin);
                 ActionEffectHandler.ReceiveFuncPtr = ActionEffectPlugin.Function;
                 PacketDispatcher.HandleActorControlFuncPtr = ActionEffectPlugin.ControlFunction;
             }
@@ -252,7 +249,7 @@ namespace Simulant.Tests.Native
             {
                 ActionEffectHandler.ReceiveFuncPtr = _previousFunction;
                 PacketDispatcher.HandleActorControlFuncPtr = _previousControlFunction;
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
+                typeof(GameInterop).GetProperty("Connection").GetSetMethod(true).Invoke(null, new object[]
                 {
                     _previousPlugin
                 });
@@ -260,19 +257,18 @@ namespace Simulant.Tests.Native
         }
     }
 
-    public sealed class ActionEffectMemory
+    public sealed class ActionEffectMemory : ExternalProcessMemory
     {
         public readonly PartyMemory Bytes = new PartyMemory();
         public string Failure;
-        public T Read<T>(IntPtr address)
-            where T : struct => Bytes.Read<T>(address);
-        public IntPtr AllocateMemory(int size)
+        public override T Read<T>(IntPtr address) => Bytes.Read<T>(address);
+        public override IntPtr AllocateMemory(int size)
         {
             NativeCallsTests.Assert(size == 0x80, "单目标演出只需一个 128 字节的远程缓冲区。");
             return Failure == "分配为空" ? IntPtr.Zero : Bytes.AllocateMemory(size);
         }
 
-        public int WriteBytes(IntPtr address, byte[] data)
+        public override int WriteBytes(IntPtr address, byte[] data)
         {
             if (Failure == "清零短写")
                 Bytes.ShortWriteAddress = address;
@@ -280,8 +276,7 @@ namespace Simulant.Tests.Native
             return Bytes.WriteBytes(address, data);
         }
 
-        public void Write<T>(IntPtr address, T value)
-            where T : struct
+        public override void Write<T>(IntPtr address, T value)
         {
             if (Failure == "头部写入" && typeof(T) == typeof(ActionEffectHandler.Header))
                 throw new InvalidOperationException("模拟技能头部写入失败。");
@@ -289,15 +284,11 @@ namespace Simulant.Tests.Native
             Bytes.Write(address, value);
         }
 
-        public bool FreeMemory(IntPtr address) => Bytes.FreeMemory(address);
+        public override bool FreeMemory(IntPtr address) => Bytes.FreeMemory(address);
     }
 
-    public sealed class ActionEffectPlugin
+    public sealed class ActionEffectPlugin : INativeCalls
     {
-        public string State => "Ready";
-
-        public readonly object CallScheduler = new object();
-        private readonly object PluginUi = new object();
         public static readonly IntPtr Function = new IntPtr(0x202);
         public static readonly IntPtr ControlFunction = new IntPtr(0x203);
         public readonly ActionEffectMemory Memory;

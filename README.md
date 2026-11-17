@@ -45,12 +45,7 @@ Work in progress.
 > [!TIP]
 > **下载时请在右侧 Release 下载最新的发布版中的 dll，不要在上方下载源码。**
 
-- 目前依赖以下 ACT 插件：
-
-  - FFXIV 解析插件
-  - [PostNamazu](https://github.com/Natsukage/PostNamazu)（1.3.6.7 或以上）
-
-  PostNamazu 的安装及更新说明见 [Triggernometry 项目 README](https://github.com/MnFeN/Triggernometry/blob/new/readme.md)。Simulant 可在 ACT 中单独加载 PostNamazu 使用。
+- 需要 64 位 ACT 和 FFXIV 解析插件。
 
 - 将此插件 dll 加载至 ACT 的插件列表即可完成加载，可置于列表中比较靠后的位置。
 

@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using Simulant.Core.Entity;
 using Simulant.Game;
 using Simulant.Game.Data;
@@ -22,7 +21,7 @@ namespace Simulant.Core
         internal SimActionRecasts(Character player)
         {
             _player = player;
-            _process = NamazuInterop.Plugin.Memory.ProcessHandle;
+            _process = GameInterop.Connection.Memory.ProcessHandle;
             foreach (var action in Simulation.Runtime.SimEntityManager.LocalActions.Where(a => a == 3 || a == 7548 || a == 7559 ||
                 a == Simulation.Runtime.SimEntityManager.InvulnerabilityAction(player.Job)))
             {
@@ -45,7 +44,7 @@ namespace Simulant.Core
 
         public void Dispose()
         {
-            var memory = NamazuInterop.Plugin.Memory;
+            var memory = GameInterop.Connection.Memory;
             if (memory == null || !memory.IsProcessOpen || memory.ProcessHandle != _process || !_player.IsAlive)
                 return;
             foreach (var entry in _original)

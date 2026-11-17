@@ -1,4 +1,3 @@
-using Simulant.ACT;
 using System;
 using System.Text;
 
@@ -40,11 +39,7 @@ namespace Simulant.Game.FFCS.Client.UI
         public static IntPtr GetAddonByNameFuncPtr { get; set; }
 
         public IntPtr GetAddonByName(string name, int index)
-        {
-            var ptr = Ptr;
-            return NamazuInterop.Plugin.Memory.WithAllocatedString(name, Encoding.ASCII,
-                namePtr => GetAddonByNameFuncPtr.Call<IntPtr>(ptr.ReadPtr(0x2C0), namePtr, index));
-        }
+            => GetAddonByNameFuncPtr.Call<IntPtr>(Ptr.ReadPtr(0x2C0), RemoteInput.CString(name, Encoding.ASCII), index);
     }
 
     public struct AddonActionBar : IMemoryObject

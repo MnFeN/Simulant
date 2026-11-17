@@ -1,6 +1,7 @@
 namespace Simulant.Tests.Native
 {
-    using Simulant.ACT;
+    using Simulant.Game;
+    using SimuMagic;
     using Simulant.Core.Entity;
     using Simulant.Game.FFCS.Client.Game.Object;
     using Simulant.Simulation.Runtime;
@@ -158,20 +159,17 @@ namespace Simulant.Tests.Native
             internal readonly SimActor Player;
             internal readonly EntityRegistry Registry;
             private readonly SimScheduler _scheduler = new SimScheduler();
-            private readonly NamazuPlugin _previousPlugin;
+            private readonly GameConnection _previousPlugin;
             private readonly IntPtr _previousFunction;
             internal string Name => Encoding.UTF8.GetString(Memory.Bytes.ReadBytes(Address + 0x30, 64)).Split('\0')[0];
             internal bool Pending => (bool)typeof(SimEntityManager).GetProperty("HasPendingCleanup", Members).GetValue(Manager);
 
             internal Scene()
             {
-                _previousPlugin = NamazuInterop.Plugin;
+                _previousPlugin = GameInterop.Connection;
                 _previousFunction = GameObject.SetNameFuncPtr;
                 Plugin = new NamePlugin(Memory);
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
-                {
-                    new NamazuPlugin(Plugin)
-                });
+                NativeTestContext.Use(Memory, Plugin);
                 GameObject.SetNameFuncPtr = NamePlugin.SetFunction;
                 Memory.Bytes.Put(Address, new IntPtr(0x500000));
                 Memory.Bytes.Put(new IntPtr(0x500000 + 6 * 8), NamePlugin.GetFunction);
@@ -206,7 +204,7 @@ namespace Simulant.Tests.Native
                 _scheduler.Dispose();
                 Manager.Clear();
                 GameObject.SetNameFuncPtr = _previousFunction;
-                typeof(NamazuInterop).GetProperty("Plugin").GetSetMethod(true).Invoke(null, new object[]
+                typeof(GameInterop).GetProperty("Connection").GetSetMethod(true).Invoke(null, new object[]
                 {
                     _previousPlugin
                 });
@@ -214,20 +212,19 @@ namespace Simulant.Tests.Native
         }
     }
 
-    public sealed class NameMemory
+    public sealed class NameMemory : ExternalProcessMemory
     {
         public readonly PartyMemory Bytes = new PartyMemory();
         public string Failure;
-        public T Read<T>(IntPtr address)
-            where T : struct => Bytes.Read<T>(address);
-        public byte[] ReadBytes(IntPtr address, int count) => Bytes.ReadBytes(address, count);
-        public IntPtr AllocateMemory(int size)
+        public override T Read<T>(IntPtr address) => Bytes.Read<T>(address);
+        public override byte[] ReadBytes(IntPtr address, int count) => Bytes.ReadBytes(address, count);
+        public override IntPtr AllocateMemory(int size)
         {
             NameTests.Assert(size == 64, "原生名字缓冲区必须保留 64 字节容量。");
             return Failure == "分配为空" ? IntPtr.Zero : Bytes.AllocateMemory(size);
         }
 
-        public int WriteBytes(IntPtr address, byte[] data)
+        public override int WriteBytes(IntPtr address, byte[] data)
         {
             if (Failure == "写入不全")
                 Bytes.ShortWriteAddress = address;
@@ -235,15 +232,11 @@ namespace Simulant.Tests.Native
             return Bytes.WriteBytes(address, data);
         }
 
-        public bool FreeMemory(IntPtr address) => Bytes.FreeMemory(address);
+        public override bool FreeMemory(IntPtr address) => Bytes.FreeMemory(address);
     }
 
-    public sealed class NamePlugin
+    public sealed class NamePlugin : INativeCalls
     {
-        public string State => "Ready";
-
-        public readonly object CallScheduler = new object();
-        private readonly object PluginUi = new object();
         public static readonly IntPtr SetFunction = new IntPtr(0x302), GetFunction = new IntPtr(0x303);
         public readonly NameMemory Memory;
         public Action BeforeSet, AfterSet;
