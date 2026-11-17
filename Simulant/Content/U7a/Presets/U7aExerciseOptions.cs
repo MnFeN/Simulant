@@ -51,7 +51,7 @@ namespace Simulant.Content.U7a.Presets
                 [ExerciseTurn.Random] = "随机", [ExerciseTurn.Clockwise] = "顺时针", [ExerciseTurn.Counterclockwise] = "逆时针"
             });
 
-        internal static CheckBoxOption FastOpening() => new CheckBoxOption("FastOpening", "开场读条加速", false,
+        internal static CheckBoxOption FastOpeningOption() => new CheckBoxOption("FastOpening", "开场读条加速", false,
             "开场咏唱缩短为 1 秒，后续机制同步提前。");
     }
 }

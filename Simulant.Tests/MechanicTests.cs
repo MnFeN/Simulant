@@ -421,6 +421,7 @@ namespace Simulant.Tests
                             checks++;
                             return "缺少一人。";
                         },
+                            Visual = result => callbacks.Add("第一道激光"),
                             Failed = result => callbacks.Add("失败演出"),
                             Resolved = result => callbacks.Add("不应减层"),
                             Cleanup = context => cleanups++,
@@ -433,6 +434,7 @@ namespace Simulant.Tests
                             checks++;
                             return null;
                         },
+                            Visual = result => callbacks.Add("第二道激光"),
                             Resolved = result => callbacks.Add("不应释放后续技能"),
                             Cleanup = context => cleanups++,
                         })
@@ -446,9 +448,9 @@ namespace Simulant.Tests
                     scene.Scheduler.Dispose();
                     Assert(checks == 2 && callbacks.SequenceEqual(new[]
                     {
-                        "失败演出"
+                        "第一道激光", "第二道激光", "失败演出"
                     }),
-                        "同组应先完成全部判定，但首次失败后不得执行结果回调和后续演出。");
+                        "同组应先完成全部判定与演出，再报告失败；失败后不得执行结果回调或推进下一轮。");
                     Assert(scene.Errors.Count == 1 && scene.Errors[0].Message == "测试双人塔：缺少一人。",
                         "失败异常必须包含对应机制名和实际原因。");
                     Assert(cleanups == 0 && scene.Player.IsActive && scene.Other.IsActive && helper.IsActive &&

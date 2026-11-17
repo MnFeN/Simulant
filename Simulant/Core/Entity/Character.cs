@@ -143,6 +143,15 @@ namespace Simulant.Core.Entity
 
         public void SetMode(CharacterModes mode, byte modeParam = 0) => Native.SetMode(mode, modeParam);
         public bool HasStatus(uint statusId) => Native.HasStatus(statusId);
+
+        /// <summary>仅停止本地状态循环特效，不移除状态；回返头顶图标使用默认的主槽。</summary>
+        public void ClearStatusLoopVfx(bool secondary = false)
+        {
+            var native = Native;
+            native.Vfx.SetVfxData(secondary ? 3 : 2, IntPtr.Zero);
+            native.StatusManager.GetLoopVfxId(secondary).Set(0);
+        }
+
         public void Knockback(float angle, float distance, float duration, byte a5 = 0, int a6 = 0)
             => Native.Knockback(angle, distance, duration, a5, a6);
 

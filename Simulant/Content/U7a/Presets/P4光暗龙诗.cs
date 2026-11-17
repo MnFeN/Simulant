@@ -57,7 +57,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 [WingSide.Random] = "随机", [WingSide.Left] = "左侧刀（右侧安全）", [WingSide.Right] = "右侧刀（左侧安全）"
             }),
-            U7aExerciseOptions.FastOpening()
+            U7aExerciseOptions.FastOpeningOption()
         };
     }
 
@@ -253,11 +253,8 @@ namespace Simulant.Content.U7a.Presets
             foreach (var target in snapshot.Nearest(Center, 4))
             {
                 var heading = Heading(target.Position - Center);
-                var bait = Avoid(Roles[target.Slot] + "引导的光之波动", 40190, Center,
-                    area: ActionArea.Cone(60, 60), heading: heading);
-                // 各自以正确朝向生成辅助实体，并按回放以自身为演出目标，避免复用假人同帧转向的插值。
-                bait.Visual = _ => Dummy(new Vector3(Center, 0), heading,
-                    actor => actor.Entity.ExecuteActionEffect(40190, actor.Entity, heading));
+                var bait = Avoid(Roles[target.Slot] + "引导的光之波动", 40190, Center, target.Slot,
+                    ActionArea.Cone(60, 60), heading);
                 bait.LockedSnapshot = snapshot;
                 bait.MaxPlayers = 1;
                 bait.Check = _ => _plan.Cycle.Contains(target.Slot) ? "连线玩家不应引导光之波动。" : null;

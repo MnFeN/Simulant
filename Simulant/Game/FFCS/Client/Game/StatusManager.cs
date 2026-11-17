@@ -10,6 +10,9 @@ namespace Simulant.Game.FFCS.Client.Game
         // [FieldOffset(0x8), FixedSizeArray] internal FixedSizeArray60<Status> _status;
         public Status GetStatus(int index) => Ptr.As<Status>(0x8 + index * 0x10); // temp until we implement the array struct
 
+        /// <summary>主、副状态循环特效当前使用的 VFX 行号缓存，不是 StatusLoopVFX 行号。</summary>
+        public MemoryField<ushort> GetLoopVfxId(bool secondary = false) => Ptr.Field<ushort>(secondary ? 0x3D6 : 0x3D4);
+
         /// <summary>一次读取状态表，避免采样时反复调用游戏线程。</summary>
         public bool ReadKnockbackImmunity()
             => (ReadDefensiveStatuses() & 1) != 0;

@@ -189,12 +189,16 @@ namespace Simulant.Content.U7a.Presets
         protected SimActor Helper(int index, Vector2 position, float heading = 0)
         {
             var actor = Helpers[index];
-            actor.Entity.ActorMove(new Vector3(position, 0), heading, 0);
+            // 辅助施法者只承载瞬时特效；原生瞬移同步位置和显示朝向，不能等插值移动后再播放。
+            actor.Entity.ActorSetPos(new Vector3(position, 0), heading);
             return actor;
         }
 
         protected void PointEffect(int helper, uint action, Vector2 position, float heading = 0)
-            => Helper(helper, position, heading).Entity.ExecuteActionEffectAt(action, new Vector3(position, 0), heading);
+        {
+            var actor = Helper(helper, position, heading);
+            actor.Entity.ExecuteActionEffect(action, actor.Entity, heading);
+        }
         protected void TargetEffect(int helper, uint action, int target)
             => Helper(helper, Party[target].Pos).Entity.ExecuteActionEffect(action, Party[target].Entity);
 

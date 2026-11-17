@@ -41,6 +41,42 @@ namespace Simulant.Tests
                         }
         }
 
+        public static void RelativityLastLaserRetreatStaysBehindBothRotatingLasers()
+        {
+            var random = new Random(20261117);
+            foreach (RelativitySolution solution in Enum.GetValues(typeof(RelativitySolution)))
+                for (var north = 0; north < 8; north++)
+                    for (var sample = 0; sample < 32; sample++)
+                    {
+                        var plan = new RelativityPlan(0, RelativityDebuff.Random, solution, (ExerciseDirection)north, random);
+                        var baiters = Enumerable.Range(0, 8).Where(slot => plan.LaserWave(slot) == 2).ToArray();
+                        foreach (var slot in baiters)
+                        {
+                            var direction = plan.DirectionIndex(slot);
+                            var area = plan.LastLaserRetreat(direction);
+                            var center = area.Midpoint();
+                            Check(area.DeviationRadius == 0.5f,
+                                "最后一组沙漏内侧等待点使用半米容差。");
+                            Check(Vector2.Distance(center, RelativityPlan.Center + 7 * RelativityPlan.Direction(plan.Angle(slot))) < 0.0001,
+                                "引导后应退到自身沙漏向场中两米半的位置，不能回到场中。");
+                            Check(Vector2.Distance(plan.LaserPoint(slot), center) + area.DeviationRadius < (49.0 - 47.9) * 6,
+                                "最后一组应能在停手前以正常速度走完完整撤离距离。");
+                            for (var edge = 0; edge < 16; edge++)
+                            {
+                                var point = center + 0.5f * RelativityPlan.Direction(Deg(edge * 22.5));
+                                foreach (var caster in baiters)
+                                    for (var step = 0; step <= 9; step++)
+                                    {
+                                        var casterDirection = plan.DirectionIndex(caster);
+                                        var heading = plan.Angle(caster) + Deg(plan.Spins[casterDirection] * (step * 15 - 60));
+                                        Check(!ActionArea.Rectangle(60, 5).Contains(point, plan.Hourglass(casterDirection), (float)heading),
+                                            "沙漏内侧等待点的容差边缘应避开最后两座沙漏的全部旋转激光。");
+                                    }
+                            }
+                        }
+                    }
+        }
+
         public static void RelativityFixedRepeatedDebuffsKeepTheirPartnersUniform()
         {
             foreach (var self in new[] { 1, 5 })

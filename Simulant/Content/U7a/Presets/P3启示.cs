@@ -134,6 +134,8 @@ namespace Simulant.Content.U7a.Presets
                     if (_plan.Orders[i] != 0)
                     {
                         Status(i, 2461, _plan.Orders[i] == 1 ? 10 : _plan.Orders[i] == 2 ? 29 : 38);
+                        // 普通分摊标记出现前，无名状态持续显示延迟水的头顶提示。
+                        Status(i, 2458, _plan.Orders[i] == 1 ? 5 : _plan.Orders[i] == 2 ? 23 : 33);
                     }
                 if (_plan.IsSingleGroup)
                     for (var slot = 0; slot < 8; slot++)
@@ -143,10 +145,14 @@ namespace Simulant.Content.U7a.Presets
             for (var round = 0; round < 3; round++)
             {
                 var water = round;
-                timeline.At(new[] { 10.52, 29.52, 38.55 }[round], () =>
+                timeline.At(new[] { 10.52, 28.52, 38.55 }[round], () =>
                 {
                     for (var group = 0; group < 2; group++)
-                        Icon(_plan.Target(water, group), 184);
+                    {
+                        var target = _plan.Target(water, group);
+                        ClearStatus(target, 2458);
+                        Icon(target, 184);
+                    }
                 }, "延迟水分摊标记");
             }
             timeline.At(8.05, () => Oracle.Cast(40296, target: Oracle), "启示读条");

@@ -236,6 +236,11 @@ namespace Simulant.Content.U7a.Presets
             }, "第一次圣翼读条");
 
             timeline.At(47.375, ResolveSpiritTaker, "碎灵一击选人与跳跃判定");
+            timeline.At(47.776, () =>
+            {
+                for (var slot = 0; slot < 8; slot++)
+                    ClearStatus(slot, 2459);
+            }, "移除回返头顶计时图标");
             if (_plan.IsY)
             {
                 for (var slot = 0; slot < 8; slot++)

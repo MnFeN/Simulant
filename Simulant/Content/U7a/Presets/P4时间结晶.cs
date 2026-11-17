@@ -288,6 +288,8 @@ namespace Simulant.Content.U7a.Presets
                 Status(slot, CrystallizeTimePlan.Status(debuff), debuff == CrystalDebuff.BlueWater ? 12 : debuff == CrystalDebuff.BlueEarth ? 17 : 14);
                 Status(slot, _plan.IsRed(slot) ? (ushort)3263 : (ushort)3264, debuff == CrystalDebuff.RedIce ? 17 : 40);
                 Status(slot, 4208, 33);
+                // 头顶计时图标由无名状态独立控制，持续到碎灵一击之后。
+                Status(slot, 2459, 37);
             }
 
             foreach (var slot in Enumerable.Range(0, 8).OrderBy(_ => _random.Next()).Take(3))
