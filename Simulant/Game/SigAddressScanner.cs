@@ -5,8 +5,11 @@ using System.Reflection;
 
 namespace Simulant.Game
 {
+    /// <summary>收集 <see cref="SigPatternAttribute"/> 声明的签名，并将解析出的地址写入对应的静态属性。</summary>
     internal static class SigAddressScanner
     {
+        private static readonly Lazy<PropertyInfo[]> SigPatternProperties = new Lazy<PropertyInfo[]>(DiscoverSigPatternProperties);
+
         /// <summary>清除缓存地址，解析标有 <see cref="SigPatternAttribute"/> 的属性，并报告失败项。</summary>
         public static Dictionary<string, string> Scan()
         {
@@ -71,14 +74,24 @@ namespace Simulant.Game
             throw new InvalidOperationException("属性不是 IntPtr 或指针类型：" + GetPropKey(ptrProp));
         }
 
-        public static IEnumerable<PropertyInfo> GetSigPatternProperties()
+        public static IEnumerable<PropertyInfo> GetSigPatternProperties() => SigPatternProperties.Value;
+
+        /// <summary>枚举地址属性声明的全部备选签名，供建立游戏连接时批量扫描。</summary>
+        internal static IEnumerable<string> GetSignatures()
+            => GetSigPatternProperties().SelectMany(GetSignatures);
+
+        private static string[] GetSignatures(PropertyInfo property)
+            => property.GetCustomAttribute<SigPatternAttribute>().Signatures ?? Array.Empty<string>();
+
+        private static PropertyInfo[] DiscoverSigPatternProperties()
         {
             return typeof(SigAddressScanner).Assembly.GetTypes()
                 .Where(t => t.Namespace != null && t.Namespace.StartsWith("Simulant.Game", StringComparison.Ordinal))
                 .SelectMany(t => t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
                 .Where(p =>
                     p.GetCustomAttribute<SigPatternAttribute>() != null &&
-                    (p.PropertyType == typeof(IntPtr) || p.PropertyType.IsPointer));
+                    (p.PropertyType == typeof(IntPtr) || p.PropertyType.IsPointer))
+                .ToArray();
         }
 
         public static string GetPropKey(PropertyInfo ptrProp)
@@ -93,9 +106,9 @@ namespace Simulant.Game
                 if (GetValue(ptrProp) != IntPtr.Zero)
                     continue;
 
-                var sigs = ptrProp.GetCustomAttribute<SigPatternAttribute>().Signatures;
+                var sigs = GetSignatures(ptrProp);
 
-                if (sigs == null || sigs.Length == 0)
+                if (sigs.Length == 0)
                     continue;
 
                 var key = GetPropKey(ptrProp);

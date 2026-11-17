@@ -27,7 +27,10 @@ namespace Simulant.Game
                 memory.IsProcessOpen && !connectedProcess.HasExited;
         }
 
-        /// <summary>连接指定的游戏进程。新建连接时返回 true，复用已有连接时返回 false。</summary>
+        /// <summary>
+        /// 连接指定的游戏进程，批量扫描地址签名并定位原生调用入口。<br />
+        /// 新建连接时返回 true，复用已有连接时返回 false。
+        /// </summary>
         internal static bool Connect(Process process, Action<string> logWarning)
         {
             if (IsConnectedTo(process))
@@ -35,6 +38,7 @@ namespace Simulant.Game
 
             Disconnect();
             var scanner = GameImageScanner.Open(process);
+            scanner.PreparePatterns(SigAddressScanner.GetSignatures());
             var entry = scanner.FindFrameEntry(out var original);
             if (RestoreFrameEntry(process, entry, original))
                 logWarning("检测到疑似 ACT 异常退出留下的内存跳转，已自动恢复框架 UI 更新入口的原始指令。");

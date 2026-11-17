@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -32,6 +33,7 @@ namespace Simulant.Game
         private readonly IntPtr _imageBase;
         private readonly byte[] _text;
         private readonly int _textRva;
+        private Dictionary<string, ScanPattern> _preparedPatterns;
 
         private GameImageScanner(string imagePath, IntPtr imageBase)
         {
@@ -39,6 +41,7 @@ namespace Simulant.Game
             _text = ReadText(imagePath, out _textRva);
         }
 
+        /// <summary>从目标进程的主模块定位磁盘 EXE，读取其 .text 并记录运行时模块基址。</summary>
         internal static GameImageScanner Open(Process process)
         {
             var module = process.MainModule;
@@ -73,45 +76,204 @@ namespace Simulant.Game
             return IntPtr.Zero;
         }
 
-        private static byte ParseByte(string value) => byte.Parse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        /// <summary>
+        /// 按抽样选出的稀有字节对建立候选索引，再完整遍历一次 .text。<br />
+        /// 缓存游戏入口和地址属性签名的匹配位置及唯一性，供后续查址使用。
+        /// </summary>
+        internal void PreparePatterns(IEnumerable<string> patterns)
+        {
+            var prepared = new Dictionary<string, ScanPattern>(StringComparer.Ordinal);
+            var candidatesByPair = new List<ScanPattern>[1 << 16];
+            var pairFrequencies = SamplePairFrequencies();
+            foreach (var pattern in patterns.Append(GameEntryReference).Distinct(StringComparer.Ordinal))
+            {
+                if (pattern == null)
+                    continue;
+
+                ScanPattern parsed;
+                try
+                {
+                    parsed = new ScanPattern(pattern);
+                }
+                catch (Exception ex) when (ex is FormatException || ex is OverflowException)
+                {
+                    // 无效的备选签名仍在实际用到时才报错。
+                    continue;
+                }
+
+                if (parsed.FirstLiteral > _text.Length)
+                    continue;
+
+                prepared.Add(pattern, parsed);
+                var pair = parsed.SelectPairAnchor(pairFrequencies);
+                if (pair >= 0)
+                {
+                    AddCandidate(candidatesByPair, pair, parsed);
+                    continue;
+                }
+
+                // 没有连续固定字节时，只限定第一个字节，下一字节取任意值。
+                for (var key = parsed.Bytes[parsed.AnchorOffset]; key < candidatesByPair.Length; key += 1 << 8)
+                    AddCandidate(candidatesByPair, key, parsed);
+            }
+
+            var last = _text.Length - 1;
+            for (var index = 0; index < last; index++)
+            {
+                var candidates = candidatesByPair[_text[index] | (_text[index + 1] << 8)];
+                if (candidates != null)
+                    CheckCandidates(candidates, index);
+            }
+
+            // 末尾用零补位查表，要求两个实际字节的锚点会在签名长度检查时被排除。
+            if (last >= 0 && candidatesByPair[_text[last]] is List<ScanPattern> lastCandidates)
+                CheckCandidates(lastCandidates, last);
+
+            _preparedPatterns = prepared;
+        }
+
+        /// <summary>按固定间隔抽样 .text，统计相邻字节对的频率，供选择较少出现的锚点使用。</summary>
+        private int[] SamplePairFrequencies()
+        {
+            const int sampleStride = 4096;
+            const int sampleLength = 64;
+            var frequencies = new int[1 << 16];
+            var last = _text.Length - 1;
+            for (var start = 0; start < last; start += sampleStride)
+            {
+                var end = Math.Min(start + sampleLength, last);
+                for (var index = start; index < end; index++)
+                    frequencies[_text[index] | (_text[index + 1] << 8)]++;
+            }
+
+            return frequencies;
+        }
+
+        private static void AddCandidate(List<ScanPattern>[] buckets, int key, ScanPattern pattern)
+        {
+            var bucket = buckets[key] ?? (buckets[key] = new List<ScanPattern>());
+            bucket.Add(pattern);
+        }
+
+        /// <summary>从锚点位置反推签名起点，逐字节验证候选并记录首次命中和重复命中。</summary>
+        private void CheckCandidates(List<ScanPattern> candidates, int index)
+        {
+            foreach (var candidate in candidates)
+            {
+                var start = index - candidate.AnchorOffset;
+                if (candidate.HasMultipleMatches || start < 0 || start > _text.Length - candidate.Bytes.Length ||
+                    !Matches(candidate, start))
+                    continue;
+
+                if (candidate.FirstMatch < 0)
+                    candidate.FirstMatch = start;
+                else
+                    candidate.HasMultipleMatches = true;
+            }
+        }
+
+        private bool Matches(ScanPattern pattern, int start)
+        {
+            var bytes = pattern.Bytes;
+            for (var index = 0; index < bytes.Length; index++)
+            {
+                if (bytes[index] >= 0 && bytes[index] != _text[start + index])
+                    return false;
+            }
+
+            return true;
+        }
 
         private int? FindRva(string pattern)
         {
-            // ? 只忽略匹配字节。连续的 * 也参与通配，并将其中的 rel32 按下一条指令地址解析。
-            var parts = pattern.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            var bytes = parts.Select(part => part == "*" || part == "**" ? -2 :
-                part == "?" || part == "??" ? -1 : ParseByte(part)).ToArray();
-            var firstLiteral = Array.FindIndex(bytes, value => value >= 0);
-            if (firstLiteral < 0)
-                throw new FormatException($"无效的地址签名 {pattern}。");
+            if (_preparedPatterns != null && pattern != null && _preparedPatterns.TryGetValue(pattern, out var prepared))
+            {
+                if (prepared.FirstMatch < 0)
+                    return null;
 
-            var relative = Array.IndexOf(bytes, -2);
-            var next = Array.LastIndexOf(bytes, -2) + 1;
-            if (relative >= 0 && (next - relative < 4 || bytes.Skip(relative).Take(next - relative).Any(value => value != -2)))
-                throw new FormatException($"无效的相对地址签名 {pattern}。");
+                var rva = ResolveRva(prepared, prepared.FirstMatch);
+                return prepared.HasMultipleMatches ? (int?)null : rva;
+            }
 
-            var literal = (byte)bytes[firstLiteral];
+            var parsed = new ScanPattern(pattern);
+            var literal = (byte)parsed.Bytes[parsed.FirstLiteral];
             int? result = null;
-
-            for (var match = Array.IndexOf(_text, literal, firstLiteral);
-                match >= 0 && match - firstLiteral <= _text.Length - bytes.Length;
+            for (var match = Array.IndexOf(_text, literal, parsed.FirstLiteral);
+                match >= 0 && match - parsed.FirstLiteral <= _text.Length - parsed.Bytes.Length;
                 match = Array.IndexOf(_text, literal, match + 1))
             {
-                var start = match - firstLiteral;
-                var i = 0;
-                while (i < bytes.Length && (bytes[i] < 0 || bytes[i] == _text[start + i]))
-                    i++;
-
-                if (i != bytes.Length)
+                var start = match - parsed.FirstLiteral;
+                if (!Matches(parsed, start))
                     continue;
                 if (result.HasValue)
                     return null;
 
-                result = checked(_textRva + start +
-                    (relative < 0 ? 0 : next + BitConverter.ToInt32(_text, start + relative)));
+                result = ResolveRva(parsed, start);
             }
 
             return result;
+        }
+
+        /// <summary>将 .text 内的命中偏移转换为模块相对虚拟地址。签名含 * 时解析其标记的 rel32 目标。</summary>
+        private int ResolveRva(ScanPattern pattern, int start)
+            => checked(_textRva + start + (pattern.RelativeOffset < 0 ? 0 :
+                pattern.RelativeEnd + BitConverter.ToInt32(_text, start + pattern.RelativeOffset)));
+
+        /// <summary>保存解析出的签名字节、相对位移位置、候选锚点和命中状态。</summary>
+        private sealed class ScanPattern
+        {
+            internal readonly int[] Bytes;
+            internal readonly int FirstLiteral;
+            internal readonly int RelativeOffset;
+            internal readonly int RelativeEnd;
+            internal int AnchorOffset;
+            internal int FirstMatch = -1;
+            internal bool HasMultipleMatches;
+
+            internal ScanPattern(string pattern)
+            {
+                // ? 仅通配，连续的 * 同时标记需要解析的 rel32。
+                var parts = pattern.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                Bytes = parts.Select(part => part == "*" || part == "**" ? -2 :
+                    part == "?" || part == "??" ? -1 : byte.Parse(part, NumberStyles.HexNumber, CultureInfo.InvariantCulture)).ToArray();
+                FirstLiteral = Array.FindIndex(Bytes, value => value >= 0);
+                if (FirstLiteral < 0)
+                    throw new FormatException($"无效的地址签名 {pattern}。");
+
+                RelativeOffset = Array.IndexOf(Bytes, -2);
+                RelativeEnd = Array.LastIndexOf(Bytes, -2) + 1;
+                if (RelativeOffset >= 0 && (RelativeEnd - RelativeOffset < 4 ||
+                    Bytes.Skip(RelativeOffset).Take(RelativeEnd - RelativeOffset).Any(value => value != -2)))
+                    throw new FormatException($"无效的相对地址签名 {pattern}。");
+            }
+
+            /// <summary>
+            /// 选取抽样中出现次数最少的相邻固定字节对，并保存它在签名中的偏移。<br />
+            /// 没有相邻固定字节时，保留首个固定字节作为锚点并返回 -1。
+            /// </summary>
+            internal int SelectPairAnchor(int[] frequencies)
+            {
+                AnchorOffset = FirstLiteral;
+                var bestPair = -1;
+                var bestFrequency = int.MaxValue;
+                for (var index = FirstLiteral; index < Bytes.Length - 1; index++)
+                {
+                    if (Bytes[index] < 0 || Bytes[index + 1] < 0)
+                        continue;
+
+                    var pair = Bytes[index] | (Bytes[index + 1] << 8);
+                    if (frequencies[pair] >= bestFrequency)
+                        continue;
+
+                    AnchorOffset = index;
+                    bestPair = pair;
+                    bestFrequency = frequencies[pair];
+                    if (bestFrequency == 0)
+                        break;
+                }
+
+                return bestPair;
+            }
         }
 
         private static byte[] ReadText(string path, out int rva)
