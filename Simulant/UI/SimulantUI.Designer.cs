@@ -126,7 +126,7 @@
             this.btnInitPlugin.Size = new System.Drawing.Size(140, 42);
             this.btnInitPlugin.TabIndex = 0;
             this.btnInitPlugin.TabStop = false;
-            this.btnInitPlugin.Text = "初始化插件";
+            this.btnInitPlugin.Text = "重试连接";
             this.btnInitPlugin.UseVisualStyleBackColor = true;
             this.btnInitPlugin.Click += new System.EventHandler(this.btnInitPlugin_Click);
             //

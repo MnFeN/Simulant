@@ -27,28 +27,18 @@ namespace Simulant.Game
                 memory.IsProcessOpen && !connectedProcess.HasExited;
         }
 
-        /// <summary>
-        /// 连接指定的游戏进程，批量扫描地址签名并定位原生调用入口。<br />
-        /// 新建连接时返回 true，复用已有连接时返回 false。
-        /// </summary>
-        internal static bool Connect(Process process, Action<string> logWarning)
+        /// <summary>用预扫结果连接游戏进程，并在建立原生调用前校验运行中的入口。</summary>
+        internal static void Connect(Process process, IntPtr imageBase, GameImageScan image, Action<string> logWarning)
         {
-            if (IsConnectedTo(process))
-                return false;
-
-            Disconnect();
-            var scanner = GameImageScanner.Open(process);
-            scanner.PreparePatterns(SigAddressScanner.GetSignatures());
-            var entry = scanner.FindFrameEntry(out var original);
-            if (RestoreFrameEntry(process, entry, original))
+            var entry = imageBase + image.EntryRva;
+            if (RestoreFrameEntry(process, entry, image.EntryBytes))
                 logWarning("检测到疑似 ACT 异常退出留下的内存跳转，已自动恢复框架 UI 更新入口的原始指令。");
 
             // SimuMagic 使用已校验的 Framework UI 更新回调作为原生调用执行入口。
             var native = new ExternalProcessMemory(process, true, false, entry, false, GameImageScanner.FrameEntryCopyBytes, true);
             try
             {
-                Connection = new GameConnection(native, scanner);
-                return true;
+                Connection = new GameConnection(native);
             }
             catch
             {
@@ -101,6 +91,7 @@ namespace Simulant.Game
         {
             Connection?.Dispose();
             Connection = null;
+            SigAddressScanner.Clear();
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]

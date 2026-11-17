@@ -36,7 +36,7 @@ Work in progress. Collaboration is welcome.
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/b2fde36d-dde1-47d1-9f7c-857ea61c9b9f" />
 
-- After the plugin is loaded and while the game is running, click "Initialize Plugin".
+- Simulant prepares the configured game files at startup and connects automatically when the FFXIV ACT Plugin selects a game process. Use “Retry Connection” if the connection fails.
 
 > [!WARNING]
 > This plugin has compatibility issues with some Dalamud plugins.

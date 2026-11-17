@@ -40,7 +40,7 @@ namespace Simulant.Tests
             });
         }
 
-        public static void GamePathUsesConfigurationAndRejectsDifferentClientInstallations()
+        public static void GamePathUsesConfigurationForOfflinePreparation()
         {
             WithPath(path =>
             {
@@ -49,28 +49,13 @@ namespace Simulant.Tests
                 var executable = Path.Combine(directory, "ffxiv_dx11.exe");
                 File.WriteAllText(executable, string.Empty);
 
-                Assert(FfxivInstallation.Resolve(executable, () =>
-                {
-                    throw new Exception("已配置时不能枚举进程。");
-                }) == executable,
-                    "已配置时即使游戏未运行也应使用指定路径。");
-
-                Assert(FfxivInstallation.Resolve("", () => new string[0]) == null, "没有进程时应返回未找到。");
-                Assert(FfxivInstallation.Resolve("", () => new[]
-                {
-                    executable, executable.ToUpperInvariant()
-                }) == executable,
-                    "相同安装目录多开应视为一个客户端。");
-                Reject(() => FfxivInstallation.Resolve("", () => new[]
-                {
-                    executable, Path.Combine(directory, "另一个客户端", "ffxiv_dx11.exe")
-                }));
+                Assert(FfxivInstallation.Resolve(" " + executable + " ") == executable,
+                    "即使游戏未运行也应使用指定路径。");
+                Assert(FfxivInstallation.Resolve("") == null, "未配置时等待解析插件提供客户端路径。");
+                File.WriteAllText(path, string.Empty);
+                Reject(() => FfxivInstallation.Resolve(path));
                 File.Delete(executable);
-
-                Reject(() => FfxivInstallation.Resolve(executable, () =>
-                {
-                    throw new Exception("无效配置不能退回自动检测。");
-                }));
+                Reject(() => FfxivInstallation.Resolve(executable));
             });
         }
 

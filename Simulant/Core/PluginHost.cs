@@ -37,6 +37,9 @@ namespace Simulant.Core
         private readonly object _initLock = new object();
         private readonly object _subscriptionGate = new object();
         private readonly object _disposeGate = new object();
+        private readonly SemaphoreSlim _processRefresh = new SemaphoreSlim(0, 1);
+        private bool _retryConnection;
+        private bool _disconnectPending;
         private FFXIV_ACT_Plugin.FFXIV_ACT_Plugin _subscribedXivPlugin;
         private bool _subscriptionsStopped;
         private bool _disposing;
@@ -51,27 +54,26 @@ namespace Simulant.Core
         internal bool GameDataLoading { get; private set; }
 
         private GameDataService _gameData;
-        private Task _gameDataLoadTask = Task.CompletedTask;
-        private int _gameDataGeneration;
-        private int _gameDataLoadGeneration;
+        private GameImageFile? _gameDataFile;
+        private GameImageScan _gameImage;
         internal bool PluginReady { get; private set; }
         internal bool IsInitializing { get; private set; }
         internal bool FirewallEnabled => FirewallService != null && FirewallService.IsEnabled;
         internal bool IsSwitchingTerritory => _ui?.IsSwitchingTerritory == true;
-        internal bool IsGameForeground => Utils.WindowFocus.IsProcessForeground(_entityProcessId ?? 0);
+        internal bool IsGameForeground => Utils.WindowFocus.IsProcessForeground(_entityProcess?.Id ?? 0);
         internal bool CanRunDebug => PluginReady && !IsInitializing && !Disposed && !IsSwitchingTerritory
             && (FirewallEnabled || Configuration.DeveloperMode);
 
         internal void EnsureDebugAllowed()
         {
             if (!CanRunDebug)
-                throw new InvalidOperationException("请先初始化插件并等待区域切换完成；未开启开发者模式时，调试操作必须启用防火墙。");
+                throw new InvalidOperationException("请等待插件连接游戏并完成区域切换；未开启开发者模式时，调试操作必须启用防火墙。");
         }
 
         internal void EnsureFirewallAllowed()
         {
             if (!PluginReady || IsInitializing || Disposed || IsSwitchingTerritory)
-                throw new InvalidOperationException("请先初始化插件并等待区域切换完成，再启用防火墙。");
+                throw new InvalidOperationException("请等待插件连接游戏并完成区域切换，再启用防火墙。");
 
             if (Configuration.DeveloperMode)
                 return;
@@ -102,8 +104,7 @@ namespace Simulant.Core
         private bool _debugStopping;
         private int _debugStoppingThreadId;
         private SimScheduler _stoppingDebugScheduler;
-        private int? _entityProcessId;
-        private int _entityProcessGeneration;
+        private (int Id, DateTime Started)? _entityProcess;
         private uint? _entityZoneId;
         private int _worldGeneration;
         internal int WorldGeneration => Volatile.Read(ref _worldGeneration);
@@ -347,129 +348,82 @@ namespace Simulant.Core
             Commands.Received += PlayerActions.Receive;
             Commands.Received += _ui.ReceiveSimulationCommand;
 
-            Attach();
+            _statusLabel.Text = "仿生石已启动，等待 FFXIV 解析插件绑定游戏。";
 
-            _statusLabel.Text = "仿生石已启动。";
-
-            _ = LoadGameDataAsync();
+            _ = WatchGameProcessAsync();
             _ = Updater.CheckAsync();
         }
 
-        internal async Task LoadGameDataAsync()
+        private async Task<GameImageScan> PrepareGameAsync(string path, Func<bool> isCurrent)
         {
-            while (true)
-            {
-                Task task;
-                int generation;
-
-                lock (_initLock)
-                {
-                    if (Disposed)
-                        return;
-
-                    if (!GameDataLoading)
-                    {
-                        GameDataLoading = true;
-                        GameDataReady = false;
-                        _gameDataLoadGeneration = _gameDataGeneration;
-                        _gameDataLoadTask = LoadGameDataCoreAsync(Configuration.FfxivPath, _gameDataLoadGeneration);
-                    }
-
-                    task = _gameDataLoadTask;
-                    generation = _gameDataLoadGeneration;
-                }
-
-                await task;
-
-                lock (_initLock)
-                    if (Disposed || generation == _gameDataGeneration)
-                        return;
-                // 读取期间用户修改了路径，完成旧任务后按最新配置重试。
-            }
+            var file = new GameImageFile(path);
+            var scan = PrepareGameImageAsync(file);
+            await Task.WhenAll(scan, LoadGameDataAsync(file, isCurrent));
+            return scan.Result;
         }
 
-        private async Task LoadGameDataCoreAsync(string configuredPath, int generation)
+        private async Task<GameImageScan> PrepareGameImageAsync(GameImageFile file)
         {
-            // 先让调用方登记任务，避免同步失败时留下错误的加载状态。
-            await Task.Yield();
+            if (_gameImage?.File.Matches(file) == true)
+                return _gameImage;
+
+            LogRuntime("正在扫描游戏 EXE：" + file.Path);
+            var image = await Task.Run(() => GameImageScanner.Scan(file));
+            if (Disposed)
+                return image;
+
+            _gameImage = image;
+            foreach (var address in image.Addresses.Where(address => !address.Value.HasValue))
+                LogError("地址扫描失败：" + SigAddressScanner.GetPropKey(address.Key));
+
+            LogRuntime($"EXE 扫描完成，定位地址 {image.Addresses.Count(address => address.Value.HasValue)} / {image.Addresses.Count}。");
+            return image;
+        }
+
+        private async Task LoadGameDataAsync(GameImageFile file, Func<bool> isCurrent)
+        {
             GameDataService candidate = null;
 
             try
             {
-                _ui?.UpdateControlStates();
-                var path = await Task.Run(() => FfxivInstallation.Resolve(configuredPath));
-
-                lock (_initLock)
+                if (_gameDataFile?.Matches(file) == true)
                 {
-                    if (Disposed || generation != _gameDataGeneration)
-                        return;
-
-                    if (path == null)
-                    {
-                        LogWarning("尚未设置过 ffxiv_dx11.exe 文件路径，请开启游戏后重新初始化，或在配置菜单中手动设置。");
-                        return;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(configuredPath))
-                    {
-                        var snapshot = Configuration.Copy();
-                        snapshot.FfxivPath = path;
-                        snapshot.Save(ConfigurationPath);
-                        Configuration = snapshot;
-                        LogRuntime("已自动检测游戏路径：" + path);
-                    }
-                }
-
-                var sqpack = GameDataService.ResolveSqPackPath(path);
-
-                if (_gameData != null && string.Equals(_gameData.SqPackPath, sqpack, StringComparison.OrdinalIgnoreCase))
-                {
-                    lock (_initLock)
-                    {
-                        if (Disposed || generation != _gameDataGeneration)
-                            return;
-
+                    if (isCurrent())
                         GameDataReady = true;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(configuredPath))
-                        LogRuntime("已从配置读取游戏路径：" + path);
-
                     return;
                 }
 
+                GameDataLoading = true;
+                _ui?.UpdateControlStates();
                 LogRuntime("正在读取游戏客户端数据……");
-                candidate = await Task.Run(() => new GameDataService(path));
+                candidate = await Task.Run(() => new GameDataService(file.Path));
 
                 lock (_initLock)
                 {
-                    if (Disposed || generation != _gameDataGeneration)
+                    if (!isCurrent())
                         return;
 
                     candidate.Activate();
                     _gameData = candidate;
+                    _gameDataFile = file;
                     candidate = null;
                     GameDataReady = true;
                 }
 
-                if (!string.IsNullOrWhiteSpace(configuredPath))
-                    LogRuntime("已从配置读取游戏路径：" + path);
-
-                LogRuntime("游戏数据加载完成（Lumina.ACT，当前客户端）。");
-                LogRuntime("如需启用模拟，请先在左侧初始化插件，然后启用防火墙。");
+                LogRuntime("游戏数据加载完成（Lumina.ACT）。");
             }
-            catch (Exception ex)
+            catch (Exception error)
             {
-                if (!Disposed && generation == _gameDataGeneration)
-                    LogError("游戏数据加载失败：" + ex.Message);
+                if (isCurrent())
+                {
+                    GameDataReady = false;
+                    LogError("游戏数据加载失败：" + error.Message);
+                }
             }
             finally
             {
                 candidate?.Dispose();
-
-                lock (_initLock)
-                    GameDataLoading = false;
-
+                GameDataLoading = false;
                 if (!Disposed)
                     _ui?.UpdateControlStates();
             }
@@ -489,9 +443,6 @@ namespace Simulant.Core
                 snapshot.QuickControlsLocation = Configuration.QuickControlsLocation;
                 snapshot.Save(ConfigurationPath);
 
-                if (!string.Equals(Configuration.FfxivPath, snapshot.FfxivPath, StringComparison.OrdinalIgnoreCase))
-                    _gameDataGeneration++;
-
                 Configuration = snapshot;
             }
 
@@ -508,7 +459,8 @@ namespace Simulant.Core
             }
 
             _ui?.UpdateControlStates();
-            LogRuntime("全局配置已保存；游戏路径在下次初始化时读取，模拟队员设置从下一次模拟开始生效。");
+            SignalProcessRefresh();
+            LogRuntime("全局配置已保存。未连接时使用配置的游戏路径，模拟队员设置从下一次模拟开始生效。");
         }
 
         internal void SaveQuickControlsLocation(System.Drawing.Point location)
@@ -549,127 +501,124 @@ namespace Simulant.Core
             }
         }
 
-        internal async Task InitAsync()
+        internal void RetryGameConnection()
         {
-            int processGeneration;
+            _retryConnection = true;
+            SignalProcessRefresh();
+        }
 
-            lock (_initLock)
+        /// <summary>用解析插件当前绑定的进程校验预扫结果，并在连接就绪后开放操作。</summary>
+        private async Task<bool> ConnectGameProcessAsync(Process process, (int Id, DateTime Started) identity)
+        {
+            bool IsCurrent()
             {
                 if (Disposed)
-                {
-                    LogWarning("插件正在卸载，不能重新初始化；请先重试完成卸载。");
-                    return;
-                }
+                    return false;
 
-                if (IsInitializing)
-                {
-                    LogWarning("插件正在初始化，跳过重复请求。");
-                    return;
-                }
-
-                if (FirewallService.HasPendingCleanup)
-                {
-                    LogWarning("防火墙尚未完全关闭，请先关闭防火墙并完成清理，再重新初始化插件。");
-                    return;
-                }
-
-                IsInitializing = true;
-                PluginReady = false;
-                processGeneration = _entityProcessGeneration;
+                RefreshXivPlugin();
+                return GetProcessIdentity(ReadGameProcess()) == identity;
             }
 
+            IsInitializing = true;
             _ui?.UpdateControlStates();
 
             try
             {
-                lock (_subscriptionGate)
-                    Commands.Stop();
+                if (!System.Environment.Is64BitProcess)
+                    throw new InvalidOperationException("模拟器需要 64 位 ACT。");
 
-                ZoneService.CancelPendingPhase();
-                PrepareEntityWorldChange();
-                await LoadGameDataAsync();
-
-                if (!GameDataReady)
-                    return;
-
-                LogRuntime("正在连接游戏进程并扫描地址……");
-                var scanResult = await Task.Run(() =>
-                {
-                    lock (_initLock)
-                    {
-                        EnsureInitProcess(processGeneration);
-                        var process = XivPluginInterop.plugin?.DataRepository.GetCurrentFFXIVProcess();
-                        if (FirewallService?.HasPendingCleanup == true && !GameInterop.IsConnectedTo(process))
-                            FirewallService.ResetProcess();
-
-                        if (!System.Environment.Is64BitProcess)
-                            throw new InvalidOperationException("模拟器需要 64 位 ACT。");
-                        if (process == null || process.HasExited)
-                            throw new InvalidOperationException("FFXIV 解析插件尚未识别游戏进程。");
-
-                        var openedConnection = GameInterop.Connect(process, LogWarning);
-                        try
-                        {
-                            return SigAddressScanner.Scan();
-                        }
-                        catch
-                        {
-                            if (openedConnection)
-                                GameInterop.Disconnect();
-                            throw;
-                        }
-                    }
-                });
-
-                var errorLines = scanResult
-                    .Where(x => !string.IsNullOrEmpty(x.Value))
-                    .Select(x => $"{x.Key}: {x.Value}")
-                    .ToList();
-
-                foreach (var line in errorLines)
-                {
-                    LogError("地址扫描失败：" + line);
-                }
-
-                LogRuntime($"地址扫描完成，成功：{scanResult.Count - errorLines.Count} / {scanResult.Count}");
+                var module = process.MainModule;
+                var path = module.FileName;
+                var image = await PrepareGameAsync(path, IsCurrent);
 
                 lock (_initLock)
                 {
-                    EnsureInitProcess(processGeneration);
+                    if (!IsCurrent())
+                        return false;
 
-                    EntitySpawner.ResumeWorld();
+                    if (!GameDataReady)
+                        return true;
+
+                    if (!image.File.Matches(new GameImageFile(path)))
+                        return false;
+
+                    PluginReady = false;
                     lock (_subscriptionGate)
-                        Commands.Start(ActGlobals.oFormActMain);
+                        Commands.Stop();
 
-                    PluginReady = true;
+                    ZoneService.CancelPendingPhase();
+                    if (GameInterop.IsConnectedTo(process))
+                        PrepareEntityWorldChange();
+
+                    GameInterop.Disconnect();
+
+                    // EXE 扫描和旧会话清理期间解析插件都可能切换进程。
+                    if (!IsCurrent())
+                        return false;
+
+                    try
+                    {
+                        GameInterop.Connect(process, module.BaseAddress, image, LogWarning);
+                        SigAddressScanner.Bind(image, module.BaseAddress);
+
+                        if (!IsCurrent())
+                        {
+                            GameInterop.Disconnect();
+                            return false;
+                        }
+
+                        EntitySpawner.ResumeWorld();
+                        lock (_subscriptionGate)
+                            Commands.Start(ActGlobals.oFormActMain);
+                        PluginReady = true;
+                    }
+                    catch
+                    {
+                        GameInterop.Disconnect();
+                        throw;
+                    }
+
+                    RememberGamePath(path);
                 }
 
-                LogRuntime("已订阅 ACT 解析日志，监听 sim 默语命令。");
-                LogRuntime("插件初始化完成。");
+                LogRuntime($"已连接 FFXIV 进程（PID {identity.Id}），开始监听 sim 默语命令。");
+                _statusLabel.Text = "仿生石已连接游戏。";
+                return true;
             }
-            catch (Exception ex)
+            catch (Exception error)
             {
-                PluginReady = false;
-                lock (_subscriptionGate)
-                    Commands.Stop();
+                if (!IsCurrent())
+                    return false;
 
-                LogError("初始化插件失败：" + ex);
+                _statusLabel.Text = PluginReady ? "重试失败，仍连接到游戏。" : "连接游戏失败，可重试连接。";
+                LogError("准备或连接游戏失败：" + error);
+                return true;
             }
             finally
             {
-                lock (_initLock)
-                {
-                    IsInitializing = false;
-                }
-
-                _ui?.UpdateControlStates();
+                IsInitializing = false;
+                if (!Disposed)
+                    _ui?.UpdateControlStates();
             }
         }
 
-        private void EnsureInitProcess(int generation)
+        private void RememberGamePath(string path)
         {
-            if (Disposed || generation != _entityProcessGeneration)
-                throw new InvalidOperationException("初始化期间游戏进程发生变化，请重新初始化插件。");
+            if (!string.IsNullOrWhiteSpace(Configuration.FfxivPath))
+                return;
+
+            try
+            {
+                var snapshot = Configuration.Copy();
+                snapshot.FfxivPath = path;
+                snapshot.Save(ConfigurationPath);
+                Configuration = snapshot;
+                LogRuntime("已保存解析插件绑定的游戏路径：" + path);
+            }
+            catch (Exception error)
+            {
+                LogWarning("保存自动检测的游戏路径失败：" + error.Message);
+            }
         }
 
         public bool Disposed { get; private set; }
@@ -688,14 +637,10 @@ namespace Simulant.Core
 
                 try
                 {
-                    bool initializationPending;
-
                     lock (_initLock)
                     {
                         Disposed = true;
                         PluginReady = false;
-                        _gameDataGeneration++;
-                        initializationPending = IsInitializing;
                     }
 
                     if (_ui != null && !_ui.IsDisposed)
@@ -741,9 +686,6 @@ namespace Simulant.Core
                     // 资源清理失败可留待重试，但不能阻止返回真实环境并恢复通信。
                     TryCleanup("卸载时取消阶段等待失败", () => ZoneService?.CancelPendingPhase());
 
-                    if (initializationPending)
-                        throw new InvalidOperationException("初始化尚未结束，旧宿主已停止接受操作；请稍后重试卸载或重新启用。");
-
                     TryCleanup("卸载时停止模拟失败", () => _ui?.StopCurrentSession());
                     TryCleanup("卸载时停止调试失败", StopDebugEntities);
                     TryCleanup("卸载时清理模拟技能失败", () => PlayerActions?.Reset());
@@ -785,7 +727,10 @@ namespace Simulant.Core
                                 subscribedPlugin.DataSubscription.ZoneChanged -= OnFFXIVZoneChanged);
 
                             if (failures == null)
+                            {
                                 _subscribedXivPlugin = null;
+                                XivPluginInterop.plugin = null;
+                            }
                         }
                     }
 
@@ -794,6 +739,8 @@ namespace Simulant.Core
                     GameInterop.Disconnect();
                     _gameData?.Dispose();
                     _gameData = null;
+                    _gameDataFile = null;
+                    _gameImage = null;
                     GameDataReady = false;
                     _ui?.Dispose();
 
@@ -822,109 +769,192 @@ namespace Simulant.Core
             }
         }
 
-        private void Attach()
+        /// <summary>在 ACT 界面线程串行处理启动预扫、解析插件通知、定期检查和手动重试。</summary>
+        private async Task WatchGameProcessAsync()
         {
-            if (ActGlobals.oFormActMain == null)
-            {
-                XivPluginInterop.plugin = null;
-                return;
-            }
+            // 等待 PluginMain 登记当前宿主后，再开始自动初始化。
+            await Task.Yield();
+            string attemptedPath = null;
+            string observationError = null;
+            var connectPending = false;
 
-            var ffxivPluginData = ActGlobals.oFormActMain.ActPlugins
-                .FirstOrDefault(x => x.pluginObj != null
-                    && x.pluginObj.GetType().ToString() == "FFXIV_ACT_Plugin.FFXIV_ACT_Plugin");
-
-            var plugin = (FFXIV_ACT_Plugin.FFXIV_ACT_Plugin)ffxivPluginData?.pluginObj;
-            XivPluginInterop.plugin = plugin;
-
-            if (plugin == null)
-                return;
-
-            async Task WaitForPluginAsync()
+            while (!_disposeCompleted)
             {
                 try
                 {
-                    while (!Disposed)
+                    RefreshXivPlugin();
+                    var process = ReadGameProcess();
+                    var identity = GetProcessIdentity(process);
+                    if (UpdateGameProcess(identity))
                     {
-                        if (ffxivPluginData.lblPluginStatus.IsDisposed)
-                            return;
-
-                        if (ffxivPluginData.lblPluginStatus.Text.IndexOf("STARTED", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            lock (_subscriptionGate)
-                            {
-                                if (Disposed || _subscriptionsStopped || _subscribedXivPlugin != null)
-                                    return;
-
-                                // 缓存实例不等于本宿主已订阅；重新启用插件时也必须走这里。
-                                _entityZoneId = plugin.DataRepository.GetCurrentTerritoryID();
-                                _subscribedXivPlugin = plugin;
-                                plugin.DataSubscription.ProcessChanged += OnFFXIVProcessChanged;
-                                plugin.DataSubscription.ZoneChanged += OnFFXIVZoneChanged;
-                            }
-
-                            OnFFXIVProcessChanged(plugin.DataRepository.GetCurrentFFXIVProcess());
-                            return;
-                        }
-
-                        await Task.Delay(3000);
+                        connectPending = identity.HasValue;
+                        attemptedPath = null;
                     }
-                }
-                catch (Exception ex)
-                {
-                    if (!Disposed)
-                        LogError("等待 FFXIV 插件启动失败：" + ex.Message);
-                }
-            }
 
-            _ = WaitForPluginAsync();
+                    var retry = _retryConnection;
+                    _retryConnection = false;
+                    var oldConnectionClosed = !Disposed && FinishProcessDisconnect();
+                    if (!Disposed && identity.HasValue)
+                    {
+                        connectPending |= retry;
+                        if (connectPending && oldConnectionClosed && !FirewallService.HasPendingCleanup)
+                            connectPending = !await ConnectGameProcessAsync(process, identity.Value);
+                    }
+                    else if (!Disposed)
+                    {
+                        if (retry)
+                            LogRuntime("正在等待 FFXIV 解析插件绑定游戏进程。");
+
+                        var configuredPath = Configuration.FfxivPath;
+                        if (retry || !string.Equals(attemptedPath, configuredPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            attemptedPath = configuredPath;
+                            var path = FfxivInstallation.Resolve(configuredPath);
+                            if (path != null)
+                                await PrepareGameAsync(path, () => !Disposed &&
+                                    string.Equals(Configuration.FfxivPath, configuredPath, StringComparison.OrdinalIgnoreCase) &&
+                                    !GetProcessIdentity(ReadGameProcess()).HasValue);
+                        }
+                    }
+
+                    observationError = null;
+                }
+                catch (Exception error)
+                {
+                    if (!Disposed && observationError != error.Message)
+                        LogError("准备客户端或读取 FFXIV 绑定状态失败：" + error.Message);
+                    observationError = error.Message;
+                }
+
+                // 部分版本的解析插件偶尔漏报 ProcessChanged，定期以 DataRepository 为准。
+                if (!_disposeCompleted)
+                    await _processRefresh.WaitAsync(1000);
+            }
         }
 
-        private void OnFFXIVProcessChanged(Process process)
+        private void RefreshXivPlugin()
         {
-            if (_disposeCompleted)
-                return;
+            lock (_subscriptionGate)
+            {
+                if (Disposed || _subscriptionsStopped)
+                    return;
 
-            var processId = process?.Id;
-            Exception firewallCleanupError = null;
+                var parser = ActGlobals.oFormActMain?.ActPlugins
+                    .Where(entry => entry.cbEnabled?.Checked != false)
+                    .Select(entry => entry.pluginObj as FFXIV_ACT_Plugin.FFXIV_ACT_Plugin)
+                    .FirstOrDefault(plugin => plugin?.PluginStarted == true &&
+                        plugin.DataRepository != null && plugin.DataSubscription != null);
+                var previous = _subscribedXivPlugin;
+                if (ReferenceEquals(previous, parser))
+                    return;
+
+                if (previous != null)
+                {
+                    previous.DataSubscription.ProcessChanged -= OnFFXIVProcessChanged;
+                    previous.DataSubscription.ZoneChanged -= OnFFXIVZoneChanged;
+                }
+
+                _subscribedXivPlugin = parser;
+                XivPluginInterop.plugin = parser;
+
+                if (parser != null)
+                {
+                    parser.DataSubscription.ProcessChanged += OnFFXIVProcessChanged;
+                    parser.DataSubscription.ZoneChanged += OnFFXIVZoneChanged;
+                }
+            }
+        }
+
+        private Process ReadGameProcess() => _subscribedXivPlugin?.DataRepository?.GetCurrentFFXIVProcess();
+
+        private static (int Id, DateTime Started)? GetProcessIdentity(Process process)
+        {
+            try
+            {
+                return process == null || process.HasExited ? ((int, DateTime)?)null : (process.Id, process.StartTime);
+            }
+            catch (InvalidOperationException)
+            {
+                // 读取 PID 和启动时间之间进程可能已经退出。
+                return null;
+            }
+        }
+
+        private void OnFFXIVProcessChanged(Process process) => SignalProcessRefresh();
+
+        private void SignalProcessRefresh()
+        {
+            lock (_processRefresh)
+            {
+                if (_processRefresh.CurrentCount == 0)
+                    _processRefresh.Release();
+            }
+        }
+
+        /// <summary>切换目标时使旧世界和地址失效，并尝试恢复旧进程中仍存在的防火墙。</summary>
+        private bool UpdateGameProcess((int Id, DateTime Started)? identity)
+        {
+            Exception cleanupError = null;
 
             lock (_initLock)
             {
-                if (_disposeCompleted || _entityProcessId == processId)
-                    return;
+                if (_disposeCompleted || _entityProcess == identity)
+                    return false;
 
-                _entityProcessId = processId;
-                _entityProcessGeneration++;
+                _entityProcess = identity;
+                PluginReady = false;
+                lock (_subscriptionGate)
+                    Commands?.Stop();
+
                 Interlocked.Increment(ref _worldGeneration);
                 VfxManager.InvalidateWorld();
-                _entityZoneId = XivPluginInterop.plugin?.DataRepository.GetCurrentTerritoryID();
-                // 旧进程可能已经退出；先使引用失效，绝不能尝试在新进程中删除旧地址。
-                PluginReady = false;
+                _entityZoneId = _subscribedXivPlugin?.DataRepository?.GetCurrentTerritoryID();
                 ZoneService?.InvalidateWorld();
                 PartyService?.InvalidateWorld();
                 EntitySpawner?.ResetWorld();
 
-                // 旧进程的补丁恢复失败也不能阻止新世界使实体引用失效。
+                _disconnectPending = true;
                 try
                 {
                     FirewallService?.ResetProcess();
                     GameInterop.Disconnect();
+                    _disconnectPending = false;
                 }
                 catch (Exception error)
                 {
-                    firewallCleanupError = error;
+                    // 在旧进程的防火墙恢复完成前，保留它的连接供清理使用。
+                    cleanupError = error;
                 }
             }
 
-            try
+            if (!Disposed)
             {
-                if (firewallCleanupError != null)
-                    LogError("切换进程时恢复旧防火墙失败，记录已保留，请重试关闭：" + firewallCleanupError);
-            }
-            finally
-            {
+                _statusLabel.Text = identity.HasValue ? "正在准备连接 FFXIV……" : "等待 FFXIV 解析插件绑定游戏。";
                 _ui?.OnEntityWorldChanged();
             }
+
+            if (cleanupError != null)
+                LogError("切换进程时清理旧连接失败，请重试关闭防火墙：" + cleanupError);
+
+            return true;
+        }
+
+        private bool FinishProcessDisconnect()
+        {
+            lock (_initLock)
+            {
+                if (!_disconnectPending)
+                    return true;
+
+                if (FirewallService.HasPendingCleanup && !FirewallService.TryResetExitedProcess())
+                    return false;
+
+                GameInterop.Disconnect();
+                _disconnectPending = false;
+            }
+
+            _ui?.UpdateControlStates();
+            return true;
         }
 
         private void OnFFXIVZoneChanged(uint zoneId, string zoneName)

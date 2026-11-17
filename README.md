@@ -45,13 +45,13 @@ Work in progress.
 > [!TIP]
 > **下载时请在右侧 Release 下载最新的发布版中的 dll，不要在上方下载源码。**
 
-- 需要 64 位 ACT 和 FFXIV 解析插件。
+- 需要 64 位 ACT 和 FFXIV 解析插件（不再需要 Triggernometry、PostNamazu 等插件）。
 
 - 将此插件 dll 加载至 ACT 的插件列表即可完成加载，可置于列表中比较靠后的位置。
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/b2fde36d-dde1-47d1-9f7c-857ea61c9b9f" />
 
-- 插件加载后，在游戏开启状态下，点击“初始化插件”。
+- 插件启动后会准备已配置的客户端文件。当 FFXIV 解析插件绑定游戏进程时，仿生石会自动连接。连接失败时可点击“重试连接”。
 
 > [!WARNING]
 > 此插件与卫月平台的一些插件存在兼容性问题。
@@ -80,7 +80,7 @@ Work in progress.
 
 - 如果此过程中有任何一步导致游戏崩溃，请记录问题并重启 ACT。
 
-- 可选：建议安装字体：
+- 可选：建议安装字体：等距更纱黑体
   
   [更纱黑体](https://github.com/be5invis/Sarasa-Gothic/releases)
 

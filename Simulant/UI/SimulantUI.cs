@@ -34,7 +34,7 @@ namespace Simulant.UI
             _host = host;
             InitializeComponent();
             ConfigureMainMenu();
-            new ToolTip(components).SetToolTip(btnInitPlugin, "重新初始化前，请先关闭防火墙并完成清理。");
+            new ToolTip(components).SetToolTip(btnInitPlugin, "插件会自动连接游戏。需要重试时，请先关闭防火墙并完成清理。");
             logView.Bind(_host); // would RefreshLogView
             presetControl.Bind(_host);
             UpdateTerritoryData(0);
@@ -43,11 +43,8 @@ namespace Simulant.UI
             Disposed += (_, __) => _exdBrowserForm?.Close();
         }
 
-        private async void btnInitPlugin_Click(object sender, EventArgs e)
-        {
-            StopCurrentSession();
-            await _host.InitAsync();
-        }
+        private void btnInitPlugin_Click(object sender, EventArgs e)
+            => _host.RetryGameConnection();
 
         private void btnConfiguration_Click(object sender, EventArgs e)
         {
@@ -233,7 +230,7 @@ namespace Simulant.UI
             var firewallReady = pluginReady && _host.FirewallEnabled;
             var firewallPending = _host.FirewallService?.HasPendingCleanup == true;
 
-            // 初始化按钮：初始化中禁用，初始化完成后仍可再次点击
+            // 连接中或仍需清理防火墙时禁用手动重试。
             btnInitPlugin.Enabled = !_host.IsInitializing && !_switchingTerritory && !firewallPending;
 
             // 游戏数据加载完：允许选地图、输入区域 ID、选择阶段

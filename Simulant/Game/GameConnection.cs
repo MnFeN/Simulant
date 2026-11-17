@@ -3,18 +3,16 @@ using System;
 
 namespace Simulant.Game
 {
-    /// <summary>持有单个游戏进程的内存访问会话、映像扫描器和原生调用调度器。</summary>
+    /// <summary>持有单个游戏进程的内存访问会话和原生调用调度器。</summary>
     public sealed partial class GameConnection : IDisposable
     {
         private readonly NativeCallScheduler _scheduler;
 
         public ExternalProcessMemory Memory { get; }
-        internal GameImageScanner Scanner { get; }
 
-        internal GameConnection(ExternalProcessMemory memory, GameImageScanner scanner)
+        internal GameConnection(ExternalProcessMemory memory)
         {
             Memory = memory;
-            Scanner = scanner;
             _scheduler = new NativeCallScheduler(memory, frameLeaseMs: 3);
         }
 

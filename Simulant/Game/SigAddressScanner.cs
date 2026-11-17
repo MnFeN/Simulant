@@ -10,54 +10,25 @@ namespace Simulant.Game
     {
         private static readonly Lazy<PropertyInfo[]> SigPatternProperties = new Lazy<PropertyInfo[]>(DiscoverSigPatternProperties);
 
-        /// <summary>清除缓存地址，解析标有 <see cref="SigPatternAttribute"/> 的属性，并报告失败项。</summary>
-        public static Dictionary<string, string> Scan()
+        /// <summary>解析地址属性的备选签名，保留未能定位的属性供初始化日志报告。</summary>
+        internal static Dictionary<PropertyInfo, int?> ResolveRvas(GameImageScanner scanner)
+            => GetSigPatternProperties().ToDictionary(property => property,
+                property => scanner.FindRva(GetSignatures(property)));
+
+        /// <summary>按当前进程的模块基址绑定已预扫出的地址。</summary>
+        internal static void Bind(GameImageScan image, IntPtr imageBase)
         {
-            var ptrProps = GetSigPatternProperties().ToList();
-            ClearPtrs(ptrProps);
-
-            var scanner = GameInterop.Connection?.Scanner;
-
-            if (!GameInterop.IsReady || scanner == null)
-                throw new Exception("[AddressStore] 游戏地址扫描器未就绪。");
-
-            Dictionary<string, string> result = new Dictionary<string, string>();
-
-            ScanGeneralPtrs(ptrProps, scanner, result);
-
-            foreach (var ptrProp in ptrProps)
-            {
-                var key = GetPropKey(ptrProp);
-
-                if (result.ContainsKey(key))
-                    continue;
-
-                result[key] = GetValue(ptrProp) == IntPtr.Zero
-                    ? "无可用内存签名，且未设置特殊扫描方法"
-                    : null;
-            }
-
-            return result;
+            foreach (var address in image.Addresses)
+                SetValue(address.Key, address.Value.HasValue ? imageBase + address.Value.Value : IntPtr.Zero);
         }
 
-        public static unsafe IntPtr GetValue(PropertyInfo ptrProp)
+        internal static void Clear()
         {
-            if (ptrProp.PropertyType == typeof(IntPtr))
-            {
-                var value = ptrProp.GetValue(null);
-                return value != null ? (IntPtr)value : IntPtr.Zero;
-            }
-
-            if (ptrProp.PropertyType.IsPointer)
-            {
-                var value = ptrProp.GetValue(null);
-                return value != null ? (IntPtr)Pointer.Unbox(value) : IntPtr.Zero;
-            }
-
-            throw new InvalidOperationException("属性不是 IntPtr 或指针类型：" + GetPropKey(ptrProp));
+            foreach (var property in GetSigPatternProperties())
+                SetValue(property, IntPtr.Zero);
         }
 
-        public static unsafe void SetValue(PropertyInfo ptrProp, IntPtr ptr)
+        private static unsafe void SetValue(PropertyInfo ptrProp, IntPtr ptr)
         {
             if (ptrProp.PropertyType == typeof(IntPtr))
             {
@@ -74,9 +45,9 @@ namespace Simulant.Game
             throw new InvalidOperationException("属性不是 IntPtr 或指针类型：" + GetPropKey(ptrProp));
         }
 
-        public static IEnumerable<PropertyInfo> GetSigPatternProperties() => SigPatternProperties.Value;
+        private static IEnumerable<PropertyInfo> GetSigPatternProperties() => SigPatternProperties.Value;
 
-        /// <summary>枚举地址属性声明的全部备选签名，供建立游戏连接时批量扫描。</summary>
+        /// <summary>枚举地址属性声明的全部备选签名，供预扫客户端时一次匹配。</summary>
         internal static IEnumerable<string> GetSignatures()
             => GetSigPatternProperties().SelectMany(GetSignatures);
 
@@ -97,41 +68,6 @@ namespace Simulant.Game
         public static string GetPropKey(PropertyInfo ptrProp)
         {
             return ptrProp.DeclaringType.FullName + "." + ptrProp.Name;
-        }
-
-        private static void ScanGeneralPtrs(List<PropertyInfo> ptrProps, GameImageScanner scanner, Dictionary<string, string> result)
-        {
-            foreach (var ptrProp in ptrProps)
-            {
-                if (GetValue(ptrProp) != IntPtr.Zero)
-                    continue;
-
-                var sigs = GetSignatures(ptrProp);
-
-                if (sigs.Length == 0)
-                    continue;
-
-                var key = GetPropKey(ptrProp);
-                var ptr = scanner.Find(sigs);
-
-                if (ptr == IntPtr.Zero)
-                {
-                    result[key] = "未能找到与签名对应的内存地址";
-                }
-                else
-                {
-                    SetValue(ptrProp, ptr);
-                    result[key] = null;
-                }
-            }
-        }
-
-        private static void ClearPtrs(List<PropertyInfo> ptrProps)
-        {
-            foreach (var ptrProp in ptrProps)
-            {
-                SetValue(ptrProp, IntPtr.Zero);
-            }
         }
     }
 

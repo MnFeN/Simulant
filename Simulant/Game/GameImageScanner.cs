@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Simulant.Game
 {
-    /// <summary>扫描磁盘上游戏可执行文件的 .text 节，并用运行中模块的基址换算命中地址。</summary>
+    // to-do: 以当前的签名数量，已经足够快，不需要随游戏版本缓存扫描结果。如果随着开发，签名多到扫描明显减慢，可添加缓存。
+
+    /// <summary>扫描磁盘上游戏可执行文件的 .text 节，解析模块相对虚拟地址（RVA）。</summary>
     internal sealed class GameImageScanner
     {
         
@@ -30,26 +32,30 @@ namespace Simulant.Game
         // SimuMagic 会原样搬运入口处的指令。当前入口的 mov [rsp+8], rbx 占 5 字节，可以直接搬运。
         private static readonly byte[] FrameEntryInstruction = { 0x48, 0x89, 0x5C, 0x24, 0x08 };
 
-        private readonly IntPtr _imageBase;
         private readonly byte[] _text;
         private readonly int _textRva;
         private Dictionary<string, ScanPattern> _preparedPatterns;
 
-        private GameImageScanner(string imagePath, IntPtr imageBase)
+        private GameImageScanner(string imagePath)
         {
-            _imageBase = imageBase;
             _text = ReadText(imagePath, out _textRva);
         }
 
-        /// <summary>从目标进程的主模块定位磁盘 EXE，读取其 .text 并记录运行时模块基址。</summary>
-        internal static GameImageScanner Open(Process process)
+        /// <summary>预扫磁盘 EXE，保存地址相对模块基址的偏移及入口原始字节，供连接进程时使用。</summary>
+        internal static GameImageScan Scan(GameImageFile file)
         {
-            var module = process.MainModule;
-            return new GameImageScanner(module.FileName, module.BaseAddress);
+            var scanner = new GameImageScanner(file.Path);
+            scanner.PreparePatterns(SigAddressScanner.GetSignatures());
+            var entryRva = scanner.FindFrameEntry(out var original);
+            var addresses = SigAddressScanner.ResolveRvas(scanner);
+            if (!file.Matches(new GameImageFile(file.Path)))
+                throw new IOException("游戏 EXE 在扫描期间发生变化，请重试连接。");
+
+            return new GameImageScan(file, entryRva, original, addresses);
         }
 
         /// <summary>定位 Framework 的 UI 更新回调，从磁盘提取入口的 10 字节并校验待搬运的指令。</summary>
-        internal IntPtr FindFrameEntry(out byte[] original)
+        private int FindFrameEntry(out byte[] original)
         {
             const int entryLength = 10;
             var rva = FindRva(GameEntryReference);
@@ -60,27 +66,27 @@ namespace Simulant.Game
             if (original.Length != entryLength || !original.Take(FrameEntryCopyBytes).SequenceEqual(FrameEntryInstruction))
                 throw new InvalidOperationException("框架 UI 更新回调的入口指令已变化，无法按 5 字节搬运。");
 
-            return _imageBase + rva.Value;
+            return rva.Value;
         }
 
-        /// <summary>按顺序查找签名，返回首个唯一命中所解析的运行时地址。无唯一命中时返回零。</summary>
-        internal IntPtr Find(params string[] patterns)
+        /// <summary>按顺序查找备选签名，返回首个唯一命中所解析的 RVA。</summary>
+        internal int? FindRva(IEnumerable<string> patterns)
         {
             foreach (var pattern in patterns)
             {
                 var rva = FindRva(pattern);
                 if (rva.HasValue)
-                    return _imageBase + rva.Value;
+                    return rva;
             }
 
-            return IntPtr.Zero;
+            return null;
         }
 
         /// <summary>
         /// 按抽样选出的稀有字节对建立候选索引，再完整遍历一次 .text。<br />
         /// 缓存游戏入口和地址属性签名的匹配位置及唯一性，供后续查址使用。
         /// </summary>
-        internal void PreparePatterns(IEnumerable<string> patterns)
+        private void PreparePatterns(IEnumerable<string> patterns)
         {
             var prepared = new Dictionary<string, ScanPattern>(StringComparer.Ordinal);
             var candidatesByPair = new List<ScanPattern>[1 << 16];
@@ -308,6 +314,43 @@ namespace Simulant.Game
                 }
             }
             throw new InvalidDataException("游戏客户端缺少 .text 节。");
+        }
+    }
+
+    /// <summary>记录磁盘 EXE 的路径和文件状态，用于判断是否需要重新准备客户端。</summary>
+    internal readonly struct GameImageFile
+    {
+        internal string Path { get; }
+        private readonly long _length;
+        private readonly DateTime _lastWriteTime;
+
+        internal GameImageFile(string path)
+        {
+            var file = new FileInfo(path);
+            Path = file.FullName;
+            _length = file.Length;
+            _lastWriteTime = file.LastWriteTimeUtc;
+        }
+
+        internal bool Matches(GameImageFile other) =>
+            string.Equals(Path, other.Path, StringComparison.OrdinalIgnoreCase) &&
+            _length == other._length && _lastWriteTime == other._lastWriteTime;
+    }
+
+    /// <summary>单次磁盘扫描的结果，可用于连接同一 EXE 的多个进程。</summary>
+    internal sealed class GameImageScan
+    {
+        internal GameImageFile File { get; }
+        internal int EntryRva { get; }
+        internal byte[] EntryBytes { get; }
+        internal IReadOnlyDictionary<PropertyInfo, int?> Addresses { get; }
+
+        internal GameImageScan(GameImageFile file, int entryRva, byte[] entryBytes, IReadOnlyDictionary<PropertyInfo, int?> addresses)
+        {
+            File = file;
+            EntryRva = entryRva;
+            EntryBytes = entryBytes;
+            Addresses = addresses;
         }
     }
 }
