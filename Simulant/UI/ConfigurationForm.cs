@@ -73,7 +73,7 @@ namespace Simulant.UI
                     "选中模拟预设并进入副本后，显示置顶的模拟控制与冲刺、防击退按钮。单击图标执行操作，按住拖动移动窗口，拖动边缘调整大小；退出副本后自动关闭。"),
                 new DecimalOption(nameof(Configuration.SimLatency), "模拟判定延迟（秒）", _draft.SimLatency, 1, 0, 2,
                     "判定采用自身此前的位置和防击退状态，模拟服务器提前判定；不影响假队员、演出和报错时间。设为 0 关闭，下次模拟生效。\n此延迟与网络延迟不同，建议不低于 0.30 s 以反映真实副本情况。"),
-                new CheckBoxOption(nameof(Configuration.GenerateActLogs), "生成 ACT 日志", _draft.GenerateActLogs,
+                new CheckBoxOption(nameof(Configuration.GenerateActLogs), "生成 ACT 日志（实验性）", _draft.GenerateActLogs,
                     "开启后可生成对应的 ACT 及网络日志，供 Triggernometry 等插件使用。"),
                 developerMode
             };
