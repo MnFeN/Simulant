@@ -23,23 +23,22 @@ namespace Simulant.Core.Environment
             envManager.TransitionTime.Set(transitionTime);
         }
 
-        /// <returns> 是否调用成功。</returns>
-        public bool PlayMapEffect(uint slot, ushort flag)
+        /// <summary>播放指定场地效果槽位的动画，并返回是否成功。</summary>
+        public bool PlayMapEffect(uint slot, ushort timelineIndex)
         {
             var contentDirector = EventFramework.Instance.ContentDirector;
 
             if (contentDirector.IsNull())
             {
-                _host.LogWarning($"当前地图中不存在 ContentDirector，无法调用 MapEffect ({slot}, {flag})");
+                _host.LogWarning($"当前地图中不存在 ContentDirector，无法播放场地动画（槽位 {slot}，动画 {timelineIndex}）。");
                 return false;
-
             }
 
-            bool success = contentDirector.MapEffect(slot, flag);
+            bool success = contentDirector.PlayMapEffectTimeline(slot, timelineIndex);
 
             if (!success)
             {
-                _host.LogWarning($"当前地图中 MapEffect ({slot}, {flag}) 调用失败。");
+                _host.LogWarning($"播放场地动画失败（槽位 {slot}，动画 {timelineIndex}）。");
             }
 
             return success;

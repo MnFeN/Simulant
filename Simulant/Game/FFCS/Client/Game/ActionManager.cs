@@ -28,8 +28,8 @@ namespace Simulant.Game.FFCS.Client.Game
         public static IntPtr SetCooldownFuncPtr { get; set; }
         public void SetCooldown(uint actionId, float elapsed, float total)
             => SetCooldownFuncPtr.Call(Ptr, 1, actionId, elapsed, total);
-        // [FieldOffset(0x184), FixedSizeArray] internal FixedSizeArray80<RecastDetail> _cooldowns;
-        public MemoryField<float> DistanceToTargetHitbox => Ptr.Field<float>(0x7E8); // distance to target minus both self & target hitbox radius, clamped to 0
+        // [FieldOffset(0x188), FixedSizeArray] internal FixedSizeArray80<RecastDetail> _cooldowns;
+        public MemoryField<float> DistanceToTargetHitbox => Ptr.Field<float>(0x7EC); // distance to target minus both self & target hitbox radius, clamped to 0
 
         /// <summary>
         /// Initiate action execution.
