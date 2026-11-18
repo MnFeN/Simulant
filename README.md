@@ -86,6 +86,21 @@ Work in progress.
 
   在 Single Family TTF Package 中下载 Mono 的压缩包并安装字体。
 
+## 致谢 · Acknowledgements
+
+此插件的开发借鉴了大量 Dalamud 仓库，建立在前人在 FFXIV 客户端、游戏数据和模拟工具方面研究的基础之上。感谢以下 Dalamud 及 ACT 项目的作者与贡献者：
+
+- [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs)提供了客户端结构与原生函数定义。
+- [Lumina](https://github.com/NotAdam/Lumina) 和 [EXDSchema](https://github.com/xivdev/EXDSchema) 支撑了游戏资源读取与数据表解析。
+- 网络包结构与字段语义参考了 [Sapphire](https://github.com/SapphireServer/Sapphire)、[Machina](https://github.com/ravahn/machina) 和 [BossMod](https://github.com/awgil/ffxiv_bossmod)，部分技能范围判定也参考了 BossMod。
+- [Kodakku Assist](https://github.com/Karlin-Z/KodakkuAssistScriptLibrary) 、[NyaDraw](https://github.com/NiGuangOwO/DalamudPlugins/tree/main/plugins/NyaDraw)、[Daily Routines](https://github.com/Dalamud-DailyRoutines/DailyRoutines) 为游戏原生 VFX 绘制与其他游戏资源的调用提供了重要参考。 
+- 卫月端模拟器 [AnoMech](https://github.com/anomek/AnoMech) 的实现帮助完善了小队更新等底层逻辑。 
+- 在客户端本地进入副本的实现参考了 [Hyperborea](https://github.com/kawaii/Hyperborea)。
+- 项目早期的本地实体生成参考了 [Brio](https://github.com/Valentine-Tools/Brio)。
+- [Advanced Combat Tracker](https://advancedcombattracker.com/) 及国服维护者 [萌新科技研究所](https://act.diemoe.net/) 提供了插件宿主的支持。
+- [PostNamazu](https://github.com/Natsukage/PostNamazu) 为通过 ACT 与游戏进程交互提供了重要的早期参考。
+- 游戏回放读取得益于 [OrchestrionPlugin](https://github.com/perchbirdd/OrchestrionPlugin) 和 [ARealmRecorded](https://github.com/UnknownX7/ARealmRecorded) 对回放格式的研究。
+
 ## 开源许可
 
 Simulant 的原创代码使用 GPLv3（`GPL-3.0-only`）开源协议。使用者可自由使用、修改此项目。

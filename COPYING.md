@@ -12,6 +12,7 @@ Simulant 的原创代码使用 GPLv3（`GPL-3.0-only`）开源协议。使用者
 
 - `Lumina.ACT` 中的 Lumina、Lumina.Excel 及相关依赖；
 - 来自 `FFXIVClientStructs` 等项目的定义和代码；
+- 用于内存交互的 `GreyMagic` 程序集被更名为 `SimuMagic`，以避免与 `PostNamazu` 发生程序集名称冲突；
 - 游戏数据、名称、美术等资源。
 
 ---
@@ -30,4 +31,5 @@ Third-party code and resources used in this project remain subject to their own 
 
 - Lumina, Lumina.Excel, and related dependencies in `Lumina.ACT`;
 - Definitions and code from projects such as `FFXIVClientStructs`;
+- The `GreyMagic` assembly used for memory access was renamed to `SimuMagic` to avoid an assembly name conflict with the copy used by `PostNamazu`;
 - Game data, names, artwork, and other resources.

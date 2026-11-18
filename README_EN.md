@@ -71,6 +71,21 @@ Work in progress. Collaboration is welcome.
 
 - [Mechanic timeline development (Chinese)](docs/Timeline.md): node definitions, timeline composition, cancellation, and entity lifetime.
 
+## Acknowledgements
+
+Simulant draws on many Dalamud repositories and builds on earlier research into the FFXIV client, game data, and simulation tools. Thank you to the authors and contributors of the following Dalamud and ACT projects.
+
+- [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs) provided definitions for client structures and native functions.
+- [Lumina](https://github.com/NotAdam/Lumina) and [EXDSchema](https://github.com/xivdev/EXDSchema) made it possible to read game assets and parse data tables.
+- [Sapphire](https://github.com/SapphireServer/Sapphire), [Machina](https://github.com/ravahn/machina), and [BossMod](https://github.com/awgil/ffxiv_bossmod) served as references for packet layouts and field meanings. BossMod also informed some of the ability area checks.
+- [Kodakku Assist](https://github.com/Karlin-Z/KodakkuAssistScriptLibrary), [NyaDraw](https://github.com/NiGuangOwO/DalamudPlugins/tree/main/plugins/NyaDraw), and [Daily Routines](https://github.com/Dalamud-DailyRoutines/DailyRoutines) were key references for drawing with the game's native visual effects and using other game assets.
+- [AnoMech](https://github.com/anomek/AnoMech), a Dalamud simulator, helped refine the underlying implementation of party updates and related features.
+- [Hyperborea](https://github.com/kawaii/Hyperborea) served as a reference for entering duties locally in the client.
+- [Brio](https://github.com/Valentine-Tools/Brio) was an early reference for spawning local entities.
+- [Advanced Combat Tracker](https://advancedcombattracker.com/) and [NewMoe Technology](https://act.diemoe.net/), which maintains its Chinese distribution, provide the platform that hosts Simulant.
+- [PostNamazu](https://github.com/Natsukage/PostNamazu) was a key early reference for interacting with the game process from ACT.
+- Simulant's replay reader benefited from work on the replay format by [OrchestrionPlugin](https://github.com/perchbirdd/OrchestrionPlugin) and [ARealmRecorded](https://github.com/UnknownX7/ARealmRecorded).
+
 ## License
 
 Simulant's original code is licensed under GPLv3 (`GPL-3.0-only`). You may freely use and modify this project.
