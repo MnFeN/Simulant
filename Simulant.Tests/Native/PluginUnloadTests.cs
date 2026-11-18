@@ -51,6 +51,7 @@ namespace Simulant.Tests.Native
                     "加载地图",
                     "设置区域",
                     "恢复位置",
+                    "位置读回不符",
                     "恢复音乐",
                     "恢复收包",
                     "释放代码洞"
@@ -134,8 +135,8 @@ namespace Simulant.Tests.Native
             scene.AssertCompleted(allowEntityResidual: failure == "回收实体");
             Assert(scene.Events.Count(item => item == "停止预设") == 1, "重试卸载不能重复执行预设 OnStop。");
 
-            if (hookFailure || failure == "回收实体")
-                Assert(scene.Events.Count(item => item == "加载地图") == loads, "地图已返回后不能因其他清理失败而重复切图。");
+            if (failure != "加载地图" && failure != "设置区域")
+                Assert(scene.Events.Count(item => item == "加载地图") == loads, "换图请求发出后，重试验证和清理不能重复切图。");
 
             Passed(failure + "失败保留记录，下一次禁用可完成卸载");
         }
@@ -172,6 +173,22 @@ namespace Simulant.Tests.Native
                 scene.AssertCompleted(allowEntityResidual: failure == "回收实体");
                 Passed(failure + "失败仍可关闭防火墙并返回真实区域");
             }
+        }
+
+        public static void WaitForReturnLayoutBeforeRestoringPosition()
+        {
+            var scene = new Scene(false);
+            scene.Memory.DelayReturnLayout = true;
+
+            Invoke(scene.UI, "TryDisableFirewall");
+
+            var ready = scene.Events.IndexOf("原场地就绪");
+            Assert(ready >= 0 && ready < scene.Events.IndexOf("恢复位置") &&
+                ready < scene.Events.IndexOf("恢复收包") && ready < scene.Events.IndexOf("恢复发包"),
+                "地图 ID 已更新但场地仍在加载时，必须等待场地就绪再恢复位置和通信。");
+            scene.Main.DeInitPlugin();
+            scene.AssertCompleted();
+            Passed("原场地就绪后才恢复位置和通信");
         }
 
         public static void ExitAfterDisconnect()
@@ -438,10 +455,12 @@ namespace Simulant.Tests.Native
         public static readonly IntPtr Game = new IntPtr(0x100000), EventPointer = new IntPtr(0x200000),
             BgmPointer = new IntPtr(0x300000), Scene = new IntPtr(0x320000), Player = new IntPtr(0x40000),
             Receive = new IntPtr(0xA00000), Send = new IntPtr(0xB00000), Cave = new IntPtr(0xC00000),
-            LayoutPointer = new IntPtr(0xD00000);
+            LayoutPointer = new IntPtr(0xD00000), Layout = new IntPtr(0xD20000);
         private readonly FakeLocalMemory _storage = new FakeLocalMemory();
         private readonly List<string> _events;
         public string Failure;
+        internal bool DelayReturnLayout;
+        private int _returnLayoutChecks;
         public override IntPtr ProcessHandle => new IntPtr(101);
         public override bool IsProcessOpen => true;
 
@@ -450,9 +469,9 @@ namespace Simulant.Tests.Native
             _events = events;
             Put(Game + 0x4108, 177u);
             Put(LayoutPointer, new IntPtr(0xD10000));
-            Put(new IntPtr(0xD10020), new IntPtr(0xD20000));
-            Put(new IntPtr(0xD20018), 5);
-            Put(new IntPtr(0xD20020), 65000u);
+            Put(new IntPtr(0xD10020), Layout);
+            Put(Layout + 0x18, 5);
+            Put(Layout + 0x20, 65000u);
             Put(EventPointer, new IntPtr(0x210000));
             Put(BgmPointer, new IntPtr(0x310000));
             Put(new IntPtr(0x3100C0), Scene);
@@ -471,12 +490,26 @@ namespace Simulant.Tests.Native
 
         public void Put<T>(IntPtr address, T value)
             where T : struct => _storage.Put(address, value);
-        public override T Read<T>(IntPtr address) => _storage.Read<T>(address);
+        public override T Read<T>(IntPtr address)
+        {
+            if (DelayReturnLayout && address == Layout + 0x18 && ++_returnLayoutChecks == 2)
+            {
+                Put(Layout + 0x18, 7);
+                Step("原场地就绪");
+            }
+
+            return _storage.Read<T>(address);
+        }
+
         public override byte[] ReadBytes(IntPtr address, int length) => _storage.ReadBytes(address, length);
         public override void Write<T>(IntPtr address, T value)
         {
             if (address == Player + 0xB0)
+            {
                 Step("恢复位置");
+                if (Failure == "位置读回不符")
+                    return;
+            }
 
             if (address == Scene + 4)
                 Step("恢复音乐");
@@ -519,8 +552,14 @@ namespace Simulant.Tests.Native
             if (function == LoadFunction)
             {
                 Memory.Step("加载地图");
-                Memory.Put(UnloadMemory.Game + 0x4100, 1u);
-                Memory.Put(UnloadMemory.Game + 0x4108, Convert.ToUInt32(args[1]));
+                var territoryId = Convert.ToUInt32(args[1]);
+                Memory.Put(UnloadMemory.Game + 0x4108, territoryId);
+                Memory.Put(UnloadMemory.Game + 0x4100, territoryId == 177 ? 2u : 1u);
+                if (territoryId == 177)
+                {
+                    Memory.Put(UnloadMemory.Layout + 0x20, territoryId);
+                    Memory.Put(UnloadMemory.Layout + 0x18, Memory.DelayReturnLayout ? 5 : 7);
+                }
             }
             else if (function != SetupFunction && function != FinalizeFunction)
                 throw new InvalidOperationException("未知区域原生调用。");

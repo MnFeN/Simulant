@@ -5,6 +5,7 @@ using Simulant.Core.Zone;
 using Simulant.Game;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
+using Simulant.Game.FFCS.Client.Game.UI;
 using TerritoryType = Lumina.Excel.Sheets.TerritoryType;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
@@ -23,11 +24,7 @@ namespace Simulant.Core
 {
     public sealed class PluginHost
     {
-        public static PluginHost Instance
-        {
-            get;
-            set;
-        } // 仅为了调试方便
+        public static PluginHost Instance { get; set; } // 仅为了调试方便
 
         public ExternalProcessMemory Memory => GameInterop.Connection.Memory;
 
@@ -85,6 +82,26 @@ namespace Simulant.Core
             var territory = GameDataService.Instance.GetSheet<TerritoryType>().GetRowOrDefault(game.CurrentTerritoryTypeId.Get());
             if (territory?.TerritoryIntendedUse.RowId != (uint)TerritoryIntendedUseEnum.Inn)
                 throw new InvalidOperationException("未开启开发者模式时，仅允许在旅馆地图内启用防火墙。");
+        }
+
+        internal void CancelCastBeforeFirewall()
+        {
+            var player = EntityProvider.GetMyself();
+            if (player == null || !player.Native.CastInfo.IsCasting)
+                return;
+
+            // 取消请求和结果都需要正常通信，读条结束前不能开启收发包拦截。
+            UIState.Instance().ThrowIfNull().Hotbar.CancelCast();
+            var elapsed = Stopwatch.StartNew();
+            while (player.Native.CastInfo.IsCasting)
+            {
+                if (elapsed.ElapsedMilliseconds >= 2000)
+                    throw new TimeoutException("游戏未确认结束读条，防火墙未开启。");
+
+                Thread.Sleep(20);
+            }
+
+            EnsureFirewallAllowed();
         }
 
         internal Firewall.FirewallService FirewallService;

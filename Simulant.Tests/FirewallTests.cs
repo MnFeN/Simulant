@@ -36,6 +36,31 @@ namespace Simulant.Tests
             }
         }
 
+        public static void CastMustEndBeforeFirewallIsInstalled()
+        {
+            using (var scene = new FirewallScene())
+            {
+                var timedOut = new TimeoutException("游戏未确认取消读条。");
+                scene.Host.BeforeCancelCast = () => throw timedOut;
+                Assert(ReferenceEquals(Throws<TimeoutException>(scene.Service.Enable), timedOut)
+                    && scene.Memory.Writes.Count == 0 && scene.Memory.AllocateCalls == 0
+                    && scene.Parser.NetworkTimeout == 60 && !scene.Service.HasPendingCleanup,
+                    "未确认读条结束时，防火墙必须保持关闭。");
+
+                var checkedCast = false;
+                scene.Host.BeforeCancelCast = () =>
+                {
+                    Assert(scene.Memory.Writes.Count == 0 && scene.Parser.NetworkTimeout == 60,
+                        "取消读条前不能拦截收包或发包。");
+                    checkedCast = true;
+                };
+                scene.Service.Enable();
+                Assert(checkedCast && scene.Service.IsEnabled, "读条结束后才能启用防火墙。");
+                scene.Service.Disable();
+                scene.AssertRestored();
+            }
+        }
+
         public static void FirewallEnableAndDisableAreIdempotent()
         {
             using (var scene = new FirewallScene())

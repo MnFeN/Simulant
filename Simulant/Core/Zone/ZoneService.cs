@@ -36,6 +36,7 @@ namespace Simulant.Core.Zone
         // 进入模拟区域前记录真实地图和位置，退出时返回
         private uint? _initialTerritoryId;
         private Vector3? _initialPosition;
+        private bool _returnLoadRequested;
 
         private bool _isInSimulatedTerritory;
         public bool IsInSimulatedTerritory
@@ -73,6 +74,7 @@ namespace Simulant.Core.Zone
                 _simulatedTerritoryId = 0;
                 _initialTerritoryId = null;
                 _initialPosition = null;
+                _returnLoadRequested = false;
                 _loadedInstanceContentId = null;
                 _entrancePosition = null;
             }
@@ -98,6 +100,9 @@ namespace Simulant.Core.Zone
 
                 lock (_stateGate)
                 {
+                    if (_returnLoadRequested)
+                        throw new InvalidOperationException("尚未确认返回原区域，请先重试退出模拟。");
+
                     worldVersion = _worldVersion;
                     recordInitialState = !_initialTerritoryId.HasValue;
                 }
@@ -180,12 +185,14 @@ namespace Simulant.Core.Zone
                 int worldVersion;
                 uint? initialTerritoryId;
                 Vector3? initialPosition;
+                bool returnLoadRequested;
 
                 lock (_stateGate)
                 {
                     worldVersion = _worldVersion;
                     initialTerritoryId = _initialTerritoryId;
                     initialPosition = _initialPosition;
+                    returnLoadRequested = _returnLoadRequested;
                 }
 
                 if (!initialTerritoryId.HasValue)
@@ -203,8 +210,8 @@ namespace Simulant.Core.Zone
                     return true;
                 }
 
-                if (!initialTerritoryId.HasValue || initialTerritoryId.Value == 0)
-                    throw new InvalidOperationException("尚未记录真实地图，无法退出。");
+                if (initialTerritoryId.Value == 0 || !initialPosition.HasValue)
+                    throw new InvalidOperationException("原区域或原位置记录不完整，无法验证返回状态。");
 
                 var territoryId = (int)initialTerritoryId.Value;
 
@@ -216,9 +223,19 @@ namespace Simulant.Core.Zone
                     _isInSimulatedTerritory = false;
                 }
 
-                LoadTerritoryInternal(territoryId, territory, worldVersion, exitingSimulation: true);
+                if (!returnLoadRequested)
+                {
+                    LoadTerritoryInternal(territoryId, territory, worldVersion, exitingSimulation: true);
 
-                RestoreInitialPosition(initialPosition, worldVersion);
+                    lock (_stateGate)
+                    {
+                        EnsureWorld(worldVersion);
+                        _returnLoadRequested = true;
+                    }
+                }
+
+                WaitForInitialTerritory(initialTerritoryId.Value, worldVersion);
+                RestoreInitialPosition(initialPosition.Value, worldVersion);
 
                 EnsureWorld(worldVersion);
                 _host.EnvironmentService.SetBgm(0);
@@ -226,9 +243,13 @@ namespace Simulant.Core.Zone
                 lock (_stateGate)
                 {
                     EnsureWorld(worldVersion);
+                    if (!IsMapReady(initialTerritoryId.Value, out var state))
+                        throw new InvalidOperationException("恢复位置后，原区域尚未就绪：" + state);
+
                     _isInSimulatedTerritory = false;
                     _initialTerritoryId = null;
                     _initialPosition = null;
+                    _returnLoadRequested = false;
                 }
 
                 var finalTerritoryId = territory.HasValue ? (int)territory.Value.RowId : territoryId;
@@ -256,8 +277,9 @@ namespace Simulant.Core.Zone
             if (currentTerritoryId == 0)
                 throw new InvalidOperationException("当前真实地图尚未就绪，不能进入模拟区域。");
 
-            var me = _host.EntityProvider.GetMyself();
-            var initialPosition = me?.Pos3D;
+            var me = _host.EntityProvider.GetMyself()
+                ?? throw new InvalidOperationException("无法记录返回位置，不能进入模拟区域。");
+            var initialPosition = me.Pos3D;
 
             lock (_stateGate)
             {
@@ -268,22 +290,42 @@ namespace Simulant.Core.Zone
 
             _host.LogRuntime($"已记录真实地图：{currentTerritoryId}");
 
-            if (initialPosition.HasValue)
-                _host.LogRuntime(FormattableString.Invariant($"已记录真实位置：{initialPosition.Value.X}, {initialPosition.Value.Y}, {initialPosition.Value.Z}"));
+            _host.LogRuntime(FormattableString.Invariant($"已记录真实位置：{initialPosition.X}, {initialPosition.Y}, {initialPosition.Z}"));
         }
 
-        private void RestoreInitialPosition(Vector3? initialPosition, int worldVersion)
+        private void WaitForInitialTerritory(uint territoryId, int worldVersion)
         {
-            if (!initialPosition.HasValue)
-                return;
+            // ACT 的卸载入口是同步的。限时等待游戏进程完成换图，超时后保留记录供重试。
+            var clock = Stopwatch.StartNew();
 
+            while (true)
+            {
+                EnsureWorld(worldVersion);
+                if (IsMapReady(territoryId, out var state))
+                    return;
+
+                if (clock.Elapsed.TotalSeconds >= 5)
+                    throw new TimeoutException($"等待原区域 {territoryId} 就绪超过 5 秒：{state}");
+
+                Thread.Sleep(50);
+            }
+        }
+
+        private void RestoreInitialPosition(Vector3 initialPosition, int worldVersion)
+        {
             EnsureWorld(worldVersion);
             var me = _host.EntityProvider.GetMyself()
                 ?? throw new InvalidOperationException("无法获取玩家实体，不能恢复真实位置。");
 
             EnsureWorld(worldVersion);
-            me.Pos3D = initialPosition.Value;
-            _host.LogRuntime(FormattableString.Invariant($"已恢复真实位置：{initialPosition.Value.X}, {initialPosition.Value.Y}, {initialPosition.Value.Z}"));
+            me.Pos3D = initialPosition;
+            EnsureWorld(worldVersion);
+            var actual = me.Pos3D;
+            if (!(Vector3.Distance(actual, initialPosition) <= 0.1f))
+                throw new InvalidOperationException(FormattableString.Invariant(
+                    $"真实位置验证失败：期望 {initialPosition}，实际 {actual}。"));
+
+            _host.LogRuntime(FormattableString.Invariant($"已恢复真实位置：{actual.X}, {actual.Y}, {actual.Z}"));
         }
 
         private static bool IsMapReady(uint territoryId, out string state)

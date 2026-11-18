@@ -2,7 +2,7 @@ using System;
 
 namespace Simulant.Game.FFCS.Client.Game.UI
 {
-    /// <summary>客户端界面状态，只映射模拟小队所需的仇恨数据。</summary>
+    /// <summary>客户端界面状态，包含快捷栏和仇恨数据。</summary>
     public struct UIState : IMemoryObject
     {
         public IntPtr Ptr { get; set; }
@@ -12,6 +12,7 @@ namespace Simulant.Game.FFCS.Client.Game.UI
         public static IntPtr InstancePtr { get; set; }
 
         public static UIState Instance() => InstancePtr.As<UIState>();
+        public Hotbar Hotbar => Ptr.As<Hotbar>(0x0);
         public Hate Hate => Ptr.As<Hate>(0x8);
     }
 }

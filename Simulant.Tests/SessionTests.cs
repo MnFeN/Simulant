@@ -1014,6 +1014,8 @@ namespace Simulant.Core
         internal Action<string> FirewallLog { get; set; }
         internal Action BeforeEnableFirewall { get; set; }
         internal void EnsureFirewallAllowed() => BeforeEnableFirewall?.Invoke();
+        internal Action BeforeCancelCast { get; set; }
+        internal void CancelCastBeforeFirewall() => BeforeCancelCast?.Invoke();
 
         internal void LogRuntime(string message) => FirewallLog?.Invoke(message);
         internal void LogWarning(string message) => FirewallLog?.Invoke(message);

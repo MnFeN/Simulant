@@ -146,6 +146,9 @@ namespace Simulant.Core.Firewall
                 if (!IsEnabled)
                     _host.EnsureFirewallAllowed();
 
+                if (_receive == null && _send == null)
+                    _host.CancelCastBeforeFirewall();
+
                 try
                 {
                     enable();
