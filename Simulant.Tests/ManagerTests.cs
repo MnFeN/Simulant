@@ -814,22 +814,32 @@ namespace Simulant.Core.Entity
         {
             request = null;
             BeforeNetworkBegin?.Invoke(spec);
-            BeginNetworkSpawn(ObjectKind.BattleNpc, Job.ADV, out request);
-            request.Targetable = spec.Targetable;
+            BeginNetworkSpawn(ObjectKind.BattleNpc, Job.ADV, spec.Targetable, false, out request);
         }
 
-        internal void BeginSpawnNetworkPlayer(NetworkPlayerSpawnSpec spec, out NetworkCharacterSpawnRequest request)
+        internal void BeginSpawnNetworkPlayer(NetworkPlayerSpawnSpec spec, out NetworkCharacterSpawnRequest request,
+            bool deferDispatch = false)
         {
             request = null;
             BeforeNetworkPlayerBegin?.Invoke(spec);
-            BeginNetworkSpawn(ObjectKind.Pc, spec.Job, out request);
-            request.Targetable = spec.Targetable;
+            BeginNetworkSpawn(ObjectKind.Pc, spec.Job, spec.Targetable, deferDispatch, out request);
         }
 
-        private void BeginNetworkSpawn(ObjectKind kind, Job job, out NetworkCharacterSpawnRequest request)
+        private void BeginNetworkSpawn(ObjectKind kind, Job job, bool targetable, bool deferDispatch,
+            out NetworkCharacterSpawnRequest request)
         {
-            request = new NetworkCharacterSpawnRequest((byte)_nextSlot++, kind, job);
+            request = new NetworkCharacterSpawnRequest((byte)_nextSlot++, kind, job)
+            {
+                Targetable = targetable
+            };
             NetworkRequests.Add(request);
+            if (!deferDispatch)
+                DispatchNetworkCharacter(request);
+        }
+
+        internal void DispatchNetworkCharacter(NetworkCharacterSpawnRequest request)
+        {
+            request.Dispatched = true;
             SpawnCount++;
 
             try
@@ -859,7 +869,7 @@ namespace Simulant.Core.Entity
             if (request.Cancelled)
                 throw new InvalidOperationException("已取消的网络生成请求不能再次领取。");
 
-            if (!NetworkReady && !request.Ready)
+            if (!request.Dispatched || (!NetworkReady && !request.Ready))
                 return null;
 
             if (request.Entity == null)
@@ -961,6 +971,7 @@ namespace Simulant.Core.Entity
         internal ObjectKind Kind { get; }
         internal Job Job { get; }
         internal bool Targetable { get; set; }
+        internal bool Dispatched;
 
         internal Character Entity;
         internal bool Ready { get; set; }

@@ -1,4 +1,5 @@
-﻿using Simulant.Core;
+﻿using Simulant.ACT;
+using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Mechanics;
@@ -304,11 +305,13 @@ namespace Simulant.Simulation
                 usedJobs.Add(job.Value);
             }
 
+            var partyJobs = jobs.Select(job => job ?? myJob).ToArray();
+            var partyNames = partyJobs.Select((job, slot) => SimPartyNames.Get(slot + 1, job)).ToArray();
             var position = myself.Pos3D;
             var heading = myself.Heading;
             var members = new SimActor[jobs.Count];
             members[myPartyIdx - 1] = EntityManager.Attach(myself);
-            EntityManager.SetTemporaryName(members[myPartyIdx - 1], SimPartyNames.Get(myPartyIdx, myJob));
+            EntityManager.SetTemporaryName(members[myPartyIdx - 1], partyNames[myPartyIdx - 1]);
             var remaining = jobs.Count - 1;
             _preparingParty = true;
 
@@ -329,28 +332,29 @@ namespace Simulant.Simulation
                 return;
             }
 
+            var specs = new NetworkPlayerSpawnSpec[jobs.Count];
             for (var i = 0; i < jobs.Count; i++)
+                if (jobs[i].HasValue)
+                    specs[i] = new NetworkPlayerSpawnSpec
+                    {
+                        Job = partyJobs[i],
+                        Name = partyNames[i],
+                        AppearanceSource = myself,
+                        Pos = position,
+                        Heading = heading,
+                    };
+
+            EntityManager.SpawnNetworkParty(specs, ids =>
             {
-                if (!jobs[i].HasValue)
-                    continue;
+                ids[myPartyIdx - 1] = myself.Id;
+                TriggernometryPartyVariables.Write(ids, partyNames, partyJobs, myPartyIdx, _host.LogWarning);
+            }, (slot, player) =>
+            {
+                members[slot] = player;
 
-                var slot = i;
-
-                EntityManager.SpawnNetworkPlayer(new NetworkPlayerSpawnSpec
-                {
-                    Job = jobs[i].Value,
-                    Name = SimPartyNames.Get(i + 1, jobs[i].Value),
-                    AppearanceSource = myself,
-                    Pos = position,
-                    Heading = heading,
-                }, player =>
-                {
-                    members[slot] = player;
-
-                    if (--remaining == 0)
-                        CompleteParty();
-                });
-            }
+                if (--remaining == 0)
+                    CompleteParty();
+            });
         }
 
         #endregion Party / Roles

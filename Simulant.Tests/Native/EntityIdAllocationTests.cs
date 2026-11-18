@@ -3,6 +3,7 @@
     using Simulant.Core.Entity;
     using Simulant.Game.FFCS.Client.Game.Character;
     using Simulant.Game.FFCS.Client.Game.Object;
+    using Simulant.Game.FFCS.Client.Network;
     using System;
     using System.Linq;
     using System.Reflection;
@@ -39,6 +40,7 @@
             Check("删除记录后仍从本进程最大已分配 ID 继续", VerifyDeletionKeepsCounter);
             Check("旧插件隐藏并释放的 EObj 仍占用其 ID", VerifyHiddenObject);
             Check("尚未进入对象表的网络请求仍占用其 ID", VerifyPendingNetwork);
+            Check("网络队员可在发包前预留 ID 和槽位，取消待发请求无原生副作用", VerifyDeferredPlayerReservations);
             Check("已交付但尚未清理的资源仍占用其 ID", VerifyOwnedRecord);
             Check("失败本地创建的已知身份仍占用其 ID", VerifyFailedCreation);
             Check("指针表读取失败不创建本地角色", () => VerifyLocalScanFailure(false));
@@ -208,6 +210,48 @@
             SetCounter(false, 0);
             var current = scene.Spawner.SpawnBNpc(1, 1, 1);
             Assert(current.Id == NpcBase + 0x2002 && request != null, "本地生成必须从未完成网络请求的高位 ID 继续递增。");
+            scene.Spawner.Clear();
+        }
+
+        private static void VerifyDeferredPlayerReservations()
+        {
+            var scene = new Scene();
+            CharacterManager.InstancePtr = new IntPtr(0xA0000);
+            PacketDispatcher.HandleSpawnPlayerPacketFuncPtr = FakeLocalPlugin.NetworkFunction;
+            SetCounter(true, 0x2000);
+            const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
+            var begin = typeof(EntitySpawner).GetMethod("BeginSpawnNetworkCharacter", flags).MakeGenericMethod(typeof(byte));
+            var send = typeof(EntitySpawner).GetMethod("DispatchNetworkCharacter", flags);
+            var cancel = typeof(EntitySpawner).GetMethod("CancelNetworkCharacter", flags);
+
+            object Prepare()
+            {
+                var args = new object[]
+                {
+                    ObjectKind.Pc, true, (Func<byte, byte>)(index => index),
+                    (Action<uint, byte>)((sentId, _) => scene.Plugin.NetworkIds.Add(sentId)), null, true
+                };
+                begin.Invoke(scene.Spawner, args);
+                return args[4];
+            }
+
+            var first = Prepare();
+            var second = Prepare();
+            var id = (uint)second.GetType().GetProperty("EntityId").GetValue(second);
+            Assert(id == PlayerBase + 0x2002 && scene.Plugin.NetworkIds.Count == 0 &&
+                (byte)second.GetType().GetProperty("Index").GetValue(second) == 2,
+                "两次预留必须取得独立的 ID 和槽位，客户端尚未收到包。");
+
+            cancel.Invoke(scene.Spawner, new[] { first });
+            Assert(scene.Plugin.CallCount == 0, "释放未发包的预留不得调用原生回收。");
+            send.Invoke(scene.Spawner, new[] { second });
+            Assert(scene.Plugin.NetworkIds.Single() == id, "发送必须沿用预留时发布的实体 ID。");
+
+            var occupied = Prepare();
+            SetObject(scene, 2, new IntPtr(0x910000), 0x10000001, ObjectKind.Pc);
+            var error = Throws<TargetInvocationException>(() => send.Invoke(scene.Spawner, new[] { occupied }));
+            Assert(error.InnerException is InvalidOperationException && scene.Plugin.NetworkIds.Count == 1 &&
+                scene.Plugin.CallCount == 0, "发包前要重新检查原生槽位，拒绝覆盖后来进入同槽的角色。");
             scene.Spawner.Clear();
         }
 

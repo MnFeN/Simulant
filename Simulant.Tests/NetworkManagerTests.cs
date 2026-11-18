@@ -12,6 +12,69 @@ namespace Simulant.Tests
 {
     internal static class NetworkManagerTests
     {
+        public static void PartyPublishesActualIdsBeforeSendingAnySpawnPacket()
+        {
+            var spawner = new EntitySpawner();
+            using (var scheduler = new SimScheduler())
+            {
+                var manager = new SimEntityManager(spawner)
+                {
+                    Scheduler = scheduler
+                };
+                try
+                {
+                    uint[] roster = null;
+                    spawner.AfterNetworkReserved = request =>
+                    {
+                        Assert(roster != null && roster.Contains(request.EntityId),
+                            "每个发出的包必须使用已经发布的实际实体 ID。");
+                    };
+                    var specs = new[] { new NetworkPlayerSpawnSpec(), null, new NetworkPlayerSpawnSpec() };
+                    manager.SpawnNetworkParty(specs, ids =>
+                    {
+                        Assert(spawner.SpawnCount == 0 && scheduler.PendingCount == 0,
+                            "名单发布时必须尚未发送任何生成包，也未安排轮询。");
+                        Assert(ids[0] == spawner.NetworkRequests[0].EntityId && ids[1] == 0 &&
+                            ids[2] == spawner.NetworkRequests[1].EntityId,
+                            "预留 ID 必须按照模拟小队槽位排列，自身位置留给调用者填入。");
+                        roster = ids;
+                    }, (_, __) => { });
+
+                    Assert(spawner.SpawnCount == 2 && scheduler.PendingCount == 1,
+                        "发布后应发送整队生成包并沿用共享轮询。");
+                }
+                finally
+                {
+                    manager.Clear();
+                }
+            }
+        }
+
+        public static void PartyDispatchFailureReleasesSentAndUnsentRequests()
+        {
+            var spawner = new EntitySpawner();
+            using (var scheduler = new SimScheduler())
+            {
+                var manager = new SimEntityManager(spawner)
+                {
+                    Scheduler = scheduler
+                };
+                spawner.AfterNetworkReserved = _ =>
+                {
+                    if (spawner.SpawnCount == 2)
+                        throw new InvalidOperationException("模拟第二个生成包发送失败。");
+                };
+
+                var specs = new[] { new NetworkPlayerSpawnSpec(), new NetworkPlayerSpawnSpec(), new NetworkPlayerSpawnSpec() };
+                Throws<InvalidOperationException>(() => manager.SpawnNetworkParty(specs, _ => { },
+                    (_, __) => throw new Exception("生成失败时不得交付队员。")));
+                Assert(spawner.SpawnCount == 2 && spawner.NetworkRequests.All(request => request.Released) &&
+                    !spawner.NetworkRequests[2].Dispatched && !manager.HasPendingCleanup && scheduler.PendingCount == 0,
+                    "发送失败后必须清理已发与待发请求，并取消队员交付。");
+                manager.Clear();
+            }
+        }
+
         public static void NetworkPlayersAndNpcsSharePollingAndPreserveKinds()
         {
             var spawner = new EntitySpawner();

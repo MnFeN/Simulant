@@ -28,6 +28,7 @@ namespace Simulant.Core.Entity
         internal long Generation { get; }
         internal ObjectKind ObjectKind { get; }
         internal bool Targetable { get; }
+        internal Action SendPacket { get; set; }
         internal Character Entity { get; set; }
         internal bool CancellationRequested { get; set; }
         internal bool Released { get; set; }
@@ -51,7 +52,8 @@ namespace Simulant.Core.Entity
                 spec.ToPacket, PacketDispatcher.HandleSpawnNpcPacket, out request);
         }
 
-        internal void BeginSpawnNetworkPlayer(NetworkPlayerSpawnSpec spec, out NetworkCharacterSpawnRequest request)
+        internal void BeginSpawnNetworkPlayer(NetworkPlayerSpawnSpec spec, out NetworkCharacterSpawnRequest request,
+            bool deferDispatch = false)
         {
             request = null;
 
@@ -63,32 +65,18 @@ namespace Simulant.Core.Entity
                 var source = spec.AppearanceSource ?? _provider.GetMyself()
                     ?? throw new InvalidOperationException("未找到用于复制外观的玩家角色。");
                 return spec.ToPacket(index, PlayerAppearanceSnapshot.Capture(source));
-            }, PacketDispatcher.HandleSpawnPlayerPacket, out request);
+            }, PacketDispatcher.HandleSpawnPlayerPacket, out request, deferDispatch);
         }
 
         private void BeginSpawnNetworkCharacter<TPacket>(ObjectKind objectKind,
             bool targetable, Func<byte, TPacket> buildPacket, Action<uint, TPacket> dispatchPacket,
-            out NetworkCharacterSpawnRequest reservedRequest)
+            out NetworkCharacterSpawnRequest reservedRequest, bool deferDispatch = false)
         {
             reservedRequest = null;
 
             lock (_gate)
             {
-                EnsureWorldReady();
-
-                if (_networkSpawnAllowed == null || !_networkSpawnAllowed())
-                    throw new InvalidOperationException("当前不允许生成网络实体；请完成初始化，未开启开发者模式时还需启用防火墙。");
-
-                EnsureNetworkDespawnFunction();
-                var spawnFunction = objectKind == ObjectKind.Pc
-                    ? PacketDispatcher.HandleSpawnPlayerPacketFuncPtr
-                    : PacketDispatcher.HandleSpawnNpcPacketFuncPtr;
-
-                if (spawnFunction == IntPtr.Zero)
-                    throw new InvalidOperationException("对应的网络角色生成函数尚未定位。");
-
-                if (PacketDispatcher.HandleActorControlFuncPtr == IntPtr.Zero)
-                    throw new InvalidOperationException("角色控制函数尚未定位，无法初始化网络角色的可选中状态。");
+                ValidateNetworkSpawn(objectKind);
 
                 var manager = CharacterManager.Instance();
                 var objects = GameObjectManager.Instance().Objects.IndexSorted;
@@ -96,21 +84,45 @@ namespace Simulant.Core.Entity
                 var entityId = NextAvailableId(manager, objects, objectKind == ObjectKind.Pc);
                 var packet = buildPacket(index);
 
-                // 构造包和扫描 ID 期间游戏仍在运行，发包前再确认选中的两个槽仍为空。
-                if (manager.GetBattleCharaPtr(index) != IntPtr.Zero ||
-                    !objects[index * 2].IsNull() || !objects[index * 2 + 1].IsNull())
-                    throw new InvalidOperationException("预留的网络角色槽位已经被占用，本次未发送生成包。");
-
                 var request = new NetworkCharacterSpawnRequest(this, _networkWorldGeneration, index, entityId,
-                    objectKind, targetable);
+                    objectKind, targetable)
+                {
+                    SendPacket = () => dispatchPacket(entityId, packet)
+                };
                 // 必须在发包前预留；生成包按槽排队，不能在等待期间用另一种路径占用同槽。
                 _networkSpawns.Add(index, request);
                 // 即使发包及回滚都失败，调用会话也必须能拿到请求并继续承担回收责任。
                 reservedRequest = request;
 
+                if (!deferDispatch)
+                    DispatchNetworkCharacter(request);
+            }
+        }
+
+        /// <summary>发送已预留的生成包。调用方可先取得整队 ID，再逐个发包。</summary>
+        internal void DispatchNetworkCharacter(NetworkCharacterSpawnRequest request)
+        {
+            lock (_gate)
+            {
+                ValidateNetworkRequestOwner(request);
+                if (!IsCurrentNetworkRequest(request) || request.CancellationRequested || request.SendPacket == null)
+                    throw new InvalidOperationException("网络角色生成包已经发送、取消或不属于当前世界。");
+
                 try
                 {
-                    dispatchPacket(entityId, packet);
+                    ValidateNetworkSpawn(request.ObjectKind);
+                    // 预留期间客户端仍在运行，发送之前重新检查原生槽位。
+                    var manager = CharacterManager.Instance();
+                    var objects = GameObjectManager.Instance().Objects.IndexSorted;
+                    var index = request.Index;
+                    if (manager.GetBattleCharaPtr(index) != IntPtr.Zero ||
+                        !objects[index * 2].IsNull() || !objects[index * 2 + 1].IsNull())
+                        throw new InvalidOperationException("预留的网络角色槽位已经被占用，本次未发送生成包。");
+
+                    var send = request.SendPacket;
+                    // 发包即使抛错也可能已入原生队列，此后按已发包回收。
+                    request.SendPacket = null;
+                    send();
                 }
                 catch (Exception spawnError)
                 {
@@ -129,6 +141,25 @@ namespace Simulant.Core.Entity
             }
         }
 
+        private void ValidateNetworkSpawn(ObjectKind objectKind)
+        {
+            EnsureWorldReady();
+
+            if (_networkSpawnAllowed == null || !_networkSpawnAllowed())
+                throw new InvalidOperationException("当前不允许生成网络实体；请完成初始化，未开启开发者模式时还需启用防火墙。");
+
+            EnsureNetworkDespawnFunction();
+            var spawnFunction = objectKind == ObjectKind.Pc
+                ? PacketDispatcher.HandleSpawnPlayerPacketFuncPtr
+                : PacketDispatcher.HandleSpawnNpcPacketFuncPtr;
+
+            if (spawnFunction == IntPtr.Zero)
+                throw new InvalidOperationException("对应的网络角色生成函数尚未定位。");
+
+            if (PacketDispatcher.HandleActorControlFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("角色控制函数尚未定位，无法初始化网络角色的可选中状态。");
+        }
+
         internal Character TryCompleteNetworkCharacter(NetworkCharacterSpawnRequest request)
         {
             if (request == null)
@@ -141,6 +172,9 @@ namespace Simulant.Core.Entity
 
                 if (!IsCurrentNetworkRequest(request) || request.CancellationRequested)
                     throw new InvalidOperationException("网络角色生成请求已取消或不属于当前世界。");
+
+                if (request.SendPacket != null)
+                    return null;
 
                 EnsureNetworkTables();
                 var manager = CharacterManager.Instance();
@@ -223,6 +257,14 @@ namespace Simulant.Core.Entity
                 throw new ArgumentOutOfRangeException(nameof(request), "无效的模拟角色网络槽位。");
 
             request.CancellationRequested = true;
+            if (request.SendPacket != null)
+            {
+                // 只预留过托管槽位，无需向客户端发送回收包。
+                request.SendPacket = null;
+                ReleaseNetworkReservation(request);
+                return;
+            }
+
             EnsureNetworkDespawnFunction();
             var manager = CharacterManager.Instance();
             var objects = GameObjectManager.Instance().Objects.IndexSorted;
@@ -255,6 +297,11 @@ namespace Simulant.Core.Entity
             if (request.Entity != null)
                 _owned.Remove(request.Entity.Identity);
 
+            ReleaseNetworkReservation(request);
+        }
+
+        private void ReleaseNetworkReservation(NetworkCharacterSpawnRequest request)
+        {
             _networkSpawns.Remove(request.Index);
             request.Released = true;
         }

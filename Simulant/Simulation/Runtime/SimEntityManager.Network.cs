@@ -57,8 +57,63 @@ namespace Simulant.Simulation.Runtime
                 onReady, timeoutSeconds);
         }
 
-        private void QueueNetworkSpawn(BeginNetworkSpawn begin, Action<SimActor> onReady, double timeoutSeconds,
-            Action<SimActor> onSpawned = null)
+        /// <summary>先预留整队槽位和实际 ID，在发送第一个生成包之前交付名单。</summary>
+        internal void SpawnNetworkParty(IReadOnlyList<NetworkPlayerSpawnSpec> specs, Action<uint[]> beforeDispatch,
+            Action<int, SimActor> onReady)
+        {
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                const double timeoutSeconds = 5;
+                var ids = new uint[specs.Count];
+                var prepared = new List<PendingNetworkSpawn>(specs.Count);
+
+                try
+                {
+                    for (var i = 0; i < specs.Count; i++)
+                    {
+                        var spec = specs[i];
+                        if (spec == null)
+                            continue;
+
+                        var slot = i;
+                        var pending = QueueNetworkSpawn(
+                            (out NetworkCharacterSpawnRequest request) => _spawner.BeginSpawnNetworkPlayer(spec, out request, deferDispatch: true),
+                            actor => onReady(slot, actor), timeoutSeconds, deferDispatch: true);
+                        prepared.Add(pending);
+                        ids[slot] = pending.Request.EntityId;
+                    }
+
+                    beforeDispatch(ids);
+                    foreach (var pending in prepared)
+                    {
+                        pending.Deadline = _scheduler.ElapsedSeconds + timeoutSeconds;
+                        _spawner.DispatchNetworkCharacter(pending.Request);
+                    }
+                    ScheduleNetworkPoll();
+                }
+                catch
+                {
+                    foreach (var pending in prepared)
+                    {
+                        pending.OnReady = null;
+                        if (TryCleanup(() => _spawner.CancelNetworkCharacter(pending.Request)))
+                            _networkSpawns.Remove(pending);
+                        else
+                        {
+                            // 发包可能部分成功，保留失败的请求供会话清理，禁止继续交付。
+                            _acceptingEntities = false;
+                            _networkPoll?.Cancel();
+                            _networkPoll = null;
+                        }
+                    }
+                    throw;
+                }
+            }
+        }
+
+        private PendingNetworkSpawn QueueNetworkSpawn(BeginNetworkSpawn begin, Action<SimActor> onReady, double timeoutSeconds,
+            Action<SimActor> onSpawned = null, bool deferDispatch = false)
         {
             if (onReady == null)
                 throw new ArgumentNullException(nameof(onReady));
@@ -105,6 +160,8 @@ namespace Simulant.Simulation.Runtime
                 }
 
                 _networkSpawns.Add(pending);
+                if (deferDispatch)
+                    return pending;
 
                 try
                 {
@@ -128,6 +185,8 @@ namespace Simulant.Simulation.Runtime
 
                     throw;
                 }
+
+                return pending;
             }
         }
 
