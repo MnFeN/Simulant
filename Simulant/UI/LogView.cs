@@ -4,7 +4,6 @@ using System;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -12,7 +11,7 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    public partial class LogView : UserControl
+    public partial class LogView : UserControlEx
     {
         private PluginHost _host;
         private readonly System.Windows.Forms.Timer _refreshTimer;
@@ -36,23 +35,17 @@ namespace Simulant.UI
                 Interval = 100
             };
             _refreshTimer.Tick += (sender, e) => RefreshPendingLogs();
-            _refreshTimer.Start();
         }
 
         internal void Bind(PluginHost host)
         {
             _host = host;
+            _refreshTimer.Start();
             RefreshLogView();
         }
 
         private Dictionary<LogType, List<LogItem>> _logSnapshot = new Dictionary<LogType, List<LogItem>>();
         private List<LogItem> _virtualData = new List<LogItem>();
-
-        private static readonly Color LogBgRed = Color.FromArgb(255, 225, 225);
-        private static readonly Color LogBgYellow = Color.FromArgb(255, 245, 215);
-        private static readonly Color LogBgGreen = Color.FromArgb(215, 255, 225);
-        private static readonly Color LogBgBlue = Color.FromArgb(215, 235, 255);
-        private static readonly Color LogBgGray = Color.FromArgb(250, 250, 250);
 
         internal void RefreshLogView()
         {
@@ -113,7 +106,8 @@ namespace Simulant.UI
                 }
             }
 
-            txtLogRegex.BackColor = _invalidRegex ? Color.MistyRose : SystemColors.Window;
+            txtLogRegex.IsInvalid = _invalidRegex;
+            logSearchField.BackColor = txtLogRegex.BackColor;
 
             if (_invalidRegex)
                 return;
@@ -219,12 +213,9 @@ namespace Simulant.UI
         private void RejectLogFilter(string message)
         {
             _invalidRegex = true;
-            txtLogRegex.BackColor = Color.MistyRose;
+            txtLogRegex.IsInvalid = true;
+            logSearchField.BackColor = txtLogRegex.BackColor;
             _filterErrors.SetError(txtLogRegex, message);
-        }
-
-        private void txtLogRegex_TextChanged(object sender, EventArgs e)
-        {
         }
 
         private void txtLogRegex_KeyDown(object sender, KeyEventArgs e)
@@ -247,32 +238,21 @@ namespace Simulant.UI
             if (e.RowIndex < 0 || e.RowIndex >= _virtualData.Count)
                 return;
 
-            var item = _virtualData[e.RowIndex];
+            var type = _virtualData[e.RowIndex].Type;
+            if (e.ColumnIndex > 1 && type != LogType.Error)
+                return;
+            var ink = WorkbenchTheme.Muted;
 
-            switch (item.Type)
-            {
-                case LogType.Error:
-                    e.CellStyle.BackColor = LogBgRed;
-                    break;
-                case LogType.Warning:
-                    e.CellStyle.BackColor = LogBgYellow;
-                    break;
-                case LogType.Runtime:
-                    e.CellStyle.BackColor = LogBgGreen;
-                    break;
-                case LogType.Sim:
-                    e.CellStyle.BackColor = LogBgBlue;
-                    break;
-                case LogType.Verbose:
-                    e.CellStyle.BackColor = LogBgGray;
-                    break;
-                default:
-                    e.CellStyle.BackColor = Color.White;
-                    break;
-            }
+            if (e.ColumnIndex > 0)
+                switch (type)
+                {
+                    case LogType.Error: ink = WorkbenchTheme.Red; break;
+                    case LogType.Warning: ink = WorkbenchTheme.Yellow; break;
+                    case LogType.Runtime: ink = WorkbenchTheme.Green; break;
+                    case LogType.Sim: ink = WorkbenchTheme.Blue; break;
+                }
 
-            e.CellStyle.ForeColor = Color.Black;
-            e.FormattingApplied = true;
+            e.CellStyle.ForeColor = e.CellStyle.SelectionForeColor = ink;
         }
 
         private void dgvLog_CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
@@ -305,21 +285,13 @@ namespace Simulant.UI
             yield return chkLogFilterVerbose;
         }
 
-        // Only for LeftClick, RightClick would not trigger MouseClick on chks
-        private void chkLogFilterAll_MouseClick(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-                chkLogFilterAll_Click();
-        }
-
-        // Only for RightClick
         private void chkLogFilterAll_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
-                chkLogFilterAll_Click();
+                chkLogFilterAll_Click(sender, e);
         }
 
-        private void chkLogFilterAll_Click()
+        private void chkLogFilterAll_Click(object sender, EventArgs e)
         {
             var newChecked = chkLogFilterAll.CheckState != CheckState.Checked;
 
@@ -335,21 +307,14 @@ namespace Simulant.UI
             ApplyLogFilter();
         }
 
-        // Only for LeftClick, RightClick would not trigger MouseClick on chks
-        private void chkLogFilters_MouseClick(object sender, MouseEventArgs e)
+        private void chkLogFilters_Click(object sender, EventArgs e)
         {
-            if (!(sender is CheckBox current))
-                return;
-
-            if (e.Button == MouseButtons.Left)
-            {
-                current.Checked = !current.Checked;
-                SyncLogFilterAllState();
-                ApplyLogFilter();
-            }
+            var current = (CheckBox)sender;
+            current.Checked = !current.Checked;
+            SyncLogFilterAllState();
+            ApplyLogFilter();
         }
 
-        // Only for RightClick
         private void chkLogFilters_MouseDown(object sender, MouseEventArgs e)
         {
             if (!(sender is CheckBox current))

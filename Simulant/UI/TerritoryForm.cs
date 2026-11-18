@@ -5,7 +5,6 @@ using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -13,7 +12,7 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    internal partial class TerritoryForm : Form
+    internal partial class TerritoryForm : FormEx
     {
         private List<TerritoryViewItem> _allTerritories;
         private List<TerritoryViewItem> _filteredTerritories;
@@ -41,8 +40,15 @@ namespace Simulant.UI
                 ContainerControl = this,
                 BlinkStyle = ErrorBlinkStyle.NeverBlink,
             };
-            LoadTerritoryData();
+        }
 
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            if (DesignMode || _allTerritories != null)
+                return;
+
+            LoadTerritoryData();
             RestoreViewState();
             ApplySearch();
             RestoreSelectedTerritory();
@@ -174,7 +180,7 @@ namespace Simulant.UI
                     ? null
                     : new Regex(txtFilter.Text, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(50));
 
-                txtFilter.BackColor = SystemColors.Window;
+                txtFilter.IsInvalid = false;
             }
             catch (ArgumentException)
             {
@@ -232,7 +238,7 @@ namespace Simulant.UI
         private void RejectSearch(string message)
         {
             _invalidRegex = true;
-            txtFilter.BackColor = Color.MistyRose;
+            txtFilter.IsInvalid = true;
             _filterErrors.SetError(txtFilter, message);
         }
 

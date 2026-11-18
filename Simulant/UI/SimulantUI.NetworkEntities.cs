@@ -14,7 +14,7 @@ namespace Simulant.UI
 
         private ContextMenuStrip ConfigureNetworkEntityMenu()
         {
-            var menu = new ContextMenuStrip(components);
+            var menu = new ContextMenuStripEx(components);
             var npc = menu.Items.Add("生成网络 NPC…", null, (_, __) => RunManualEntityAction(SpawnManualNetworkNpc));
             var player = menu.Items.Add("生成网络玩家…", null, (_, __) => RunManualEntityAction(SpawnManualNetworkPlayer));
             var local = menu.Items.Add("本地生成（备用）…", null, (_, __) => RunManualEntityAction(() => SpawnManualEntity(true)));

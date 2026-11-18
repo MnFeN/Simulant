@@ -11,7 +11,7 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    public partial class PresetControl : UserControl
+    public partial class PresetControl : UserControlEx
     {
         private PluginHost _host;
         private SimPresetBase _preset;
@@ -32,6 +32,7 @@ namespace Simulant.UI
             InitializeComponent();
             toolTip.SetToolTip(btnRetry, "清理当前模拟，恢复本阶段场地和出生点，使用上一场的种子再次开始。");
             _optionEditor = new OptionEditor(tableOptions, toolTip);
+            optionsScroll.SetContent(optionsContent);
             _optionEditor.ValueChanged += SavePresetOptions;
             _sessionStateTimer = new System.Windows.Forms.Timer(components)
             {
@@ -49,7 +50,6 @@ namespace Simulant.UI
                 UpdateQuickControls();
             };
 
-            _sessionStateTimer.Start();
             Disposed += (sender, e) =>
             {
                 _quickControls?.Dispose();
@@ -61,6 +61,7 @@ namespace Simulant.UI
         internal void Bind(PluginHost host)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
+            _sessionStateTimer.Start();
             UpdateButtons();
         }
 
@@ -79,13 +80,14 @@ namespace Simulant.UI
                 return;
             }
 
-            lblPreset.Text = "预设：" + preset.Name;
-            lblAuthor.Text = "作者：" + preset.Author;
-            lblLastChanged.Text = "更新时间：" + preset.LastUpdated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-            rtbInfo.Text = preset.Description ?? "（无）";
-
+            lblPreset.Text = preset.Name;
+            toolTip.SetToolTip(lblPreset, preset.Name);
+            lblAuthor.Text = "作者 " + preset.Author;
+            lblLastChanged.Text = preset.LastUpdated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            rtbInfo.Text = preset.Description?.Trim() ?? string.Empty;
             if (!preset.IsImplemented)
                 rtbInfo.AppendText(System.Environment.NewLine + "该预设尚未实现，暂不能开始模拟。");
+            rtbInfo.Visible = !string.IsNullOrWhiteSpace(rtbInfo.Text);
 
             RebuildOptions(preset);
             UpdateButtons();
@@ -98,12 +100,17 @@ namespace Simulant.UI
             _preset = null;
             _lastAttempt = null;
 
-            lblPreset.Text = "预设：";
-            lblAuthor.Text = "作者：";
-            lblLastChanged.Text = "更新时间：";
-            rtbInfo.Text = "请先在左侧选择预设。";
+            lblPreset.Text = "选择预设";
+            toolTip.SetToolTip(lblPreset, null);
+            lblAuthor.Text = string.Empty;
+            lblLastChanged.Text = string.Empty;
+            rtbInfo.Clear();
+            rtbInfo.Visible = false;
 
             ClearOptions();
+            lblNoOptions.Text = "选择预设后可调整参数";
+            lblNoOptions.Visible = true;
+            optionsScroll.ResetScroll();
             UpdateButtons();
         }
 
@@ -125,6 +132,9 @@ namespace Simulant.UI
                     _host.LogWarning($"预设「{preset.Name}」的选项「{option.PropertyName}」无法恢复，使用默认值：{error.Message}");
                 }
             });
+            lblNoOptions.Text = "此预设没有可调参数";
+            lblNoOptions.Visible = tableOptions.Controls.Count == 0;
+            optionsScroll.ResetScroll();
         }
 
         private void SavePresetOptions()
@@ -304,6 +314,11 @@ namespace Simulant.UI
             btnStart.Enabled = hasHost && hasPreset && _preset.IsImplemented && _displayedReadyToStart;
             btnRetry.Enabled = btnStart.Enabled && _displayedReadyToRetry;
             btnEnd.Enabled = hasHost && (isRunning || hasPendingCleanup || _restoringPhase);
+            lblRunState.Text = !hasPreset ? string.Empty : _restoringPhase ? "恢复阶段中" :
+                isRunning ? "模拟中" : hasPendingCleanup ? "等待清理" : btnStart.Enabled ? "可开始" : "等待就绪";
+            lblRunState.ForeColor = _restoringPhase ? WorkbenchTheme.Muted :
+                hasPendingCleanup ? WorkbenchTheme.Yellow :
+                isRunning || btnStart.Enabled ? WorkbenchTheme.Accent : WorkbenchTheme.Muted;
             UpdateQuickControls();
         }
 

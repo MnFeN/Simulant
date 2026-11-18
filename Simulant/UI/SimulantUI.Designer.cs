@@ -1,369 +1,503 @@
-﻿namespace Simulant.UI
+using System;
+using System.ComponentModel;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace Simulant.UI
 {
     partial class SimulantUI
     {
-        /// <summary>
-        /// 必需的设计器变量。
-        /// </summary>
-        private System.ComponentModel.IContainer components = null;
+        private IContainer components = null;
 
-        /// <summary>
-        /// 清理所有正在使用的资源。
-        /// </summary>
-        /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
-            {
+            if (disposing && components != null)
                 components.Dispose();
-            }
 
             base.Dispose(disposing);
         }
 
-        #region 组件设计器生成的代码
-        /// <summary>
-        /// 设计器支持所需的方法 - 不要修改
-        /// 使用代码编辑器修改此方法的内容。
-        /// </summary>
+        #region Windows Forms Designer generated code
+
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SimulantUI));
-            this.splitMainV = new System.Windows.Forms.SplitContainer();
-            this.tableL = new System.Windows.Forms.TableLayoutPanel();
-            this.btnInitPlugin = new System.Windows.Forms.Button();
-            this.btnMenu = new System.Windows.Forms.Button();
-            this.btnSelectTerritory = new System.Windows.Forms.Button();
-            this.btnSimEnter = new System.Windows.Forms.Button();
-            this.btnSimExit = new System.Windows.Forms.Button();
-            this.lblTerritory = new System.Windows.Forms.Label();
-            this.picLogo = new System.Windows.Forms.PictureBox();
-            this.cbxPhase = new System.Windows.Forms.ComboBox();
-            this.chkToggleFirewall = new System.Windows.Forms.CheckBox();
-            this.lblTerritoryId = new System.Windows.Forms.Label();
-            this.numTerritoryId = new System.Windows.Forms.NumericUpDown();
-            this.splitMainH = new System.Windows.Forms.SplitContainer();
-            this.presetControl = new Simulant.UI.PresetControl();
-            this.logView = new Simulant.UI.LogView();
-            ((System.ComponentModel.ISupportInitialize)(this.splitMainV)).BeginInit();
+            this.components = new Container();
+            this.frame = new TableLayoutPanel();
+            this.headerCard = new PanelEx();
+            this.headerRow = new TableLayoutPanel();
+            this.mark = new SimulantMark();
+            this.wordmark = new TableLayoutPanel();
+            this.lblBrand = new LabelEx();
+            this.lblBrandEnglish = new LabelEx();
+            this.lblConnection = new LabelEx();
+            this.btnInitPlugin = new ButtonEx();
+            this.chkToggleFirewall = new CheckBoxEx();
+            this.btnMenu = new ButtonEx();
+            this.workspace = new SplitContainerEx();
+            this.splitMainV = new SplitContainerEx();
+            this.sidebarCard = new PanelEx();
+            this.sidebar = new TableLayoutPanel();
+            this.lblRegionTitle = new LabelEx();
+            this.mapPicker = new TableLayoutPanel();
+            this.btnSelectTerritory = new ButtonEx();
+            this.idField = new TableLayoutPanel();
+            this.lblTerritoryId = new LabelEx();
+            this.numTerritoryId = new NumericTextBoxEx();
+            this.mapDetails = new PanelEx();
+            this.mapText = new TableLayoutPanel();
+            this.lblZoneName = new LabelEx();
+            this.lblTerritory = new LabelEx();
+            this.lblPhase = new LabelEx();
+            this.cbxPhase = new ComboBoxEx();
+            this.mapActions = new TableLayoutPanel();
+            this.btnSimEnter = new ButtonEx();
+            this.btnSimExit = new ButtonEx();
+            this.presetControl = new PresetControl();
+            this.logView = new LogView();
+            this.frame.SuspendLayout();
+            this.headerCard.SuspendLayout();
+            this.headerRow.SuspendLayout();
+            this.wordmark.SuspendLayout();
+            ((ISupportInitialize)this.workspace).BeginInit();
+            this.workspace.Panel1.SuspendLayout();
+            this.workspace.Panel2.SuspendLayout();
+            this.workspace.SuspendLayout();
+            ((ISupportInitialize)this.splitMainV).BeginInit();
             this.splitMainV.Panel1.SuspendLayout();
             this.splitMainV.Panel2.SuspendLayout();
             this.splitMainV.SuspendLayout();
-            this.tableL.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.picLogo)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numTerritoryId)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.splitMainH)).BeginInit();
-            this.splitMainH.Panel1.SuspendLayout();
-            this.splitMainH.Panel2.SuspendLayout();
-            this.splitMainH.SuspendLayout();
+            this.sidebarCard.SuspendLayout();
+            this.sidebar.SuspendLayout();
+            this.mapPicker.SuspendLayout();
+            this.idField.SuspendLayout();
+            this.mapDetails.SuspendLayout();
+            this.mapText.SuspendLayout();
+            this.mapActions.SuspendLayout();
             this.SuspendLayout();
             //
-            // splitMainV
+            // frame
             //
-            this.splitMainV.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitMainV.Font = new System.Drawing.Font("等距更纱黑体 SC", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.splitMainV.Location = new System.Drawing.Point(0, 0);
-            this.splitMainV.Name = "splitMainV";
+            this.frame.ColumnCount = 1;
+            this.frame.RowCount = 2;
+            this.frame.Dock = DockStyle.Fill;
+            this.frame.Margin = Padding.Empty;
+            this.frame.Padding = new Padding(16, 14, 16, 14);
+            this.frame.Name = "frame";
+            this.frame.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.frame.RowStyles.Add(new RowStyle(SizeType.Absolute, 76F));
+            this.frame.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.frame.Controls.Add(this.headerCard, 0, 0);
+            this.frame.Controls.Add(this.workspace, 0, 1);
             //
-            // splitMainV.Panel1
+            // headerCard
             //
-            this.splitMainV.Panel1.Controls.Add(this.tableL);
+            this.headerCard.Dock = DockStyle.Fill;
+            this.headerCard.Margin = new Padding(0, 0, 0, 12);
+            this.headerCard.Padding = new Padding(14, 9, 14, 9);
+            this.headerCard.Name = "headerCard";
+            this.headerCard.Controls.Add(this.headerRow);
             //
-            // splitMainV.Panel2
+            // headerRow
             //
-            this.splitMainV.Panel2.Controls.Add(this.splitMainH);
-            this.splitMainV.Size = new System.Drawing.Size(1209, 892);
-            this.splitMainV.SplitterDistance = 340;
-            this.splitMainV.TabIndex = 0;
+            this.headerRow.ColumnCount = 6;
+            this.headerRow.RowCount = 1;
+            this.headerRow.Dock = DockStyle.Fill;
+            this.headerRow.Margin = Padding.Empty;
+            this.headerRow.Name = "headerRow";
+            this.headerRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
+            this.headerRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.headerRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 98F));
+            this.headerRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86F));
+            this.headerRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 121F));
+            this.headerRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64F));
+            this.headerRow.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.headerRow.Controls.Add(this.mark, 0, 0);
+            this.headerRow.Controls.Add(this.wordmark, 1, 0);
+            this.headerRow.Controls.Add(this.lblConnection, 2, 0);
+            this.headerRow.Controls.Add(this.btnInitPlugin, 3, 0);
+            this.headerRow.Controls.Add(this.chkToggleFirewall, 4, 0);
+            this.headerRow.Controls.Add(this.btnMenu, 5, 0);
             //
-            // tableL
+            // mark
             //
-            this.tableL.AutoSize = true;
-            this.tableL.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.tableL.BackColor = System.Drawing.SystemColors.ActiveCaption;
-            this.tableL.ColumnCount = 3;
-            this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 22.19101F));
-            this.tableL.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 27.80899F));
-            this.tableL.Controls.Add(this.btnInitPlugin, 0, 1);
-            this.tableL.Controls.Add(this.btnMenu, 0, 6);
-            this.tableL.Controls.Add(this.btnSelectTerritory, 0, 2);
-            this.tableL.Controls.Add(this.btnSimEnter, 0, 5);
-            this.tableL.Controls.Add(this.btnSimExit, 1, 5);
-            this.tableL.Controls.Add(this.lblTerritory, 0, 3);
-            this.tableL.Controls.Add(this.picLogo, 0, 0);
-            this.tableL.Controls.Add(this.cbxPhase, 0, 4);
-            this.tableL.Controls.Add(this.chkToggleFirewall, 1, 1);
-            this.tableL.Controls.Add(this.lblTerritoryId, 1, 2);
-            this.tableL.Controls.Add(this.numTerritoryId, 2, 2);
-            this.tableL.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tableL.Location = new System.Drawing.Point(0, 0);
-            this.tableL.Name = "tableL";
-            this.tableL.RowCount = 8;
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 156F));
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableL.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableL.Size = new System.Drawing.Size(340, 892);
-            this.tableL.TabIndex = 0;
-            this.tableL.TabStop = true;
+            this.mark.Dock = DockStyle.Fill;
+            this.mark.Margin = new Padding(0, 0, 8, 0);
+            this.mark.TabStop = false;
+            this.mark.Name = "mark";
+            //
+            // wordmark
+            //
+            this.wordmark.ColumnCount = 2;
+            this.wordmark.RowCount = 1;
+            this.wordmark.Dock = DockStyle.Fill;
+            this.wordmark.Margin = Padding.Empty;
+            this.wordmark.Name = "wordmark";
+            this.wordmark.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80F));
+            this.wordmark.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.wordmark.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.wordmark.Controls.Add(this.lblBrand, 0, 0);
+            this.wordmark.Controls.Add(this.lblBrandEnglish, 1, 0);
+            //
+            // lblBrand
+            //
+            this.lblBrand.Text = "仿生石";
+            this.lblBrand.Dock = DockStyle.Fill;
+            this.lblBrand.Margin = Padding.Empty;
+            this.lblBrand.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblBrand.AutoEllipsis = true;
+            this.lblBrand.Tone = LabelTone.Title;
+            this.lblBrand.Name = "lblBrand";
+            //
+            // lblBrandEnglish
+            //
+            this.lblBrandEnglish.Text = "SIMULANT";
+            this.lblBrandEnglish.Dock = DockStyle.Fill;
+            this.lblBrandEnglish.Margin = Padding.Empty;
+            this.lblBrandEnglish.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblBrandEnglish.AutoEllipsis = true;
+            this.lblBrandEnglish.Tone = LabelTone.Muted;
+            this.lblBrandEnglish.Name = "lblBrandEnglish";
+            //
+            // lblConnection
+            //
+            this.lblConnection.Text = "未连接";
+            this.lblConnection.Dock = DockStyle.Fill;
+            this.lblConnection.Margin = new Padding(0, 0, 12, 0);
+            this.lblConnection.TextAlign = ContentAlignment.MiddleRight;
+            this.lblConnection.AutoEllipsis = true;
+            this.lblConnection.Tone = LabelTone.Muted;
+            this.lblConnection.Name = "lblConnection";
             //
             // btnInitPlugin
             //
-            this.btnInitPlugin.AutoSize = true;
-            this.btnInitPlugin.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.btnInitPlugin.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnInitPlugin.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnInitPlugin.Location = new System.Drawing.Point(15, 166);
-            this.btnInitPlugin.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.btnInitPlugin.Name = "btnInitPlugin";
-            this.btnInitPlugin.Padding = new System.Windows.Forms.Padding(5);
-            this.btnInitPlugin.Size = new System.Drawing.Size(140, 42);
-            this.btnInitPlugin.TabIndex = 0;
-            this.btnInitPlugin.TabStop = false;
             this.btnInitPlugin.Text = "重试连接";
-            this.btnInitPlugin.UseVisualStyleBackColor = true;
-            this.btnInitPlugin.Click += new System.EventHandler(this.btnInitPlugin_Click);
-            //
-            // btnMenu
-            //
-            this.btnMenu.AutoSize = true;
-            this.btnMenu.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.tableL.SetColumnSpan(this.btnMenu, 3);
-            this.btnMenu.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnMenu.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.btnMenu.Name = "btnMenu";
-            this.btnMenu.Padding = new System.Windows.Forms.Padding(5);
-            this.btnMenu.TabIndex = 6;
-            this.btnMenu.Text = "菜单";
-            this.btnMenu.UseVisualStyleBackColor = true;
-            this.btnMenu.Click += new System.EventHandler(this.btnMenu_Click);
-            //
-            // btnSelectTerritory
-            //
-            this.btnSelectTerritory.AutoSize = true;
-            this.btnSelectTerritory.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.btnSelectTerritory.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnSelectTerritory.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnSelectTerritory.Location = new System.Drawing.Point(15, 228);
-            this.btnSelectTerritory.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.btnSelectTerritory.Name = "btnSelectTerritory";
-            this.btnSelectTerritory.Padding = new System.Windows.Forms.Padding(5);
-            this.btnSelectTerritory.Size = new System.Drawing.Size(140, 42);
-            this.btnSelectTerritory.TabIndex = 0;
-            this.btnSelectTerritory.TabStop = false;
-            this.btnSelectTerritory.Text = "选择地图";
-            this.btnSelectTerritory.UseVisualStyleBackColor = true;
-            this.btnSelectTerritory.Click += new System.EventHandler(this.btnSelectTerritory_Click);
-            //
-            // btnSimEnter
-            //
-            this.btnSimEnter.AutoSize = true;
-            this.btnSimEnter.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.btnSimEnter.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnSimEnter.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnSimEnter.Location = new System.Drawing.Point(15, 414);
-            this.btnSimEnter.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.btnSimEnter.Name = "btnSimEnter";
-            this.btnSimEnter.Padding = new System.Windows.Forms.Padding(5);
-            this.btnSimEnter.Size = new System.Drawing.Size(140, 42);
-            this.btnSimEnter.TabIndex = 0;
-            this.btnSimEnter.TabStop = false;
-            this.btnSimEnter.Text = "加载区域";
-            this.btnSimEnter.UseVisualStyleBackColor = true;
-            this.btnSimEnter.Click += new System.EventHandler(this.btnSimEnter_Click);
-            //
-            // btnSimExit
-            //
-            this.btnSimExit.AutoSize = true;
-            this.btnSimExit.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.tableL.SetColumnSpan(this.btnSimExit, 2);
-            this.btnSimExit.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnSimExit.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnSimExit.Location = new System.Drawing.Point(185, 414);
-            this.btnSimExit.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.btnSimExit.Name = "btnSimExit";
-            this.btnSimExit.Padding = new System.Windows.Forms.Padding(5);
-            this.btnSimExit.Size = new System.Drawing.Size(140, 42);
-            this.btnSimExit.TabIndex = 0;
-            this.btnSimExit.TabStop = false;
-            this.btnSimExit.Text = "退出模拟";
-            this.btnSimExit.UseVisualStyleBackColor = true;
-            this.btnSimExit.Click += new System.EventHandler(this.btnSimExit_Click);
-            //
-            // lblTerritory
-            //
-            this.lblTerritory.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.lblTerritory.AutoSize = true;
-            this.tableL.SetColumnSpan(this.lblTerritory, 3);
-            this.lblTerritory.Location = new System.Drawing.Point(15, 290);
-            this.lblTerritory.Margin = new System.Windows.Forms.Padding(15, 10, 15, 10);
-            this.lblTerritory.Name = "lblTerritory";
-            this.lblTerritory.Size = new System.Drawing.Size(106, 44);
-            this.lblTerritory.TabIndex = 0;
-            this.lblTerritory.Text = "选中区域：无\r\n选中副本：无";
-            //
-            // picLogo
-            //
-            this.tableL.SetColumnSpan(this.picLogo, 3);
-            this.picLogo.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.picLogo.Image = ((System.Drawing.Image)(resources.GetObject("picLogo.Image")));
-            this.picLogo.Location = new System.Drawing.Point(15, 15);
-            this.picLogo.Margin = new System.Windows.Forms.Padding(15);
-            this.picLogo.Name = "picLogo";
-            this.picLogo.Size = new System.Drawing.Size(310, 126);
-            this.picLogo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.picLogo.TabIndex = 2;
-            this.picLogo.TabStop = false;
-            //
-            // cbxPhase
-            //
-            this.tableL.SetColumnSpan(this.cbxPhase, 3);
-            this.cbxPhase.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cbxPhase.DropDownHeight = 500;
-            this.cbxPhase.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbxPhase.FormattingEnabled = true;
-            this.cbxPhase.IntegralHeight = false;
-            this.cbxPhase.Location = new System.Drawing.Point(15, 359);
-            this.cbxPhase.Margin = new System.Windows.Forms.Padding(15);
-            this.cbxPhase.MaxDropDownItems = 15;
-            this.cbxPhase.Name = "cbxPhase";
-            this.cbxPhase.Size = new System.Drawing.Size(310, 30);
-            this.cbxPhase.TabIndex = 8;
-            this.cbxPhase.SelectedIndexChanged += new System.EventHandler(this.cbxPhase_SelectedIndexChanged);
+            this.btnInitPlugin.Dock = DockStyle.Fill;
+            this.btnInitPlugin.Margin = new Padding(0, 5, 8, 5);
+            this.btnInitPlugin.TabIndex = 0;
+            this.btnInitPlugin.Name = "btnInitPlugin";
+            this.btnInitPlugin.Click += new EventHandler(this.btnInitPlugin_Click);
             //
             // chkToggleFirewall
             //
-            this.chkToggleFirewall.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.chkToggleFirewall.AutoSize = true;
-            this.chkToggleFirewall.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.tableL.SetColumnSpan(this.chkToggleFirewall, 2);
-            this.chkToggleFirewall.Location = new System.Drawing.Point(173, 169);
+            this.chkToggleFirewall.Text = "防火墙未开启";
+            this.chkToggleFirewall.Appearance = Appearance.Button;
+            this.chkToggleFirewall.Style = CheckBoxStyle.ToggleButton;
+            this.chkToggleFirewall.TextAlign = ContentAlignment.MiddleCenter;
+            this.chkToggleFirewall.Dock = DockStyle.Fill;
+            this.chkToggleFirewall.Margin = new Padding(0, 5, 8, 5);
+            this.chkToggleFirewall.AccessibleName = "防火墙";
+            this.chkToggleFirewall.TabIndex = 1;
             this.chkToggleFirewall.Name = "chkToggleFirewall";
-            this.chkToggleFirewall.Padding = new System.Windows.Forms.Padding(0, 5, 5, 5);
-            this.chkToggleFirewall.Size = new System.Drawing.Size(117, 36);
-            this.chkToggleFirewall.TabIndex = 7;
-            this.chkToggleFirewall.Text = "启用防火墙";
-            this.chkToggleFirewall.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.chkToggleFirewall.UseVisualStyleBackColor = true;
-            this.chkToggleFirewall.CheckedChanged += new System.EventHandler(this.chkToggleFirewall_CheckedChanged);
+            this.chkToggleFirewall.CheckedChanged += new EventHandler(this.chkToggleFirewall_CheckedChanged);
+            //
+            // btnMenu
+            //
+            this.btnMenu.Text = "菜单";
+            this.btnMenu.Dock = DockStyle.Fill;
+            this.btnMenu.Margin = new Padding(0, 5, 0, 5);
+            this.btnMenu.TabIndex = 2;
+            this.btnMenu.Name = "btnMenu";
+            this.btnMenu.Click += new EventHandler(this.btnMenu_Click);
+            //
+            // workspace
+            //
+            this.workspace.Dock = DockStyle.Fill;
+            this.workspace.Margin = Padding.Empty;
+            this.workspace.TabStop = false;
+            this.workspace.Orientation = Orientation.Horizontal;
+            this.workspace.Size = new Size(1148, 656);
+            this.workspace.SplitterWidth = 8;
+            this.workspace.SplitterDistance = 286;
+            this.workspace.Panel1MinSize = 174;
+            this.workspace.Panel2MinSize = 150;
+            this.workspace.Name = "workspace";
+            this.workspace.Panel1.Controls.Add(this.splitMainV);
+            this.workspace.Panel2.Controls.Add(this.logView);
+            //
+            // splitMainV
+            //
+            this.splitMainV.Dock = DockStyle.Fill;
+            this.splitMainV.Margin = Padding.Empty;
+            this.splitMainV.TabStop = false;
+            this.splitMainV.Size = new Size(1148, 280);
+            this.splitMainV.SplitterWidth = 8;
+            this.splitMainV.SplitterDistance = 244;
+            this.splitMainV.Panel1MinSize = 232;
+            this.splitMainV.Panel2MinSize = 300;
+            this.splitMainV.Name = "splitMainV";
+            this.splitMainV.Panel1.AutoScroll = true;
+            this.splitMainV.Panel1.Controls.Add(this.sidebarCard);
+            this.splitMainV.Panel2.Controls.Add(this.presetControl);
+            //
+            // sidebarCard
+            //
+            this.sidebarCard.Dock = DockStyle.Fill;
+            this.sidebarCard.Margin = Padding.Empty;
+            this.sidebarCard.Padding = new Padding(16);
+            this.sidebarCard.MinimumSize = new Size(0, 285);
+            this.sidebarCard.Name = "sidebarCard";
+            this.sidebarCard.Controls.Add(this.sidebar);
+            //
+            // sidebar
+            //
+            this.sidebar.ColumnCount = 1;
+            this.sidebar.RowCount = 9;
+            this.sidebar.Dock = DockStyle.Fill;
+            this.sidebar.Margin = Padding.Empty;
+            this.sidebar.Name = "sidebar";
+            this.sidebar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 27F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 67F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 8F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 33F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 9F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 37F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.sidebar.Controls.Add(this.lblRegionTitle, 0, 0);
+            this.sidebar.Controls.Add(this.mapDetails, 0, 1);
+            this.sidebar.Controls.Add(this.mapPicker, 0, 3);
+            this.sidebar.Controls.Add(this.lblPhase, 0, 4);
+            this.sidebar.Controls.Add(this.cbxPhase, 0, 5);
+            this.sidebar.Controls.Add(this.mapActions, 0, 7);
+            //
+            // lblRegionTitle
+            //
+            this.lblRegionTitle.Text = "模拟区域";
+            this.lblRegionTitle.Dock = DockStyle.Fill;
+            this.lblRegionTitle.Margin = Padding.Empty;
+            this.lblRegionTitle.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblRegionTitle.AutoEllipsis = true;
+            this.lblRegionTitle.Tone = LabelTone.Heading;
+            this.lblRegionTitle.Name = "lblRegionTitle";
+            //
+            // mapPicker
+            //
+            this.mapPicker.ColumnCount = 2;
+            this.mapPicker.RowCount = 1;
+            this.mapPicker.Dock = DockStyle.Fill;
+            this.mapPicker.Margin = Padding.Empty;
+            this.mapPicker.Name = "mapPicker";
+            this.mapPicker.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.mapPicker.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80F));
+            this.mapPicker.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.mapPicker.Controls.Add(this.idField, 0, 0);
+            this.mapPicker.Controls.Add(this.btnSelectTerritory, 1, 0);
+            //
+            // btnSelectTerritory
+            //
+            this.btnSelectTerritory.Text = "选择区域";
+            this.btnSelectTerritory.Dock = DockStyle.Fill;
+            this.btnSelectTerritory.Margin = new Padding(6, 0, 0, 0);
+            this.btnSelectTerritory.TabIndex = 0;
+            this.btnSelectTerritory.Name = "btnSelectTerritory";
+            this.btnSelectTerritory.Click += new EventHandler(this.btnSelectTerritory_Click);
+            //
+            // idField
+            //
+            this.idField.ColumnCount = 3;
+            this.idField.RowCount = 1;
+            this.idField.Dock = DockStyle.Fill;
+            this.idField.Margin = Padding.Empty;
+            this.idField.Name = "idField";
+            this.idField.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 49F));
+            this.idField.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 53F));
+            this.idField.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.idField.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.idField.Controls.Add(this.lblTerritoryId, 0, 0);
+            this.idField.Controls.Add(this.numTerritoryId, 1, 0);
             //
             // lblTerritoryId
             //
-            this.lblTerritoryId.AutoSize = true;
-            this.lblTerritoryId.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblTerritoryId.Location = new System.Drawing.Point(173, 218);
-            this.lblTerritoryId.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
+            this.lblTerritoryId.Text = "区域 ID";
+            this.lblTerritoryId.Dock = DockStyle.Fill;
+            this.lblTerritoryId.Margin = Padding.Empty;
+            this.lblTerritoryId.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblTerritoryId.AutoEllipsis = true;
+            this.lblTerritoryId.Tone = LabelTone.Muted;
             this.lblTerritoryId.Name = "lblTerritoryId";
-            this.lblTerritoryId.Size = new System.Drawing.Size(72, 62);
-            this.lblTerritoryId.TabIndex = 9;
-            this.lblTerritoryId.Text = "地图 ID";
-            this.lblTerritoryId.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             //
             // numTerritoryId
             //
-            this.numTerritoryId.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.numTerritoryId.Location = new System.Drawing.Point(255, 234);
-            this.numTerritoryId.Margin = new System.Windows.Forms.Padding(10, 10, 15, 10);
-            this.numTerritoryId.Maximum = new decimal(new int[]
-            {
-                65535,
-                0,
-                0,
-                0
-            });
+            this.numTerritoryId.AccessibleName = "区域 ID";
+            this.numTerritoryId.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            this.numTerritoryId.Margin = Padding.Empty;
+            this.numTerritoryId.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
+            this.numTerritoryId.TextAlign = HorizontalAlignment.Center;
             this.numTerritoryId.Name = "numTerritoryId";
-            this.numTerritoryId.Size = new System.Drawing.Size(70, 29);
-            this.numTerritoryId.TabIndex = 10;
-            this.numTerritoryId.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.numTerritoryId.ValueChanged += new System.EventHandler(this.numTerritoryId_ValueChanged);
+            this.numTerritoryId.ValueChanged += new EventHandler(this.numTerritoryId_ValueChanged);
             //
-            // splitMainH
+            // mapDetails
             //
-            this.splitMainH.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitMainH.Font = new System.Drawing.Font("等距更纱黑体 SC", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.splitMainH.Location = new System.Drawing.Point(0, 0);
-            this.splitMainH.Name = "splitMainH";
-            this.splitMainH.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            this.mapDetails.Dock = DockStyle.Fill;
+            this.mapDetails.Margin = new Padding(0, 6, 0, 0);
+            this.mapDetails.Padding = new Padding(12, 7, 12, 7);
+            this.mapDetails.Tone = PanelTone.Field;
+            this.mapDetails.Name = "mapDetails";
+            this.mapDetails.Controls.Add(this.mapText);
             //
-            // splitMainH.Panel1
+            // mapText
             //
-            this.splitMainH.Panel1.BackColor = System.Drawing.SystemColors.ActiveCaption;
-            this.splitMainH.Panel1.Controls.Add(this.presetControl);
+            this.mapText.ColumnCount = 1;
+            this.mapText.RowCount = 2;
+            this.mapText.Dock = DockStyle.Fill;
+            this.mapText.Margin = Padding.Empty;
+            this.mapText.Name = "mapText";
+            this.mapText.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.mapText.RowStyles.Add(new RowStyle(SizeType.Percent, 55F));
+            this.mapText.RowStyles.Add(new RowStyle(SizeType.Percent, 45F));
+            this.mapText.Controls.Add(this.lblZoneName, 0, 0);
+            this.mapText.Controls.Add(this.lblTerritory, 0, 1);
             //
-            // splitMainH.Panel2
+            // lblZoneName
             //
-            this.splitMainH.Panel2.Controls.Add(this.logView);
-            this.splitMainH.Size = new System.Drawing.Size(865, 892);
-            this.splitMainH.SplitterDistance = 423;
-            this.splitMainH.TabIndex = 0;
+            this.lblZoneName.Text = "未选择区域";
+            this.lblZoneName.Dock = DockStyle.Fill;
+            this.lblZoneName.Margin = Padding.Empty;
+            this.lblZoneName.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblZoneName.AutoEllipsis = true;
+            this.lblZoneName.Tone = LabelTone.Heading;
+            this.lblZoneName.Name = "lblZoneName";
+            //
+            // lblTerritory
+            //
+            this.lblTerritory.Text = "";
+            this.lblTerritory.Dock = DockStyle.Fill;
+            this.lblTerritory.Margin = Padding.Empty;
+            this.lblTerritory.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblTerritory.AutoEllipsis = true;
+            this.lblTerritory.Tone = LabelTone.Muted;
+            this.lblTerritory.Name = "lblTerritory";
+            //
+            // lblPhase
+            //
+            this.lblPhase.Text = "阶段 / 预设";
+            this.lblPhase.Dock = DockStyle.Fill;
+            this.lblPhase.Margin = Padding.Empty;
+            this.lblPhase.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblPhase.AutoEllipsis = true;
+            this.lblPhase.Tone = LabelTone.Muted;
+            this.lblPhase.Name = "lblPhase";
+            //
+            // cbxPhase
+            //
+            this.cbxPhase.AccessibleName = "阶段 / 预设";
+            this.cbxPhase.Dock = DockStyle.Fill;
+            this.cbxPhase.Margin = Padding.Empty;
+            this.cbxPhase.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cbxPhase.DropDownHeight = 450;
+            this.cbxPhase.IntegralHeight = false;
+            this.cbxPhase.FormattingEnabled = true;
+            this.cbxPhase.TabIndex = 2;
+            this.cbxPhase.Name = "cbxPhase";
+            this.cbxPhase.SelectedIndexChanged += new EventHandler(this.cbxPhase_SelectedIndexChanged);
+            //
+            // mapActions
+            //
+            this.mapActions.ColumnCount = 3;
+            this.mapActions.RowCount = 1;
+            this.mapActions.Dock = DockStyle.Fill;
+            this.mapActions.Margin = Padding.Empty;
+            this.mapActions.Name = "mapActions";
+            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92F));
+            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92F));
+            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.mapActions.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.mapActions.Controls.Add(this.btnSimEnter, 0, 0);
+            this.mapActions.Controls.Add(this.btnSimExit, 1, 0);
+            //
+            // btnSimEnter
+            //
+            this.btnSimEnter.Text = "加载区域";
+            this.btnSimEnter.Dock = DockStyle.Fill;
+            this.btnSimEnter.Margin = new Padding(0, 0, 8, 0);
+            this.btnSimEnter.Tone = ButtonTone.Primary;
+            this.btnSimEnter.Name = "btnSimEnter";
+            this.btnSimEnter.Click += new EventHandler(this.btnSimEnter_Click);
+            //
+            // btnSimExit
+            //
+            this.btnSimExit.Text = "退出模拟";
+            this.btnSimExit.Dock = DockStyle.Fill;
+            this.btnSimExit.Margin = Padding.Empty;
+            this.btnSimExit.TabIndex = 1;
+            this.btnSimExit.Name = "btnSimExit";
+            this.btnSimExit.Click += new EventHandler(this.btnSimExit_Click);
             //
             // presetControl
             //
-            this.presetControl.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.presetControl.BackColor = System.Drawing.SystemColors.Control;
-            this.presetControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.presetControl.Font = new System.Drawing.Font("等距更纱黑体 SC", 10.2F);
-            this.presetControl.Location = new System.Drawing.Point(0, 0);
-            this.presetControl.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.presetControl.Name = "presetControl";
-            this.presetControl.Size = new System.Drawing.Size(865, 423);
-            this.presetControl.TabIndex = 0;
+            this.presetControl.Dock = DockStyle.Fill;
             this.presetControl.TabStop = false;
+            this.presetControl.Name = "presetControl";
             //
             // logView
             //
-            this.logView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.logView.Location = new System.Drawing.Point(0, 0);
+            this.logView.Dock = DockStyle.Fill;
             this.logView.Name = "logView";
-            this.logView.Size = new System.Drawing.Size(865, 465);
-            this.logView.TabIndex = 0;
             //
             // SimulantUI
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.splitMainV);
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.Controls.Add(this.frame);
+            this.Size = new Size(1180, 760);
             this.Name = "SimulantUI";
-            this.Size = new System.Drawing.Size(1209, 892);
+            this.mapActions.ResumeLayout(false);
+            this.mapText.ResumeLayout(false);
+            this.mapDetails.ResumeLayout(false);
+            this.idField.ResumeLayout(false);
+            this.mapPicker.ResumeLayout(false);
+            this.sidebar.ResumeLayout(false);
+            this.sidebarCard.ResumeLayout(false);
             this.splitMainV.Panel1.ResumeLayout(false);
-            this.splitMainV.Panel1.PerformLayout();
             this.splitMainV.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitMainV)).EndInit();
+            ((ISupportInitialize)this.splitMainV).EndInit();
             this.splitMainV.ResumeLayout(false);
-            this.tableL.ResumeLayout(false);
-            this.tableL.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.picLogo)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numTerritoryId)).EndInit();
-            this.splitMainH.Panel1.ResumeLayout(false);
-            this.splitMainH.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitMainH)).EndInit();
-            this.splitMainH.ResumeLayout(false);
+            this.workspace.Panel1.ResumeLayout(false);
+            this.workspace.Panel2.ResumeLayout(false);
+            ((ISupportInitialize)this.workspace).EndInit();
+            this.workspace.ResumeLayout(false);
+            this.wordmark.ResumeLayout(false);
+            this.headerRow.ResumeLayout(false);
+            this.headerCard.ResumeLayout(false);
+            this.frame.ResumeLayout(false);
             this.ResumeLayout(false);
-
         }
 
         #endregion
-        private System.Windows.Forms.SplitContainer splitMainV;
-        private System.Windows.Forms.TableLayoutPanel tableL;
-        private System.Windows.Forms.SplitContainer splitMainH;
-        private Simulant.UI.LogView logView;
-        private System.Windows.Forms.Label lblTerritory;
-        private System.Windows.Forms.Button btnSimEnter;
-        private System.Windows.Forms.Button btnSimExit;
-        private System.Windows.Forms.Button btnInitPlugin;
-        private System.Windows.Forms.Button btnMenu;
-        private System.Windows.Forms.Button btnSelectTerritory;
-        private System.Windows.Forms.PictureBox picLogo;
-        private System.Windows.Forms.CheckBox chkToggleFirewall;
-        private System.Windows.Forms.ComboBox cbxPhase;
-        private System.Windows.Forms.Label lblTerritoryId;
-        private System.Windows.Forms.NumericUpDown numTerritoryId;
+
+        private TableLayoutPanel frame;
+        private PanelEx headerCard;
+        private TableLayoutPanel headerRow;
+        private SimulantMark mark;
+        private TableLayoutPanel wordmark;
+        private LabelEx lblBrand;
+        private LabelEx lblBrandEnglish;
+        private LabelEx lblConnection;
+        private ButtonEx btnInitPlugin;
+        private CheckBoxEx chkToggleFirewall;
+        private ButtonEx btnMenu;
+        private SplitContainerEx workspace;
+        private SplitContainerEx splitMainV;
+        private PanelEx sidebarCard;
+        private TableLayoutPanel sidebar;
+        private LabelEx lblRegionTitle;
+        private TableLayoutPanel mapPicker;
+        private ButtonEx btnSelectTerritory;
+        private TableLayoutPanel idField;
+        private LabelEx lblTerritoryId;
+        private NumericTextBoxEx numTerritoryId;
+        private PanelEx mapDetails;
+        private TableLayoutPanel mapText;
+        private LabelEx lblZoneName;
+        private LabelEx lblTerritory;
+        private LabelEx lblPhase;
+        private ComboBoxEx cbxPhase;
+        private TableLayoutPanel mapActions;
+        private ButtonEx btnSimEnter;
+        private ButtonEx btnSimExit;
         internal PresetControl presetControl;
+        private LogView logView;
     }
 }

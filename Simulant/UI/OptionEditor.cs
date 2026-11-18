@@ -90,7 +90,7 @@ namespace Simulant.UI
                 combo.SelectedIndexChanged += OnValueChanged;
             else if (control is CheckBox check)
                 check.CheckedChanged += OnValueChanged;
-            else if (control is NumericUpDown number)
+            else if (control is NumericTextBoxEx number)
                 number.ValueChanged += OnValueChanged;
             else if (control is TextBox text)
                 text.TextChanged += OnValueChanged;
@@ -108,29 +108,25 @@ namespace Simulant.UI
         /// <summary>沿用预设选项的标签、间距和输入控件样式。</summary>
         internal void ApplyStyle(Control control)
         {
-            control.ResetFont();
-            control.ResetForeColor();
-            control.ResetBackColor();
-
             if (control is Label)
             {
                 control.Anchor = AnchorStyles.Left;
                 control.AutoSize = true;
                 control.Margin = Padding.Empty;
-                control.Padding = new Padding(15, 10, 5, 10);
+                control.ForeColor = WorkbenchTheme.Muted;
+                control.Padding = new Padding(0, 8, 12, 8);
                 return;
             }
 
             control.Dock = DockStyle.Fill;
-            control.Margin = new Padding(30, 10, 20, 10);
+            control.Margin = new Padding(0, 3, 0, 3);
 
-            if (control is CheckBox checkBox)
+            if (control is CheckBoxEx checkBox)
             {
-                checkBox.AutoSize = true;
-                checkBox.Margin = Padding.Empty;
-                checkBox.Padding = new Padding(30, 10, 5, 10);
-                checkBox.TextAlign = ContentAlignment.MiddleRight;
-                checkBox.UseVisualStyleBackColor = true;
+                checkBox.Style = CheckBoxStyle.Switch;
+                checkBox.Dock = DockStyle.None;
+                checkBox.Anchor = AnchorStyles.Left;
+                checkBox.Size = new Size(38, 23);
             }
 
             if (control is ComboBox comboBox)

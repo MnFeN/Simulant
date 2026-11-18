@@ -61,12 +61,6 @@ Work in progress. Collaboration is welcome.
 
 - If any step during this process causes the game to crash, please record any errors and restart ACT.
 
-- Optional: If you experience problems with text or UI layout, you can install a font:
-
-  [Sarasa Gothic](https://github.com/be5invis/Sarasa-Gothic/releases)
-
-  Download the Mono archive from the Single Family TTF Package and install the font.
-
 ## Development
 
 - [Mechanic timeline development (Chinese)](docs/Timeline.md): node definitions, timeline composition, cancellation, and entity lifetime.

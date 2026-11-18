@@ -17,7 +17,7 @@ namespace Simulant.Simulation.Options
 
         protected override Control CreateControl(OptionEditor editor)
         {
-            var txt = new TextBox
+            var txt = new TextBoxEx
             {
                 Text = _default,
             };

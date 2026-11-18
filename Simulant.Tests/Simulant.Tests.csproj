@@ -69,6 +69,36 @@
     <Compile Include="..\Simulant\Simulation\SimOptionGeneric.cs" />
     <Compile Include="..\Simulant\Simulation\Options\*.cs" Exclude="..\Simulant\Simulation\Options\RandomEnumAttribute.cs" />
     <Compile Include="..\Simulant\UI\OptionEditor.cs" />
+    <Compile Include="..\Simulant\UI\WorkbenchTheme.cs" />
+    <Compile Include="..\Simulant\UI\Controls\ButtonEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\CheckBoxEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\ComboBoxEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\ContextMenuStripEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\DataGridViewEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\FieldsEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\LabelEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\NumericTextBoxEx.cs" />
+    <Compile Include="..\Simulant\UI\Controls\ScrollBarTheme.cs" />
+    <Compile Include="..\Simulant\UI\Controls\SimulantMark.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\SurfaceEx.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="..\Simulant\Game\Data\FfxivInstallation.cs">
       <Link>Game\FfxivInstallation.cs</Link>
     </Compile>

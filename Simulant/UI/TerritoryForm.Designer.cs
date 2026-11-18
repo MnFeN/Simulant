@@ -29,16 +29,16 @@
         private void InitializeComponent()
         {
             this.tableLeft = new System.Windows.Forms.TableLayoutPanel();
-            this.btnOk = new System.Windows.Forms.Button();
-            this.txtFilter = new System.Windows.Forms.TextBox();
-            this.dgvTerritory = new System.Windows.Forms.DataGridView();
+            this.btnOk = new ButtonEx();
+            this.txtFilter = new TextBoxEx();
+            this.dgvTerritory = new DataGridViewEx();
             this.colId = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colPlace = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colInstance = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colRegion = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colType = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lblFilter = new System.Windows.Forms.Label();
-            this.chkPresetOnly = new System.Windows.Forms.CheckBox();
+            this.chkPresetOnly = new CheckBoxEx();
             this.tableLeft.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvTerritory)).BeginInit();
             this.SuspendLayout();
@@ -47,7 +47,6 @@
             //
             this.tableLeft.AutoSize = true;
             this.tableLeft.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.tableLeft.BackColor = System.Drawing.SystemColors.Control;
             this.tableLeft.ColumnCount = 4;
             this.tableLeft.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
             this.tableLeft.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
@@ -78,7 +77,7 @@
             this.btnOk.Size = new System.Drawing.Size(124, 36);
             this.btnOk.TabIndex = 8;
             this.btnOk.Text = "读取预设";
-            this.btnOk.UseVisualStyleBackColor = true;
+            this.btnOk.Tone = ButtonTone.Primary;
             this.btnOk.Click += new System.EventHandler(this.btnOk_Click);
             //
             // txtFilter
@@ -96,7 +95,6 @@
             this.dgvTerritory.AllowUserToAddRows = false;
             this.dgvTerritory.AllowUserToDeleteRows = false;
             this.dgvTerritory.AllowUserToResizeRows = false;
-            this.dgvTerritory.BackgroundColor = System.Drawing.SystemColors.Control;
             this.dgvTerritory.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvTerritory.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[]
             {
@@ -191,16 +189,14 @@
             this.chkPresetOnly.Size = new System.Drawing.Size(160, 26);
             this.chkPresetOnly.TabIndex = 7;
             this.chkPresetOnly.Text = "仅显示含预设区域";
-            this.chkPresetOnly.UseVisualStyleBackColor = true;
             this.chkPresetOnly.CheckedChanged += new System.EventHandler(this.chkPresetOnly_CheckedChanged);
             //
             // TerritoryForm
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 22F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.ClientSize = new System.Drawing.Size(1059, 811);
             this.Controls.Add(this.tableLeft);
-            this.Font = new System.Drawing.Font("等距更纱黑体 SC", 10.2F);
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.Name = "TerritoryForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
@@ -215,15 +211,15 @@
 
         #endregion
         private System.Windows.Forms.TableLayoutPanel tableLeft;
-        private System.Windows.Forms.Button btnOk;
-        private System.Windows.Forms.TextBox txtFilter;
-        private System.Windows.Forms.DataGridView dgvTerritory;
+        private ButtonEx btnOk;
+        private TextBoxEx txtFilter;
+        private DataGridViewEx dgvTerritory;
         private System.Windows.Forms.DataGridViewTextBoxColumn colId;
         private System.Windows.Forms.DataGridViewTextBoxColumn colPlace;
         private System.Windows.Forms.DataGridViewTextBoxColumn colInstance;
         private System.Windows.Forms.DataGridViewTextBoxColumn colRegion;
         private System.Windows.Forms.DataGridViewTextBoxColumn colType;
         private System.Windows.Forms.Label lblFilter;
-        private System.Windows.Forms.CheckBox chkPresetOnly;
+        private CheckBoxEx chkPresetOnly;
     }
 }

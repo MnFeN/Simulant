@@ -175,6 +175,12 @@
 			<DependentUpon>TerritoryForm.cs</DependentUpon>
 		</Compile>
 
+		<Compile Update="UI\SimpleInputForm.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="UI\SimpleInputForm.Designer.cs">
+			<DependentUpon>SimpleInputForm.cs</DependentUpon>
+		</Compile>
 		<Compile Update="UI\SimulantUI.cs">
 			<SubType>UserControl</SubType>
 		</Compile>

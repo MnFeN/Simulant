@@ -19,7 +19,7 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    public partial class SimulantUI : UserControl
+    public partial class SimulantUI : UserControlEx
     {
         private readonly PluginHost _host;
         private ToolStripMenuItem _addEntityMenuItem;
@@ -28,11 +28,18 @@ namespace Simulant.UI
         private ActionListForm _actionListForm;
         private ToolStripMenuItem _exdResourceMenuItem;
         private ExdBrowserForm _exdBrowserForm;
+        private Form _resizeHost;
+        private bool _resizeLayoutSuspended;
 
-        internal SimulantUI(PluginHost host)
+        public SimulantUI()
+        {
+            InitializeComponent();
+            UpdateFirewallButton(false);
+        }
+
+        internal SimulantUI(PluginHost host) : this()
         {
             _host = host;
-            InitializeComponent();
             ConfigureMainMenu();
             new ToolTip(components).SetToolTip(btnInitPlugin, "插件会自动连接游戏。需要重试时，请先关闭防火墙并完成清理。");
             logView.Bind(_host); // would RefreshLogView
@@ -43,12 +50,74 @@ namespace Simulant.UI
             Disposed += (_, __) => _exdBrowserForm?.Close();
         }
 
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            AttachResizeHost(FindForm());
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            AttachResizeHost(FindForm());
+        }
+
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            AttachResizeHost(null);
+            base.OnHandleDestroyed(e);
+        }
+
+        private void AttachResizeHost(Form host)
+        {
+            if (ReferenceEquals(_resizeHost, host))
+                return;
+
+            if (_resizeHost != null)
+            {
+                _resizeHost.ResizeBegin -= HostResizeBegin;
+                _resizeHost.ResizeEnd -= HostResizeEnd;
+                ResumeResizeLayout();
+            }
+
+            _resizeHost = host;
+            if (host != null)
+            {
+                host.ResizeBegin += HostResizeBegin;
+                host.ResizeEnd += HostResizeEnd;
+            }
+        }
+
+        private void HostResizeBegin(object sender, EventArgs e)
+        {
+            if (_resizeLayoutSuspended)
+                return;
+
+            // The host can keep resizing the tab. Hold the child layout until the final bounds are known.
+            _resizeLayoutSuspended = true;
+            SuspendLayout();
+        }
+
+        private void HostResizeEnd(object sender, EventArgs e)
+            => ResumeResizeLayout();
+
+        private void ResumeResizeLayout()
+        {
+            if (!_resizeLayoutSuspended)
+                return;
+
+            _resizeLayoutSuspended = false;
+            ResumeLayout(!IsDisposed && !Disposing);
+            if (!IsDisposed && !Disposing)
+                Invalidate(true);
+        }
+
         private void btnInitPlugin_Click(object sender, EventArgs e)
             => _host.RetryGameConnection();
 
         private void btnConfiguration_Click(object sender, EventArgs e)
         {
-            using (var form = new ConfigurationForm(_host, splitMainV.Font))
+            using (var form = new ConfigurationForm(_host))
                 form.ShowDialog(this);
         }
 
@@ -57,10 +126,7 @@ namespace Simulant.UI
 
         private void ConfigureMainMenu()
         {
-            var menu = new ContextMenuStrip(components)
-            {
-                Font = splitMainV.Font
-            };
+            var menu = new ContextMenuStripEx(components) { ShowImageMargin = false };
             menu.Items.Add("配置", null, btnConfiguration_Click);
             var update = new ToolStripMenuItem("更新");
             update.DropDownItems.Add("检查更新", null, async (_, __) => await _host.Updater.CheckAsync());
@@ -229,8 +295,11 @@ namespace Simulant.UI
 
             var gameDataReady = _host.GameDataReady && !_host.GameDataLoading;
             var pluginReady = _host.PluginReady && !_host.IsInitializing;
-            var firewallReady = pluginReady && _host.FirewallEnabled;
+            var firewallEnabled = _host.FirewallEnabled;
+            var firewallReady = pluginReady && firewallEnabled;
             var firewallPending = _host.FirewallService?.HasPendingCleanup == true;
+            lblConnection.Text = _host.IsInitializing ? "正在连接" : pluginReady ? "游戏已连接" : "未连接";
+            lblConnection.ForeColor = pluginReady ? WorkbenchTheme.Accent : WorkbenchTheme.Muted;
 
             // 连接中或仍需清理防火墙时禁用手动重试。
             btnInitPlugin.Enabled = !_host.IsInitializing && !_switchingTerritory && !firewallPending;
@@ -244,8 +313,9 @@ namespace Simulant.UI
 
             // 插件初始化完成：允许防火墙和调试
             chkToggleFirewall.Enabled = !_host.IsInitializing && (pluginReady || firewallPending);
-            // 部分失败时仍保留勾选，用户可以继续关闭并重试剩余清理。
+            // 保留清理入口，状态文字以防火墙实际启用状态为准。
             SetFirewallToggleChecked(firewallPending);
+            UpdateFirewallButton(firewallEnabled);
             _debugMenuItem.Enabled = _host.CanRunDebug || _host.DebugTest?.HasPendingEntityTestCleanup == true;
             _addEntityMenuItem.Enabled = _host.CanRunDebug || _host.HasPendingDebugEntityCleanup;
             _actionResourceMenuItem.Enabled = gameDataReady;
@@ -343,6 +413,14 @@ namespace Simulant.UI
             _updatingFirewallToggle = false;
         }
 
+        private void UpdateFirewallButton(bool enabled)
+        {
+            var colors = WorkbenchTheme.GetButtonColors(enabled ? ButtonTone.Primary : ButtonTone.Default);
+            chkToggleFirewall.Text = enabled ? "防火墙已开启" : "防火墙未开启";
+            chkToggleFirewall.BackColor = colors.Background;
+            chkToggleFirewall.ForeColor = enabled ? colors.Foreground : WorkbenchTheme.PaleRed;
+        }
+
         #endregion Firewall
         #region Territory
         private bool _switchingTerritory;
@@ -405,7 +483,8 @@ namespace Simulant.UI
                 }
             }
 
-            lblTerritory.Text = $"选中区域：{territoryName}\n选中副本：{instanceName}";
+            lblZoneName.Text = territoryName == "无" ? "未选择区域" : territoryName;
+            lblTerritory.Text = instanceName == "无" ? string.Empty : instanceName;
 
             presetControl.ClearPreset();
 
@@ -553,7 +632,7 @@ namespace Simulant.UI
 
         private ContextMenuStrip ConfigureEntityTestMenu()
         {
-            var menu = new ContextMenuStrip(components);
+            var menu = new ContextMenuStripEx(components);
             menu.Items.Add("网络 NPC 测试", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkNpc));
             menu.Items.Add("网络玩家测试（职业套装与复制外观）", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkPlayer));
             menu.Items.Add("小队列表测试（血量、状态与仇恨）", null, async (_, __) => await RunEntityTest(Test.EntityTestKind.NetworkParty));

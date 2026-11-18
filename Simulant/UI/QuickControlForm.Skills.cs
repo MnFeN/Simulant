@@ -72,7 +72,7 @@ namespace Simulant.UI
                 bounds.Top + (bounds.Height - size) / 2, size, size);
             var icon = _skillIcons[Array.IndexOf(SkillActions, SkillAction(index))];
             var state = graphics.Save();
-            using (var outline = RoundedRectangle(square, Inset))
+            using (var outline = WorkbenchTheme.RoundedRect(square, Inset))
             {
                 try
                 {
@@ -83,7 +83,7 @@ namespace Simulant.UI
                     var remaining = cooldown.Remaining;
                     if (!_enabled[index])
                     {
-                        using (var shade = new SolidBrush(Color.FromArgb(155, 22, 25, 31)))
+                        using (var shade = new SolidBrush(WorkbenchTheme.QuickControl.DisabledSkillShade))
                             graphics.FillRectangle(shade, square);
                     }
                     else if (remaining > 0)
@@ -97,7 +97,7 @@ namespace Simulant.UI
                 {
                     graphics.Restore(state);
                 }
-                using (var border = new Pen(Color.FromArgb(95, 180, 185, 195), Math.Max(1, size / 50)))
+                using (var border = new Pen(WorkbenchTheme.QuickControl.SkillBorder, Math.Max(1, size / 50)))
                     graphics.DrawPath(border, outline);
             }
         }
@@ -109,10 +109,10 @@ namespace Simulant.UI
             if (!(size > 0 && angle > 0) || float.IsInfinity(angle) ||
                 size * 0.92 / 2 * Deg(angle) < 1)
                 return;
-            using (var shade = new SolidBrush(Color.FromArgb(185, 12, 17, 27)))
+            using (var shade = new SolidBrush(WorkbenchTheme.QuickControl.CooldownShade))
                 graphics.FillPie(shade, square.X - size / 2, square.Y - size / 2,
                     size * 2, size * 2, 270 - angle, angle);
-            using (var edge = new Pen(Color.FromArgb(210, 200, 228, 255), Math.Max(1, size / 35)))
+            using (var edge = new Pen(WorkbenchTheme.QuickControl.CooldownEdge, Math.Max(1, size / 35)))
                 graphics.DrawArc(edge, square.X + size * 0.04f, square.Y + size * 0.04f,
                     size * 0.92f, size * 0.92f, 270 - angle, angle);
         }

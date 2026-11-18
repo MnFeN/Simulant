@@ -6,7 +6,7 @@ using System.Windows.Forms;
 namespace Simulant.UI
 {
     /// <summary>模拟副本内的快捷控制；单击执行，拖动移动，边缘缩放。</summary>
-    internal sealed partial class QuickControlForm : Form
+    internal sealed partial class QuickControlForm : FormEx
     {
         private const int StartButton = 0;
         private const int RetryButton = 1;
@@ -17,9 +17,9 @@ namespace Simulant.UI
         private const int InvulnerabilityButton = 5;
         private static readonly Color[] SessionAccents =
         {
-            Color.FromArgb(89, 215, 150),
-            Color.FromArgb(250, 202, 91),
-            Color.FromArgb(236, 111, 124)
+            WorkbenchTheme.Mint,
+            WorkbenchTheme.Yellow,
+            WorkbenchTheme.Red
         };
 
         private readonly Action[] _actions;
@@ -55,7 +55,7 @@ namespace Simulant.UI
             TopMost = true;
             Opacity = 0.88;
             StartPosition = FormStartPosition.Manual;
-            BackColor = Color.FromArgb(30, 33, 39);
+            BackColor = WorkbenchTheme.QuickControl.Background;
             AccessibleName = "模拟快捷控制";
             DoubleBuffered = true;
             SetStyle(ControlStyles.ResizeRedraw, true);
@@ -144,18 +144,6 @@ namespace Simulant.UI
             return -1;
         }
 
-        private static GraphicsPath RoundedRectangle(RectangleF bounds, float radius)
-        {
-            var path = new GraphicsPath();
-            var diameter = radius * 2;
-            path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
-            path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
-            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
-            path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
-
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -165,10 +153,10 @@ namespace Simulant.UI
                 var bounds = ButtonBounds(i);
                 var active = CanClick(i);
                 var hover = active && _hover == i && !_dragging;
-                var background = hover ? Color.FromArgb(58, 62, 70) : Color.FromArgb(40, 44, 51);
+                var background = hover ? WorkbenchTheme.QuickControl.ButtonHover : WorkbenchTheme.QuickControl.Button;
                 if (hover && Capture && _pressed == i)
-                    background = Color.FromArgb(69, 74, 82);
-                using (var shape = RoundedRectangle(bounds, Inset))
+                    background = WorkbenchTheme.QuickControl.ButtonPressed;
+                using (var shape = WorkbenchTheme.RoundedRect(bounds, Inset))
                 using (var fill = new SolidBrush(background))
                     e.Graphics.FillPath(fill, shape);
 
@@ -182,7 +170,7 @@ namespace Simulant.UI
                 var x = bounds.Left + bounds.Width / 2;
                 var y = bounds.Top + bounds.Height / 2;
                 var accent = SessionAccents[i];
-                using (var icon = new SolidBrush(active ? accent : Color.FromArgb(accent.R / 2, accent.G / 2, accent.B / 2)))
+                using (var icon = new SolidBrush(active ? accent : WorkbenchTheme.QuickControl.DisabledAction(accent)))
                 {
                     if (i == StartButton)
                         e.Graphics.FillPolygon(icon, new[]
@@ -194,7 +182,7 @@ namespace Simulant.UI
                     else if (i == RetryButton)
                         PaintRetryIcon(e.Graphics, icon, x, y, size);
                     else
-                        using (var square = RoundedRectangle(new RectangleF(x - size / 2, y - size / 2, size, size), size * 0.12f))
+                        using (var square = WorkbenchTheme.RoundedRect(new RectangleF(x - size / 2, y - size / 2, size, size), size * 0.12f))
                             e.Graphics.FillPath(icon, square);
                 }
             }
@@ -220,7 +208,7 @@ namespace Simulant.UI
             base.OnSizeChanged(e);
             if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
                 return;
-            using (var outline = RoundedRectangle(ClientRectangle, Inset * 1.7f))
+            using (var outline = WorkbenchTheme.RoundedRect(ClientRectangle, Inset * 1.7f))
             {
                 var old = Region;
                 Region = new Region(outline);

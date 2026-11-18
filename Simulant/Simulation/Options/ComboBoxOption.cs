@@ -19,7 +19,8 @@ namespace Simulant.Simulation.Options
 
         protected override Control CreateControl(OptionEditor editor)
         {
-            var comboBox = new ComboBox();
+            var comboBox = new ComboBoxEx();
+            comboBox.AccessibleName = _labelText;
             editor.ApplyStyle(comboBox);
 
             comboBox.Items.AddRange(_options.Values.Select(s => $" {s}").ToArray());

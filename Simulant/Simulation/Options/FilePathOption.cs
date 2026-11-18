@@ -30,13 +30,13 @@ namespace Simulant.Simulation.Options
             };
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            _textBox = new TextBox
+            _textBox = new TextBoxEx
             {
                 Text = _default,
                 Dock = DockStyle.Fill,
                 Margin = Padding.Empty
             };
-            _browse = new Button
+            _browse = new ButtonEx
             {
                 Text = "浏览…",
                 AutoSize = true,

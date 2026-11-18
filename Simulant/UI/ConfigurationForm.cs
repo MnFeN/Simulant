@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    internal sealed class ConfigurationForm : Form
+    internal sealed class ConfigurationForm : FormEx
     {
         private readonly IContainer _components = new Container();
         private readonly PluginHost _host;
@@ -18,11 +18,10 @@ namespace Simulant.UI
         private readonly List<SimOptionBase> _partyOptions;
         private readonly List<SimOptionBase> _miscOptions;
 
-        internal ConfigurationForm(PluginHost host, Font font)
+        internal ConfigurationForm(PluginHost host)
         {
             _host = host;
             _draft = host.Configuration.Copy();
-            Font = font;
             Text = "仿生石配置";
             StartPosition = FormStartPosition.CenterParent;
             ShowInTaskbar = false;
@@ -32,14 +31,15 @@ namespace Simulant.UI
             ClientSize = new Size(600, 370);
             MinimumSize = new Size(540, 400);
 
-            var tabs = new TabControl
+            var tabs = new TabControlEx
             {
                 Dock = DockStyle.Fill
             };
-            var partyTab = new TabPage("模拟队员")
+            var partyTab = new TabPageEx
             {
+                Text = "模拟队员",
                 AutoScroll = true,
-                Padding = new Padding(5)
+                Padding = new Padding(14)
             };
             var table = new TableLayoutPanel();
             var toolTip = new ToolTip(_components)
@@ -53,10 +53,11 @@ namespace Simulant.UI
             new OptionEditor(table, toolTip).Build(_partyOptions);
             tabs.TabPages.Add(partyTab);
 
-            var miscTab = new TabPage("杂项")
+            var miscTab = new TabPageEx
             {
+                Text = "杂项",
                 AutoScroll = true,
-                Padding = new Padding(5)
+                Padding = new Padding(14)
             };
             var miscTable = new TableLayoutPanel();
             var developerMode = new CheckBoxOption(nameof(Configuration.DeveloperMode), "开发者模式", _draft.DeveloperMode,
@@ -95,15 +96,16 @@ namespace Simulant.UI
                 FlowDirection = FlowDirection.RightToLeft,
                 Padding = new Padding(8)
             };
-            var cancel = new Button
+            var cancel = new ButtonEx
             {
                 Text = "取消",
                 AutoSize = true,
                 DialogResult = DialogResult.Cancel
             };
-            var save = new Button
+            var save = new ButtonEx
             {
                 Text = "保存",
+                Tone = ButtonTone.Primary,
                 AutoSize = true
             };
             save.Click += Save;

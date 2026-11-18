@@ -21,18 +21,18 @@ namespace Simulant.Simulation.Options
 
         protected override Control CreateControl(OptionEditor editor)
         {
-            var numericUpDown = new NumericUpDown
+            var input = new NumericTextBoxEx
             {
                 Minimum = _min,
                 Maximum = _max,
                 DecimalPlaces = 0,
                 Value = _default,
             };
-            editor.ApplyStyle(numericUpDown);
-            return numericUpDown;
+            editor.ApplyStyle(input);
+            return input;
         }
 
-        internal override int GetValue() => (int?)(Control as NumericUpDown)?.Value ?? _default;
-        protected override void SetValue(int value) => ((NumericUpDown)Control).Value = value;
+        internal override int GetValue() => (int?)(Control as NumericTextBoxEx)?.Value ?? _default;
+        protected override void SetValue(int value) => ((NumericTextBoxEx)Control).Value = value;
     }
 }

@@ -80,12 +80,6 @@ Work in progress.
 
 - 如果此过程中有任何一步导致游戏崩溃，请记录问题并重启 ACT。
 
-- 可选：建议安装字体：等距更纱黑体
-  
-  [更纱黑体](https://github.com/be5invis/Sarasa-Gothic/releases)
-
-  在 Single Family TTF Package 中下载 Mono 的压缩包并安装字体。
-
 ## 致谢 · Acknowledgements
 
 此插件的开发借鉴了大量 Dalamud 仓库，建立在前人在 FFXIV 客户端、游戏数据和模拟工具方面研究的基础之上。感谢以下 Dalamud 及 ACT 项目的作者与贡献者：

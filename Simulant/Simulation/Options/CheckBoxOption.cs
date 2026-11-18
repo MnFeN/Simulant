@@ -16,10 +16,9 @@ namespace Simulant.Simulation.Options
 
         protected override Control CreateControl(OptionEditor editor)
         {
-            var chk = new CheckBox
-            {
-                Checked = _default,
-            };
+            var chk = new CheckBoxEx();
+            chk.Checked = _default;
+            chk.AccessibleName = _labelText;
             editor.ApplyStyle(chk);
             return chk;
         }

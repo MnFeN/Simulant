@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    public partial class ExdBrowserForm : Form
+    public partial class ExdBrowserForm : FormEx
     {
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
         private readonly CancellationToken _token;
@@ -25,16 +25,20 @@ namespace Simulant.UI
         {
             _token = _lifetime.Token;
             InitializeComponent();
-            Padding = new Padding(Font.Height / 2);
-            var area = Screen.FromPoint(Cursor.Position).WorkingArea;
-            ClientSize = new Size(area.Width * 3 / 4, area.Height * 3 / 4);
-            MinimumSize = SizeFromClientSize(new Size(panelSearch.PreferredSize.Width * 4 / 3 + Padding.Horizontal,
-                panelSearch.PreferredSize.Height + panelNavigation.PreferredSize.Height + Font.Height * 12 + Padding.Vertical));
         }
 
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            if (DesignMode)
+                return;
+
+            Padding = new Padding(Font.Height / 2);
+            var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+            ClientSize = new Size(area.Width * 3 / 4, area.Height * 3 / 4);
+            MinimumSize = SizeFromClientSize(new Size(panelSearch.PreferredSize.Width * 4 / 3 + Padding.Horizontal,
+                panelSearch.PreferredSize.Height + panelNavigation.PreferredSize.Height + Font.Height * 12 + Padding.Vertical));
+
 
             if (StartPosition == FormStartPosition.CenterScreen)
                 CenterToScreen();

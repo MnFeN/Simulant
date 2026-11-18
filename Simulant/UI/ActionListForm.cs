@@ -13,7 +13,7 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    public partial class ActionListForm : Form
+    public partial class ActionListForm : FormEx
     {
         private readonly PluginHost _host;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
@@ -31,15 +31,7 @@ namespace Simulant.UI
         {
             _lifetimeToken = _lifetime.Token;
             InitializeComponent();
-            Padding = new Padding(Font.Height / 2);
-            var area = Screen.FromPoint(Cursor.Position).WorkingArea;
-            ClientSize = new System.Drawing.Size(area.Width * 3 / 4, area.Height * 3 / 4);
-            MinimumSize = SizeFromClientSize(new System.Drawing.Size(
-                Math.Max(panelTop.PreferredSize.Width, panelFilters.PreferredSize.Width) + Padding.Horizontal,
-                panelTop.PreferredSize.Height + panelFilters.PreferredSize.Height + panelShapes.PreferredSize.Height / 2
-                + Padding.Vertical + panelTop.Margin.Vertical + panelFilters.Margin.Vertical));
-            typeof(DataGridView).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance).SetValue(gridActions, true, null);
+            ScrollBarTheme.Attach(panelShapes);
         }
 
         internal ActionListForm(PluginHost host) : this()
@@ -50,6 +42,17 @@ namespace Simulant.UI
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            if (DesignMode)
+                return;
+
+            Padding = new Padding(Font.Height / 2);
+            var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+            ClientSize = new System.Drawing.Size(area.Width * 3 / 4, area.Height * 3 / 4);
+            MinimumSize = SizeFromClientSize(new System.Drawing.Size(
+                Math.Max(panelTop.PreferredSize.Width, panelFilters.PreferredSize.Width) + Padding.Horizontal,
+                panelTop.PreferredSize.Height + panelFilters.PreferredSize.Height + panelShapes.PreferredSize.Height / 2
+                + Padding.Vertical + panelTop.Margin.Vertical + panelFilters.Margin.Vertical));
+
 
             // 等自动缩放和布局完成后，再按最终尺寸居中。
             if (StartPosition == FormStartPosition.CenterScreen)

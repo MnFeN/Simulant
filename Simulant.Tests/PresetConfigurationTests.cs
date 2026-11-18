@@ -114,7 +114,7 @@ namespace Simulant.Tests
                 });
                 Assert(changes == 0, "初次创建和配置恢复不能触发自动保存。");
                 ((CheckBox)options[1].Control).Checked = false;
-                ((NumericUpDown)options[2].Control).Value = 9;
+                ((NumericTextBoxEx)options[2].Control).Value = 9;
                 ((TextBox)options[5].Control.Controls[0]).Text = "新的路径";
                 Assert(changes == 3, "普通控件和复合选项的子控件都应自动通知改动。");
                 editor.Clear();

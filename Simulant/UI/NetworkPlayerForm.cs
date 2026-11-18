@@ -7,7 +7,7 @@ using System.Windows.Forms;
 namespace Simulant.UI
 {
     /// <summary>手动生成玩家时只选择常用属性，其余外观由当前玩家提供。</summary>
-    internal sealed class NetworkPlayerForm : Form
+    internal sealed class NetworkPlayerForm : FormEx
     {
         private static readonly string[] JobNames =
         {
@@ -56,22 +56,22 @@ namespace Simulant.UI
             "绘灵法师"
         };
 
-        private readonly ComboBox _job = new ComboBox
+        private readonly ComboBox _job = new ComboBoxEx
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
             Dock = DockStyle.Fill
         };
-        private readonly NumericUpDown _level = new NumericUpDown
+        private readonly NumericTextBoxEx _level = new NumericTextBoxEx
         {
             Minimum = 1,
             Maximum = 255,
             Width = 90
         };
-        private readonly TextBox _name = new TextBox
+        private readonly TextBox _name = new TextBoxEx
         {
             Dock = DockStyle.Fill
         };
-        private readonly CheckBox _jobEquipment = new CheckBox
+        private readonly CheckBox _jobEquipment = new CheckBoxEx
         {
             Text = "优先使用职业预设装备",
             Checked = true,
@@ -133,15 +133,16 @@ namespace Simulant.UI
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0, 14, 0, 0)
             };
-            var cancel = new Button
+            var cancel = new ButtonEx
             {
                 Text = "取消",
                 AutoSize = true,
                 DialogResult = DialogResult.Cancel
             };
-            var create = new Button
+            var create = new ButtonEx
             {
                 Text = "生成",
+                Tone = ButtonTone.Primary,
                 AutoSize = true,
                 DialogResult = DialogResult.OK
             };

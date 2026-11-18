@@ -3,7 +3,7 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    public partial class SimpleInputForm : Form
+    public partial class SimpleInputForm : FormEx
     {
         public SimpleInputForm()
         {

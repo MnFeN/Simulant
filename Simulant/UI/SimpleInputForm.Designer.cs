@@ -29,9 +29,9 @@
         private void InitializeComponent()
         {
             this.tableMain = new System.Windows.Forms.TableLayoutPanel();
-            this.btnCancel = new System.Windows.Forms.Button();
-            this.btnOk = new System.Windows.Forms.Button();
-            this.txtInput = new System.Windows.Forms.TextBox();
+            this.btnCancel = new ButtonEx();
+            this.btnOk = new ButtonEx();
+            this.txtInput = new TextBoxEx();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.lblDesc = new System.Windows.Forms.Label();
             this.tableMain.SuspendLayout();
@@ -75,7 +75,6 @@
             this.btnCancel.TabIndex = 2;
             this.btnCancel.TabStop = false;
             this.btnCancel.Text = "取消";
-            this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             //
             // btnOk
@@ -92,7 +91,7 @@
             this.btnOk.TabIndex = 1;
             this.btnOk.TabStop = false;
             this.btnOk.Text = "确认";
-            this.btnOk.UseVisualStyleBackColor = true;
+            this.btnOk.Tone = ButtonTone.Primary;
             this.btnOk.Click += new System.EventHandler(this.btnOk_Click);
             //
             // txtInput
@@ -120,13 +119,12 @@
             // SimpleInputForm
             //
             this.AcceptButton = this.btnOk;
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 19F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.AutoSize = true;
             this.CancelButton = this.btnCancel;
             this.ClientSize = new System.Drawing.Size(411, 170);
             this.Controls.Add(this.tableMain);
-            this.Font = new System.Drawing.Font("等距更纱黑体 SC", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.Name = "SimpleInputForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
@@ -140,10 +138,10 @@
 
         #endregion
         private System.Windows.Forms.TableLayoutPanel tableMain;
-        private System.Windows.Forms.Button btnCancel;
-        private System.Windows.Forms.Button btnOk;
+        private ButtonEx btnCancel;
+        private ButtonEx btnOk;
         private System.ComponentModel.BackgroundWorker backgroundWorker1;
-        private System.Windows.Forms.TextBox txtInput;
+        private TextBoxEx txtInput;
         private System.Windows.Forms.Label lblDesc;
     }
 }
