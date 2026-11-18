@@ -2,10 +2,12 @@ using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Simulation;
 using Simulant.Simulation.Mechanics;
+using Simulant.Simulation.Options;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 
 namespace Simulant.Tests
@@ -64,6 +66,59 @@ namespace Simulant.Tests
                 {
                     host.Commands.Stop();
                     host.PlayerActions.Reset();
+                }
+            }
+        }
+
+        public static void FixedSeedReplaysRandomOptionsAndPointAssignments()
+        {
+            var host = new PluginHost();
+            const int seed = 20261118;
+            var option = new ComboBoxOption<SeededAssignment>(nameof(SessionTestLogic.Assignment), "点名",
+                SeededAssignment.Random, new Map<SeededAssignment>());
+            var pool = new[] { 0, 0, 1, 1, 2, 2, 3, 3 };
+            var priority = new[] { 5, 2, 7, 0, 4, 1, 6, 3 };
+            int[] Draw(SessionProbe probe)
+            {
+                var random = probe.Logic.Random;
+                return Enumerable.Range(0, 16).SelectMany(_ =>
+                {
+                    option.ApplyTo(probe.Logic, random);
+                    var assignment = (int)probe.Logic.Assignment;
+                    var group = AssignmentRandom.Draw(pool, random, 0, value => value == assignment, priority);
+                    Assert(group[0] == assignment && group.OrderBy(value => value).SequenceEqual(pool),
+                        "固定种子必须保留随机枚举的递归解析、自身点名与其他名额。");
+                    return group;
+                }).ToArray();
+            }
+
+            using (var probe = new SessionProbe())
+            using (var session = new SimSession(host, new SessionTestPreset(probe), seed))
+            {
+                int[] first = null;
+                probe.PrepareAction = () => first = Draw(probe);
+                session.Start();
+                session.Stop();
+
+                int[] repeated = null;
+                probe.PrepareAction = () => repeated = Draw(probe);
+                session.Start();
+                session.Stop();
+                Assert(first.SequenceEqual(repeated), "同一会话重新开始应从固定种子开头重新抽取。");
+
+                using (var retryProbe = new SessionProbe())
+                using (var retry = new SimSession(host, new SessionTestPreset(retryProbe), session.RandomSeed))
+                {
+                    retryProbe.PrepareAction = () => repeated = Draw(retryProbe);
+                    retry.Start();
+                    Assert(retry.RandomSeed == seed && first.SequenceEqual(repeated),
+                        "用上次种子新建会话时，随机选项和点名都应复现。");
+                }
+
+                using (var next = new SimSession(host, new SessionTestPreset(probe), seed + 1))
+                {
+                    next.Start();
+                    Assert(!first.SequenceEqual(repeated), "新种子应改变这组抽取结果。");
                 }
             }
         }
@@ -942,9 +997,21 @@ namespace Simulant.Tests
         public override Simulant.Core.Environment.WaymarkLayout Waymarks => Probe.Waymarks;
     }
 
+    internal enum SeededAssignment
+    {
+        First, Second, Third, Fourth,
+        [RandomEnum(First, Second)]
+        FirstPair,
+        [RandomEnum(Third, Fourth)]
+        SecondPair,
+        [RandomEnum(FirstPair, SecondPair)]
+        Random
+    }
+
     internal sealed class SessionTestLogic : SimLogicBase
     {
         private readonly SessionProbe _probe;
+        internal SeededAssignment Assignment { get; set; }
 
         public SessionTestLogic(PluginHost host, SimPresetBase preset)
         {
@@ -1035,6 +1102,7 @@ namespace Simulant.Simulation
     {
         internal SimEntityManager EntityManager { get; set; }
         internal SimScheduler Scheduler { get; set; }
+        protected internal Random Random { get; internal set; }
 
         internal abstract void Prepare();
         internal abstract void Start();

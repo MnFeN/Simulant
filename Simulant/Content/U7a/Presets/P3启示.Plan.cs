@@ -62,7 +62,7 @@ namespace Simulant.Content.U7a.Presets
         {
             _spiritTakerRadius = spiritTakerRadius;
             IsSingleGroup = solution > ApocalypseSolution.DoubleNA;
-            var initial = (int)debuff.TryResolveRandom();
+            var initial = (int)debuff.ResolveRandom(random);
             var prio = solution == ApocalypseSolution.DoubleCN ? new[] { 2, 3, 0, 1, 4, 5, 6, 7 } :
                 solution == ApocalypseSolution.DoubleHTDH || solution == ApocalypseSolution.SingleHTDH ? new[] { 2, 0, 1, 4, 5, 6, 7, 3 } :
                 solution == ApocalypseSolution.DoubleNA || solution == ApocalypseSolution.SingleJP ? new[] { 3, 2, 1, 0, 4, 5, 6, 7 } :
@@ -128,8 +128,8 @@ namespace Simulant.Content.U7a.Presets
                 for (var slot = 0; slot < 8; slot++)
                     SpreadIndices[slot] ^= 1;
 
-            StartDirection = (int)start.TryResolveRandom();
-            Turn = turn.TryResolveRandom() == ExerciseTurn.Clockwise ? 1 : -1;
+            StartDirection = (int)start.ResolveRandom(random);
+            Turn = turn.ResolveRandom(random) == ExerciseTurn.Clockwise ? 1 : -1;
             var d = StartDirection;
             ThreeDirection = half == ApocalypseHalf.NorthToSouthwest
                 ? reference == ApocalypseReference.FirstFire

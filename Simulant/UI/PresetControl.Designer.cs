@@ -36,6 +36,7 @@
             this.lblPreset = new System.Windows.Forms.Label();
             this.lblAuthor = new System.Windows.Forms.Label();
             this.btnStart = new System.Windows.Forms.Button();
+            this.btnRetry = new System.Windows.Forms.Button();
             this.btnEnd = new System.Windows.Forms.Button();
             this.lblLastChanged = new System.Windows.Forms.Label();
             this.rtbInfo = new System.Windows.Forms.RichTextBox();
@@ -84,14 +85,16 @@
             //
             // tableMetaData
             //
-            this.tableMetaData.ColumnCount = 2;
-            this.tableMetaData.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tableMetaData.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableMetaData.ColumnCount = 3;
+            this.tableMetaData.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.tableMetaData.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.tableMetaData.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33334F));
             this.tableMetaData.Controls.Add(this.lblInfo, 0, 3);
             this.tableMetaData.Controls.Add(this.lblPreset, 0, 0);
             this.tableMetaData.Controls.Add(this.lblAuthor, 0, 1);
             this.tableMetaData.Controls.Add(this.btnStart, 0, 5);
-            this.tableMetaData.Controls.Add(this.btnEnd, 1, 5);
+            this.tableMetaData.Controls.Add(this.btnRetry, 1, 5);
+            this.tableMetaData.Controls.Add(this.btnEnd, 2, 5);
             this.tableMetaData.Controls.Add(this.lblLastChanged, 0, 2);
             this.tableMetaData.Controls.Add(this.rtbInfo, 0, 4);
             this.tableMetaData.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -112,7 +115,7 @@
             // lblInfo
             //
             this.lblInfo.AutoSize = true;
-            this.tableMetaData.SetColumnSpan(this.lblInfo, 2);
+            this.tableMetaData.SetColumnSpan(this.lblInfo, 3);
             this.lblInfo.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblInfo.Location = new System.Drawing.Point(0, 106);
             this.lblInfo.Margin = new System.Windows.Forms.Padding(0);
@@ -125,7 +128,7 @@
             // lblPreset
             //
             this.lblPreset.AutoSize = true;
-            this.tableMetaData.SetColumnSpan(this.lblPreset, 2);
+            this.tableMetaData.SetColumnSpan(this.lblPreset, 3);
             this.lblPreset.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblPreset.Location = new System.Drawing.Point(0, 10);
             this.lblPreset.Margin = new System.Windows.Forms.Padding(0, 10, 0, 0);
@@ -138,7 +141,7 @@
             // lblAuthor
             //
             this.lblAuthor.AutoSize = true;
-            this.tableMetaData.SetColumnSpan(this.lblAuthor, 2);
+            this.tableMetaData.SetColumnSpan(this.lblAuthor, 3);
             this.lblAuthor.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblAuthor.Location = new System.Drawing.Point(0, 42);
             this.lblAuthor.Margin = new System.Windows.Forms.Padding(0);
@@ -155,15 +158,32 @@
             this.btnStart.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(220)))), ((int)(((byte)(255)))), ((int)(((byte)(235)))));
             this.btnStart.Dock = System.Windows.Forms.DockStyle.Fill;
             this.btnStart.ForeColor = System.Drawing.Color.Black;
-            this.btnStart.Location = new System.Drawing.Point(8, 377);
-            this.btnStart.Margin = new System.Windows.Forms.Padding(8, 0, 8, 8);
+            this.btnStart.Location = new System.Drawing.Point(5, 377);
+            this.btnStart.Margin = new System.Windows.Forms.Padding(5, 0, 5, 8);
             this.btnStart.Name = "btnStart";
             this.btnStart.Padding = new System.Windows.Forms.Padding(5);
-            this.btnStart.Size = new System.Drawing.Size(142, 42);
+            this.btnStart.Size = new System.Drawing.Size(95, 42);
             this.btnStart.TabIndex = 5;
             this.btnStart.Text = "开始模拟";
             this.btnStart.UseVisualStyleBackColor = false;
             this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
+            //
+            // btnRetry
+            //
+            this.btnRetry.AutoSize = true;
+            this.btnRetry.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.btnRetry.BackColor = System.Drawing.Color.FromArgb(255, 242, 196);
+            this.btnRetry.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.btnRetry.ForeColor = System.Drawing.Color.Black;
+            this.btnRetry.Location = new System.Drawing.Point(110, 377);
+            this.btnRetry.Margin = new System.Windows.Forms.Padding(5, 0, 5, 8);
+            this.btnRetry.Name = "btnRetry";
+            this.btnRetry.Padding = new System.Windows.Forms.Padding(5);
+            this.btnRetry.Size = new System.Drawing.Size(95, 42);
+            this.btnRetry.TabIndex = 6;
+            this.btnRetry.Text = "重复上次";
+            this.btnRetry.UseVisualStyleBackColor = false;
+            this.btnRetry.Click += new System.EventHandler(this.btnRetry_Click);
             //
             // btnEnd
             //
@@ -172,12 +192,12 @@
             this.btnEnd.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(230)))), ((int)(((byte)(230)))));
             this.btnEnd.Dock = System.Windows.Forms.DockStyle.Fill;
             this.btnEnd.ForeColor = System.Drawing.Color.Black;
-            this.btnEnd.Location = new System.Drawing.Point(166, 377);
-            this.btnEnd.Margin = new System.Windows.Forms.Padding(8, 0, 8, 8);
+            this.btnEnd.Location = new System.Drawing.Point(215, 377);
+            this.btnEnd.Margin = new System.Windows.Forms.Padding(5, 0, 5, 8);
             this.btnEnd.Name = "btnEnd";
             this.btnEnd.Padding = new System.Windows.Forms.Padding(5);
-            this.btnEnd.Size = new System.Drawing.Size(142, 42);
-            this.btnEnd.TabIndex = 6;
+            this.btnEnd.Size = new System.Drawing.Size(96, 42);
+            this.btnEnd.TabIndex = 7;
             this.btnEnd.Text = "停止模拟";
             this.btnEnd.UseVisualStyleBackColor = false;
             this.btnEnd.Click += new System.EventHandler(this.btnEnd_Click);
@@ -185,7 +205,7 @@
             // lblLastChanged
             //
             this.lblLastChanged.AutoSize = true;
-            this.tableMetaData.SetColumnSpan(this.lblLastChanged, 2);
+            this.tableMetaData.SetColumnSpan(this.lblLastChanged, 3);
             this.lblLastChanged.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblLastChanged.Location = new System.Drawing.Point(0, 74);
             this.lblLastChanged.Margin = new System.Windows.Forms.Padding(0);
@@ -197,7 +217,7 @@
             //
             // rtbInfo
             //
-            this.tableMetaData.SetColumnSpan(this.rtbInfo, 2);
+            this.tableMetaData.SetColumnSpan(this.rtbInfo, 3);
             this.rtbInfo.Cursor = System.Windows.Forms.Cursors.Arrow;
             this.rtbInfo.Dock = System.Windows.Forms.DockStyle.Fill;
             this.rtbInfo.Location = new System.Drawing.Point(8, 146);
@@ -388,6 +408,7 @@
         private System.Windows.Forms.Label lblAuthor;
         private System.Windows.Forms.Label lblLastChanged;
         private System.Windows.Forms.Button btnStart;
+        private System.Windows.Forms.Button btnRetry;
         private System.Windows.Forms.Button btnEnd;
         private System.Windows.Forms.Label lblInfo;
         private System.Windows.Forms.RichTextBox rtbInfo;

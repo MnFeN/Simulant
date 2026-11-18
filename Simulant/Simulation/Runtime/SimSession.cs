@@ -22,10 +22,11 @@ namespace Simulant.Simulation.Runtime
         private int _waymarkWorld;
         private volatile bool _disposed;
 
+        public int RandomSeed { get; }
         public bool IsRunning => _scheduler?.IsRunning == true;
         internal bool HasPendingCleanup => _entityManager.HasPendingCleanup || _waymarksPendingCleanup || Volatile.Read(ref _failureRetained) != 0;
 
-        internal SimSession(PluginHost host, SimPresetBase preset)
+        internal SimSession(PluginHost host, SimPresetBase preset, int? randomSeed = null)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _preset = preset;
@@ -41,6 +42,7 @@ namespace Simulant.Simulation.Runtime
                 CombatLog = new SimCombatLog(() => _host.Configuration.GenerateActLogs, XivNetworkLog.WriteLine, _host.LogWarning)
             };
 
+            RandomSeed = randomSeed ?? (BitConverter.ToInt32(Guid.NewGuid().ToByteArray(), 0) & int.MaxValue);
             _logic = (SimLogicBase)Activator.CreateInstance(preset.SimLogicType, _host, preset);
             _logic.EntityManager = _entityManager;
         }
@@ -70,6 +72,10 @@ namespace Simulant.Simulation.Runtime
 
                 try
                 {
+                    // 假队员的轮询读盘与技能间隔不影响机制随机序列。
+                    var random = new Random(RandomSeed);
+                    _entityManager.BehaviorRandom = new Random(random.Next());
+                    _logic.Random = random;
                     _entityManager.Scheduler = _scheduler;
                     _logic.Scheduler = _scheduler;
                     Interlocked.Exchange(ref _cleanupRequired, 1);

@@ -33,7 +33,7 @@ namespace Simulant.Content.U7a.Presets
         {
             _solution = solution;
             var initial = (int)debuff;
-            North = Math.PI + Deg((int)north.TryResolveRandom() * 45);
+            North = Math.PI + Deg((int)north.ResolveRandom(random) * 45);
             var iceOnSupport = initial == 0 ? self < 4 : initial == 1 && self < 4 ? false :
                 initial == 3 && self >= 4 ? true : random.Next(2) == 0;
             Codes = iceOnSupport ? new[] { 1, 2, 3, 3, 5, 5, 7, 8 } : new[] { 0, 2, 3, 3, 5, 5, 7, 9 };

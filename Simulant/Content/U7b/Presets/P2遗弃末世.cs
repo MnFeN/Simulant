@@ -123,7 +123,7 @@ namespace Simulant.Content.U7b.Presets
             if (_selfSlot < 0 || _selfSlot >= 8)
                 throw new InvalidOperationException("遗弃末世的职能必须在 MT 至 D4 范围内。");
 
-            _plan = ForsakenPlan.Create(new Random(), _selfSlot, Assignment, OptimizeMelee, HelpersByRole);
+            _plan = ForsakenPlan.Create(Random, _selfSlot, Assignment, OptimizeMelee, HelpersByRole);
 
             for (var i = 0; i < 8; i++)
             {
@@ -141,11 +141,9 @@ namespace Simulant.Content.U7b.Presets
         private void PrepareEnemies()
         {
             // 开场全队按职能预站位；进入机制后只控制假队员，真实玩家自行走位。
-            var random = new Random();
-
             for (var i = 0; i < 8; i++)
             {
-                Party[i].Pos = ForsakenPlan.InitialPosition(i, SimJobActions.For(Party[i].Job)?.Melee == true).Sample(random);
+                Party[i].Pos = ForsakenPlan.InitialPosition(i, SimJobActions.For(Party[i].Job)?.Melee == true).Sample(Random);
                 Party[i].Heading = Heading(Party[i].Pos, ForsakenPlan.Center);
             }
 

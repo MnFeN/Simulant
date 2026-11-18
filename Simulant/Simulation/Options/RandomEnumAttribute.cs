@@ -43,22 +43,30 @@ namespace Simulant.Simulation.Options
 
     public static class RandomEnumAttributeExtension
     {
-        private static readonly Random _rnd = new Random();
+        private static readonly Random _fallbackRandom = new Random();
         private static readonly object _lock = new object();
 
         /// <summary>
         /// 按 <see cref="RandomEnumAttribute"/> 指定的选项递归随机选择，直到得到不带该属性的枚举值。<br />
         /// 对于普通枚举值则直接返回原始值。
         /// </summary>
-        public static T TryResolveRandom<T>(this T @enum) // 这里为了非枚举泛型类的 SimOption<T> 调用而不加 where
+        public static T ResolveRandom<T>(this T @enum)
+            => ResolveRandom(@enum, null);
+
+        public static T ResolveRandom<T>(this T @enum, Random random)
         {
             if (!typeof(T).IsEnum)
                 throw new InvalidOperationException($"ResolveRandom 只能用于 enum 枚举类型，但传入了 {typeof(T).FullName}。");
 
-            return ResolveRandom(@enum, new HashSet<T>());
+            var visited = new HashSet<T>();
+            if (random != null)
+                return ResolveRandom(@enum, random, visited);
+
+            lock (_lock)
+                return ResolveRandom(@enum, _fallbackRandom, visited);
         }
 
-        private static T ResolveRandom<T>(T @enum, HashSet<T> visited)
+        private static T ResolveRandom<T>(T @enum, Random random, HashSet<T> visited)
         {
             var choices = @enum.GetRandomChoices();
 
@@ -68,14 +76,8 @@ namespace Simulant.Simulation.Options
             if (!visited.Add(@enum))
                 throw new InvalidOperationException($"RandomEnum 存在循环引用：{typeof(T).FullName}.{@enum}。");
 
-            T next;
-
-            lock (_lock)
-            {
-                next = choices[_rnd.Next(choices.Count)];
-            }
-
-            return ResolveRandom(next, visited);
+            var next = choices[random.Next(choices.Count)];
+            return ResolveRandom(next, random, visited);
         }
 
         private static List<T> GetRandomChoices<T>(this T @enum)

@@ -377,7 +377,7 @@ namespace Simulant.Content.U7a.Presets
             var area = ActionArea.FromAction(40289);
             var snapshot = PartySnapshot.Capture(Party);
             var target = CrystallizeTimePlan.SpiritTakerTarget(Enumerable.Range(0, Party.Count).Select(slot => snapshot.Get(slot).Position).ToArray(), Self,
-                area, _crystal.Pos, _crystal.Entity.HitboxRadius, _random);
+                area, _crystal.Pos, _crystal.Entity.HitboxRadius, Random);
             var center = Party[target].Pos;
             var mechanic = Targeted("碎灵一击分散", 40289, target, new[]
             {

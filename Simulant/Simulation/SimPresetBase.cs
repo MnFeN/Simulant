@@ -34,11 +34,14 @@ namespace Simulant.Simulation
         public override string ToString() => $"[模拟] {Name}";
 
         public SimSession CreateSimSession(PluginHost host)
+            => CreateSimSession(host, null);
+
+        public SimSession CreateSimSession(PluginHost host, int? randomSeed)
         {
             if (!IsImplemented)
                 throw new InvalidOperationException($"预设「{Name}」尚未实现，暂不能开始模拟。");
 
-            return new SimSession(host, this);
+            return new SimSession(host, this, randomSeed);
         }
 
     }

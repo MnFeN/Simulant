@@ -70,7 +70,7 @@ namespace Simulant.Content.U7a.Presets
         internal DarklitPlan(int self, DarklitDebuff initial, DarklitSolution solution, DiagonalSwap diagonal,
             SideSwap side, SomberDanceBait tanks, WingSide wing, Random random)
         {
-            initial = initial.TryResolveRandom();
+            initial = initial.ResolveRandom(random);
             var chained = initial == DarklitDebuff.Chain || initial == DarklitDebuff.ChainWater;
             var water = initial == DarklitDebuff.ChainWater || initial == DarklitDebuff.ProteanWater;
             int[] Pick(int start, int count, int take)
@@ -118,7 +118,7 @@ namespace Simulant.Content.U7a.Presets
             FirstTank = tanks == SomberDanceBait.STInvulnerable || tanks == SomberDanceBait.STThenMT ? 1 : 0;
             SecondTank = tanks == SomberDanceBait.MTThenST ? 1 : tanks == SomberDanceBait.STThenMT ? 0 : FirstTank;
             NeedsInvulnerability = FirstTank == SecondTank;
-            RightSafe = wing.TryResolveRandom() == WingSide.Left;
+            RightSafe = wing.ResolveRandom(random) == WingSide.Left;
         }
 
         private static void Swap(int[] values, int first, int second)

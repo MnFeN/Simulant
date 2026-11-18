@@ -8,8 +8,22 @@ namespace Simulant.UI
     /// <summary>模拟副本内的快捷控制；单击执行，拖动移动，边缘缩放。</summary>
     internal sealed partial class QuickControlForm : Form
     {
+        private const int StartButton = 0;
+        private const int RetryButton = 1;
+        private const int StopButton = 2;
+        private const int SessionButtonCount = 3;
+        private const int SprintButton = SessionButtonCount;
+        private const int KnockbackButton = 4;
+        private const int InvulnerabilityButton = 5;
+        private static readonly Color[] SessionAccents =
+        {
+            Color.FromArgb(89, 215, 150),
+            Color.FromArgb(250, 202, 91),
+            Color.FromArgb(236, 111, 124)
+        };
+
         private readonly Action[] _actions;
-        private readonly bool[] _enabled = new bool[5];
+        private readonly bool[] _enabled;
         private int _hover = -1;
         private int _pressed = -1;
         private Point _mouseOrigin;
@@ -20,11 +34,12 @@ namespace Simulant.UI
         internal event Action<Point> LocationCommitted;
         internal Func<bool> IsGameForeground { get; set; }
 
-        internal QuickControlForm(Action start, Action stop, Action<string> command, Action<string> logWarning,
+        internal QuickControlForm(Action start, Action retry, Action stop, Action<string> command, Action<string> logWarning,
             Func<uint, Core.SimActionCooldown> cooldown)
         {
-            _actions = new[] { start, stop, () => command("ac 冲刺"),
+            _actions = new[] { start, retry, stop, () => command("ac 冲刺"),
                 () => command(_surecast ? "ac 沉稳咏唱" : "ac 亲疏自行"), () => command("ac 无敌") };
+            _enabled = new bool[_actions.Length];
             _logWarning = logWarning;
             _cooldown = cooldown;
             _animationTimer = new Timer { Interval = 33 };
@@ -48,7 +63,8 @@ namespace Simulant.UI
             var screen = Screen.PrimaryScreen;
             Location = screen.WorkingArea.Location;
             UpdateScreenLimits();
-            Size = new Size(screen.Bounds.Width / 16, screen.Bounds.Height / 12);
+            var width = screen.Bounds.Width / 16;
+            Size = new Size(width, CompactHeight(width, screen.Bounds.Height / 12));
             // 隐藏后仍检测前台窗口，复用冷却动画计时器，不销毁窗口或重新加载图标。
             _animationTimer.Start();
         }
@@ -65,22 +81,24 @@ namespace Simulant.UI
             }
         }
 
-        internal void UpdateState(bool canStart, bool canStop, bool? surecast, uint invulnerability = 0)
+        internal void UpdateState(bool canStart, bool canRetry, bool canStop, bool? surecast, uint invulnerability = 0)
         {
-            var skillStateChanged = _invulnerability != invulnerability || _enabled[2] != surecast.HasValue || (surecast.HasValue && _surecast != surecast.Value);
+            var stateChanged = _enabled[StartButton] != canStart || _enabled[RetryButton] != canRetry ||
+                _enabled[StopButton] != canStop || _invulnerability != invulnerability ||
+                _enabled[SprintButton] != surecast.HasValue || (surecast.HasValue && _surecast != surecast.Value);
+            _enabled[StartButton] = canStart;
+            _enabled[RetryButton] = canRetry;
+            _enabled[StopButton] = canStop;
+            var skillCountChanged = (_invulnerability == 0) != (invulnerability == 0);
             _invulnerability = invulnerability;
-            _enabled[2] = _enabled[3] = surecast.HasValue;
-            _enabled[4] = surecast.HasValue && invulnerability != 0;
+            if (skillCountChanged)
+                Height = CompactHeight(Width, Height);
+            _enabled[SprintButton] = _enabled[KnockbackButton] = surecast.HasValue;
+            _enabled[InvulnerabilityButton] = surecast.HasValue && invulnerability != 0;
             if (surecast.HasValue)
                 _surecast = surecast.Value;
-            if (skillStateChanged)
+            if (stateChanged)
                 Invalidate();
-            if (_enabled[0] != canStart || _enabled[1] != canStop)
-            {
-                _enabled[0] = canStart;
-                _enabled[1] = canStop;
-                Invalidate();
-            }
             if (WindowState != FormWindowState.Normal)
                 WindowState = FormWindowState.Normal;
             UpdateVisibility();
@@ -97,15 +115,25 @@ namespace Simulant.UI
 
         private float Inset => Math.Min(ClientSize.Width / 2f, ClientSize.Height / 2f) * 0.12f;
 
-        private int ButtonCount => _invulnerability == 0 ? 4 : 5;
+        private int ButtonCount => _invulnerability == 0 ? InvulnerabilityButton : InvulnerabilityButton + 1;
+        private int SkillButtonCount => ButtonCount - SessionButtonCount;
+
+        private int CompactHeight(int width, int requestedHeight)
+        {
+            // 两行各自以一格的宽度为高度上限，技能图标贴合下排，保留边距。
+            var layoutHeight = width / (float)SessionButtonCount + width / (float)SkillButtonCount;
+            return Math.Max(MinimumSize.Height, Math.Min(requestedHeight, (int)layoutHeight));
+        }
 
         private RectangleF ButtonBounds(int index)
         {
-            var width = ClientSize.Width / (float)(index < 2 ? 2 : ButtonCount - 2);
-            var topHeight = ClientSize.Height * 0.36f;
-            var top = index < 2 ? 0 : topHeight;
-            var height = index < 2 ? topHeight : ClientSize.Height - topHeight;
-            return new RectangleF((index < 2 ? index : index - 2) * width + Inset, top + Inset, width - Inset * 2, height - Inset * 2);
+            var sessionButton = index < SessionButtonCount;
+            var width = ClientSize.Width / (float)(sessionButton ? SessionButtonCount : SkillButtonCount);
+            var topHeight = ClientSize.Height * SkillButtonCount / (float)ButtonCount;
+            var top = sessionButton ? 0 : topHeight;
+            var height = sessionButton ? topHeight : ClientSize.Height - topHeight;
+            var column = sessionButton ? index : index - SessionButtonCount;
+            return new RectangleF(column * width + Inset, top + Inset, width - Inset * 2, height - Inset * 2);
         }
 
         private int ButtonAt(Point point)
@@ -137,7 +165,6 @@ namespace Simulant.UI
                 var bounds = ButtonBounds(i);
                 var active = CanClick(i);
                 var hover = active && _hover == i && !_dragging;
-                var accent = i == 0 ? Color.FromArgb(89, 215, 150) : Color.FromArgb(236, 111, 124);
                 var background = hover ? Color.FromArgb(58, 62, 70) : Color.FromArgb(40, 44, 51);
                 if (hover && Capture && _pressed == i)
                     background = Color.FromArgb(69, 74, 82);
@@ -145,7 +172,7 @@ namespace Simulant.UI
                 using (var fill = new SolidBrush(background))
                     e.Graphics.FillPath(fill, shape);
 
-                if (i >= 2)
+                if (i >= SessionButtonCount)
                 {
                     PaintSkill(e.Graphics, i, bounds);
                     continue;
@@ -154,20 +181,38 @@ namespace Simulant.UI
                 var size = Math.Min(bounds.Width, bounds.Height) * 0.44f;
                 var x = bounds.Left + bounds.Width / 2;
                 var y = bounds.Top + bounds.Height / 2;
+                var accent = SessionAccents[i];
                 using (var icon = new SolidBrush(active ? accent : Color.FromArgb(accent.R / 2, accent.G / 2, accent.B / 2)))
                 {
-                    if (i == 0)
+                    if (i == StartButton)
                         e.Graphics.FillPolygon(icon, new[]
                         {
                             new PointF(x - size * 0.38f, y - size * 0.6f),
                             new PointF(x - size * 0.38f, y + size * 0.6f),
                             new PointF(x + size * 0.66f, y)
                         });
+                    else if (i == RetryButton)
+                        PaintRetryIcon(e.Graphics, icon, x, y, size);
                     else
                         using (var square = RoundedRectangle(new RectangleF(x - size / 2, y - size / 2, size, size), size * 0.12f))
                             e.Graphics.FillPath(icon, square);
                 }
             }
+        }
+
+        private static void PaintRetryIcon(Graphics graphics, SolidBrush icon, float x, float y, float size)
+        {
+            var diameter = size * 0.86f;
+            var tipX = x + size * 0.34f;
+            using (var pen = new Pen(icon.Color, Math.Max(1.5f, size * 0.26f)) { StartCap = LineCap.Round })
+                graphics.DrawArc(pen, tipX - diameter, y - diameter / 2, diameter, diameter, 82, 278);
+
+            graphics.FillPolygon(icon, new[]
+            {
+                new PointF(tipX - size * 0.29f, y - size * 0.08f),
+                new PointF(tipX + size * 0.29f, y - size * 0.08f),
+                new PointF(tipX, y + size * 0.47f)
+            });
         }
 
         protected override void OnSizeChanged(EventArgs e)
@@ -253,7 +298,7 @@ namespace Simulant.UI
             var width = _originalBounds.Width + (left ? -delta.Width : (_resizeEdges & AnchorStyles.Right) != 0 ? delta.Width : 0);
             var height = _originalBounds.Height + (top ? -delta.Height : (_resizeEdges & AnchorStyles.Bottom) != 0 ? delta.Height : 0);
             width = Math.Max(MinimumSize.Width, Math.Min(MaximumSize.Width, width));
-            height = Math.Max(MinimumSize.Height, Math.Min(MaximumSize.Height, height));
+            height = CompactHeight(width, Math.Min(MaximumSize.Height, height));
             Bounds = new Rectangle(left ? _originalBounds.Right - width : _originalBounds.Left,
                 top ? _originalBounds.Bottom - height : _originalBounds.Top, width, height);
         }
@@ -317,8 +362,10 @@ namespace Simulant.UI
             try
             {
                 var screen = Screen.FromRectangle(Bounds);
+                var minWidth = screen.Bounds.Width / 24;
                 MaximumSize = new Size(screen.Bounds.Width / 10, screen.Bounds.Height / 10);
-                MinimumSize = new Size(screen.Bounds.Width / 24, screen.Bounds.Height / 20);
+                MinimumSize = new Size(minWidth, Math.Min(screen.Bounds.Height / 20, minWidth * 2 / SessionButtonCount));
+                Height = CompactHeight(Width, Height);
             }
             finally
             {

@@ -51,7 +51,7 @@ namespace Simulant.Content.S4b.Presets
         protected override void BuildTimeline(SimTimeline timeline)
         {
             _remainingTriangles = _candidateTriangles
-                .Select((triangle, i) => (triangle, (byte)(10 + i)))
+                .Select((triangle, i) => (new Triangle(triangle.X, triangle.Y, triangle.Direction, Random), (byte)(10 + i)))
                 .ToList();
 
             timeline.At(0, () => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
@@ -105,18 +105,17 @@ namespace Simulant.Content.S4b.Presets
             return timeline;
         }
 
-        private List<Triangle> _candidateTriangles = new List<Triangle>
+        private static readonly (float X, float Y, TriangleDirection Direction)[] _candidateTriangles =
         {
-            new Triangle(14.4338f, -5.0000f, TriangleDirection.Left),
-            new Triangle(11.5470f, 10.0000f, TriangleDirection.Right),
-            new Triangle(-11.5470f, -10.0000f, TriangleDirection.Left),
-            new Triangle(-14.4338f, 5.0000f, TriangleDirection.Right),
-            new Triangle(2.8868f, -15.0000f, TriangleDirection.Right),
-            new Triangle(0.0000f, 0.0000f, TriangleDirection.Both),
-            new Triangle(-2.8868f, 15.0000f, TriangleDirection.Left),
+            (14.4338f, -5.0000f, TriangleDirection.Left),
+            (11.5470f, 10.0000f, TriangleDirection.Right),
+            (-11.5470f, -10.0000f, TriangleDirection.Left),
+            (-14.4338f, 5.0000f, TriangleDirection.Right),
+            (2.8868f, -15.0000f, TriangleDirection.Right),
+            (0.0000f, 0.0000f, TriangleDirection.Both),
+            (-2.8868f, 15.0000f, TriangleDirection.Left),
         };
 
-        private readonly Random _random = new Random();
         private readonly object _randomLock = new object();
         private List<(Triangle Triangle, byte ObjectIndex)> _remainingTriangles;
 
@@ -131,7 +130,7 @@ namespace Simulant.Content.S4b.Presets
                 if (_remainingTriangles == null || _remainingTriangles.Count == 0)
                     throw new InvalidOperationException("没有可用的异三角候选位置。");
 
-                int i = _random.Next(_remainingTriangles.Count);
+                int i = Random.Next(_remainingTriangles.Count);
                 var item = _remainingTriangles[i];
                 _remainingTriangles.RemoveAt(i);
 
@@ -152,10 +151,10 @@ namespace Simulant.Content.S4b.Presets
             public Vector2 PosXY;
             public bool IsLeft;
 
-            public Triangle(float x, float y, TriangleDirection direction)
+            public Triangle(float x, float y, TriangleDirection direction, Random random)
             {
                 PosXY = new Vector2(x, y);
-                IsLeft = direction.TryResolveRandom() == TriangleDirection.Left;
+                IsLeft = direction.ResolveRandom(random) == TriangleDirection.Left;
             }
 
             public EventObjectSpawnSpec CreateSpawnSpec(byte objectIndex)

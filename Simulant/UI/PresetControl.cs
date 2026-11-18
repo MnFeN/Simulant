@@ -5,6 +5,8 @@ using Simulant.Game.FFCS.Client.Game;
 using Simulant.Simulation.Runtime;
 using System;
 using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Simulant.UI
@@ -14,19 +16,24 @@ namespace Simulant.UI
         private PluginHost _host;
         private SimPresetBase _preset;
         private SimSession _session;
-        private readonly Timer _sessionStateTimer;
+        private (int World, int Seed)? _lastAttempt;
+        private volatile bool _restoringPhase;
+        private int _stopVersion;
+        private readonly System.Windows.Forms.Timer _sessionStateTimer;
         private readonly OptionEditor _optionEditor;
         private QuickControlForm _quickControls;
         private bool _displayedRunning;
         private bool _displayedPendingCleanup;
         private bool _displayedReadyToStart;
+        private bool _displayedReadyToRetry;
 
         public PresetControl()
         {
             InitializeComponent();
+            toolTip.SetToolTip(btnRetry, "清理当前模拟，恢复本阶段场地和出生点，使用上一场的种子再次开始。");
             _optionEditor = new OptionEditor(tableOptions, toolTip);
             _optionEditor.ValueChanged += SavePresetOptions;
-            _sessionStateTimer = new Timer(components)
+            _sessionStateTimer = new System.Windows.Forms.Timer(components)
             {
                 Interval = 500
             };
@@ -35,7 +42,8 @@ namespace Simulant.UI
             {
                 if ((_session?.IsRunning == true) != _displayedRunning ||
                     (_session?.HasPendingCleanup == true) != _displayedPendingCleanup ||
-                    (GetStartBlockReason() == null) != _displayedReadyToStart)
+                    (GetStartBlockReason() == null) != _displayedReadyToStart ||
+                    CanRetry != _displayedReadyToRetry)
                     UpdateButtons();
 
                 UpdateQuickControls();
@@ -59,6 +67,10 @@ namespace Simulant.UI
         internal void LoadPreset(SimPresetBase preset)
         {
             StopCurrentSession();
+
+            if (!ReferenceEquals(_preset, preset))
+                _lastAttempt = null;
+
             _preset = preset;
 
             if (preset == null)
@@ -84,6 +96,7 @@ namespace Simulant.UI
             StopCurrentSession();
 
             _preset = null;
+            _lastAttempt = null;
 
             lblPreset.Text = "预设：";
             lblAuthor.Text = "作者：";
@@ -135,14 +148,22 @@ namespace Simulant.UI
         private void btnStart_Click(object sender, EventArgs e)
             => StartCurrentSession();
 
-        internal void StartCurrentSession()
+        private void btnRetry_Click(object sender, EventArgs e)
+            => RetryCurrentSession();
+
+        internal async void StartCurrentSession()
+            => await StartCurrentSessionAsync(retry: false);
+
+        internal async void RetryCurrentSession()
+            => await StartCurrentSessionAsync(retry: true);
+
+        private bool CanRetry => _lastAttempt?.World == _host?.WorldGeneration &&
+            _host?.ZoneService?.IsInSimulatedTerritory == true;
+
+        private async Task StartCurrentSessionAsync(bool retry)
         {
-            if (_host == null)
-                throw new InvalidOperationException("PresetControl 尚未初始化 PluginHost。");
-
-            _host.LogVerbose("开始或重启当前模拟");
-
-            if (_preset == null || !_preset.IsImplemented)
+            var preset = _preset;
+            if (_host == null || preset?.IsImplemented != true)
                 return;
 
             try
@@ -155,22 +176,44 @@ namespace Simulant.UI
                     return;
                 }
 
-                // 只在点击开始时读取原生区域编号，状态轮询不访问游戏内存。
+                var world = _host.WorldGeneration;
+                int? seed = null;
+                if (retry)
+                {
+                    var attempt = _lastAttempt;
+                    if (attempt?.World != world || _host.ZoneService?.IsInSimulatedTerritory != true)
+                    {
+                        _host.LogWarning("请先在当前区域开始一次该预设，再重复上次。");
+                        return;
+                    }
+
+                    seed = attempt.Value.Seed;
+                }
+
+                // 只在实际启动时读取原生区域编号，状态轮询不访问游戏内存。
                 var currentTerritoryId = GameMain.Instance.ThrowIfNull().CurrentTerritoryTypeId.Get();
 
-                if (currentTerritoryId != _preset.TerritoryId)
+                if (currentTerritoryId != preset.TerritoryId)
                 {
-                    _host.LogWarning($"当前区域为 {currentTerritoryId}，预设需要区域 {_preset.TerritoryId}，请先加载对应区域。");
+                    _host.LogWarning($"当前区域为 {currentTerritoryId}，预设需要区域 {preset.TerritoryId}，请先加载对应区域。");
                     return;
                 }
 
                 StopCurrentSession();
-
                 if (_session != null)
                     return;
 
-                _session = _preset.CreateSimSession(_host);
+                if (retry && !await RestorePhaseForRetry(preset))
+                    return;
+
+                if (IsDisposed || Disposing || !ReferenceEquals(_preset, preset) ||
+                    _host.WorldGeneration != world || GetStartBlockReason() != null)
+                    return;
+
+                _session = preset.CreateSimSession(_host, seed);
                 _session.Start();
+                _lastAttempt = (world, _session.RandomSeed);
+                _host.LogSim(FormattableString.Invariant($"本场模拟种子：{_session.RandomSeed}"));
             }
             catch (Exception ex)
             {
@@ -179,7 +222,24 @@ namespace Simulant.UI
             }
             finally
             {
+                if (!IsDisposed && !Disposing)
+                    UpdateButtons();
+            }
+        }
+
+        private async Task<bool> RestorePhaseForRetry(SimPresetBase preset)
+        {
+            var version = Volatile.Read(ref _stopVersion);
+            _restoringPhase = true;
+            try
+            {
                 UpdateButtons();
+                // 停止或离开区域后，即使阶段恢复刚好完成，也不启动旧请求。
+                return await _host.ZoneService.EnterPhase(preset.Phase) && Volatile.Read(ref _stopVersion) == version;
+            }
+            finally
+            {
+                _restoringPhase = false;
             }
         }
 
@@ -194,6 +254,10 @@ namespace Simulant.UI
         {
             try
             {
+                Interlocked.Increment(ref _stopVersion);
+                if (_restoringPhase)
+                    _host.ZoneService.CancelPendingPhase();
+
                 _session?.Dispose();
             }
             finally
@@ -216,7 +280,7 @@ namespace Simulant.UI
             if (!_host.GameDataReady || _host.GameDataLoading)
                 return "数据尚未加载完成，请稍后开始模拟。";
 
-            if (_host.IsSwitchingTerritory)
+            if (_host.IsSwitchingTerritory || _restoringPhase)
                 return "区域与阶段正在加载，请等待加载完成后再开始模拟。";
 
             if (!_host.FirewallEnabled)
@@ -234,10 +298,12 @@ namespace Simulant.UI
             _displayedRunning = isRunning;
             _displayedPendingCleanup = hasPendingCleanup;
             _displayedReadyToStart = GetStartBlockReason() == null;
+            _displayedReadyToRetry = CanRetry;
 
             _host?.LogVerbose($"UpdateButtons: hasHost = {hasHost}, hasPreset = {hasPreset}, isRunning = {isRunning}");
             btnStart.Enabled = hasHost && hasPreset && _preset.IsImplemented && _displayedReadyToStart;
-            btnEnd.Enabled = hasHost && (isRunning || hasPendingCleanup);
+            btnRetry.Enabled = btnStart.Enabled && _displayedReadyToRetry;
+            btnEnd.Enabled = hasHost && (isRunning || hasPendingCleanup || _restoringPhase);
             UpdateQuickControls();
         }
 
@@ -256,7 +322,7 @@ namespace Simulant.UI
 
             if (_quickControls == null || _quickControls.IsDisposed)
             {
-                _quickControls = new QuickControlForm(StartCurrentSession, StopCurrentSession, _host.Commands.Dispatch,
+                _quickControls = new QuickControlForm(StartCurrentSession, RetryCurrentSession, StopCurrentSession, _host.Commands.Dispatch,
                     _host.LogWarning, _host.PlayerActions.Cooldown)
                 {
                     IsGameForeground = () => _host.IsGameForeground
@@ -284,7 +350,7 @@ namespace Simulant.UI
                     // 换图或掉线时身份可能已失效，保留窗口但禁用技能。
                 }
             }
-            _quickControls.UpdateState(btnStart.Enabled, btnEnd.Enabled, surecast, invulnerability);
+            _quickControls.UpdateState(btnStart.Enabled, btnRetry.Enabled, btnEnd.Enabled, surecast, invulnerability);
         }
 
     }

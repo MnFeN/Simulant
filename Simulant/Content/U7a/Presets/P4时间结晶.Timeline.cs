@@ -144,7 +144,7 @@ namespace Simulant.Content.U7a.Presets
             })
             {
                 var groupSide = side;
-                var enter = CrystallizeTimePlan.SandHits[0] + _random.NextDouble();
+                var enter = CrystallizeTimePlan.SandHits[0] + Random.NextDouble();
                 timeline.At(enter, () =>
                 {
                     Move(_plan.Red(CrystalDebuff.RedWind, groupSide), _plan.Wind(groupSide), enter + 1, urgent: true);
@@ -249,7 +249,7 @@ namespace Simulant.Content.U7a.Presets
                         continue;
 
                     var member = slot;
-                    timeline.At(CrystallizeTimePlan.ReturnDebuffEnd - 1 - _random.NextDouble() * 2,
+                    timeline.At(CrystallizeTimePlan.ReturnDebuffEnd - 1 - Random.NextDouble() * 2,
                         () => EntityManager.UseKnockbackImmunity(Party[member]), "假队员使用防击退");
                 }
             }

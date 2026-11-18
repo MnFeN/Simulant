@@ -23,7 +23,7 @@ namespace Simulant.Simulation
         internal override void RestoreValue(string value)
             => SetValue((T)TypeDescriptor.GetConverter(typeof(T)).ConvertFromInvariantString(value));
 
-        internal override void ApplyTo(object target)
+        internal override void ApplyTo(object target, Random random = null)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
@@ -43,7 +43,7 @@ namespace Simulant.Simulation
             var value = GetValue();
 
             if (typeof(T).IsEnum)
-                value = value.TryResolveRandom();
+                value = value.ResolveRandom(random);
 
             property.SetValue(target, value, null);
         }

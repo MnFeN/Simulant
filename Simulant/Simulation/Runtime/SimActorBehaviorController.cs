@@ -33,7 +33,7 @@ namespace Simulant.Simulation.Runtime
         private readonly SimScheduler _scheduler;
         private readonly SimMovementController _movement;
         private readonly SimCastController _casts;
-        private readonly Random _random = new Random();
+        private readonly Random _random;
         private readonly Action _update;
         private readonly Action<SimActor, bool> _sprintEffect;
         private SimScheduledAction _tick;
@@ -46,13 +46,14 @@ namespace Simulant.Simulation.Runtime
         private const byte RunSpeed = 60;
 
         internal SimActorBehaviorController(SimScheduler scheduler, SimMovementController movement, SimCastController casts,
-            Action<SimActor, bool> sprintEffect = null)
+            Action<SimActor, bool> sprintEffect = null, Random random = null)
         {
             _scheduler = scheduler;
             _movement = movement;
             _casts = casts;
             _update = Tick;
             _sprintEffect = sprintEffect;
+            _random = random ?? new Random();
         }
 
         internal void Add(SimActor actor, SimActorBehaviorOptions options)

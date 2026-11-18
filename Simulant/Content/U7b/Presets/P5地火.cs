@@ -425,7 +425,7 @@ namespace Simulant.Content.U7b.Presets
             }
 
             // 整组位置全部通过校验后再移动队友，布置失败时由会话统一清理。
-            var positions = PlanSpreadPositions(myPos, members.Count, minDistance, new Random(),
+            var positions = PlanSpreadPositions(myPos, members.Count, minDistance, Random,
                 moving ? members.Select(member => member.Pos).ToArray() : null, maxTravel: 28.5f);
 
             for (var i = 0; i < members.Count; i++)

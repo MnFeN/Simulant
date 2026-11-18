@@ -18,9 +18,10 @@ namespace Simulant.UI
         private uint _invulnerability;
         private static readonly uint[] SkillActions = Simulation.Runtime.SimEntityManager.LocalActions;
 
-        private uint SkillAction(int index) => index == 2 ? 3u : index == 4 ? _invulnerability : _surecast ? 7559u : 7548u;
+        private uint SkillAction(int index) => index == SprintButton ? 3u :
+            index == InvulnerabilityButton ? _invulnerability : _surecast ? 7559u : 7548u;
 
-        private bool CanClick(int index) => _enabled[index] && (index < 2 ||
+        private bool CanClick(int index) => _enabled[index] && (index < SessionButtonCount ||
             (_skillIcons != null && _cooldown(SkillAction(index)).Remaining <= 0));
 
         protected override async void OnShown(EventArgs e)

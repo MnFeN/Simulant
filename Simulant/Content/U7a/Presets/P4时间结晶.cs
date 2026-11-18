@@ -110,7 +110,6 @@ namespace Simulant.Content.U7a.Presets
 
         private int Self => PlayerSlot - 1;
 
-        private readonly Random _random = new Random();
         private CrystallizeTimePlan _plan;
         private SimActor _shiva, _gaia, _crystal, _wyrm;
         private readonly SimActor[] _sand = new SimActor[6], _heads = new SimActor[2], _helpers = new SimActor[19];
@@ -135,7 +134,7 @@ namespace Simulant.Content.U7a.Presets
 
         protected override void BuildTimeline(SimTimeline timeline)
         {
-            _plan = new CrystallizeTimePlan(Self, InitialDebuff, Wave, Purple, _random, RedPriority, Solution);
+            _plan = new CrystallizeTimePlan(Self, InitialDebuff, Wave, Purple, Random, RedPriority, Solution);
             timeline.At(0, () => GeneratePartyMembers(PlayerSlot, PrepareActors), "准备时间结晶小队");
         }
 
@@ -143,7 +142,7 @@ namespace Simulant.Content.U7a.Presets
         {
             for (var slot = 0; slot < 8; slot++)
             {
-                Party[slot].Pos = CrystallizeTimePlan.Circle(Center, 5).Sample(_random);
+                Party[slot].Pos = CrystallizeTimePlan.Circle(Center, 5).Sample(Random);
                 Party[slot].Heading = (float)Math.PI;
             }
 
@@ -294,7 +293,7 @@ namespace Simulant.Content.U7a.Presets
                 Status(slot, 2459, 37);
             }
 
-            foreach (var slot in Enumerable.Range(0, 8).OrderBy(_ => _random.Next()).Take(3))
+            foreach (var slot in Enumerable.Range(0, 8).OrderBy(_ => Random.Next()).Take(3))
                 Status(slot, 4174, 31);
 
             _markersOwned = true;

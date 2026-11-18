@@ -172,6 +172,8 @@ namespace Simulant.UI
                 action = presetControl.StartCurrentSession;
             else if (string.Equals(command?.Trim(), "stop", StringComparison.OrdinalIgnoreCase))
                 action = StopCurrentSession;
+            else if (string.Equals(command?.Trim(), "retry", StringComparison.OrdinalIgnoreCase))
+                action = presetControl.RetryCurrentSession;
             else
                 return;
 

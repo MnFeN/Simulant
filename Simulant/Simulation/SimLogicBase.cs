@@ -21,6 +21,9 @@ namespace Simulant.Simulation
         internal SimEntityManager EntityManager { get; set; }
         internal SimScheduler Scheduler { get; set; }
 
+        /// <summary>本场模拟的机制随机源。在加载选项、构建时间轴和执行节点时可用。</summary>
+        protected internal Random Random { get; internal set; }
+
         // 如果修改构造函数传参，需要同步修改 SimSession 构造函数中的 CreateInstance 调用参数
         public SimLogicBase(PluginHost host, SimPresetBase preset)
         {
@@ -121,7 +124,7 @@ namespace Simulant.Simulation
                 if (!dict.TryGetValue(prop.Name, out var option))
                     throw new InvalidOperationException($"配置选项 {GetType().Name} 的标记属性 {prop.Name} 在界面中未找到对应选项。");
 
-                option.ApplyTo(this);
+                option.ApplyTo(this, Random);
 
                 var optionValue = prop.GetValue(this);
                 _host.LogSim(FormattableString.Invariant($"应用当前模拟选项：{prop.Name} = {optionValue}"));

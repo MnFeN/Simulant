@@ -66,7 +66,6 @@ namespace Simulant.Content.U6b.Presets
 
         private SimActor _boss;
         private readonly SimActor[] _helpers = new SimActor[20];
-        private readonly Random _random = new Random();
         private readonly HashSet<int> _marked = new HashSet<int>();
         private int[] _beamOrder;
         private int _chargeTarget, _mistakes;
@@ -91,7 +90,7 @@ namespace Simulant.Content.U6b.Presets
         {
             for (var slot = 0; slot < 8; slot++)
             {
-                Party[slot].Pos = CosmoArrowPlan.SpawnArea.Sample(_random);
+                Party[slot].Pos = CosmoArrowPlan.SpawnArea.Sample(Random);
                 Party[slot].Heading = Heading(CosmoArrowPlan.Center - Party[slot].Pos);
             }
 
@@ -135,13 +134,13 @@ namespace Simulant.Content.U6b.Presets
 
             for (var i = 7; i > 0; i--)
             {
-                var j = _random.Next(i + 1);
+                var j = Random.Next(i + 1);
                 var value = _beamOrder[i];
                 _beamOrder[i] = _beamOrder[j];
                 _beamOrder[j] = value;
             }
 
-            _chargeTarget = _random.Next(8);
+            _chargeTarget = Random.Next(8);
             EntityManager.SetPartyEnmity(_boss, 100, 90, 30, 30, 50, 50, 50, 50);
             _host.LogSim($"[宇宙天箭] 你的职能为 {CosmoArrowPlan.Roles[SelfSlot]}；{(Occurrence == ArrowOccurrence.First ? "第一次，后接宇宙龙炎" : "第二次，后接波动炮")}；{(ArrowMode == ArrowMode.InsideFirst ? "先内侧" : "先外侧")}。");
             var timeline = new SimTimeline();

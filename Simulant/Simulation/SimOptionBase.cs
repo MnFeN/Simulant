@@ -72,7 +72,7 @@ namespace Simulant.Simulation
         {
         }
 
-        internal virtual void ApplyTo(object target)
+        internal virtual void ApplyTo(object target, Random random = null)
         {
             // Implemented in SimOption<T> and will be ignored when the option is not SimOption<T>, such as LabelOption.
         }

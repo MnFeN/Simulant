@@ -20,7 +20,6 @@ namespace Simulant.Content.U7a.Presets
     {
         protected static readonly Vector2 Center = new Vector2(100, 100);
         protected static readonly string[] Roles = { "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4" };
-        protected readonly Random Random = new Random();
         protected readonly SimActor[] Helpers = new SimActor[11];
         protected readonly SimActor[] Hourglasses = new SimActor[8];
         protected SimActor Oracle;

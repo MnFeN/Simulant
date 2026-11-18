@@ -23,6 +23,7 @@ namespace Simulant.Simulation.Runtime
         private SimCastController _casts;
         private SimMovementController _movement;
         private SimActorBehaviorController _behaviors;
+        internal Random BehaviorRandom { get; set; }
         public double SelfJudgementAdvance { get; set; }
         public SimActorBehaviorOptions PlayerBehavior { get; set; } = new SimActorBehaviorOptions();
 
@@ -120,7 +121,7 @@ namespace Simulant.Simulation.Runtime
                     _simMarkers.Clear();
                     _casts = new SimCastController(value);
                     _movement = new SimMovementController(value);
-                    _behaviors = new SimActorBehaviorController(value, _movement, _casts, SetSprintEffect);
+                    _behaviors = new SimActorBehaviorController(value, _movement, _casts, SetSprintEffect, BehaviorRandom);
                     _acceptingEntities = true;
                 }
             }
