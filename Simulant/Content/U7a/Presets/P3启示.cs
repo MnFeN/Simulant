@@ -119,7 +119,7 @@ namespace Simulant.Content.U7a.Presets
                 else
                     MoveAll(_plan.InitialStack, 13.9, 15.65);
             }, "黑暗狂水读条并显示分摊标记");
-            timeline.At(4.88, () => Oracle.Entity.ExecuteActionEffect(40270, Oracle.Entity), "黑暗狂水读条结束演出");
+            timeline.At(4.88, () => Oracle.ExecuteActionEffect(40270, Oracle), "黑暗狂水读条结束演出");
             timeline.At(4.98, () =>
             {
                 for (var slot = 0; slot < 8; slot++)
@@ -168,12 +168,12 @@ namespace Simulant.Content.U7a.Presets
                 var positions = _plan.SampleFirstJump(Random);
                 MoveAll(slot => positions[slot], 17.32, 18.7, true);
             }, "水分摊后散开躲碎灵一击");
-            timeline.At(17.24, () => Oracle.Entity.ExecuteActionEffect(40288, Oracle.Entity), "碎灵一击读条结束演出");
+            timeline.At(17.24, () => Oracle.ExecuteActionEffect(40288, Oracle), "碎灵一击读条结束演出");
             timeline.At(17.52, () => SpiritTaker(Oracle), "碎灵一击锁定与跳跃");
             timeline.At(20.34, () =>
             {
-                Oracle.Entity.ExecuteActionEffectAt(40117, new Vector3(Center, 0), (float)Math.PI);
-                Oracle.Entity.ActorMove(new Vector3(Center, 0), (float)Math.PI, 0);
+                Oracle.ExecuteActionEffectAt(40117, new Vector3(Center, 0), (float)Math.PI);
+                Oracle.ActorMove(new Vector3(Center, 0), (float)Math.PI, 0);
                 MoveAll(_plan.Spread, 25.1, 28.95, true);
             }, "回场并进入启示分散安全区");
             timeline.At(23.7, () =>
@@ -189,7 +189,7 @@ namespace Simulant.Content.U7a.Presets
                     (SimMechanic)Avoid("启示地火", 40297, point,
                         severity: MechanicFailureSeverity.Warning)).ToArray()), $"第 {wave + 1} 轮启示地火");
             }
-            timeline.At(27.64, () => Oracle.Entity.ExecuteActionEffect(40273, Oracle.Entity), "暗炎喷发读条结束演出");
+            timeline.At(27.64, () => Oracle.ExecuteActionEffect(40273, Oracle), "暗炎喷发读条结束演出");
             timeline.At(28.69, () => Run(Enumerable.Range(0, 8).Select(i => (SimMechanic)Spread(Roles[i] + "的暗炎喷发", i)).ToArray()), "八人暗炎喷发判定");
             // 外侧两人先经过前方近战的分散点，再回分摊组，不能斜穿相邻地火的圆边。
             timeline.At(28.74, () =>
@@ -205,7 +205,7 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(31.41, () => Oracle.Cast(40181, executeOnFinish: false), "至黑之舞读条");
             timeline.At(34.53, () => ResolveWater(1), "第二轮四人水分摊");
             timeline.At(34.55, () => Move(_plan.TankSlot, _plan.TankPosition, 36.35, 37.84, true), "分摊后坦克边出人群边转至 45° 贴边引导");
-            timeline.At(36.35, () => Oracle.Entity.ExecuteActionEffect(40181, Oracle.Entity), "至黑之舞读条结束演出");
+            timeline.At(36.35, () => Oracle.ExecuteActionEffect(40181, Oracle), "至黑之舞读条结束演出");
             timeline.At(36.81, BeginDance, "至黑之舞远点跳跃");
             timeline.At(39.599, Knockback, "至黑之舞击退演出与锁定");
             timeline.At(40.5, () => MoveAll(i => _plan.FinalStack(i, _dance), 42.6, 44.2, true, gapClose: true), "击退后近战突进并准备第三轮分摊");
@@ -245,11 +245,11 @@ namespace Simulant.Content.U7a.Presets
                     ? new[] { Self } : Array.Empty<int>()), result);
             buster.Visual = _ =>
             {
-                Oracle.Entity.ActorMove(Oracle.Entity.Pos3D, _danceHeading, 0);
-                Oracle.Entity.ExecuteActionEffect(40182, Party[target].Entity, _danceHeading);
+                Oracle.ActorMove(Oracle.Entity.Pos3D, _danceHeading, 0);
+                Oracle.ExecuteActionEffect(40182, Party[target], _danceHeading);
                 Scheduler.ScheduleAfter(1.02, () =>
                 {
-                    Oracle.Entity.ActorMove(new Vector3(_dance, 0), _danceHeading, 0);
+                    Oracle.ActorMove(new Vector3(_dance, 0), _danceHeading, 0);
                     ReturnForKnockback(target);
                 }, "至黑之舞落点同步");
             };
@@ -269,8 +269,8 @@ namespace Simulant.Content.U7a.Presets
 
         private void Knockback()
         {
-            Oracle.Entity.ActorMove(new Vector3(_dance, 0), _danceHeading, 0);
-            Oracle.Entity.ExecuteActionEffectAt(40183, new Vector3(_dance, 0), _danceHeading);
+            Oracle.ActorMove(new Vector3(_dance, 0), _danceHeading, 0);
+            Oracle.ExecuteActionEffectAt(40183, new Vector3(_dance, 0), _danceHeading);
             // 回放：技能包 39.599 秒；录制者 40.350～40.870 秒击退，40.953 秒恢复普通移动。
             // 击退方向、落点和免疫统一交由实体层在位移开始时按当前值处理。
             Scheduler.Schedule(Origin + 40.35, () =>

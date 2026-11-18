@@ -37,6 +37,7 @@ namespace Simulant.Core.Entity
         public uint GimmickId;
         public byte ModelScaleId;
         public byte ModelState;
+        public byte AnimationState;
         /// <summary>模型部件显隐标志；按实体生成包设置，与武器装备编号无关。</summary>
         public byte ModelAttributeFlags;
         public uint DisplayFlags = 0x4000B;
@@ -139,6 +140,7 @@ namespace Simulant.Core.Entity
                     DisplayFlags = DisplayFlags,
                     ModelScaleId = ModelScaleId,
                     ModelState = ModelState,
+                    AnimationState = AnimationState,
                     ModelAttributeFlags = ModelAttributeFlags,
                     MainhandWeaponModel = MainhandWeaponModel,
                     OffhandWeaponModel = OffhandWeaponModel

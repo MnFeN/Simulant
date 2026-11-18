@@ -74,6 +74,23 @@ namespace Simulant.Tests
             });
         }
 
+        public static void ActLogsDefaultToDisabledAndPersist()
+        {
+            WithPath(path =>
+            {
+                Assert(!Configuration.Load(path).GenerateActLogs, "新配置默认不生成 ACT 日志。");
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, "<Simulant />");
+                var configuration = Configuration.Load(path);
+                Assert(!configuration.GenerateActLogs, "旧配置缺少该选项时也默认关闭。");
+                var draft = configuration.Copy();
+                draft.GenerateActLogs = true;
+                draft.Save(path);
+                Assert(!configuration.GenerateActLogs && Configuration.Load(path).GenerateActLogs,
+                    "保存后应保留日志选项，编辑副本不改变原配置。");
+            });
+        }
+
         public static void DeveloperModeDefaultsToDisabledAndPersistsOnlyAfterSaving()
         {
             WithPath(path =>

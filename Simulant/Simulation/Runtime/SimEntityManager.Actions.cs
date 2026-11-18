@@ -112,7 +112,7 @@ namespace Simulant.Simulation.Runtime
                 // 冲刺的 Param 是加速百分比；回放中的状态 50 使用 30，填 0 只显示图标、不加速。
                 var param = actionId == 3 ? (ushort)30 : (ushort)0;
                 SetStatus(actor, id, seconds, param, actor);
-                actor.Entity.ExecuteActionEffect(actionId, actor.Entity);
+                actor.ExecuteActionEffect(actionId, actor);
                 // 本机没有真正按下技能，需补播角色动作；其他网络角色仍由结算演出驱动。
                 if (actor.Entity.Identity.Slot == 0 &&
                     GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var action))

@@ -147,7 +147,7 @@ namespace Simulant.Content.U7a.Presets
                 Shiva.Cast(_plan.WingAction, omenPosition: new Vector3(_plan.WingOrigin, 0),
                     omenHeading: (float)Math.PI, castTime: 4.7f, executeOnFinish: false);
             }, "希瓦神圣之翼半场刀");
-            timeline.At(19.2, () => Oracle.Entity.ExecuteActionEffect(40288, Oracle.Entity), "碎灵一击读条结束演出");
+            timeline.At(19.2, () => Oracle.ExecuteActionEffect(40288, Oracle), "碎灵一击读条结束演出");
             timeline.At(19.47, () => SpiritTaker(Oracle), "碎灵一击锁定与跳跃");
             timeline.At(20.55, () =>
             {
@@ -167,7 +167,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 var wing = Avoid("神圣之翼", _plan.WingAction, _plan.WingOrigin,
                     area: ActionArea.FromAction(_plan.WingAction), heading: (float)Math.PI);
-                wing.Visual = _ => Shiva.Entity.ExecuteActionEffect(_plan.WingAction, Shiva.Entity, (float)Math.PI);
+                wing.Visual = result => Shiva.ExecuteActionEffect(_plan.WingAction, Shiva, (float)Math.PI, result.HitActors);
                 Run(wing);
             }, "半场刀判定");
             timeline.At(24.35, () => MoveAll(_plan.FirstBait, 27.25, 27.9, true), "指定坦克引导最远死刑");
@@ -180,13 +180,13 @@ namespace Simulant.Content.U7a.Presets
             {
                 foreach (var slot in _plan.Cycle)
                 {
-                    Party[slot].Entity.ActorControl(ActorControlCategory.TetherCancel);
+                    Party[slot].ActorControl(ActorControlCategory.TetherCancel);
                     ClearStatus(slot, 2255);
                 }
                 for (var slot = 0; slot < 8; slot++)
                     ClearStatus(slot, 2257);
             }, "光之锁解除");
-            timeline.At(27.27, () => Oracle.Entity.ExecuteActionEffect(40283, Oracle.Entity), "真夜舞蹈读条结束演出");
+            timeline.At(27.27, () => Oracle.ExecuteActionEffect(40283, Oracle), "真夜舞蹈读条结束演出");
             timeline.At(27.78, () => ResolveDance(false), "真夜舞蹈最远死刑");
             timeline.At(31.02, () => ResolveDance(true), "真夜舞蹈最近死刑");
             timeline.At(33, Complete, "完成光与暗的龙诗练习");
@@ -215,11 +215,11 @@ namespace Simulant.Content.U7a.Presets
             for (var index = 0; index < 4; index++)
             {
                 var slot = _plan.Cycle[index];
-                Party[slot].Entity.ActorControl(ActorControlCategory.TetherCancel);
+                Party[slot].ActorControl(ActorControlCategory.TetherCancel);
                 if (id == 111)
                     ClearStatus(slot, 2253);
                 Status(slot, id == 110 ? (ushort)2253 : (ushort)2255, id == 110 ? 7 : 14.6f);
-                Party[slot].Entity.ActorControl(ActorControlCategory.Tether, 0, id, Party[_plan.Cycle[(index + 1) % 4]].Id, 15);
+                Party[slot].ActorControl(ActorControlCategory.Tether, 0, id, Party[_plan.Cycle[(index + 1) % 4]].Id, 15);
             }
         }
 
@@ -238,7 +238,7 @@ namespace Simulant.Content.U7a.Presets
                     Center = point,
                     RequiredPlayers = 2,
                     Check = members => members.Any(p => !_plan.Cycle.Contains(p.Slot)) ? "无连线玩家不应踩塔。" : null,
-                    Visual = _ => PointEffect(helper, 40213, point),
+                    Visual = result => PointEffect(helper, 40213, point, hitTargets: result.HitActors),
                     Failed = result => Report(result.DescribeFailure("双人塔", expected)
                         .WithAttribution(expected.Contains(Self) != result.Participants.Any(p => p.Slot == Self)
                             ? new[] { Self } : Array.Empty<int>()), result)
@@ -284,9 +284,9 @@ namespace Simulant.Content.U7a.Presets
                 second && target == _firstHit && !invulnerable ? "连续承受两次死刑，需要本职业无敌。" : null;
             mechanic.Visual = result =>
             {
-                Oracle.Entity.ActorMove(Oracle.Entity.Pos3D, heading, 0);
-                Oracle.Entity.ExecuteActionEffect(second ? 40285u : 40284u, Party[target].Entity, heading);
-                Scheduler.ScheduleAfter(1.05, () => Oracle.Entity.ActorMove(new Vector3(landing, 0), heading, 0), "真夜舞蹈落点同步");
+                Oracle.ActorMove(Oracle.Entity.Pos3D, heading, 0);
+                Oracle.ExecuteActionEffect(second ? 40285u : 40284u, Party[target], heading, result.HitActors);
+                Scheduler.ScheduleAfter(1.05, () => Oracle.ActorMove(new Vector3(landing, 0), heading, 0), "真夜舞蹈落点同步");
                 Status(target, 3323, 10);
                 if (!second)
                     _firstHit = target;

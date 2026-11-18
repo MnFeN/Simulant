@@ -208,7 +208,7 @@ namespace Simulant.Content.U7b.Presets
             var status = (ushort)(0x13DC + (ushort)marker - (ushort)ForsakenMarker.Stack);
             EntityManager.SetStatus(Party[slot], status, 9999, 0, _casters[0]);
             // 头标本身使用原生收包入口；第二参数是被点名者 ID。
-            Party[slot].Entity.ActorControl(ActorControlCategory.TargetIcon, (uint)marker, Party[slot].Id);
+            Party[slot].ActorControl(ActorControlCategory.TargetIcon, (uint)marker, Party[slot].Id);
         }
 
         private void SetTrouble(int slot)
@@ -219,20 +219,21 @@ namespace Simulant.Content.U7b.Presets
                 EntityManager.SetStatus(Party[slot], TroubleStatus, 30, (ushort)_stacks[slot], _casters[0]);
         }
 
-        private void Effect(int helper, Vector2 position, float heading, uint action)
+        private void Effect(int helper, Vector2 position, float heading, uint action, IEnumerable<SimActor> hitTargets = null)
         {
             var actor = _helpers[helper];
             // 隐藏的技能假人每次演出前初始化位置与朝向，不播放走位过程。
             actor.Pos = position;
             actor.Heading = heading;
-            actor.Execute(action);
+            actor.Execute(action, hitTargets);
         }
 
         private void MapEffect(uint index, ushort timeline)
         {
             _environmentChanged = true;
 
-            if (!_host.EnvironmentService.PlayMapEffect(index, timeline))
+            // 原始 101 行在 0x12 的动画 4 使用低位 1（00040001）。
+            if (!PlayMapEffect(index, timeline, index == 0x12 && timeline == 4 ? (ushort?)1 : null))
                 throw new InvalidOperationException($"遗弃末世场地特效调用失败：位置 {index}，动画 {timeline}。");
         }
 

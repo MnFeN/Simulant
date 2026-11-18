@@ -27,6 +27,28 @@ namespace Simulant.Simulation
             _preset = preset ?? throw new ArgumentNullException(nameof(preset));
         }
 
+        /// <summary>播放当前模拟的场地动画；复现已有日志时可显式提供旗标低 16 位。</summary>
+        protected bool PlayMapEffect(uint slot, ushort timeline, ushort? lowFlags = null)
+        {
+            if (!_host.EnvironmentService.PlayMapEffect(slot, timeline))
+                return false;
+
+            // 常用地图效果用相邻位组成包标志，例如 00020001、00080004；低位不是上一条动画。
+            if (EntityManager.CombatLog?.Enabled == true)
+                EntityManager.CombatLog.MapEffect(_host.ZoneService.InstanceDirectorId, slot,
+                    lowFlags ?? (ushort)Math.Max(1, timeline >> 1), timeline);
+            return true;
+        }
+
+        /// <summary>为模拟中已有的 NPC 喊话事件生成 10A 行，使用 BNpcName 和 NpcYell 的编号。</summary>
+        protected void LogNpcYell(uint actor, ushort npcName, ushort npcYell)
+            => EntityManager.CombatLog?.NpcYell(actor, npcName, npcYell);
+
+        /// <summary>为模拟中已有的 BattleTalk2 演出生成 10B 行，保留原包文本编号、时长和参数。</summary>
+        protected void LogBattleTalk(uint actor, ushort npcName, ushort text, uint milliseconds,
+            uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
+            => EntityManager.CombatLog?.BattleTalk(actor, _host.ZoneService.InstanceDirectorId, npcName, text, milliseconds, a1, a2, a3, a4);
+
         internal void Prepare()
         {
             _host.LogSim($"正在开始模拟：{_preset.Name}（{_preset.Phase.Name}）");

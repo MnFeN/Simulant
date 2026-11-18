@@ -37,21 +37,21 @@ namespace Simulant.Content.U7a.Presets
 
             timeline.At(13.1, () =>
             {
-                _shiva.Entity.SetTargetable(false);
+                _shiva.SetTargetable(false);
                 // 回放通过隐藏时间轴离场，不能只关闭当前绘制对象。
-                _shiva.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 0x11E5);
+                _shiva.ActorControl(ActorControlCategory.PlayActionTimeline, 0x11E5);
             }, "希瓦离场");
 
             timeline.At(14.169, () =>
             {
-                _gaia.Entity.SetTargetable(false);
+                _gaia.SetTargetable(false);
 
                 for (var i = 0; i < 6; i++)
                 {
                     var wave = _plan.HourglassWave(i);
 
                     if (wave != 1)
-                        _sand[i].Entity.ActorControl(ActorControlCategory.Tether, 0, wave == 0 ? 134u : 133u, _gaia.Id, 15);
+                        _sand[i].ActorControl(ActorControlCategory.Tether, 0, wave == 0 ? 134u : 133u, _gaia.Id, 15);
                 }
             }, "沙漏加减速连线");
 
@@ -78,8 +78,8 @@ namespace Simulant.Content.U7a.Presets
                     if (wave == 1)
                         continue;
 
-                    _sand[i].Entity.ActorControl(ActorControlCategory.TetherCancel);
-                    _helpers[i].Entity.ExecuteActionEffect(wave == 0 ? 40294u : 40295u, _sand[i].Entity);
+                    _sand[i].ActorControl(ActorControlCategory.TetherCancel);
+                    _helpers[i].ExecuteActionEffect(wave == 0 ? 40294u : 40295u, _sand[i]);
                 }
             }, "沙漏速度变化");
 
@@ -164,8 +164,8 @@ namespace Simulant.Content.U7a.Presets
             }
 
             timeline.At(22.888, ResolveWater, "黑暗狂水四人分摊");
-            timeline.At(22.888, () => _gaia.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 4576), "暗之巫女隐藏");
-            timeline.At(42.026, () => _gaia.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 4564), "暗之巫女显现");
+            timeline.At(22.888, () => _gaia.ActorControl(ActorControlCategory.PlayActionTimeline, 4576), "暗之巫女隐藏");
+            timeline.At(42.026, () => _gaia.ActorControl(ActorControlCategory.PlayActionTimeline, 4564), "暗之巫女显现");
 
             AddJump(timeline, _shiva, 0x9CEF, 26.986, 27.702, _plan.WaveStart(0), 27.985);
             AddJump(timeline, _shiva, 0x9CEF, 33.456, 34.173, _plan.WaveStart(1), 34.423);
@@ -174,8 +174,8 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(24.837, () =>
             {
                 // 回放先将希瓦放回场中，再播放 warp/warp_end，随后才到场边释放光波。
-                _shiva.Entity.ActorSetPos(new Vector3(Center, 0), 0);
-                _shiva.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 0x1E43);
+                _shiva.ActorSetPos(new Vector3(Center, 0), 0);
+                _shiva.ActorControl(ActorControlCategory.PlayActionTimeline, 0x1E43);
                 ResolveIceWindDark();
             }, "希瓦显现与冰、风、暗同时结算");
 
@@ -223,7 +223,7 @@ namespace Simulant.Content.U7a.Presets
 
             timeline.At(44.16, () =>
             {
-                _gaia.Entity.ActorMove(new Vector3(Center + new Vector2(0, 5), 0), 0, 0);
+                _gaia.ActorMove(new Vector3(Center + new Vector2(0, 5), 0), 0, 0);
                 _gaia.Cast(40288, castTime: 2.7f, effectDelay: 0.282f);
             }, "碎灵一击读条");
 
@@ -283,8 +283,8 @@ namespace Simulant.Content.U7a.Presets
 
             timeline.At(63.018, () =>
             {
-                _shiva.Entity.SetTargetable(true);
-                _gaia.Entity.SetTargetable(true);
+                _shiva.SetTargetable(true);
+                _gaia.SetTargetable(true);
             }, "双 Boss 可选中");
 
             timeline.At(63.118, () =>
@@ -329,11 +329,11 @@ namespace Simulant.Content.U7a.Presets
             {
                 heading = Heading(destination - actor.Pos);
                 actor.StopCasting();
-                actor.Entity.ExecuteActionEffectAt(action, new Vector3(destination, 0), heading, 1.1f);
+                actor.ExecuteActionEffectAt(action, new Vector3(destination, 0), heading, 1.1f);
             }, "Boss 跳跃技能演出");
-            timeline.At(landing, () => actor.Entity.ActorMove(new Vector3(destination, 0), heading, 90), "Boss 跳跃落点");
+            timeline.At(landing, () => actor.ActorMove(new Vector3(destination, 0), heading, 90), "Boss 跳跃落点");
             if (wyrmLanding.HasValue)
-                timeline.At(wyrmLanding.Value, () => _wyrm.Entity.ActorMove(new Vector3(destination, 0), heading, 60), "圣龙跟随落点");
+                timeline.At(wyrmLanding.Value, () => _wyrm.ActorMove(new Vector3(destination, 0), heading, 60), "圣龙跟随落点");
         }
 
         private void AddWaveTimeline(SimTimeline timeline)
@@ -387,7 +387,7 @@ namespace Simulant.Content.U7a.Presets
 
         private void WingCast(int wave)
         {
-            _shiva.Entity.ActorMove(new Vector3(_plan.WaveStart(wave), 0), Heading(_plan.WaveDirection(wave)), 0);
+            _shiva.ActorMove(new Vector3(_plan.WaveStart(wave), 0), Heading(_plan.WaveDirection(wave)), 0);
             _shiva.Cast(40332);
         }
 

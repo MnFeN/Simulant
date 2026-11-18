@@ -1,3 +1,4 @@
+using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Core.Environment;
 using Simulant.Simulation.Mechanics;
@@ -35,7 +36,10 @@ namespace Simulant.Simulation.Runtime
                 throw new InvalidOperationException($"{preset.GetType().Name} 预设的逻辑类型 {preset.SimLogicType.Name} 不继承自 SimLogicBase。");
 
             _entityManager = new SimEntityManager(_host.EntitySpawner,
-                ex => _host.LogError("清理模拟实体失败：" + ex));
+                ex => _host.LogError("清理模拟实体失败：" + ex))
+            {
+                CombatLog = new SimCombatLog(() => _host.Configuration.GenerateActLogs, XivNetworkLog.WriteLine, _host.LogWarning)
+            };
 
             _logic = (SimLogicBase)Activator.CreateInstance(preset.SimLogicType, _host, preset);
             _logic.EntityManager = _entityManager;
@@ -71,7 +75,7 @@ namespace Simulant.Simulation.Runtime
                     Interlocked.Exchange(ref _cleanupRequired, 1);
                     // 行为来自插件全局配置；每次模拟取独立快照，不受窗口编辑或预设切换影响。
                     _entityManager.PlayerBehavior = _host.Configuration.SimulatedParty.Copy();
-                    _entityManager.SelfJudgementAdvance = _host.Configuration.SelfJudgementAdvance;
+                    _entityManager.SelfJudgementAdvance = _host.Configuration.SimLatency;
                     _logic.Prepare();
                     _host.PlayerActions.BeginSimulation();
                     var waymarks = _preset.Waymarks;

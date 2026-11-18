@@ -17,6 +17,7 @@ namespace Simulant.Simulation.Runtime
             internal Action<SimActor> OnReady;
             internal double Deadline;
             internal SimActor Actor;
+            internal Action<SimActor> OnSpawned;
         }
 
         private readonly List<PendingNetworkSpawn> _networkSpawns = new List<PendingNetworkSpawn>();
@@ -32,8 +33,12 @@ namespace Simulant.Simulation.Runtime
             if (spec == null)
                 throw new ArgumentNullException(nameof(spec));
 
+            // OverlayPlugin 的 272 行读取生成包 0x58、0x7C 和 0x95；这里对应连接对端、连线类型和动画状态。
+            var parent = spec.TetherTargetId;
+            var tether = spec.TetherId;
+            var animation = spec.AnimationState;
             QueueNetworkSpawn((out NetworkCharacterSpawnRequest request) => _spawner.BeginSpawnNetworkBNpc(spec, out request),
-                onReady, timeoutSeconds);
+                onReady, timeoutSeconds, actor => CombatLog?.SpawnNpc(actor.Id, parent, tether, animation));
         }
 
         /// <summary>生成网络玩家，默认复制自身外貌并优先采用已知的职业装备；就绪后在调度线程交付。</summary>
@@ -52,7 +57,8 @@ namespace Simulant.Simulation.Runtime
                 onReady, timeoutSeconds);
         }
 
-        private void QueueNetworkSpawn(BeginNetworkSpawn begin, Action<SimActor> onReady, double timeoutSeconds)
+        private void QueueNetworkSpawn(BeginNetworkSpawn begin, Action<SimActor> onReady, double timeoutSeconds,
+            Action<SimActor> onSpawned = null)
         {
             if (onReady == null)
                 throw new ArgumentNullException(nameof(onReady));
@@ -75,6 +81,7 @@ namespace Simulant.Simulation.Runtime
                 var pending = new PendingNetworkSpawn
                 {
                     OnReady = onReady,
+                    OnSpawned = onSpawned,
                     Deadline = deadline
                 };
 
@@ -157,6 +164,8 @@ namespace Simulant.Simulation.Runtime
                     if (entity != null)
                     {
                         pending.Actor = Own(entity);
+                        pending.OnSpawned?.Invoke(pending.Actor);
+                        CombatLog?.Targetable(entity.Id, entity, pending.Request.Targetable ? 1u : 0u);
 
                         if (ready == null)
                             ready = new List<PendingNetworkSpawn>();

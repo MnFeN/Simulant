@@ -815,6 +815,7 @@ namespace Simulant.Core.Entity
             request = null;
             BeforeNetworkBegin?.Invoke(spec);
             BeginNetworkSpawn(ObjectKind.BattleNpc, Job.ADV, out request);
+            request.Targetable = spec.Targetable;
         }
 
         internal void BeginSpawnNetworkPlayer(NetworkPlayerSpawnSpec spec, out NetworkCharacterSpawnRequest request)
@@ -822,6 +823,7 @@ namespace Simulant.Core.Entity
             request = null;
             BeforeNetworkPlayerBegin?.Invoke(spec);
             BeginNetworkSpawn(ObjectKind.Pc, spec.Job, out request);
+            request.Targetable = spec.Targetable;
         }
 
         private void BeginNetworkSpawn(ObjectKind kind, Job job, out NetworkCharacterSpawnRequest request)
@@ -958,6 +960,7 @@ namespace Simulant.Core.Entity
         public uint EntityId { get; }
         internal ObjectKind Kind { get; }
         internal Job Job { get; }
+        internal bool Targetable { get; set; }
 
         internal Character Entity;
         internal bool Ready { get; set; }

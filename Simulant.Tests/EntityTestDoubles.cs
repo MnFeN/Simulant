@@ -135,6 +135,15 @@ namespace Simulant.Core.Entity
         }
 
         public uint HP { get; set; } = 10000;
+        public uint MaxHP { get; set; } = 10000;
+        public uint MP { get; set; } = 10000;
+        public uint MaxMp { get; set; } = 10000;
+        public void ActorSetPos(Vector3 position, float heading)
+        {
+            Pos3D = position;
+            Heading = heading;
+        }
+
         public bool IsTargetable { get; set; } = true;
         public bool IsWeaponDrawn { get; set; }
 
@@ -525,6 +534,7 @@ namespace Simulant.Core.Environment
 {
     internal static class GameMarkers
     {
+        internal static void Mark(Simulant.Game.FFCS.Client.Game.UI.MarkerType marker, uint id) { }
         internal static readonly List<Vector3?[]> WaymarkCommands = new List<Vector3?[]>();
         internal static Action<Vector3?[]> OnWaymarkCommand;
 
@@ -606,5 +616,24 @@ namespace Simulant.Game.FFCS.Client.Game.Object
     {
         public const int Count = 819;
         public GameObject this[int slot] => throw new InvalidOperationException("测试不得访问原生游戏内存。");
+    }
+}
+
+namespace Simulant.Game.FFCS.Client.Network
+{
+    internal static class PacketDispatcher
+    {
+        internal static IntPtr HandleActorControl(uint actor, Simulant.Game.ActorControlCategory category,
+            uint a1, uint a2, uint a3, uint a4, uint a5, uint a6, uint a7, uint a8, uint target, uint unknown)
+            => IntPtr.Zero;
+    }
+}
+
+namespace Simulant.ACT
+{
+    internal static class XivNetworkLog
+    {
+        internal static void WriteLine(int id, string payload, DateTimeOffset? timestamp)
+            => throw new InvalidOperationException("测试不能写入实际 ACT 日志。");
     }
 }

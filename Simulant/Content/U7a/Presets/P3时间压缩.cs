@@ -87,13 +87,13 @@ namespace Simulant.Content.U7a.Presets
             {
                 for (var direction = 0; direction < 8; direction++)
                     if (RelativityPlan.HourglassWave(direction) != 1)
-                        Hourglasses[direction].Entity.ActorControl(ActorControlCategory.TetherCancel);
+                        Hourglasses[direction].ActorControl(ActorControlCategory.TetherCancel);
             }, "取消沙漏加减速连线");
             timeline.At(19.63, () =>
             {
                 for (var i = 0; i < 8; i++)
                     if (RelativityPlan.HourglassWave(i) != 1)
-                        Hourglasses[i].Entity.ExecuteActionEffect(RelativityPlan.HourglassWave(i) == 0 ? 40294u : 40295u, Hourglasses[i].Entity);
+                        Hourglasses[i].ExecuteActionEffect(RelativityPlan.HourglassWave(i) == 0 ? 40294u : 40295u, Hourglasses[i]);
             }, "沙漏加减速演出");
 
             var fires = new[] { 21.85, 31.87, 41.87 };
@@ -166,7 +166,7 @@ namespace Simulant.Content.U7a.Presets
                 MoveAll(_ => Spot(Center, 1), 57.0, 58.2, true);
                 Oracle.Cast(40286, executeOnFinish: false);
             }, "眩晕结束，破盾一击读条");
-            timeline.At(57.78, () => Oracle.Entity.ExecuteActionEffect(40286, Oracle.Entity), "破盾一击读条结束演出");
+            timeline.At(57.78, () => Oracle.ExecuteActionEffect(40286, Oracle), "破盾一击读条结束演出");
             timeline.At(58.15, () => Run(Stack("破盾一击八人分摊", Random.Next(8), 8, Enumerable.Range(0, 8), 40287)), "破盾一击判定");
             timeline.At(59, Complete, "完成时间压缩练习");
             timeline.At(61.23, () => HourglassMaps(8), "沙漏场地效果退场");
@@ -191,7 +191,7 @@ namespace Simulant.Content.U7a.Presets
         {
             for (var i = 0; i < 8; i++)
             {
-                Hourglasses[i].Entity.ActorMove(new Vector3(_plan.Hourglass(i), 0), Heading(Center - _plan.Hourglass(i)), 0);
+                Hourglasses[i].ActorMove(new Vector3(_plan.Hourglass(i), 0), Heading(Center - _plan.Hourglass(i)), 0);
                 Hourglasses[i].EnableDraw();
             }
         }
@@ -207,7 +207,7 @@ namespace Simulant.Content.U7a.Presets
         {
             for (var i = 0; i < 8; i++)
                 if (RelativityPlan.HourglassWave(i) != 1)
-                    Hourglasses[i].Entity.ActorControl(ActorControlCategory.Tether, 0,
+                    Hourglasses[i].ActorControl(ActorControlCategory.Tether, 0,
                         RelativityPlan.HourglassWave(i) == 0 ? 134u : 133u, Oracle.Id, 15);
         }
 
@@ -231,7 +231,7 @@ namespace Simulant.Content.U7a.Presets
                         Area = ActionArea.Donut(4, 12),
                         CenterAtResolve = snapshot => snapshot.Get(target).Position,
                         MaxPlayers = 0,
-                        Visual = _ => TargetEffect(target, 40279, target),
+                        Visual = result => TargetEffect(target, 40279, target, result.HitActors),
                         Failed = result => Report(result.DescribeFailure("黑暗冰封月环", Array.Empty<int>())
                             .WithAttribution(result.Participants.Select(p => p.Slot)), result)
                     });
@@ -316,7 +316,7 @@ namespace Simulant.Content.U7a.Presets
                         Name = Roles[i] + "的暗影之眼",
                         Area = ActionArea.Circle(100),
                         CenterAtResolve = snapshot => snapshot.Get(target).Position,
-                        Visual = _ => TargetEffect(target, 40278, target),
+                        Visual = result => TargetEffect(target, 40278, target, result.HitActors),
                         Check = members => members.Any(p => p.Slot != target && FacingGaze(p.Actor, p.Position, Party[target].JudgementPosition))
                             ? "面前 90° 范围内存在石化源。" : null,
                         Failed = result => Report(MechanicError.Rule("暗影之眼", result.Participants.Where(p => p.Slot != target &&

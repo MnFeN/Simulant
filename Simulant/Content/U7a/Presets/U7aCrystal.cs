@@ -62,10 +62,10 @@ namespace Simulant.Content.U7a.Presets
 
                     // 不继承前一阶段的显示标志；保留不可选中，但让人物正常绘制。
                     var ryne = spec.BNpcBaseId == 17844;
-                    actor.Entity.ActorControl(ActorControlCategory.PlayActionTimeline, ryne ? 11415u : 3207u);
+                    actor.ActorControl(ActorControlCategory.PlayActionTimeline, ryne ? 11415u : 3207u);
                     scheduler.ScheduleAfter(1.084, () =>
                     {
-                        actor.Entity.ActorControl(ActorControlCategory.SetModelState, ryne ? 5u : 31u);
+                        actor.ActorControl(ActorControlCategory.SetModelState, ryne ? 5u : 31u);
                         ready(actor);
                     }, "冻结水晶内的幻影");
                 });

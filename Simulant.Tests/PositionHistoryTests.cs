@@ -84,10 +84,10 @@ namespace Simulant.Tests
             if (history.At(19).X != 950 || history.At(-1).X != 872)
                 throw new Exception("环形记录必须保留最近的固定数量样本。");
             var config = new Configuration();
-            if (config.Copy().SelfJudgementAdvance != 0.35)
+            if (config.Copy().SimLatency != 0.35)
                 throw new Exception("默认提前量应为 0.35 秒。");
-            config.SelfJudgementAdvance = 0;
-            if (config.Copy().SelfJudgementAdvance != 0)
+            config.SimLatency = 0;
+            if (config.Copy().SimLatency != 0)
                 throw new Exception("关闭提前判定的设置必须保留。");
         }
     }

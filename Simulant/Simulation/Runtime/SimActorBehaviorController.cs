@@ -396,7 +396,7 @@ namespace Simulant.Simulation.Runtime
             var difference = Math.Atan2(Math.Sin(heading - actor.Heading), Math.Cos(heading - actor.Heading));
 
             if (Math.Abs(difference) > 0.05)
-                actor.Entity.ActorMove(actor.Pos3D, heading, RunSpeed);
+                actor.ActorMove(actor.Pos3D, heading, RunSpeed);
         }
 
         private void CancelOwnCast(State state)

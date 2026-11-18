@@ -18,6 +18,7 @@ namespace Simulant.Simulation.Mechanics
         public Vector2 Center { get; }
         public float Heading { get; }
         public IReadOnlyList<MechanicResult> Children { get; }
+        internal IEnumerable<Runtime.SimActor> HitActors => Participants.Select(member => member.Actor);
 
         /// <summary>从本次判定的实际名单生成固定位置或固定点名描述，不重新读取实体，也不改变成功与否。</summary>
         public MechanicError DescribeFailure(string description, IEnumerable<int> expected, int? target = null)

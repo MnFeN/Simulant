@@ -27,11 +27,11 @@ namespace Simulant.Simulation.Runtime
             CancelOwnCast(state);
             _movement.Stop(actor);
             SetSprintEffect(state, false);
-            actor.Entity.ActorMove(actor.Pos3D, heading, 0);
+            actor.ActorMove(actor.Pos3D, heading, 0);
             if (actor.Job == Job.NIN || actor.Job == Job.ROG)
-                actor.Entity.ExecuteActionEffectAt(action, new Vector3(destination, actor.Pos3D.Z), heading);
+                actor.ExecuteActionEffectAt(action, new Vector3(destination, actor.Pos3D.Z), heading);
             else
-                actor.Entity.ExecuteActionEffect(action, actor.Job == Job.RPR ? actor.Entity : _target.Entity, heading);
+                actor.ExecuteActionEffect(action, actor.Job == Job.RPR ? actor : _target, heading);
 
             // 技能演出不负责更新逻辑位置；显式同步到目标圈外，并保留已选定的机制目的地。
             const float duration = 0.3f;

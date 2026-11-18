@@ -3,6 +3,7 @@ using Simulant.Game.Data;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Timeline;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
@@ -10,7 +11,7 @@ using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 namespace Simulant.Simulation.Runtime
 {
     /// <summary>参与一次模拟的角色。释放时停止其行为，原生实体的回收由资源所有者负责。</summary>
-    public sealed class SimActor : IDisposable
+    public sealed partial class SimActor : IDisposable
     {
         private readonly SimCastController _casts;
         private readonly SimMovementController _movement;
@@ -138,10 +139,10 @@ namespace Simulant.Simulation.Runtime
             _casts.Cast(this, actionId, omenDelay, target, omenPosition, omenHeading, castTime, effectDelay, executeOnFinish);
         }
 
-        public void Execute(uint actionId)
+        public void Execute(uint actionId, IEnumerable<SimActor> hitTargets = null)
         {
             BehaviorController?.ManualAction(this);
-            _casts.Execute(this, actionId);
+            _casts.Execute(this, actionId, hitTargets: hitTargets);
         }
 
         public void ConfigureBehavior(SimActorBehaviorOptions options)
@@ -282,7 +283,7 @@ namespace Simulant.Simulation.Runtime
                 throw new InvalidOperationException("网络转向只支持网络角色，不能用于自身玩家或本地备用实体。");
 
             StopMoving();
-            Entity.ActorMove(Entity.Pos3D, heading);
+            ActorMove(Entity.Pos3D, heading);
         }
 
         /// <summary>停止本会话的本地或网络移动；不会接管直接调用 Entity.ActorMove 产生的移动。</summary>

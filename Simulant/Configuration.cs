@@ -18,7 +18,8 @@ namespace Simulant
         public bool QuickControlsEnabled { get; set; } = true;
         public Point? QuickControlsLocation { get; set; }
         public bool ShouldSerializeQuickControlsLocation() => QuickControlsLocation.HasValue;
-        public double SelfJudgementAdvance { get; set; } = 0.35;
+        public double SimLatency { get; set; } = 0.35;
+        public bool GenerateActLogs { get; set; }
         public bool DeveloperMode { get; set; }
         public string FfxivPath { get; set; } = string.Empty;
 
@@ -32,8 +33,8 @@ namespace Simulant
             if (SimulatedParty == null)
                 throw new InvalidOperationException("全局配置缺少模拟队员设置。");
 
-            if (double.IsNaN(SelfJudgementAdvance) || SelfJudgementAdvance < 0 || SelfJudgementAdvance > 1)
-                throw new InvalidOperationException("自身判定提前量必须在 0 到 1 秒之间。");
+            if (double.IsNaN(SimLatency) || SimLatency < 0 || SimLatency > 1)
+                throw new InvalidOperationException("模拟延迟必须在 0 到 1 秒之间。");
 
             return new Configuration
             {
@@ -41,7 +42,8 @@ namespace Simulant
                 AutoInstallUpdates = AutoInstallUpdates,
                 QuickControlsEnabled = QuickControlsEnabled,
                 QuickControlsLocation = QuickControlsLocation,
-                SelfJudgementAdvance = SelfJudgementAdvance,
+                SimLatency = SimLatency,
+                GenerateActLogs = GenerateActLogs,
                 DeveloperMode = DeveloperMode,
                 FfxivPath = FfxivPath?.Trim() ?? string.Empty,
                 Presets = (Presets ?? new List<PresetConfiguration>()).Where(preset => preset.Options.Count != 0)

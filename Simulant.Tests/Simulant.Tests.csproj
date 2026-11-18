@@ -202,6 +202,8 @@
     <Compile Include="..\Simulant\Core\Entity\EntityRegistry.cs">
       <Link>Entity\EntityRegistry.cs</Link>
     </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimCombatLog.cs" />
+    <Compile Include="..\Simulant\Simulation\Runtime\SimActor.LoggedActions.cs" />
     <Compile Include="..\Simulant\Simulation\Runtime\SimActor.cs">
       <Link>Runtime\SimActor.cs</Link>
     </Compile>

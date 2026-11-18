@@ -28,7 +28,7 @@ namespace Simulant.Content.U7b.Presets
                     MapEffect(round.TowerMapIndices[tower], 2);
                     context.ScheduleAfter(3.03, () => MapEffect(round.TowerMapIndices[tower], 8), "塔动画转换");
                 },
-                Visual = result => Effect(8 + tower, result.Center, 0, result.Success ? 0xBABEu : 0xBABFu),
+                Visual = result => Effect(8 + tower, result.Center, 0, result.Success ? 0xBABEu : 0xBABFu, result.HitActors),
                 Failed = result => ReportTowerFailure(index, tower, result),
                 Resolved = result =>
                 {
@@ -43,7 +43,7 @@ namespace Simulant.Content.U7b.Presets
                 },
                 Cleanup = context =>
                 {
-                    if (!_host.EnvironmentService.PlayMapEffect(round.TowerMapIndices[tower], 4))
+                    if (!PlayMapEffect(round.TowerMapIndices[tower], 4))
                     throw new InvalidOperationException("遗弃末世的塔特效清理失败。");
                 },
             }).ToArray();
@@ -79,7 +79,7 @@ namespace Simulant.Content.U7b.Presets
                         var center = Party[source].Pos;
                         var bait = fan ? result.Snapshot.Nearest(result.Center, Party[source]) : null;
                         var heading = bait.HasValue ? Heading(center, Party[bait.Value.Slot].Pos) : 0;
-                        Effect(source, center, heading, action);
+                        Effect(source, center, heading, action, result.HitActors);
 
                         if (fan)
                             directionError = CheckFanDirection(index, source, area, result);
@@ -196,13 +196,13 @@ namespace Simulant.Content.U7b.Presets
                         actor.Entity.ResetBaseTimeline();
                         actor.FaceNetwork(heading);
                         // 圆形伤害仍以目标为中心；施法者沿场中心到目标的方向，停在目标前四米。
-                        actor.Entity.ExecuteActionEffect(action, Party[target].Entity);
+                        actor.ExecuteActionEffect(action, Party[target], hitTargets: result.HitActors);
 
                         // 回放在动作效果后约 0.65 秒以速度参数 90 更新落点，后续半场刀读取该实体位置。
                         Scheduler.ScheduleAfter(0.65, () =>
                         {
                             if (actor.IsActive)
-                                actor.Entity.ActorMove(position, heading, 90);
+                                actor.ActorMove(position, heading, 90);
                         }, $"第 {round.Number} 轮跳跃落地 {source + 1}");
                     },
                     Resolved = result =>
@@ -257,7 +257,7 @@ namespace Simulant.Content.U7b.Presets
                 Failed = result => Warn(result.DescribeFailure($"第 {round.Number} 轮{(round.FutureEnd ? "前刀" : "后刀")}", Array.Empty<int>())
                     .WithAttribution(result.Participants.Select(player => player.Slot),
                         $"自身未避开{(round.FutureEnd ? "前刀" : "后刀")}范围")),
-                Visual = result => _casters[source].Execute(action),
+                Visual = result => _casters[source].Execute(action, result.HitActors),
             }).ToArray()));
         }
 

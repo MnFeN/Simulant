@@ -188,7 +188,7 @@ namespace Simulant.Content.U7a.Presets
             Spawn(17834, 9324, Center + new Vector2(0, 5), actor =>
             {
                 _wyrm = actor;
-                actor.Entity.SetTargetable(false);
+                actor.SetTargetable(false);
             }, heading: 0);
 
             for (var i = 0; i < 6; i++)
@@ -272,12 +272,13 @@ namespace Simulant.Content.U7a.Presets
         private SimActor Helper(int index, Vector2 position, float heading = 0)
         {
             var actor = _helpers[index];
-            actor.Entity.ActorMove(new Vector3(position, 0), heading, 0);
+            actor.ActorMove(new Vector3(position, 0), heading, 0);
             return actor;
         }
 
         private static float Heading(Vector2 direction) => (float)Math.Atan2(direction.X, direction.Y);
-        private void Effect(int helper, uint action, int target) => Helper(helper, Party[target].Pos).Entity.ExecuteActionEffect(action, Party[target].Entity);
+        private void Effect(int helper, uint action, int target, IEnumerable<SimActor> hitTargets = null)
+            => Helper(helper, Party[target].Pos).ExecuteActionEffect(action, Party[target], hitTargets: hitTargets);
         private void Status(int slot, ushort id, float seconds) => EntityManager.SetStatus(Party[slot], id, seconds, 0, _gaia);
         private void ClearStatus(int slot, ushort id) => EntityManager.RemoveStatus(Party[slot], id);
 
@@ -304,14 +305,14 @@ namespace Simulant.Content.U7a.Presets
             MoveAll(_plan.Initial, CrystallizeTimePlan.SandHits[0] - 1.2);
         }
 
-        private static void Mark(int number, uint id)
-            => GameMarkers.Mark((MarkerType)(number - 1), id);
+        private void Mark(int number, uint id)
+            => EntityManager.Mark((MarkerType)(number - 1), id);
 
         private void Map(uint index, ushort animation)
         {
             _mapChanges.Add(index);
 
-            if (!_host.EnvironmentService.PlayMapEffect(index, animation))
+            if (!PlayMapEffect(index, animation))
                 throw new InvalidOperationException($"时间结晶场地特效调用失败：位置 {index}，动画 {animation}。");
         }
 
@@ -326,7 +327,7 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 1; i <= 4; i++)
                     try
                     {
-                        GameMarkers.ClearMarker((MarkerType)(i - 1));
+                        EntityManager.Mark((MarkerType)(i - 1), SimCombatLog.NoTarget);
                     }
                     catch (Exception ex)
                     {

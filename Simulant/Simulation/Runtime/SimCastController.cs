@@ -104,6 +104,9 @@ namespace Simulant.Simulation.Runtime
                                 () => ShowOmen(actor, state, action), "技能 " + actionId + " 预兆");
                     }
 
+                    if (duration > 0)
+                        actor.CombatLog?.Cast(actor.Entity, action, target?.Entity, duration, omenPosition, omenHeading);
+
                     _log?.Invoke(FormattableString.Invariant($"开始读条：技能 {actionId}（{duration:0.0} 秒）"));
                 }
                 catch
@@ -116,7 +119,7 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        public void Execute(SimActor actor, uint actionId, SimActor target = null)
+        public void Execute(SimActor actor, uint actionId, SimActor target = null, IEnumerable<SimActor> hitTargets = null)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -134,7 +137,7 @@ namespace Simulant.Simulation.Runtime
                 if (_disposed || !actor.IsActive || _casts.ContainsKey(actor))
                     return;
 
-                ExecuteCore(actor, action, target);
+                ExecuteCore(actor, action, target, hitTargets: hitTargets);
             }
         }
 
@@ -247,19 +250,23 @@ namespace Simulant.Simulation.Runtime
                 var actionAfterCleanup = actor.Entity.CastingActionId;
 
                 if (actionAfterCleanup == 0 || actionAfterCleanup == state.ActionId)
-                    ExecuteCore(actor, action, state.Target);
+                    ExecuteCore(actor, action, state.Target, state.OmenPosition, state.OmenHeading);
             }
         }
 
         private bool IsCurrent(SimActor actor, CastState state)
             => !_disposed && _casts.TryGetValue(actor, out var current) && ReferenceEquals(current, state);
 
-        private void ExecuteCore(SimActor actor, ActionRow action, SimActor target = null)
+        private void ExecuteCore(SimActor actor, ActionRow action, SimActor target,
+            Vector3? effectOrigin = null, float? effectHeading = null, IEnumerable<SimActor> hitTargets = null)
         {
             if (target != null)
             {
                 if (target.IsActive && target.Entity.IsTargetable && target.Entity.HP != 0)
+                {
                     actor.Entity.ExecuteActionEffect(action.RowId, target.Entity);
+                    actor.CombatLog?.Ability(actor.Entity, action.RowId, target.Entity, effectOrigin, effectHeading, 0, hitTargets);
+                }
 
                 return;
             }
@@ -272,6 +279,7 @@ namespace Simulant.Simulation.Runtime
                 actor.Entity.PlayBlendTimeline((ushort)timeline);
             }
 
+            actor.CombatLog?.Ability(actor.Entity, action.RowId, null, effectOrigin, effectHeading, 0, hitTargets);
             _log?.Invoke($"已执行技能：{action.RowId}；结束动画：{timeline}");
         }
 
@@ -281,7 +289,10 @@ namespace Simulant.Simulation.Runtime
                 return;
 
             _casts.Remove(actor);
+            var interrupted = actor.IsActive && !state.CastFinished && _scheduler.ElapsedSeconds < state.EndsAt;
             CancelState(actor, state);
+            if (interrupted)
+                actor.CombatLog?.Cancel(actor.Entity, state.ActionId);
         }
 
         private void CancelState(SimActor actor, CastState state)

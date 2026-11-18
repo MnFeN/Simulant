@@ -465,7 +465,7 @@ namespace Simulant.Simulation.Runtime
             if (withinTolerance && (!movement.NetworkStarted || movement.NetworkDestinationSent))
             {
                 if (movement.Knockback && movement.NetworkStarted)
-                    entity.ActorMove(current, movement.FixedHeading, 0);
+                    movement.Actor.ActorMove(current, movement.FixedHeading, 0);
 
                 return true;
             }
@@ -479,7 +479,7 @@ namespace Simulant.Simulation.Runtime
                 movement.NetworkLastSentAt = now;
                 movement.NetworkOrigin = movement.NetworkLastSent = new Vector2(current.X, current.Y);
                 movement.NetworkDuration = Math.Sqrt(dx * dx + dy * dy) / movement.Speed;
-                entity.ActorMove(current,
+                movement.Actor.ActorMove(current,
                     movement.Knockback ? movement.FixedHeading : (float)Math.Atan2(dx, dy), movement.SpeedParam,
                     movement.Knockback ? ActorMoveFlags.Knockback : ActorMoveFlags.None);
             }
@@ -516,7 +516,7 @@ namespace Simulant.Simulation.Runtime
                 if (next != movement.NetworkLastSent || final)
                 {
                     var direction = movement.Target - movement.NetworkOrigin;
-                    entity.ActorMove(new Vector3(next.X, next.Y, current.Z),
+                    movement.Actor.ActorMove(new Vector3(next.X, next.Y, current.Z),
                         movement.Knockback ? movement.FixedHeading : (float)Math.Atan2(direction.X, direction.Y), movement.SpeedParam,
                         movement.Knockback ? ActorMoveFlags.Knockback : ActorMoveFlags.None);
                     movement.NetworkLastSent = next;
@@ -544,7 +544,7 @@ namespace Simulant.Simulation.Runtime
             {
                 // Detach 已将 actor 标记为不活动，但仍应停止本次拥有的原生移动。
                 if (entity.IsAlive)
-                    entity.ActorMove(entity.Pos3D, entity.Heading, movement.SpeedParam);
+                    movement.Actor.ActorMove(entity.Pos3D, entity.Heading, movement.SpeedParam);
 
                 movement.NetworkStarted = false;
             }

@@ -1,4 +1,6 @@
 using Simulant.Core.Entity;
+using Simulant.Core.Environment;
+using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Core.Party;
 using Simulant.Simulation.Timeline;
 using System;
@@ -28,6 +30,36 @@ namespace Simulant.Simulation.Runtime
         private bool _isClearing;
         private SimPartyService _partyService;
         private SimScheduledAction _partyEnmityPoll;
+
+        private readonly Dictionary<MarkerType, uint> _simMarkers = new Dictionary<MarkerType, uint>();
+
+        internal void Mark(MarkerType marker, uint entityId)
+        {
+            lock (_gate)
+            {
+                GameMarkers.Mark(marker, entityId);
+
+                var source = _actors.Values.FirstOrDefault(actor => actor.Entity.Identity.Slot == 0)?.Entity;
+                if (_simMarkers.TryGetValue(marker, out var previous) && previous != entityId)
+                    CombatLog?.Mark(false, (int)marker, source, previous, FindLogActor(previous));
+
+                if (entityId == SimCombatLog.NoTarget)
+                    _simMarkers.Remove(marker);
+                else if (previous != entityId)
+                {
+                    _simMarkers[marker] = entityId;
+                    CombatLog?.Mark(true, (int)marker, source, entityId, FindLogActor(entityId));
+                }
+            }
+        }
+
+        internal SimCombatLog CombatLog { get; set; }
+
+        private Character FindLogActor(uint id)
+        {
+            lock (_gate)
+                return _actors.Values.FirstOrDefault(actor => actor.Id == id && actor.IsActive)?.Entity;
+        }
 
         internal List<SimActor> Party { get; } = new List<SimActor>();
 
@@ -85,6 +117,7 @@ namespace Simulant.Simulation.Runtime
                     _behaviors?.Dispose();
                     _scheduler = value;
                     _networkGeneration++;
+                    _simMarkers.Clear();
                     _casts = new SimCastController(value);
                     _movement = new SimMovementController(value);
                     _behaviors = new SimActorBehaviorController(value, _movement, _casts, SetSprintEffect);
@@ -113,6 +146,7 @@ namespace Simulant.Simulation.Runtime
 
                 _partyService = service;
                 service.Show(this, Party);
+                CombatLog?.Party(Party);
             }
         }
 
@@ -246,7 +280,11 @@ namespace Simulant.Simulation.Runtime
                 if (_actors.TryGetValue(entity.Identity, out var actor) && actor.IsActive)
                     return actor;
 
-                actor = new SimActor(entity, _casts, _movement);
+                actor = new SimActor(entity, _casts, _movement)
+                {
+                    CombatLog = CombatLog,
+                    FindLogActor = FindLogActor
+                };
                 _actors[entity.Identity] = actor;
                 if (entity.Identity.Slot == 0 && SelfJudgementAdvance > 0)
                     actor.StartJudgementSampling(_scheduler, SelfJudgementAdvance);
@@ -278,7 +316,8 @@ namespace Simulant.Simulation.Runtime
                 finally
                 {
                     _actors.Remove(actor.Entity.Identity);
-                    Party.Remove(actor);
+                    if (Party.Remove(actor) && _partyService?.IsOwnedBy(this) == true)
+                        CombatLog?.Party(Party);
                 }
             }
         }

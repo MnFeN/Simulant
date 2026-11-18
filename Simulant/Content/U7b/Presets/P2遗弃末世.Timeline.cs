@@ -90,7 +90,7 @@ namespace Simulant.Content.U7b.Presets
             timeline.At(EndCast[pair], () =>
             {
                 // 上轮跳跃已改变实际落点；新一轮通过收包恢复中心与朝北面向。
-                _casters[0].Entity.ActorMove(new Vector3(ForsakenPlan.Center, _casters[0].Pos3D.Z), (float)Math.PI);
+                _casters[0].ActorMove(new Vector3(ForsakenPlan.Center, _casters[0].Pos3D.Z), (float)Math.PI);
                 _casters[0].Cast(round.FutureEnd ? 0xBAD2u : 0xBAD3u);
             }, $"第 {pair + 1} 次{(round.FutureEnd ? "未来" : "过去")}终结读条");
 
@@ -126,7 +126,7 @@ namespace Simulant.Content.U7b.Presets
 
                 if (caster != 0)
                 {
-                    timeline.At(CleaveHit[pair, caster] + 3, () => _casters[source].Entity.ActorControl(ActorControlCategory.PlayActionTimeline, 0x1E39),
+                    timeline.At(CleaveHit[pair, caster] + 3, () => _casters[source].ActorControl(ActorControlCategory.PlayActionTimeline, 0x1E39),
                         $"第 {pair + 1} 次复制体 {caster} 退场动画");
                     timeline.At(CleaveHit[pair, caster] + 4.5, () => _casters[source].Entity.DisableDraw(),
                         $"第 {pair + 1} 次隐藏复制体 {caster}");

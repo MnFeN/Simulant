@@ -33,6 +33,15 @@ namespace Simulant.Core.Zone
         // 用于下次切换区域时清理旧 instance
         private ushort? _loadedInstanceContentId;
 
+        internal uint InstanceDirectorId
+        {
+            get
+            {
+                lock (_stateGate)
+                    return _loadedInstanceContentId is ushort id && id != 0 ? 0x80030000u + id : 0;
+            }
+        }
+
         // 进入模拟区域前记录真实地图和位置，退出时返回
         private uint? _initialTerritoryId;
         private Vector3? _initialPosition;

@@ -68,6 +68,7 @@ namespace Lumina.Excel.Sheets
     public struct Status : IExcelRow<Status>
     {
         public bool LockMovement, LockActions;
+        public TestText Name;
     }
 
     public struct ModelChara : IExcelRow<ModelChara>
@@ -129,6 +130,7 @@ namespace Lumina.Excel.Sheets
     {
         public uint RowId;
         public ushort Cast100ms;
+        public TestText Name;
         public sbyte Range;
         public RowRef<ActionTimeline> AnimationEnd;
         public byte CastType;

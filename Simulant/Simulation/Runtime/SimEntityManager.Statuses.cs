@@ -2,6 +2,7 @@ using Simulant.Core.Entity;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Game.FFCS.Client.Game.Object;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,8 @@ namespace Simulant.Simulation.Runtime
             internal SimActor Participant;
             internal bool LockMovement;
             internal double ExpiresAt;
+            internal SimScheduledAction LogExpiry;
+            internal ushort LoggedParam;
         }
 
         private readonly List<OwnedStatus> _statuses = new List<OwnedStatus>();
@@ -72,12 +75,12 @@ namespace Simulant.Simulation.Runtime
 
                     if (current.StatusId.Get() == 0)
                     {
-                        _statuses.Remove(owned);
+                        ForgetStatus(owned);
                         owned = null;
                     }
                     else if (!MatchesStatus(current, owned))
                     {
-                        _statuses.Remove(owned);
+                        ForgetStatus(owned);
                         throw new InvalidOperationException("模拟状态槽已被其他状态替换，拒绝覆盖。");
                     }
                     else if (owned.Source.Identity != source.Entity.Identity)
@@ -132,8 +135,44 @@ namespace Simulant.Simulation.Runtime
                         FormattableString.Invariant($"实际编号 0x{actualId:X4}、参数 {actualParam}、来源 0x{actualSource:X16}、剩余 {actual.RemainingTime.Get():F3} 秒；") +
                         $"原生编号或来源变化标志：{(identityChanged ? "是" : "否")}。");
 
+                RecordStatus(owned, seconds, param);
                 RefreshMovementLocks();
             }
+        }
+
+        private void RecordStatus(OwnedStatus owned, float seconds, ushort param)
+        {
+            owned.LogExpiry?.Cancel();
+            owned.LogExpiry = null;
+            if (CombatLog?.Enabled != true)
+                return;
+
+            CombatLog.Status(true, owned.StatusId, seconds, param, owned.Source, owned.Actor);
+            owned.LoggedParam = param;
+            var expiresAt = owned.ExpiresAt;
+            owned.LogExpiry = _scheduler.Schedule(expiresAt, () =>
+            {
+                lock (_gate)
+                    if (owned.LogExpiry != null && owned.ExpiresAt == expiresAt)
+                        RecordStatusRemoval(owned);
+            }, "记录模拟状态到期");
+        }
+
+        private void RecordStatusRemoval(OwnedStatus owned)
+        {
+            if (owned.LogExpiry == null)
+                return;
+
+            owned.LogExpiry.Cancel();
+            owned.LogExpiry = null;
+            if (owned.Actor.IsAlive)
+                CombatLog?.Status(false, owned.StatusId, 0, owned.LoggedParam, owned.Source, owned.Actor);
+        }
+
+        private void ForgetStatus(OwnedStatus owned)
+        {
+            _statuses.Remove(owned);
+            RecordStatusRemoval(owned);
         }
 
         /// <summary>只移除本会话施加的同种状态，不触碰原有或后来替换的状态。</summary>
@@ -165,7 +204,7 @@ namespace Simulant.Simulation.Runtime
             // 实体身份包含世界与生命周期；失效后绝不触碰被复用的地址。
             if (!owned.Actor.IsAlive)
             {
-                _statuses.Remove(owned);
+                ForgetStatus(owned);
                 return;
             }
 
@@ -174,7 +213,7 @@ namespace Simulant.Simulation.Runtime
 
             if (!MatchesStatus(current, owned))
             {
-                _statuses.Remove(owned);
+                ForgetStatus(owned);
                 return;
             }
 
@@ -185,14 +224,14 @@ namespace Simulant.Simulation.Runtime
 
             if (!owned.Actor.IsAlive)
             {
-                _statuses.Remove(owned);
+                ForgetStatus(owned);
                 return;
             }
 
             if (MatchesStatus(owned.Actor.Native.StatusManager.GetStatus(owned.Slot), owned))
                 throw new InvalidOperationException("原生状态移除后模拟点名仍存在，请重试停止。");
 
-            _statuses.Remove(owned);
+            ForgetStatus(owned);
         }
 
         private void ClearStatuses(EntityBase dependency = null)

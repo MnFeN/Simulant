@@ -99,7 +99,7 @@ namespace Simulant.Content.U7a.Presets
                 Spawn(17834, 9324, Center, actor =>
                 {
                     Wyrm = actor;
-                    actor.Entity.SetTargetable(false);
+                    actor.SetTargetable(false);
                 });
                 U7aCrystal.Spawn(EntityManager, Scheduler, actor =>
                 {
@@ -158,7 +158,7 @@ namespace Simulant.Content.U7a.Presets
         protected void Status(int slot, ushort status, float seconds, ushort param = 0)
             => EntityManager.SetStatus(Party[slot], status, seconds, param, Oracle);
         protected void ClearStatus(int slot, ushort status) => EntityManager.RemoveStatus(Party[slot], status);
-        protected void Icon(int slot, uint icon) => Party[slot].Entity.ActorControl(ActorControlCategory.TargetIcon, icon, Party[slot].Id);
+        protected void Icon(int slot, uint icon) => Party[slot].ActorControl(ActorControlCategory.TargetIcon, icon, Party[slot].Id);
 
         protected void MarkPartyMember(int slot, MarkerType markType)
         {
@@ -166,7 +166,7 @@ namespace Simulant.Content.U7a.Presets
             if (_partyMarks.Count == 0)
                 _partyMarksWorld = _host.WorldGeneration;
             _partyMarks.Add(markType);
-            GameMarkers.Mark(markType, Party[slot].Id);
+            EntityManager.Mark(markType, Party[slot].Id);
         }
 
         protected void ClearPartyMarks()
@@ -181,7 +181,7 @@ namespace Simulant.Content.U7a.Presets
             foreach (var markType in _partyMarks.ToArray())
                 try
                 {
-                    GameMarkers.ClearMarker(markType);
+                    EntityManager.Mark(markType, SimCombatLog.NoTarget);
                     _partyMarks.Remove(markType);
                 }
                 catch (Exception ex)
@@ -196,17 +196,18 @@ namespace Simulant.Content.U7a.Presets
         {
             var actor = Helpers[index];
             // 辅助施法者只承载瞬时特效；原生瞬移同步位置和显示朝向，不能等插值移动后再播放。
-            actor.Entity.ActorSetPos(new Vector3(position, 0), heading);
+            actor.ActorSetPos(new Vector3(position, 0), heading);
             return actor;
         }
 
-        protected void PointEffect(int helper, uint action, Vector2 position, float heading = 0)
+        protected void PointEffect(int helper, uint action, Vector2 position, float heading = 0,
+            IEnumerable<SimActor> hitTargets = null)
         {
             var actor = Helper(helper, position, heading);
-            actor.Entity.ExecuteActionEffect(action, actor.Entity, heading);
+            actor.ExecuteActionEffect(action, actor, heading, hitTargets);
         }
-        protected void TargetEffect(int helper, uint action, int target)
-            => Helper(helper, Party[target].Pos).Entity.ExecuteActionEffect(action, Party[target].Entity);
+        protected void TargetEffect(int helper, uint action, int target, IEnumerable<SimActor> hitTargets = null)
+            => Helper(helper, Party[target].Pos).ExecuteActionEffect(action, Party[target], hitTargets: hitTargets);
 
         protected void Run(params SimMechanic[] mechanics)
         {
@@ -224,13 +225,13 @@ namespace Simulant.Content.U7a.Presets
                 Heading = heading,
                 MaxPlayers = 0,
                 FailureSeverity = severity,
-                Visual = _ =>
+                Visual = result =>
                 {
                     if (helper.HasValue)
-                        PointEffect(helper.Value, action, center, heading);
+                        PointEffect(helper.Value, action, center, heading, result.HitActors);
                     else
                         Dummy(new Vector3(center, 0), heading,
-                            actor => actor.Entity.ExecuteActionEffectAt(action, new Vector3(center, 0), heading));
+                            actor => actor.ExecuteActionEffectAt(action, new Vector3(center, 0), heading, hitTargets: result.HitActors));
                 },
                 Failed = result => Report(MechanicError.Fixed(name, Array.Empty<int>(), result.Participants.Select(p => p.Slot))
                     .WithAttribution(result.Participants.Select(p => p.Slot)), result)
@@ -249,7 +250,7 @@ namespace Simulant.Content.U7a.Presets
                     ? "参与者不符合当前点名分工。" : null,
                 Visual = result =>
                 {
-                    TargetEffect(target, action, target);
+                    TargetEffect(target, action, target, result.HitActors);
                     if (action == 40271 || action == 40277)
                         EntityManager.MarkUnderfilledStack(result.Participants.Select(p => p.Actor).ToArray(), minimum, Oracle);
                 },
@@ -265,7 +266,7 @@ namespace Simulant.Content.U7a.Presets
                 Area = ActionArea.FromAction(action),
                 CenterAtResolve = snapshot => snapshot.Get(target).Position,
                 MaxPlayers = 1,
-                Visual = _ => TargetEffect(target, action, target),
+                Visual = result => TargetEffect(target, action, target, result.HitActors),
                 Failed = result => Report(result.DescribeFailure(name, new[] { target }, target)
                     .WithAttribution(Responsible(result, new[] { target }, target), "可能是自身站歪了"), result)
             };
@@ -338,9 +339,9 @@ namespace Simulant.Content.U7a.Presets
             var heading = Heading(center - source.Pos);
             mechanic.Started = context =>
             {
-                source.Entity.ActorMove(source.Entity.Pos3D, heading, 0);
-                source.Entity.ExecuteActionEffect(40289, Party[target].Entity, heading);
-                context.ScheduleAfter(0.716, () => source.Entity.ActorMove(new Vector3(landing, 0), heading, 0), "碎灵一击落点同步");
+                source.ActorMove(source.Entity.Pos3D, heading, 0);
+                source.ExecuteActionEffect(40289, Party[target], heading);
+                context.ScheduleAfter(0.716, () => source.ActorMove(new Vector3(landing, 0), heading, 0), "碎灵一击落点同步");
             };
             mechanic.Visual = result =>
             {
@@ -356,8 +357,8 @@ namespace Simulant.Content.U7a.Presets
                 return;
             _crystalBroken = true;
             Crystal.Entity.SetNetworkVitals(0);
-            Crystal.Entity.ActorControl(ActorControlCategory.DeathAnimation);
-            Crystal.Entity.ActorControl(ActorControlCategory.SetStatus, 2);
+            Crystal.ActorControl(ActorControlCategory.DeathAnimation);
+            Crystal.ActorControl(ActorControlCategory.SetStatus, 2);
             Map(0x2E, 0x10);
         }
 
@@ -376,7 +377,7 @@ namespace Simulant.Content.U7a.Presets
         protected void Map(uint index, ushort animation)
         {
             _mapChanges.Add(index);
-            _host.EnvironmentService.PlayMapEffect(index, animation);
+            PlayMapEffect(index, animation);
         }
 
         protected override void OnStop()
@@ -392,7 +393,7 @@ namespace Simulant.Content.U7a.Presets
                     {
                         var original = slot < _preset.Phase.MapEffectFlags.Count ? _preset.Phase.MapEffectFlags[(int)slot] : null;
                         if (original.HasValue)
-                            _host.EnvironmentService.PlayMapEffect(slot, original.Value);
+                            PlayMapEffect(slot, original.Value);
                     }
             }
         }

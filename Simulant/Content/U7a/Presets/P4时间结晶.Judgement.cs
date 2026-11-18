@@ -30,7 +30,7 @@ namespace Simulant.Content.U7a.Presets
                     if (visual != null)
                         visual(result);
                     else
-                        Effect(helper, action, target);
+                        Effect(helper, action, target, result.HitActors);
                 },
                 Failed = result => Report(result.DescribeFailure(name, expected, target)
                     .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null), result),
@@ -98,8 +98,8 @@ namespace Simulant.Content.U7a.Presets
             _crystal.StopCasting();
             _crystal.Entity.SetNetworkVitals(0);
             // 回放 4786.223 秒水晶破碎：死亡动画、状态 2，同时 MapEffect 0x2E 切换到 0x10。
-            _crystal.Entity.ActorControl(Simulant.Game.ActorControlCategory.DeathAnimation);
-            _crystal.Entity.ActorControl(Simulant.Game.ActorControlCategory.SetStatus, 2);
+            _crystal.ActorControl(Simulant.Game.ActorControlCategory.DeathAnimation);
+            _crystal.ActorControl(Simulant.Game.ActorControlCategory.SetStatus, 2);
             Map(0x2E, 0x10);
         }
 
@@ -206,7 +206,7 @@ namespace Simulant.Content.U7a.Presets
                 {
                     // 该动作没有预兆行；内圈按上游机制定义取 3 米，外圈仍读取技能表。
                     var mechanic = Avoid(CrystallizeTimePlan.Roles[slot] + " 的黑暗冰封", ActionArea.FromAction(40279, innerRadius: 3), Party[slot].JudgementPosition, target: slot);
-                    mechanic.Visual = result => Effect(target, 40279, target);
+                    mechanic.Visual = result => Effect(target, 40279, target, result.HitActors);
                     mechanics.Add(ProtectCrystal(mechanic, slot));
                 }
             }
@@ -231,7 +231,7 @@ namespace Simulant.Content.U7a.Presets
 
                 var side = index == 0 ? -1 : 1;
                 var position = _plan.HeadPosition(side, time);
-                _heads[index].Entity.ActorMove(new Vector3(position, 0), Heading(_plan.HeadPosition(side, time + 0.1) - position), 30);
+                _heads[index].ActorMove(new Vector3(position, 0), Heading(_plan.HeadPosition(side, time + 0.1) - position), 30);
                 var radius = _headHits[index] == 0 ? 2f : 1f;
                 var touched = Enumerable.Range(0, 8).Where(slot => !(_cleansed[slot] && _plan.IsRed(slot)) && Vector2.Distance(Party[slot].JudgementPosition, position) <= radius)
                     .OrderBy(slot => Vector2.DistanceSquared(Party[slot].JudgementPosition, position)).ToArray();
@@ -273,8 +273,8 @@ namespace Simulant.Content.U7a.Presets
                 {
                     var helper = _helpers[16 + head];
                     // 辅助施法者立即定位到本次碰撞处；ActorMove 的插值尚未结束时不能播放原地特效。
-                    helper.Entity.ActorSetPos(new Vector3(center, 0), 0);
-                    helper.Execute(40241);
+                    helper.ActorSetPos(new Vector3(center, 0), 0);
+                    helper.Execute(40241, result.HitActors);
                 },
                 Failed = result =>
                 {
@@ -312,7 +312,7 @@ namespace Simulant.Content.U7a.Presets
                     }
                     else
                     {
-                        _heads[head].Entity.ActorControl(Simulant.Game.ActorControlCategory.SetModelScale, 4);
+                        _heads[head].ActorControl(Simulant.Game.ActorControlCategory.SetModelScale, 4);
                         foreach (var move in _plan.RedIceRoute(side, Now))
                             Scheduler.Schedule(_origin + move.Start, () => Move(slot, move.Area, move.Arrival, urgent: true), "红冰撞头后撤离");
                     }
@@ -420,7 +420,7 @@ namespace Simulant.Content.U7a.Presets
             // 锁定站位后先播放跳跃，落地才击退并报错，避免失败中断取消尚未执行的击退。
             mechanic.LockedSnapshot = snapshot;
             mechanic.ResolveAfter = 0.934;
-            mechanic.Started = _ => _gaia.Entity.ExecuteActionEffect(40289, Party[target].Entity);
+            mechanic.Started = _ => _gaia.ExecuteActionEffect(40289, Party[target]);
             EntityManager.RunMechanic(mechanic);
         }
 

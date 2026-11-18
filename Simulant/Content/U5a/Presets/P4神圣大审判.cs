@@ -198,7 +198,7 @@ namespace Simulant.Content.U5a.Presets
                 Center = actor.Pos,
                 MaxPlayers = 0,
                 FailureSeverity = MechanicFailureSeverity.Warning,
-                Visual = result => actor.Execute(0x4890),
+                Visual = result => actor.Execute(0x4890, result.HitActors),
             }).ToArray())
             {
                 Name = name,

@@ -3,6 +3,7 @@ using Simulant.Game.Data;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
@@ -13,6 +14,61 @@ namespace Simulant.Tests
 {
     internal static class CastTests
     {
+        public static void ActLogsUseTheCastCenterAndOneSequenceForAllTargets()
+        {
+            using (var scene = new CastTestScene())
+            {
+                var events = new List<(int Id, string[] Fields, DateTimeOffset? Timestamp)>();
+                var config = new Configuration();
+                scene.AddAction(0x123, 2);
+                var caster = scene.Actor(0);
+                var target1 = scene.Actor(1);
+                var target2 = scene.Actor(2);
+                caster.Pos3D = new Vector3(100, 90, 0);
+                caster.Heading = 0;
+                caster.CombatLog = new SimCombatLog(() => config.GenerateActLogs,
+                    (id, payload, time) => events.Add((id, payload.Split('|'), time)), null);
+
+                caster.ExecuteActionEffect(0x123, target1);
+                Assert(events.Count == 0, "日志选项关闭时不能记录技能。");
+
+                var culture = Thread.CurrentThread.CurrentCulture;
+                try
+                {
+                    Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+                    config.GenerateActLogs = true;
+                    caster.Cast(0x123, omenDelay: null, target: target1, omenPosition: new Vector3(90, 80, 5),
+                        omenHeading: -(float)Math.PI / 2, castTime: 1.25f, executeOnFinish: false);
+                    caster.StopCasting();
+                    caster.ExecuteActionEffectAt(0x123, new Vector3(90, 80, 5), -(float)Math.PI / 2,
+                        hitTargets: new[] { target1, target2 });
+                    caster.ExecuteActionEffectAt(0x123, new Vector3(90, 80, 5), 0);
+                }
+                finally
+                {
+                    Thread.CurrentThread.CurrentCulture = culture;
+                }
+
+                Assert(events.Select(entry => entry.Id).SequenceEqual(new[] { 20, 263, 23, 22, 22, 264, 21, 264 }),
+                    "开始咏唱、敌方中断、多目标与空目标技能应分别记录对应的协议行。");
+                Assert(events[0].Timestamp == events[1].Timestamp &&
+                    events[0].Fields[6] == "1.250" && events[0].Fields[10] == "0.00" &&
+                    Math.Abs(double.Parse(events[1].Fields[2], CultureInfo.InvariantCulture) - 90) < 0.02 &&
+                    Math.Abs(double.Parse(events[1].Fields[5], CultureInfo.InvariantCulture) + Math.PI / 2) < 0.002,
+                    "传统咏唱行使用实体面向，107 行使用技能落点和独立的预兆面向。");
+                var first = events[3].Fields;
+                var second = events[4].Fields;
+                var extra = events[5].Fields;
+                Assert(first.Length == 52 && second.Length == 52 && extra.Length == 9 &&
+                    first[42] == second[42] && first[42] == extra[2] &&
+                    first[43] == "0" && second[43] == "1" && first[44] == "2" && second[44] == "2" &&
+                    events[3].Timestamp == events[5].Timestamp,
+                    "两条 16 行必须具有匹配的时间、序号、索引及总目标数，且与 108 的序号对应。");
+                Assert(events[6].Fields[4] == "E0000000" && events[6].Fields[44] == "0",
+                    "无命中仍发送无目标的 15 行，目标数为零。");
+            }
+        }
+
         public static void CustomCastTimeControlsNativeCastCompletionAndOmen()
         {
             using (var scene = new CastTestScene())
