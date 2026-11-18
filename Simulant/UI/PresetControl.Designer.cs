@@ -120,7 +120,7 @@ namespace Simulant.UI
             //
             // lblCurrentPreset
             //
-            this.lblCurrentPreset.Text = "当前预设";
+            this.lblCurrentPreset.Text = "当前模拟";
             this.lblCurrentPreset.Dock = DockStyle.Fill;
             this.lblCurrentPreset.Margin = Padding.Empty;
             this.lblCurrentPreset.TextAlign = ContentAlignment.MiddleLeft;
@@ -140,7 +140,7 @@ namespace Simulant.UI
             //
             // lblPreset
             //
-            this.lblPreset.Text = "选择预设";
+            this.lblPreset.Text = "选择模拟";
             this.lblPreset.Dock = DockStyle.Fill;
             this.lblPreset.Margin = Padding.Empty;
             this.lblPreset.TextAlign = ContentAlignment.MiddleLeft;
@@ -303,7 +303,7 @@ namespace Simulant.UI
             //
             // lblNoOptions
             //
-            this.lblNoOptions.Text = "选择预设后可调整参数";
+            this.lblNoOptions.Text = "选择模拟后可调整参数";
             this.lblNoOptions.Dock = DockStyle.Top;
             this.lblNoOptions.Margin = Padding.Empty;
             this.lblNoOptions.TextAlign = ContentAlignment.MiddleLeft;

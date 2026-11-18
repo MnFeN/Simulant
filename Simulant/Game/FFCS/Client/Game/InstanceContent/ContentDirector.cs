@@ -1,4 +1,4 @@
-﻿using Simulant.Game.FFCS.Client.Game.Event;
+using Simulant.Game.FFCS.Client.Game.Event;
 using System;
 using System.IO;
 
@@ -8,6 +8,7 @@ namespace Simulant.Game.FFCS.Client.Game.InstanceContent
     //   Client::Game::Event::Director
     //     Client::Game::Event::LuaEventHandler
     //       Client::Game::Event::EventHandler
+    // https://github.com/aers/FFXIVClientStructs/blob/aad0de66f0a6b49f257d224499dd685ceba567da/FFXIVClientStructs/FFXIV/Client/Game/InstanceContent/ContentDirector.cs
     public struct ContentDirector : IMemoryObject
     {
         public IntPtr Ptr { get; set; }
@@ -46,6 +47,8 @@ namespace Simulant.Game.FFCS.Client.Game.InstanceContent
         {
             public IntPtr Ptr { get; set; }
 
+            internal const int Capacity = 128;
+
             // [FieldOffset(0x00), FixedSizeArray] internal FixedSizeArray128<MapEffectItem> _items;
             public MapEffectItem GetItem(int index) => Ptr.As<MapEffectItem>(0x00 + index * MapEffectItemSize); // temp until we implement the array struct
             public MemoryField<ushort> ItemCount => Ptr.Field<ushort>(0x602);
@@ -55,6 +58,9 @@ namespace Simulant.Game.FFCS.Client.Game.InstanceContent
         private const int MapEffectItemSize = 0x0C;
         public struct MapEffectItem : IMemoryObject
         {
+            // 本机客户端 2026.11.03.0000.0000：待应用槽位播放成功后置位（RVA 0xB71077、0xB731E6）。
+            internal const byte TimelineAppliedFlag = 0x02;
+
             public IntPtr Ptr { get; set; }
 
             public MemoryField<uint> LayoutId => Ptr.Field<uint>(0x00); // ContentDirectorManagedSG.Unknown0

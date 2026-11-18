@@ -183,10 +183,10 @@
             // chkPresetOnly
             //
             this.chkPresetOnly.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.chkPresetOnly.AutoSize = true;
             this.chkPresetOnly.Location = new System.Drawing.Point(766, 8);
             this.chkPresetOnly.Name = "chkPresetOnly";
-            this.chkPresetOnly.Size = new System.Drawing.Size(160, 26);
+            this.chkPresetOnly.Size = new System.Drawing.Size(180, 30);
+            this.chkPresetOnly.Style = CheckBoxStyle.Switch;
             this.chkPresetOnly.TabIndex = 7;
             this.chkPresetOnly.Text = "仅显示含预设区域";
             this.chkPresetOnly.CheckedChanged += new System.EventHandler(this.chkPresetOnly_CheckedChanged);

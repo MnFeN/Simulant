@@ -78,14 +78,22 @@ namespace Simulant.UI
 
         protected override void OnDrawItem(DrawItemEventArgs e)
         {
-            var selected = (e.State & DrawItemState.Selected) != 0;
-            using (var fill = new SolidBrush(selected ? WorkbenchTheme.Surface : WorkbenchTheme.Field))
-                e.Graphics.FillRectangle(fill, e.Bounds);
             if (e.Index >= 0 && e.Index < TabCount)
-                TextRenderer.DrawText(e.Graphics, TabPages[e.Index].Text, Font, e.Bounds,
-                    selected ? WorkbenchTheme.Accent : WorkbenchTheme.Muted, TextFormatFlags.HorizontalCenter |
+            {
+                var selected = (e.State & DrawItemState.Selected) != 0;
+                var page = TabPages[e.Index];
+                var background = e.Bounds;
+                if (selected && Alignment == TabAlignment.Top)
+                    background.Height = Math.Max(background.Height, DisplayRectangle.Top - background.Top);
+
+                using (var fill = new SolidBrush(selected ? page.BackColor : WorkbenchTheme.Canvas))
+                    e.Graphics.FillRectangle(fill, background);
+
+                TextRenderer.DrawText(e.Graphics, page.Text, Font, e.Bounds,
+                    selected ? WorkbenchTheme.Text : WorkbenchTheme.InactiveTabText, TextFormatFlags.HorizontalCenter |
                     TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine |
                     TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+            }
             base.OnDrawItem(e);
         }
     }

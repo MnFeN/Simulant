@@ -15,6 +15,7 @@ namespace Simulant.UI
         internal static readonly Color Text = Color.FromArgb(234, 240, 248);
         internal static readonly Color Muted = Color.FromArgb(161, 178, 198);
         internal static readonly Color Dim = Color.FromArgb(125, 144, 166);
+        internal static readonly Color InactiveTabText = Color.FromArgb(128, 128, 128);
         internal static readonly Color Mint = Color.FromArgb(108, 225, 194);
         internal static readonly Color Yellow = Color.FromArgb(247, 204, 111);
         internal static readonly Color Red = Color.FromArgb(247, 145, 154);

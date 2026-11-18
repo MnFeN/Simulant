@@ -205,7 +205,7 @@ namespace Simulant.Core.Party
                     Position = original.Position,
                     Flags = original.Flags,
                     Shield = original.DamageShield,
-                    Name = original.ReadNameBytes()
+                    Name = original.Name.Get()
                 };
                 CopyName(_memberDetails[i].Name, member.Name);
                 // 排除 StatusManager.Owner 指针，保存全部 60 条状态及计数、标志等尾部值。
@@ -449,7 +449,7 @@ namespace Simulant.Core.Party
                     var member = group.GetPartyMember(i);
                     WriteExact(member.Ptr + 8, _memberValues[i]);
                     var details = _memberDetails[i];
-                    WriteExact(member.NamePtr, details.Name);
+                    WriteExact(member.Name.Ptr, details.Name);
                     WriteExact(member.Flags.Ptr, new[]
                     {
                         details.Flags

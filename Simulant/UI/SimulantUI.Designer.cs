@@ -52,6 +52,7 @@ namespace Simulant.UI
             this.mapActions = new TableLayoutPanel();
             this.btnSimEnter = new ButtonEx();
             this.btnSimExit = new ButtonEx();
+            this.btnEnvironment = new ButtonEx();
             this.presetControl = new PresetControl();
             this.logView = new LogView();
             this.frame.SuspendLayout();
@@ -221,8 +222,8 @@ namespace Simulant.UI
             this.splitMainV.TabStop = false;
             this.splitMainV.Size = new Size(1148, 280);
             this.splitMainV.SplitterWidth = 8;
-            this.splitMainV.SplitterDistance = 244;
-            this.splitMainV.Panel1MinSize = 232;
+            this.splitMainV.SplitterDistance = 286;
+            this.splitMainV.Panel1MinSize = 280;
             this.splitMainV.Panel2MinSize = 300;
             this.splitMainV.Name = "splitMainV";
             this.splitMainV.Panel1.AutoScroll = true;
@@ -372,7 +373,7 @@ namespace Simulant.UI
             //
             // lblPhase
             //
-            this.lblPhase.Text = "阶段 / 预设";
+            this.lblPhase.Text = "阶段 / 模拟";
             this.lblPhase.Dock = DockStyle.Fill;
             this.lblPhase.Margin = Padding.Empty;
             this.lblPhase.TextAlign = ContentAlignment.MiddleLeft;
@@ -400,18 +401,19 @@ namespace Simulant.UI
             this.mapActions.Dock = DockStyle.Fill;
             this.mapActions.Margin = Padding.Empty;
             this.mapActions.Name = "mapActions";
-            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92F));
-            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92F));
-            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33333F));
+            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33333F));
+            this.mapActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33333F));
             this.mapActions.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             this.mapActions.Controls.Add(this.btnSimEnter, 0, 0);
             this.mapActions.Controls.Add(this.btnSimExit, 1, 0);
+            this.mapActions.Controls.Add(this.btnEnvironment, 2, 0);
             //
             // btnSimEnter
             //
             this.btnSimEnter.Text = "加载区域";
             this.btnSimEnter.Dock = DockStyle.Fill;
-            this.btnSimEnter.Margin = new Padding(0, 0, 8, 0);
+            this.btnSimEnter.Margin = new Padding(0, 0, 5, 0);
             this.btnSimEnter.Tone = ButtonTone.Primary;
             this.btnSimEnter.Name = "btnSimEnter";
             this.btnSimEnter.Click += new EventHandler(this.btnSimEnter_Click);
@@ -420,10 +422,19 @@ namespace Simulant.UI
             //
             this.btnSimExit.Text = "退出模拟";
             this.btnSimExit.Dock = DockStyle.Fill;
-            this.btnSimExit.Margin = Padding.Empty;
+            this.btnSimExit.Margin = new Padding(0, 0, 5, 0);
             this.btnSimExit.TabIndex = 1;
             this.btnSimExit.Name = "btnSimExit";
             this.btnSimExit.Click += new EventHandler(this.btnSimExit_Click);
+            //
+            // btnEnvironment
+            //
+            this.btnEnvironment.Text = "场景调整";
+            this.btnEnvironment.Dock = DockStyle.Fill;
+            this.btnEnvironment.Margin = Padding.Empty;
+            this.btnEnvironment.TabIndex = 2;
+            this.btnEnvironment.Name = "btnEnvironment";
+            this.btnEnvironment.Click += new EventHandler(this.btnEnvironment_Click);
             //
             // presetControl
             //
@@ -497,6 +508,7 @@ namespace Simulant.UI
         private TableLayoutPanel mapActions;
         private ButtonEx btnSimEnter;
         private ButtonEx btnSimExit;
+        private ButtonEx btnEnvironment;
         internal PresetControl presetControl;
         private LogView logView;
     }

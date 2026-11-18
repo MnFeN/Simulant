@@ -26,9 +26,7 @@ namespace Simulant.Game.FFCS.Client.Game.Group
         public MemoryField<ushort> MaxMP => Ptr.Field<ushort>(0x416);
         public MemoryField<ushort> TerritoryType => Ptr.Field<ushort>(0x418);
         public MemoryField<ushort> HomeWorld => Ptr.Field<ushort>(0x41A);
-        public IntPtr NamePtr => Ptr == IntPtr.Zero ? IntPtr.Zero : Ptr + 0x41C;
-
-        public byte[] ReadNameBytes() => Ptr.ReadBytes(NameLength, 0x41C);
+        public MemoryArray<byte> Name => Ptr.ArrayField<byte>(0x41C, NameLength);
         public MemoryField<byte> Sex => Ptr.Field<byte>(0x468);
         public MemoryField<byte> ClassJob => Ptr.Field<byte>(0x469);
         public MemoryField<byte> Level => Ptr.Field<byte>(0x46A);

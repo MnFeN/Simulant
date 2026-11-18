@@ -28,6 +28,7 @@ namespace Simulant.UI
         private ActionListForm _actionListForm;
         private ToolStripMenuItem _exdResourceMenuItem;
         private ExdBrowserForm _exdBrowserForm;
+        private EnvironmentEditorForm _environmentEditorForm;
         private Form _resizeHost;
         private bool _resizeLayoutSuspended;
 
@@ -48,6 +49,7 @@ namespace Simulant.UI
             UpdateControlStates();
             Disposed += (_, __) => _actionListForm?.Close();
             Disposed += (_, __) => _exdBrowserForm?.Close();
+            Disposed += (_, __) => _environmentEditorForm?.Close();
         }
 
         protected override void OnParentChanged(EventArgs e)
@@ -611,6 +613,25 @@ namespace Simulant.UI
             {
                 _switchingTerritory = false;
                 UpdateControlStates();
+            }
+        }
+
+        private void btnEnvironment_Click(object sender, EventArgs e)
+        {
+            if (_host == null)
+                return;
+
+            if (_environmentEditorForm == null || _environmentEditorForm.IsDisposed)
+            {
+                _environmentEditorForm = new EnvironmentEditorForm(_host);
+                _environmentEditorForm.Show();
+            }
+            else
+            {
+                if (_environmentEditorForm.WindowState == FormWindowState.Minimized)
+                    _environmentEditorForm.WindowState = FormWindowState.Normal;
+
+                _environmentEditorForm.Activate();
             }
         }
 

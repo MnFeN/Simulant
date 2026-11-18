@@ -100,7 +100,7 @@ namespace Simulant.UI
             _preset = null;
             _lastAttempt = null;
 
-            lblPreset.Text = "选择预设";
+            lblPreset.Text = "选择模拟";
             toolTip.SetToolTip(lblPreset, null);
             lblAuthor.Text = string.Empty;
             lblLastChanged.Text = string.Empty;
@@ -108,7 +108,7 @@ namespace Simulant.UI
             rtbInfo.Visible = false;
 
             ClearOptions();
-            lblNoOptions.Text = "选择预设后可调整参数";
+            lblNoOptions.Text = "选择模拟后可调整参数";
             lblNoOptions.Visible = true;
             optionsScroll.ResetScroll();
             UpdateButtons();
