@@ -44,6 +44,10 @@ namespace Simulant.Game
             where T : struct
             => new MemoryField<T>(ptr, offset);
 
+        public static MemoryArray<T> ArrayField<T>(this IntPtr ptr, int offset, int length)
+            where T : unmanaged
+            => new MemoryArray<T>(ptr, offset, length);
+
         public static MemoryBitField BitField(this IntPtr ptr, int offset, int bit)
             => new MemoryBitField(ptr, offset, bit);
 
