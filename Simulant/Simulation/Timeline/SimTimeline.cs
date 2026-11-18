@@ -92,6 +92,37 @@ namespace Simulant.Simulation.Timeline
             return this;
         }
 
+        /// <summary>Adds one node per item at its absolute time. Items at the same time retain enumeration order.</summary>
+        public SimTimeline AtEach<T>(IEnumerable<T> items, Func<T, double> time, Action<T> action, Func<T, string> name = null)
+        {
+            if (items == null)
+                throw new ArgumentNullException(nameof(items));
+
+            if (time == null)
+                throw new ArgumentNullException(nameof(time));
+
+            ValidateAction(action, nameof(action));
+
+            var nodes = new List<Node>();
+            foreach (var item in items)
+            {
+                var seconds = time(item);
+                ValidateSeconds(seconds, nameof(time));
+                nodes.Add(new Node(seconds, () => action(item), name?.Invoke(item)));
+            }
+
+            if (nodes.Count == 0)
+                return this;
+
+            lock (_gate)
+            {
+                _nodes.AddRange(nodes);
+                _cursor = nodes[nodes.Count - 1].Seconds;
+            }
+
+            return this;
+        }
+
         internal Node[] Snapshot()
         {
             lock (_gate)

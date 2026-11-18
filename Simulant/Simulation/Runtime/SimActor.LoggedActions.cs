@@ -43,6 +43,14 @@ namespace Simulant.Simulation.Runtime
         public void SetTargetable(bool targetable)
             => ActorControl(ActorControlCategory.Targetable, targetable ? 1u : 0u);
 
+        /// <summary>向目标显示连线，默认使用第一个连线槽和常用线宽。</summary>
+        public void TetherTo(SimActor target, uint tetherId, uint slot = 0, uint width = 15)
+            => ActorControl(ActorControlCategory.Tether, slot, tetherId, target.Id, width);
+
+        /// <summary>取消指定槽位的连线。编号为零时取消该槽上的任意连线。</summary>
+        public void CancelTether(uint slot = 0, uint tetherId = 0)
+            => ActorControl(ActorControlCategory.TetherCancel, slot, tetherId);
+
         /// <summary>调用普通 ActorControl，按类别生成解析插件或 OverlayPlugin 对应的日志。</summary>
         public IntPtr ActorControl(ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
         {

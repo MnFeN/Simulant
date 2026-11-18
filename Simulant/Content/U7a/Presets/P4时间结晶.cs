@@ -288,7 +288,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 var debuff = _plan.Debuffs[slot];
                 Status(slot, CrystallizeTimePlan.Status(debuff), debuff == CrystalDebuff.BlueWater ? 12 : debuff == CrystalDebuff.BlueEarth ? 17 : 14);
-                Status(slot, _plan.IsRed(slot) ? (ushort)3263 : (ushort)3264, debuff == CrystalDebuff.RedIce ? 17 : 40);
+                Status(slot, DragonCurseStatus(slot), debuff == CrystalDebuff.RedIce ? 17 : 40);
                 Status(slot, 4208, 33);
                 // 头顶计时图标由无名状态独立控制，持续到碎灵一击之后。
                 Status(slot, 2459, 37);

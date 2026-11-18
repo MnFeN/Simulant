@@ -69,6 +69,33 @@ namespace Simulant.Tests
             }
         }
 
+        public static void TetherHelpersPreserveNativeArgumentsAndActLogs()
+        {
+            using (var scene = new CastTestScene())
+            {
+                var events = new List<(int Id, string[] Fields)>();
+                var source = scene.Actor(0);
+                var target = scene.Actor(1);
+                source.CombatLog = new SimCombatLog(() => true,
+                    (id, payload, time) => events.Add((id, payload.Split('|'))), null);
+
+                source.TetherTo(target, 134);
+                Assert(source.Entity.LastActorControl == (Simulant.Game.ActorControlCategory.Tether, 0u, 134u, target.Id, 15u),
+                    "连线默认使用槽位 0、指定目标和宽度参数 15。");
+                var logged = events.Single();
+                Assert(logged.Id == 35 && logged.Fields[2] == target.Id.ToString("X8") &&
+                    logged.Fields[5] == "0000" && logged.Fields[6] == "0086" && logged.Fields[8] == "000F",
+                    "连线辅助方法应使用同一个 ACT 日志入口。");
+
+                source.CancelTether();
+                Assert(source.Entity.LastActorControl == (Simulant.Game.ActorControlCategory.TetherCancel, 0u, 0u, 0u, 0u),
+                    "默认取消应无条件清除槽位 0。");
+                source.CancelTether(slot: 1, tetherId: 134);
+                Assert(source.Entity.LastActorControl == (Simulant.Game.ActorControlCategory.TetherCancel, 1u, 134u, 0u, 0u)
+                    && events.Count == 1, "按编号取消应传入指定槽位和编号，且保留原有日志行为。");
+            }
+        }
+
         public static void CustomCastTimeControlsNativeCastCompletionAndOmen()
         {
             using (var scene = new CastTestScene())

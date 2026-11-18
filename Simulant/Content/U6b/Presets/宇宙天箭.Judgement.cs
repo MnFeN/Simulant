@@ -10,11 +10,9 @@ namespace Simulant.Content.U6b.Presets
     {
         private void ResolveArrows(int wave, CosmoArrowPlan.Shot[] shots)
         {
-            EntityManager.RunMechanic(new MechanicGroup(shots.Select((shot, index) => new AreaMechanic
+            EntityManager.RunMechanic(new MechanicGroup(shots.Select((shot, index) => new AreaMechanic($"第 {wave + 1} 次天箭",
+                ActionArea.FromAction(shot.Action), shot.Position)
             {
-                Name = $"第 {wave + 1} 次天箭",
-                Area = ActionArea.FromAction(shot.Action),
-                Center = shot.Position,
                 Heading = shot.Heading,
                 MaxPlayers = 0,
                 FailureSeverity = MechanicFailureSeverity.Warning, // 宽直条由读条结束自动演出，窄直条在本次判定统一播放。
@@ -23,7 +21,7 @@ namespace Simulant.Content.U6b.Presets
                     if (shot.Action == 0x7BA4)
                         PlaceHelper(12 + index, shot.Position, shot.Heading).Execute(shot.Action, result.HitActors);
                 },
-            }).ToArray())
+            }))
             {
                 Name = $"第 {wave + 1} 次天箭",
                 Failed = result =>
@@ -39,17 +37,18 @@ namespace Simulant.Content.U6b.Presets
         {
             var tankArea = ActionArea.FromAction(0x7BA7);
             var stackArea = ActionArea.FromAction(0x7BA8);
-            var targets = new int[3];
+            Vector2[] actualPositions = null;
+            int[] targets = null;
 
-            EntityManager.RunMechanic(new MechanicGroup(Enumerable.Range(0, 3).Select(index => new AreaMechanic
+            EntityManager.RunMechanic(new MechanicGroup(Enumerable.Range(0, 3).Select(index => new AreaMechanic(index < 2 ? "宇宙龙炎近点死刑" : "宇宙龙炎远点分摊",
+                index < 2 ? tankArea : stackArea)
             {
-                Name = index < 2 ? "宇宙龙炎近点死刑" : "宇宙龙炎远点分摊",
-                Area = index < 2 ? tankArea : stackArea,
                 RequiredPlayers = index < 2 ? 1 : 6,
                 FailureSeverity = MechanicFailureSeverity.Warning,
                 CenterAtResolve = snapshot =>
                 {
-                    targets[index] = CosmoArrowPlan.DiveTargets(Positions(snapshot))[index];
+                    actualPositions = actualPositions ?? Positions(snapshot);
+                    targets = targets ?? CosmoArrowPlan.DiveTargets(actualPositions);
                     return snapshot.Get(targets[index]).Position;
                 },
                 Check = members => index < 2
@@ -57,12 +56,12 @@ namespace Simulant.Content.U6b.Presets
                     : (targets[index] >= 2 && members.All(member => member.Slot >= 2) ? null : "分摊必须由非坦克在远点引导，由六名非坦克共同承担。"), // 龙炎在被引导者身上播放，必须提供目标，单播施法者动作不会产生完整特效。
                 Visual = result => PlaceHelper(12 + index, _boss.Pos, Heading(Party[targets[index]].Pos - _boss.Pos))
                         .ExecuteActionEffect(index < 2 ? 0x7BA7u : 0x7BA8u, Party[targets[index]], hitTargets: result.HitActors),
-            }).ToArray())
+            }))
             {
                 Name = "宇宙龙炎",
                 Failed = result =>
                 {
-                    var offenders = FindOffenders(result.Snapshot, CosmoArrowPlan.FollowupHit(Occurrence),
+                    var offenders = FindOffenders(actualPositions, CosmoArrowPlan.FollowupHit(Occurrence),
                         positions => CosmoArrowPlan.ValidDive(positions, tankArea, stackArea));
 
                     for (var index = 0; index < 3; index++)
@@ -92,23 +91,26 @@ namespace Simulant.Content.U6b.Presets
         {
             var targets = _beamOrder.Skip(wave * 4).Take(4).ToArray();
             var area = ActionArea.FromAction(0x7BAB);
+            Vector2[] actualPositions = null;
 
-            EntityManager.RunMechanic(new MechanicGroup(targets.Select((target, index) => new AreaMechanic
+            EntityManager.RunMechanic(new MechanicGroup(targets.Select((target, index) => new AreaMechanic($"第 {wave + 1} 组 {CosmoArrowPlan.Roles[target]} 的波动炮",
+                area, CosmoArrowPlan.Center)
             {
-                Name = $"第 {wave + 1} 组 {CosmoArrowPlan.Roles[target]} 的波动炮",
-                Area = area,
-                Center = CosmoArrowPlan.Center,
-                HeadingAtResolve = snapshot => CosmoArrowPlan.TargetHeading(Positions(snapshot), target),
+                HeadingAtResolve = snapshot =>
+                {
+                    actualPositions = actualPositions ?? Positions(snapshot);
+                    return CosmoArrowPlan.TargetHeading(actualPositions, target);
+                },
                 RequiredPlayers = 1,
                 FailureSeverity = MechanicFailureSeverity.Warning,
                 Visual = result => PlaceHelper(12 + index, CosmoArrowPlan.Center,
                     Heading(Party[target].Pos - CosmoArrowPlan.Center)).Execute(0x7BAB, result.HitActors),
-            }).ToArray())
+            }))
             {
                 Name = $"第 {wave + 1} 组波动炮",
                 Failed = result =>
                 {
-                    var offenders = FindOffenders(result.Snapshot, CosmoArrowPlan.BeamHit(wave), positions => CosmoArrowPlan.ValidBeams(positions, targets, area));
+                    var offenders = FindOffenders(actualPositions, CosmoArrowPlan.BeamHit(wave), positions => CosmoArrowPlan.ValidBeams(positions, targets, area));
 
                     for (var index = 0; index < targets.Length; index++)
                     {
@@ -131,20 +133,18 @@ namespace Simulant.Content.U6b.Presets
         private void ResolveCharge()
         {
             var area = ActionArea.FromAction(0x7BAA);
+            Vector2[] actualPositions = null;
             int[] front = null;
 
-            EntityManager.RunMechanic(new AreaMechanic
+            EntityManager.RunMechanic(new AreaMechanic("波动炮八人分摊", area, CosmoArrowPlan.Center)
             {
-                Name = "波动炮八人分摊",
-                Area = area,
-                Center = CosmoArrowPlan.Center,
                 RequiredPlayers = 8,
                 FailureSeverity = MechanicFailureSeverity.Warning,
                 HeadingAtResolve = snapshot =>
                 {
-                    var positions = Positions(snapshot);
-                    var heading = CosmoArrowPlan.TargetHeading(positions, _chargeTarget);
-                    front = CosmoArrowPlan.ChargeFront(positions, heading);
+                    actualPositions = Positions(snapshot);
+                    var heading = CosmoArrowPlan.TargetHeading(actualPositions, _chargeTarget);
+                    front = CosmoArrowPlan.ChargeFront(actualPositions, heading);
                     return heading;
                 },
                 Check = members => front.All(slot => slot < 2) ? null : "双 T 必须站在分摊队列最前方挡枪。",
@@ -155,14 +155,14 @@ namespace Simulant.Content.U6b.Presets
                 },
                 Failed = result => Report(result.DescribeFailure("波动炮八人分摊", Enumerable.Range(0, 8), _chargeTarget)
                     .WithDetail("最前两人：" + string.Join(" ", front.Select(slot => CosmoArrowPlan.Roles[slot])))
-                    .WithAttribution(FindOffenders(result.Snapshot, CosmoArrowPlan.FollowupHit(Occurrence),
+                    .WithAttribution(FindOffenders(actualPositions, CosmoArrowPlan.FollowupHit(Occurrence),
                         positions => CosmoArrowPlan.ValidCharge(positions, _chargeTarget, area)),
                         SelfSlot < 2 ? "自身未在分摊前排挡枪" : "自身未进入分摊直线，或越过坦克站到前排")),
             });
         }
 
-        private int[] FindOffenders(PartySnapshot snapshot, double time, Func<Vector2[], bool> valid)
-            => CosmoArrowPlan.FindOffenders(Positions(snapshot), CosmoArrowPlan.PositionsAt(ArrowMode, Occurrence, time), valid);
+        private int[] FindOffenders(Vector2[] actualPositions, double time, Func<Vector2[], bool> valid)
+            => CosmoArrowPlan.FindOffenders(actualPositions, CosmoArrowPlan.PositionsAt(ArrowMode, Occurrence, time), valid);
 
         private static Vector2[] Positions(PartySnapshot snapshot)
             => Enumerable.Range(0, 8).Select(slot => snapshot.Get(slot).Position).ToArray();

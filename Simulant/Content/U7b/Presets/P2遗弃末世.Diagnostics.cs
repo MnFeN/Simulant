@@ -1,8 +1,10 @@
 using System;
+using Simulant.Core;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
 using System.Linq;
 using System.Numerics;
+using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7b.Presets
 {
@@ -27,30 +29,55 @@ namespace Simulant.Content.U7b.Presets
                 noStacks.Contains(_selfSlot) ? "自身无层数时踩塔" : null));
         }
 
-        private MechanicError DescribeMarkerFailure(int index, int source, ForsakenMarker marker, ActionArea area, MechanicResult result)
+        private MechanicError DescribeMarkerFailure(int index, int source, ForsakenMarker marker, ActionArea area,
+            MechanicResult result, int? baitSlot = null)
         {
-            var round = _plan.Rounds[index];
-            var fan = marker == ForsakenMarker.Fan;
+            var positions = _plan.Rounds[index].Positions;
             var expectedHeading = 0f;
             var expectedTarget = source;
+            var degrees = 0.0;
 
-            if (fan)
+            if (baitSlot.HasValue)
             {
-                expectedTarget = Enumerable.Range(0, 8).Where(slot => slot != source)
-                    .OrderBy(slot => Vector2.DistanceSquared(round.Positions[source], round.Positions[slot])).ThenBy(slot => slot).First();
-                expectedHeading = Heading(round.Positions[source], round.Positions[expectedTarget]);
+                expectedTarget = Enumerable.Range(0, positions.Length).Where(slot => slot != source)
+                    .OrderBy(slot => Vector2.DistanceSquared(positions[source], positions[slot])).ThenBy(slot => slot).First();
+                expectedHeading = Heading(positions[source], positions[expectedTarget]);
+                // 比较同一轮世界坐标中的方向，取跨越正负 π 后的最小夹角。
+                var difference = (double)result.Heading - expectedHeading;
+                degrees = ToDegrees(Math.Abs(Math.Atan2(Math.Sin(difference), Math.Cos(difference))));
+
+                if (result.Success && degrees <= 30)
+                    return null;
             }
 
-            var expected = Enumerable.Range(0, 8).Where(slot => (!fan || slot != source) &&
-                area.Contains(round.Positions[slot], round.Positions[source], expectedHeading)).ToArray();
+            // 预设点位只用于推导解法名单；名单差异不足以确认是哪位队员移动有误。
+            var expected = Enumerable.Range(0, positions.Length).Where(slot => (!baitSlot.HasValue || slot != source) &&
+                area.Contains(positions[slot], positions[source], expectedHeading));
             var description = $"第 {index + 1} 轮 {Roles[source]} 的{MarkerName(marker)}点名";
-            var error = fan
-                ? result.DescribeBaitFailure(description, expected, expectedTarget,
-                    result.Snapshot.Nearest(result.Center, Party[source])?.Slot, source)
+            var error = baitSlot.HasValue
+                ? result.DescribeBaitFailure(description, expected, expectedTarget, baitSlot, source)
                 : result.DescribeFailure(description, expected, source);
 
-            // 预设点位只用于推导解法名单；名单差异不足以确认是哪位队员移动有误。
+            if (degrees > 30)
+                error.WithDetail(FormattableString.Invariant($"扇形偏离解法方向 {degrees:0.0}°，超过 30°；") +
+                    $"实际由 {Roles[baitSlot.Value]} 引导，约定由 {Roles[expectedTarget]} 引导");
+
             return error;
+        }
+
+        private void ReportFanDirectionWarning(MechanicError error)
+        {
+            var message = RecordMistake(error);
+            _host.LogWarning(message);
+
+            try
+            {
+                GameChat.SendEcho(message, playSound: true);
+            }
+            catch (Exception chatError)
+            {
+                _host.LogWarning("[遗弃末世] 扇形引导偏差的默语提示发送失败：" + chatError.Message);
+            }
         }
 
         private void ReportJumpFailure(ForsakenRoundPlan round, int target, MechanicResult result)

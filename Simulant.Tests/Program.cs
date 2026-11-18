@@ -93,6 +93,27 @@ namespace Simulant.Tests
                 new SimTimeline().At(2, unordered).After(0.5, noop).Snapshot().Select(node => node.Seconds));
         }
 
+        public static void TimelineAtEachUsesSourceOrderAndValidatesBeforeAdding()
+        {
+            var times = new[] { 3.0, 1, 1 };
+            var calls = new List<int>();
+            var timeline = new SimTimeline().AtEach(Enumerable.Range(0, times.Length), index => times[index],
+                calls.Add, index => $"Node {index}");
+
+            Throws<ArgumentOutOfRangeException>(() => timeline.AtEach(new[] { 4.0, -1 }, time => time, _ => { }));
+            timeline.AtEach(Array.Empty<int>(), index => index, calls.Add).After(0.5, () => calls.Add(3));
+
+            times[0] = 10;
+            var nodes = timeline.Snapshot();
+            SequenceNear(new[] { 3.0, 1, 1, 1.5 }, nodes.Select(node => node.Seconds));
+            SequenceEqual(new[] { "Node 0", "Node 1", "Node 2", null }, nodes.Select(node => node.Name));
+
+            foreach (var node in nodes.OrderBy(node => node.Seconds))
+                node.Action();
+
+            SequenceEqual(new[] { 1, 2, 3, 0 }, calls);
+        }
+
         public static void SnapshotIsolation()
         {
             var calls = new List<string>();

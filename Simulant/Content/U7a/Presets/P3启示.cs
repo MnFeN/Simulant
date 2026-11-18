@@ -144,19 +144,16 @@ namespace Simulant.Content.U7a.Presets
                         if (_plan.PositionOwners[slot] != slot)
                             Move(slot, _plan.InitialStack(slot), 13.9, 15.65);
             }, "赋予三组延迟水分摊");
-            for (var round = 0; round < 3; round++)
+            var waterMarks = new[] { 10.52, 28.52, 38.55 };
+            timeline.AtEach(Enumerable.Range(0, waterMarks.Length), round => waterMarks[round], round =>
             {
-                var water = round;
-                timeline.At(new[] { 10.52, 28.52, 38.55 }[round], () =>
+                for (var group = 0; group < 2; group++)
                 {
-                    for (var group = 0; group < 2; group++)
-                    {
-                        var target = _plan.Target(water, group);
-                        ClearStatus(target, 2458);
-                        Icon(target, 184);
-                    }
-                }, "延迟水分摊标记");
-            }
+                    var target = _plan.Target(round, group);
+                    ClearStatus(target, 2458);
+                    Icon(target, 184);
+                }
+            }, _ => "延迟水分摊标记");
             timeline.At(8.05, () => Oracle.Cast(40296, target: Oracle), "启示读条");
             timeline.At(8.42, SpawnLights, "生成启示地火光点");
             timeline.At(12.77, () => Map(0x29, 0x20), "启示场地魔法阵");
@@ -182,15 +179,11 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 0; i < 8; i++)
                     Icon(i, 139);
             }, "暗炎喷发八人分散读条");
-            for (var wave = 0; wave < ApocalypsePlan.ExplosionTimes.Length; wave++)
-            {
-                var index = wave;
-                timeline.At(ApocalypsePlan.ExplosionTimes[wave], () => Run(_plan.Explosions(index).Select(point =>
-                    (SimMechanic)Avoid("启示地火", 40297, point,
-                        severity: MechanicFailureSeverity.Warning)).ToArray()), $"第 {wave + 1} 轮启示地火");
-            }
+            timeline.AtEach(Enumerable.Range(0, ApocalypsePlan.ExplosionTimes.Length), wave => ApocalypsePlan.ExplosionTimes[wave],
+                wave => Run(_plan.Explosions(wave).Select(point => Avoid("启示地火", 40297, point,
+                    severity: MechanicFailureSeverity.Warning))), wave => $"第 {wave + 1} 轮启示地火");
             timeline.At(27.64, () => Oracle.ExecuteActionEffect(40273, Oracle), "暗炎喷发读条结束演出");
-            timeline.At(28.69, () => Run(Enumerable.Range(0, 8).Select(i => (SimMechanic)Spread(Roles[i] + "的暗炎喷发", i)).ToArray()), "八人暗炎喷发判定");
+            timeline.At(28.69, () => Run(Enumerable.Range(0, 8).Select(i => Spread(Roles[i] + "的暗炎喷发", i))), "八人暗炎喷发判定");
             // 外侧两人先经过前方近战的分散点，再回分摊组，不能斜穿相邻地火的圆边。
             timeline.At(28.74, () =>
             {
@@ -225,7 +218,7 @@ namespace Simulant.Content.U7a.Presets
                 ClearStatus(target, 2461);
                 mechanics.Add(Stack($"第{round + 1}轮{Roles[target]}的黑暗狂水", target, 4, _plan.Group(group)));
             }
-            var water = new MechanicGroup(mechanics.ToArray());
+            var water = new MechanicGroup(mechanics);
             if (round == 2)
                 water.Resolved = _ => ClearPartyMarks();
             Run(water);

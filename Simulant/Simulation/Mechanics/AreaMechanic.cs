@@ -2,6 +2,7 @@ using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 namespace Simulant.Simulation.Mechanics
@@ -24,6 +25,29 @@ namespace Simulant.Simulation.Mechanics
         public Func<PartySnapshot, float> HeadingAtResolve { get; set; }
         /// <summary>返回空值表示满足规则；否则返回失败原因，可检查层数、颜色等条件。</summary>
         public Func<IReadOnlyList<PartyMemberSnapshot>, string> Check { get; set; }
+
+        public AreaMechanic()
+        {
+        }
+
+        public AreaMechanic(string name, ActionArea area, Vector2 center = default)
+        {
+            Name = name;
+            Area = area;
+            Center = center;
+        }
+
+        /// <summary>以判定快照中指定队员的位置为中心。</summary>
+        public AreaMechanic(string name, ActionArea area, int centerSlot)
+            : this(name, area)
+        {
+            CenterAtResolve = snapshot => snapshot.Get(centerSlot).Position;
+        }
+
+        /// <summary>比较实际参与者和预定槽位，忽略名单的排列顺序。</summary>
+        public static string CheckPartyAssignment(IReadOnlyList<PartyMemberSnapshot> participants, IEnumerable<int> expected)
+            => participants.Select(member => member.Slot).OrderBy(slot => slot).SequenceEqual(expected.OrderBy(slot => slot))
+                ? null : "参与者不符合当前点名分工。";
 
         protected override void Validate()
         {

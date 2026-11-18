@@ -191,15 +191,12 @@ namespace Simulant.Content.U5a.Presets
             var area = ActionArea.FromAction(0x4890);
 
             // 同一快照判定整组圆形；先播放全部爆炸，再汇总一次提示，避免重叠圆重复报错。
-            EntityManager.RunMechanic(new MechanicGroup(casters.Select(actor => new AreaMechanic
+            EntityManager.RunMechanic(new MechanicGroup(casters.Select(actor => new AreaMechanic(name, area, actor.Pos)
             {
-                Name = name,
-                Area = area,
-                Center = actor.Pos,
                 MaxPlayers = 0,
                 FailureSeverity = MechanicFailureSeverity.Warning,
                 Visual = result => actor.Execute(0x4890, result.HitActors),
-            }).ToArray())
+            }))
             {
                 Name = name,
                 Failed = result =>

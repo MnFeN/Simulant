@@ -12,14 +12,19 @@ namespace Simulant.Simulation.Mechanics
         protected override IReadOnlyList<SimMechanic> Children => _claimedChildren;
 
         public MechanicGroup(params SimMechanic[] children)
+            : this((IEnumerable<SimMechanic>)children)
         {
-            if (children == null)
-                throw new ArgumentNullException(nameof(children));
+        }
 
-            if (children.Length == 0 || children.Any(child => child == null) || children.Distinct().Count() != children.Length)
+        /// <summary>按枚举顺序取得子机制快照，供同一次判定使用。</summary>
+        public MechanicGroup(IEnumerable<SimMechanic> children)
+        {
+            var snapshot = children?.ToArray() ?? throw new ArgumentNullException(nameof(children));
+
+            if (snapshot.Length == 0 || snapshot.Any(child => child == null) || snapshot.Distinct().Count() != snapshot.Length)
                 throw new ArgumentException("机制组必须包含至少一个不重复的有效子机制。", nameof(children));
 
-            _children = Array.AsReadOnly((SimMechanic[])children.Clone());
+            _children = Array.AsReadOnly(snapshot);
             Name = "机制组";
         }
 

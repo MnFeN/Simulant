@@ -87,7 +87,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 for (var direction = 0; direction < 8; direction++)
                     if (RelativityPlan.HourglassWave(direction) != 1)
-                        Hourglasses[direction].ActorControl(ActorControlCategory.TetherCancel);
+                        Hourglasses[direction].CancelTether();
             }, "取消沙漏加减速连线");
             timeline.At(19.63, () =>
             {
@@ -207,8 +207,7 @@ namespace Simulant.Content.U7a.Presets
         {
             for (var i = 0; i < 8; i++)
                 if (RelativityPlan.HourglassWave(i) != 1)
-                    Hourglasses[i].ActorControl(ActorControlCategory.Tether, 0,
-                        RelativityPlan.HourglassWave(i) == 0 ? 134u : 133u, Oracle.Id, 15);
+                    Hourglasses[i].TetherTo(Oracle, RelativityPlan.HourglassWave(i) == 0 ? 134u : 133u);
         }
 
         private void ResolveFire(int wave)
@@ -225,11 +224,8 @@ namespace Simulant.Content.U7a.Presets
                 {
                     ClearStatus(i, 2462);
                     var target = i;
-                    mechanics.Add(new AreaMechanic
+                    mechanics.Add(new AreaMechanic("黑暗冰封月环", ActionArea.Donut(4, 12), centerSlot: target)
                     {
-                        Name = "黑暗冰封月环",
-                        Area = ActionArea.Donut(4, 12),
-                        CenterAtResolve = snapshot => snapshot.Get(target).Position,
                         MaxPlayers = 0,
                         Visual = result => TargetEffect(target, 40279, target, result.HitActors),
                         Failed = result => Report(result.DescribeFailure("黑暗冰封月环", Array.Empty<int>())
@@ -241,7 +237,7 @@ namespace Simulant.Content.U7a.Presets
             ClearStatus(stack, 2454);
             mechanics.Add(Stack($"第{wave + 1}轮黑暗神圣", stack, 5,
                 Enumerable.Range(0, 8).Where(i => !_plan.HasFire(i, wave)), 40277));
-            Run(mechanics.ToArray());
+            Run(mechanics);
         }
 
         private void LockLasers(int wave)
@@ -276,14 +272,14 @@ namespace Simulant.Content.U7a.Presets
             }
 
             // 同一轮先播放全部激光，再报告失败，避免第一道出错就取消其余演出。
-            Run(firstLasers.ToArray());
+            Run(firstLasers);
             for (var step = 1; step <= 9; step++)
             {
                 var rotationStep = step;
                 Scheduler.ScheduleAfter(2.1 + (step - 1) * 1.067, () =>
                 {
                     var lasers = directions.Select(direction => Avoid("沙漏旋转激光", 40292, _plan.Hourglass(direction), direction,
-                        ActionArea.Rectangle(50, 5), headings[direction] + (float)Deg(_plan.Spins[direction] * rotationStep * 15))).ToArray();
+                        ActionArea.Rectangle(50, 5), headings[direction] + (float)Deg(_plan.Spins[direction] * rotationStep * 15)));
                     Run(lasers);
                 }, "旋转激光判定");
             }
@@ -311,11 +307,8 @@ namespace Simulant.Content.U7a.Presets
                 if (_plan.Gaze(i))
                 {
                     ClearStatus(i, 2456);
-                    var gaze = new AreaMechanic
+                    var gaze = new AreaMechanic(Roles[i] + "的暗影之眼", ActionArea.Circle(100), centerSlot: target)
                     {
-                        Name = Roles[i] + "的暗影之眼",
-                        Area = ActionArea.Circle(100),
-                        CenterAtResolve = snapshot => snapshot.Get(target).Position,
                         Visual = result => TargetEffect(target, 40278, target, result.HitActors),
                         Check = members => members.Any(p => p.Slot != target && FacingGaze(p.Actor, p.Position, Party[target].JudgementPosition))
                             ? "面前 90° 范围内存在石化源。" : null,
@@ -336,7 +329,7 @@ namespace Simulant.Content.U7a.Presets
                     mechanics.Add(Spread(Roles[i] + "的回返暗炎喷发", i));
                 }
             }
-            Run(mechanics.ToArray());
+            Run(mechanics);
         }
 
         internal static bool FacingGaze(SimActor actor, Vector2 position, Vector2 source)

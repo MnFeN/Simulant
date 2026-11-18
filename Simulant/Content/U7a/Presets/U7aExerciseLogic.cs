@@ -209,19 +209,19 @@ namespace Simulant.Content.U7a.Presets
         protected void TargetEffect(int helper, uint action, int target, IEnumerable<SimActor> hitTargets = null)
             => Helper(helper, Party[target].Pos).ExecuteActionEffect(action, Party[target], hitTargets: hitTargets);
 
-        protected void Run(params SimMechanic[] mechanics)
+        protected void Run(SimMechanic mechanic) => EntityManager.RunMechanic(mechanic);
+
+        protected void Run(IEnumerable<SimMechanic> mechanics)
         {
-            if (mechanics.Length != 0)
-                EntityManager.RunMechanic(mechanics.Length == 1 ? mechanics[0] : new MechanicGroup(mechanics));
+            var group = mechanics as IReadOnlyList<SimMechanic> ?? mechanics.ToArray();
+            if (group.Count != 0)
+                Run(group.Count == 1 ? group[0] : new MechanicGroup(group));
         }
 
         protected AreaMechanic Avoid(string name, uint action, Vector2 center, int? helper = null, ActionArea? area = null, float heading = 0,
             MechanicFailureSeverity severity = MechanicFailureSeverity.Fatal)
-            => new AreaMechanic
+            => new AreaMechanic(name, area ?? ActionArea.FromAction(action), center)
             {
-                Name = name,
-                Area = area ?? ActionArea.FromAction(action),
-                Center = center,
                 Heading = heading,
                 MaxPlayers = 0,
                 FailureSeverity = severity,
@@ -238,16 +238,12 @@ namespace Simulant.Content.U7a.Presets
             };
 
         protected AreaMechanic Stack(string name, int target, int minimum, IEnumerable<int> expected, uint action = 40271)
-            => ProtectCrystal(new AreaMechanic
+            => ProtectCrystal(new AreaMechanic(name, ActionArea.FromAction(action), centerSlot: target)
             {
-                Name = name,
-                Area = ActionArea.FromAction(action),
-                CenterAtResolve = snapshot => snapshot.Get(target).Position,
                 MinPlayers = minimum,
                 MaxPlayers = minimum == 4 ? (int?)4 : null,
                 FailureSeverity = MechanicFailureSeverity.Warning,
-                Check = members => minimum == 4 && !members.Select(p => p.Slot).OrderBy(i => i).SequenceEqual(expected.OrderBy(i => i))
-                    ? "参与者不符合当前点名分工。" : null,
+                Check = members => minimum == 4 ? AreaMechanic.CheckPartyAssignment(members, expected) : null,
                 Visual = result =>
                 {
                     TargetEffect(target, action, target, result.HitActors);
@@ -260,11 +256,8 @@ namespace Simulant.Content.U7a.Presets
 
         protected AreaMechanic Spread(string name, int target, uint action = 40274, bool protectCrystal = true)
         {
-            var mechanic = new AreaMechanic
+            var mechanic = new AreaMechanic(name, ActionArea.FromAction(action), centerSlot: target)
             {
-                Name = name,
-                Area = ActionArea.FromAction(action),
-                CenterAtResolve = snapshot => snapshot.Get(target).Position,
                 MaxPlayers = 1,
                 Visual = result => TargetEffect(target, action, target, result.HitActors),
                 Failed = result => Report(result.DescribeFailure(name, new[] { target }, target)
@@ -281,39 +274,10 @@ namespace Simulant.Content.U7a.Presets
         {
             if (Crystal == null)
                 return mechanic;
-            var check = mechanic.Check;
-            var visual = mechanic.Visual;
-            var failed = mechanic.Failed;
-            var center = mechanic.CenterAtResolve;
-            var hit = false;
-            mechanic.CenterAtResolve = snapshot =>
-            {
-                var position = center?.Invoke(snapshot) ?? mechanic.Center;
-                hit = !_crystalBroken && mechanic.Area.IntersectsCircle(Crystal.Pos, Crystal.Entity.HitboxRadius, position, mechanic.Heading);
-                if (hit)
-                    mechanic.FailureSeverity = MechanicFailureSeverity.Fatal;
-                return position;
-            };
-            mechanic.Check = members =>
-            {
-                var reason = check?.Invoke(members);
-                return hit ? (reason == null ? "" : reason + " ") + "点名范围击碎了北侧水晶。" : reason;
-            };
-            mechanic.Visual = result =>
-            {
-                visual?.Invoke(result);
-                if (hit)
-                    BreakCrystal();
-            };
-            mechanic.Failed = result =>
-            {
-                if (hit)
-                    Report(MechanicError.Rule(mechanic.Name, new[] { target }, result.Reason)
-                        .WithAttribution(target == Self ? new[] { Self } : Array.Empty<int>(), "自身点名范围击中了北侧水晶"), result);
-                else
-                    failed?.Invoke(result);
-            };
-            return mechanic;
+            return U7aCrystal.Protect(mechanic,
+                center => !_crystalBroken && mechanic.Area.IntersectsCircle(Crystal.Pos, Crystal.Entity.HitboxRadius, center, mechanic.Heading),
+                BreakCrystal, result => Report(MechanicError.Rule(mechanic.Name, new[] { target }, result.Reason)
+                    .WithAttribution(target == Self ? new[] { Self } : Array.Empty<int>(), "自身点名范围击中了北侧水晶"), result));
         }
 
         protected static Vector2 JumpLanding(SimActor actor, Vector2 target)

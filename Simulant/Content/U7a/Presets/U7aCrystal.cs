@@ -1,6 +1,7 @@
 using Simulant.Core.Entity;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.Network;
+using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
@@ -11,6 +12,44 @@ namespace Simulant.Content.U7a.Presets
     /// <summary>两个 P4 练习共用的水晶与浮空幻影场景。</summary>
     internal static class U7aCrystal
     {
+        /// <summary>在原有范围判定中检查水晶，命中时保留原演出并追加击碎和失败处理。</summary>
+        internal static AreaMechanic Protect(AreaMechanic mechanic, Func<Vector2, bool> intersects,
+            Action breakCrystal, Action<MechanicResult> reportFailure)
+        {
+            var centerAtResolve = mechanic.CenterAtResolve;
+            var check = mechanic.Check;
+            var visual = mechanic.Visual;
+            var failed = mechanic.Failed;
+            var hit = false;
+            mechanic.CenterAtResolve = snapshot =>
+            {
+                var center = centerAtResolve?.Invoke(snapshot) ?? mechanic.Center;
+                hit = intersects(center);
+                if (hit)
+                    mechanic.FailureSeverity = MechanicFailureSeverity.Fatal;
+                return center;
+            };
+            mechanic.Check = members =>
+            {
+                var reason = check?.Invoke(members);
+                return hit ? (reason == null ? "" : reason + " ") + "点名范围击碎了北侧水晶。" : reason;
+            };
+            mechanic.Visual = result =>
+            {
+                visual?.Invoke(result);
+                if (hit)
+                    breakCrystal();
+            };
+            mechanic.Failed = result =>
+            {
+                if (hit)
+                    reportFailure(result);
+                else
+                    failed?.Invoke(result);
+            };
+            return mechanic;
+        }
+
         internal static void Spawn(SimEntityManager entities, SimScheduler scheduler, Action<SimActor> ready, uint health = 169245)
         {
             // 水晶、琳和盖娅是三个独立实体；幻影先播放回放中的动作，再切换冻结姿势。

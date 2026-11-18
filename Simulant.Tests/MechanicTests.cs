@@ -1,3 +1,4 @@
+using Simulant.Content.U7a.Presets;
 using Simulant.Core.Entity;
 using Simulant.Game.Data;
 using Simulant.Simulation.Geometry;
@@ -114,11 +115,9 @@ namespace Simulant.Tests
                 scene.Player.Pos = new Vector2(10, 10);
                 scene.Other.Pos = new Vector2(11, 10);
                 var order = new List<string>();
-                var mechanic = new AreaMechanic
+                var mechanic = new AreaMechanic("双人塔", ActionArea.Circle(3), centerSlot: 0)
                 {
-                    Area = ActionArea.Circle(3),
                     RequiredPlayers = 2,
-                    CenterAtResolve = snapshot => snapshot.Get(0).Position,
                     HeadingAtResolve = snapshot => 1.25f,
                     Started = context => order.Add("开始"),
                     Check = members => members.Any(member => member.Slot == 1) ? "队员没有所需层数。" : null,
@@ -157,27 +156,32 @@ namespace Simulant.Tests
             {
                 scene.Player.Pos = Vector2.Zero;
                 scene.Other.Pos = Vector2.UnitX;
-                var checkedCrystal = false;
-                var showedCrystal = false;
+                var events = new List<string>();
                 var mechanic = new AreaMechanic
                 {
                     Area = ActionArea.Circle(5),
                     RequiredPlayers = 1,
-                    Check = members =>
-                    {
-                        checkedCrystal = true;
-                        return "点名范围击碎了北侧水晶。";
-                    },
-                    Visual = result => showedCrystal = checkedCrystal,
-                    Failed = result => Assert(showedCrystal && result.Reason.Contains("实际 2 人") && result.Reason.Contains("水晶"),
-                        "人数失败不能跳过水晶判定，两项原因必须保留，并先展示当前特效。")
+                    FailureSeverity = MechanicFailureSeverity.Warning,
+                    Check = members => AreaMechanic.CheckPartyAssignment(members, new[] { 0 }),
+                    Visual = result => events.Add("技能演出"),
+                    Failed = result => events.Add("普通失败"),
                 };
-                scene.Manager.RunMechanic(mechanic);
+                scene.Manager.RunMechanic(U7aCrystal.Protect(mechanic, center =>
+                {
+                    events.Add("水晶判定");
+                    return true;
+                }, () => events.Add("水晶击碎"), result =>
+                {
+                    Assert(result.Reason.Contains("实际 2 人") && result.Reason.Contains("点名分工") && result.Reason.Contains("水晶"),
+                        "人数、分工和水晶判定的失败原因必须同时保留。");
+                    events.Add("水晶失败");
+                }));
                 scene.Scheduler.Start();
                 Await(scene.ErrorReported);
                 scene.Scheduler.Dispose();
-                Assert(checkedCrystal && showedCrystal && scene.Errors.Count == 1 && scene.Errors[0] is SimMechanicFailedException,
-                    "额外规则和演出必须实际执行，完成后再报告机制失败。");
+                Assert(events.SequenceEqual(new[] { "水晶判定", "技能演出", "水晶击碎", "水晶失败" })
+                    && scene.Errors.Count == 1 && scene.Errors[0] is SimMechanicFailedException,
+                    "击碎水晶须在原技能演出后上报，并把提示升级为中断。");
             }
         }
 
@@ -214,7 +218,8 @@ namespace Simulant.Tests
                 };
                 var reads = scene.Other.Entity.PositionReads;
 
-                scene.Manager.RunMechanic(new MechanicGroup(first, second)
+                var children = new List<SimMechanic> { first, second };
+                var group = new MechanicGroup(children)
                 {
                     Resolved = result =>
                                     {
@@ -223,7 +228,9 @@ namespace Simulant.Tests
                                         callbacks.Add(3);
                                     },
                     Cleanup = context => finished.Set(),
-                });
+                };
+                children.Clear();
+                scene.Manager.RunMechanic(group);
 
                 scene.Scheduler.Start();
                 Await(finished);

@@ -1,11 +1,10 @@
-using Simulant.Core;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using static Simulant.Content.U7b.Presets.ForsakenTiming;
-using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U7b.Presets
 {
@@ -16,11 +15,9 @@ namespace Simulant.Content.U7b.Presets
         private SimMechanic CreateTowers(int index)
         {
             var round = _plan.Rounds[index];
-            var towers = Enumerable.Range(0, 2).Select(tower => new AreaMechanic
+            var towers = Enumerable.Range(0, 2).Select(tower => new AreaMechanic($"第 {index + 1} 轮第 {tower + 1} 座塔",
+                ActionArea.FromAction(0xBABE), round.TowerCenters[tower])
             {
-                Name = $"第 {index + 1} 轮第 {tower + 1} 座塔",
-                Area = ActionArea.FromAction(0xBABE),
-                Center = round.TowerCenters[tower],
                 RequiredPlayers = 2,
                 Check = players => players.Any(player => _stacks[player.Slot] == 0) ? "踩塔者已没有咏唱危机层数。" : null,
                 Started = context =>
@@ -46,7 +43,7 @@ namespace Simulant.Content.U7b.Presets
                     if (!PlayMapEffect(round.TowerMapIndices[tower], 4))
                     throw new InvalidOperationException("遗弃末世的塔特效清理失败。");
                 },
-            }).ToArray();
+            });
             return new MechanicGroup(towers)
             {
                 Name = $"第 {index + 1} 轮双人塔",
@@ -56,99 +53,67 @@ namespace Simulant.Content.U7b.Presets
 
         private void ResolveSpells(int index)
         {
-            var hits = new int[8];
             var spells = _triggered[index].Where(slot => _markers[slot] != ForsakenMarker.None).Select(source =>
             {
                 var marker = _markers[source];
                 var fan = marker == ForsakenMarker.Fan;
                 var action = marker == ForsakenMarker.Stack ? 0xBAC0u : fan ? 0xBAC2u : 0xBAC1u;
                 var area = ActionArea.FromAction(action, coneAngleDegrees: fan ? 90f : (float?)null);
-                MechanicError directionError = null;
-                return new AreaMechanic
+                int? baitSlot = null;
+                MechanicError fanError = null;
+                return new AreaMechanic($"第 {index + 1} 轮 {Roles[source]} 的{MarkerName(marker)}点名", area, centerSlot: source)
                 {
-                    Name = $"第 {index + 1} 轮 {Roles[source]} 的{MarkerName(marker)}点名",
-                    Area = area,
-                    CenterAtResolve = snapshot => snapshot.Get(source).Position,
-                    HeadingAtResolve = snapshot => fan ? Heading(snapshot.Get(source).Position,
-                        (snapshot.Nearest(snapshot.Get(source).Position, Party[source]) ?? throw new InvalidOperationException("扇形没有可引导的队员。")).Position) : 0,
+                    HeadingAtResolve = snapshot =>
+                    {
+                        if (!fan)
+                            return 0;
+
+                        var center = snapshot.Get(source).Position;
+                        var bait = snapshot.Nearest(center, Party[source])
+                            ?? throw new InvalidOperationException("扇形没有可引导的队员。");
+                        baitSlot = bait.Slot;
+                        return Heading(center, bait.Position);
+                    },
                     Exclude = fan ? Party[source] : null,
                     RequiredPlayers = marker == ForsakenMarker.Stack ? 3 : 1,
                     Visual = result =>
                     {
                         // 目标仍由历史判定选定，特效在该目标当前的位置和方向上播放。
                         var center = Party[source].Pos;
-                        var bait = fan ? result.Snapshot.Nearest(result.Center, Party[source]) : null;
-                        var heading = bait.HasValue ? Heading(center, Party[bait.Value.Slot].Pos) : 0;
+                        var heading = baitSlot.HasValue ? Heading(center, Party[baitSlot.Value].Pos) : 0;
                         Effect(source, center, heading, action, result.HitActors);
 
                         if (fan)
-                            directionError = CheckFanDirection(index, source, area, result);
+                        {
+                            fanError = DescribeMarkerFailure(index, source, marker, area, result, baitSlot);
+                            // 人数也失败时由 Failed 上报，方向说明随同一次中断提示发送。
+                            if (result.Success && fanError != null)
+                                ReportFanDirectionWarning(fanError);
+                        }
                     },
-                    Failed = result => Fail(directionError ?? DescribeMarkerFailure(index, source, marker, area, result)),
-                    Resolved = result =>
-                    {
-                        foreach (var player in result.Participants)
-                            hits[player.Slot]++;
-                    },
+                    Failed = result => Fail(fan ? fanError : DescribeMarkerFailure(index, source, marker, area, result)),
                 };
             }).ToArray();
 
             if (spells.Length == 0)
             {
-                FinishSpells(index, hits);
+                FinishSpells(index);
                 return;
             }
 
             EntityManager.RunMechanic(new MechanicGroup(spells)
             {
                 Name = $"第 {index + 1} 轮钢铁、扇形与分摊",
-                Resolved = result => FinishSpells(index, hits),
+                Resolved = result =>
+                {
+                    ApplyMagicHits(result, $"第 {index + 1} 轮钢扇分摊");
+                    FinishSpells(index);
+                },
             });
         }
 
-        private MechanicError CheckFanDirection(int index, int source, ActionArea area, MechanicResult result)
+        private void FinishSpells(int index)
         {
-            var positions = _plan.Rounds[index].Positions;
-            var expectedTarget = Enumerable.Range(0, positions.Length).Where(slot => slot != source)
-                .OrderBy(slot => Vector2.DistanceSquared(positions[source], positions[slot])).ThenBy(slot => slot).First();
-            var expectedHeading = Heading(positions[source], positions[expectedTarget]);
-            // 比较同一轮世界坐标中的方向，取跨越正负 π 后的最小夹角。
-            var difference = (double)result.Heading - expectedHeading;
-            var degrees = ToDegrees(Math.Abs(Math.Atan2(Math.Sin(difference), Math.Cos(difference))));
-
-            if (degrees <= 30)
-                return null;
-
-            // 沿用伤害判定快照，不再次读取移动中的玩家，也不改变实际扇形或人数判定。
-            var actualTarget = result.Snapshot.Nearest(result.Center, Party[source])
-                ?? throw new InvalidOperationException("扇形没有可引导的队员。");
-            var error = DescribeMarkerFailure(index, source, ForsakenMarker.Fan, area, result)
-                .WithDetail(FormattableString.Invariant($"扇形偏离解法方向 {degrees:0.0}°，超过 30°；") +
-                    $"实际由 {Roles[actualTarget.Slot]} 引导，约定由 {Roles[expectedTarget]} 引导");
-
-            // 人数也失败时，交给 Failed 统一记录并发送中断提示，保留角度说明但不重复上报。
-            if (!result.Success)
-                return error;
-
-            var message = RecordMistake(error);
-            _host.LogWarning(message);
-
-            try
-            {
-                GameChat.SendEcho(message, playSound: true);
-            }
-            catch (Exception chatError)
-            {
-                _host.LogWarning("[遗弃末世] 扇形引导偏差的默语提示发送失败：" + chatError.Message);
-            }
-
-            return error;
-        }
-
-        private void FinishSpells(int index, int[] hits)
-        {
-            ApplyMagicHits(hits, $"第 {index + 1} 轮钢扇分摊");
-
             // 只有本轮判定全部通过，才更新实际入塔者的层数与后续点名。
             foreach (var slot in _triggered[index])
             {
@@ -168,20 +133,16 @@ namespace Simulant.Content.U7b.Presets
         private void SelectJumpTargets() // 本体取最近者，三个分身依次取第二至第四近者，不按动作包的先后重新选人。
         => _jumpTargets = PartySnapshot.Capture(Party).Nearest(ForsakenPlan.Center, 4).Select(player => player.Slot).ToArray();
 
-        private void ResolveJumps(ForsakenRoundPlan round, int[] sources)
+        private void ResolveJumps(ForsakenRoundPlan round, IEnumerable<int> sources)
         {
-            var hits = new int[8];
             var jumps = sources.Select(source =>
             {
                 var target = _jumpTargets[source];
                 var actor = _casters[source];
                 var action = source == 0 ? (round.FutureEnd ? 0xBAD6u : 0xBAD7u) : (round.FutureEnd ? 0xBAD8u : 0xBAD9u);
-                return new AreaMechanic
+                return new AreaMechanic($"第 {round.Number} 轮 {Roles[target]} 的跳跃圆形伤害", ActionArea.FromAction(action), centerSlot: target)
                 {
-                    Name = $"第 {round.Number} 轮 {Roles[target]} 的跳跃圆形伤害",
-                    Area = ActionArea.FromAction(action),
                     RequiredPlayers = 1,
-                    CenterAtResolve = snapshot => snapshot.Get(target).Position,
                     Failed = result => ReportJumpFailure(round, target, result),
                     Visual = result =>
                     {
@@ -205,17 +166,12 @@ namespace Simulant.Content.U7b.Presets
                                 actor.ActorMove(position, heading, 90);
                         }, $"第 {round.Number} 轮跳跃落地 {source + 1}");
                     },
-                    Resolved = result =>
-                    {
-                        foreach (var player in result.Participants)
-                            hits[player.Slot]++;
-                    },
                 };
-            }).ToArray();
+            });
             EntityManager.RunMechanic(new MechanicGroup(jumps)
             {
                 Name = $"第 {round.Number} 轮近点圆",
-                Resolved = result => ApplyMagicHits(hits, $"第 {round.Number} 轮近点圆"),
+                Resolved = result => ApplyMagicHits(result, $"第 {round.Number} 轮近点圆"),
             });
         }
 
@@ -243,34 +199,35 @@ namespace Simulant.Content.U7b.Presets
             actor.Cast(round.FutureEnd ? 0xBADCu : 0xBADDu, executeOnFinish: false);
         }
 
-        private void ResolveCleaves(ForsakenRoundPlan round, int[] sources)
+        private void ResolveCleaves(ForsakenRoundPlan round, IEnumerable<int> sources)
         {
             var action = round.FutureEnd ? 0xBADCu : 0xBADDu;
-            EntityManager.RunMechanic(new MechanicGroup(sources.Select(source => new AreaMechanic
+            var name = $"第 {round.Number} 轮{(round.FutureEnd ? "前刀" : "后刀")}";
+            EntityManager.RunMechanic(new MechanicGroup(sources.Select(source => new AreaMechanic(name,
+                ActionArea.FromAction(action, coneAngleDegrees: 180), _cleaveOrigins[source])
             {
-                Name = $"第 {round.Number} 轮{(round.FutureEnd ? "前刀" : "后刀")}",
-                Area = ActionArea.FromAction(action, coneAngleDegrees: 180),
-                Center = _cleaveOrigins[source],
                 Heading = _cleaveHeadings[source],
                 RequiredPlayers = 0,
                 FailureSeverity = MechanicFailureSeverity.Warning,
-                Failed = result => Warn(result.DescribeFailure($"第 {round.Number} 轮{(round.FutureEnd ? "前刀" : "后刀")}", Array.Empty<int>())
+                Failed = result => Warn(result.DescribeFailure(name, Array.Empty<int>())
                     .WithAttribution(result.Participants.Select(player => player.Slot),
                         $"自身未避开{(round.FutureEnd ? "前刀" : "后刀")}范围")),
                 Visual = result => _casters[source].Execute(action, result.HitActors),
-            }).ToArray()));
+            })));
         }
 
-        private void ApplyMagicHits(int[] hits, string description)
+        private void ApplyMagicHits(MechanicResult result, string description)
         {
             var now = Scheduler.ElapsedSeconds;
+            // 组名单已按槽位去重，从各子技能的名单保留重复受击。
+            var hitsBySlot = result.Children.SelectMany(child => child.Participants)
+                .GroupBy(member => member.Slot).OrderBy(group => group.Key);
 
-            for (var slot = 0; slot < 8; slot++)
+            foreach (var hits in hitsBySlot)
             {
-                if (hits[slot] == 0)
-                    continue;
+                var slot = hits.Key;
 
-                if (hits[slot] > 1 || now - _lastMagicHit[slot] < 1.96)
+                if (hits.Count() > 1 || now - _lastMagicHit[slot] < 1.96)
                     Fail(MechanicError.Rule(description + "重复魔法伤害", new[]
                     {
                     slot

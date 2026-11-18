@@ -51,7 +51,7 @@ namespace Simulant.Content.U7a.Presets
                     var wave = _plan.HourglassWave(i);
 
                     if (wave != 1)
-                        _sand[i].ActorControl(ActorControlCategory.Tether, 0, wave == 0 ? 134u : 133u, _gaia.Id, 15);
+                        _sand[i].TetherTo(_gaia, wave == 0 ? 134u : 133u);
                 }
             }, "沙漏加减速连线");
 
@@ -78,7 +78,7 @@ namespace Simulant.Content.U7a.Presets
                     if (wave == 1)
                         continue;
 
-                    _sand[i].ActorControl(ActorControlCategory.TetherCancel);
+                    _sand[i].CancelTether();
                     _helpers[i].ExecuteActionEffect(wave == 0 ? 40294u : 40295u, _sand[i]);
                 }
             }, "沙漏速度变化");

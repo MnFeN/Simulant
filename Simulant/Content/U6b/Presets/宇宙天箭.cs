@@ -181,19 +181,15 @@ namespace Simulant.Content.U6b.Presets
 
                 var actor = Party[slot];
 
-                foreach (var move in CosmoArrowPlan.Route(ArrowMode, Occurrence, slot))
-                    timeline.At(move.Start, () => actor.MoveForMechanic(move.Area,
-                        _origin + move.Arrival, _origin + finish + 1, urgent: move.Start > 0), $"{CosmoArrowPlan.Roles[slot]} 天箭走位");
+                timeline.AtEach(CosmoArrowPlan.Route(ArrowMode, Occurrence, slot), move => move.Start,
+                    move => actor.MoveForMechanic(move.Area, _origin + move.Arrival, _origin + finish + 1, urgent: move.Start > 0),
+                    _ => $"{CosmoArrowPlan.Roles[slot]} 天箭走位");
             }
 
             timeline.At(CosmoArrowPlan.FollowupCast(Occurrence), () => _boss.Cast(Occurrence == ArrowOccurrence.First ? 0x7BA6u : 0x7BA9u), "天箭后续读条");
 
             if (Occurrence == ArrowOccurrence.Second)
-                for (var wave = 0; wave < 2; wave++)
-                {
-                    var index = wave;
-                    timeline.At(CosmoArrowPlan.BeamHit(wave), () => ResolveBeams(index), $"第 {wave + 1} 组四人波动炮");
-                }
+                timeline.AtEach(Enumerable.Range(0, 2), CosmoArrowPlan.BeamHit, ResolveBeams, wave => $"第 {wave + 1} 组四人波动炮");
 
             timeline.At(finish, () =>
             {

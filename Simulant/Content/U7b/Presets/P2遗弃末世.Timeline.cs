@@ -107,17 +107,11 @@ namespace Simulant.Content.U7b.Presets
 
             timeline.At(RowMin(JumpHit, pair), SelectJumpTargets, $"第 {pair + 1} 次选取最近四人");
 
-            foreach (var moment in Enumerable.Range(0, 4).GroupBy(source => JumpHit[pair, source]))
-            {
-                var sources = moment.ToArray();
-                timeline.At(moment.Key, () => ResolveJumps(round, sources), $"第 {pair + 1} 次近点圆判定");
-            }
+            timeline.AtEach(Enumerable.Range(0, 4).GroupBy(source => JumpHit[pair, source]), moment => moment.Key,
+                moment => ResolveJumps(round, moment), _ => $"第 {pair + 1} 次近点圆判定");
 
-            foreach (var moment in Enumerable.Range(0, 4).GroupBy(source => CleaveHit[pair, source]))
-            {
-                var sources = moment.ToArray();
-                timeline.At(moment.Key, () => ResolveCleaves(round, sources), $"第 {pair + 1} 次消灭之脚判定");
-            }
+            timeline.AtEach(Enumerable.Range(0, 4).GroupBy(source => CleaveHit[pair, source]), moment => moment.Key,
+                moment => ResolveCleaves(round, moment), _ => $"第 {pair + 1} 次消灭之脚判定");
 
             for (var caster = 0; caster < 4; caster++)
             {

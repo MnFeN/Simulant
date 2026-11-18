@@ -17,12 +17,9 @@ namespace Simulant.Content.U7a.Presets
             ActionArea? area = null, Action<MechanicResult> visual = null)
         {
             var shape = area ?? ActionArea.FromAction(action);
-            return ProtectCrystal(new AreaMechanic
+            return ProtectCrystal(new AreaMechanic(name, shape, centerSlot: target)
             {
-                Name = name,
-                Area = shape,
                 RequiredPlayers = expected.Length,
-                CenterAtResolve = snapshot => snapshot.Get(target).Position,
                 Visual = result =>
                 {
                     if (action == 40271 || action == 40277)
@@ -34,59 +31,29 @@ namespace Simulant.Content.U7a.Presets
                 },
                 Failed = result => Report(result.DescribeFailure(name, expected, target)
                     .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null), result),
-                Check = members => members.Select(m => m.Slot).OrderBy(i => i).SequenceEqual(expected.OrderBy(i => i))
-                    ? null : "参与者不符合当前点名分工。"
+                Check = members => AreaMechanic.CheckPartyAssignment(members, expected)
             }, target);
         }
 
         private AreaMechanic ProtectCrystal(AreaMechanic mechanic, int target)
         {
-            var centerAtResolve = mechanic.CenterAtResolve;
-            var check = mechanic.Check;
-            var visual = mechanic.Visual;
-            var failed = mechanic.Failed;
-            var hit = false;
-            mechanic.CenterAtResolve = snapshot =>
+            return U7aCrystal.Protect(mechanic, center =>
             {
-                var center = centerAtResolve?.Invoke(snapshot) ?? mechanic.Center;
                 var crystalPosition = _crystal.Pos;
                 var crystalRadius = _crystal.Entity.HitboxRadius;
-                hit = !_crystalBroken && mechanic.Area.IntersectsCircle(crystalPosition, crystalRadius, center, mechanic.Heading);
+                var hit = !_crystalBroken && mechanic.Area.IntersectsCircle(crystalPosition, crystalRadius, center, mechanic.Heading);
 
                 if (hit)
-                {
-                    mechanic.FailureSeverity = MechanicFailureSeverity.Fatal;
                     _host.LogVerbose(FormattableString.Invariant($"[时间结晶] {mechanic.Name} 水晶命中判定：技能中心 ({center.X:0.000}, {center.Y:0.000})，水晶 ({crystalPosition.X:0.000}, {crystalPosition.Y:0.000})，水晶半径 {crystalRadius:0.000} 米，中心距离 {Vector2.Distance(center, crystalPosition):0.000} 米。"));
-                }
 
-                return center;
-            };
-            mechanic.Check = members =>
+                return hit;
+            }, BreakCrystal, result => Report(MechanicError.Rule(mechanic.Name, new[]
             {
-                var reason = check?.Invoke(members);
-                return hit ? (reason == null ? "" : reason + " ") + "点名范围击碎了北侧水晶。" : reason;
-            };
-            mechanic.Visual = result =>
+                target
+            }, result.Reason).WithAttribution(target == Self ? new[]
             {
-                visual?.Invoke(result);
-
-                if (hit)
-                    BreakCrystal();
-            };
-            mechanic.Failed = result =>
-            {
-                if (hit)
-                    Report(MechanicError.Rule(mechanic.Name, new[]
-                    {
-                        target
-                    }, result.Reason).WithAttribution(target == Self ? new[]
-                    {
-                        Self
-                    } : Array.Empty<int>(), "自身点名范围击中了北侧水晶"), result);
-                else
-                    failed?.Invoke(result);
-            };
-            return mechanic;
+                Self
+            } : Array.Empty<int>(), "自身点名范围击中了北侧水晶"), result));
         }
 
         private void BreakCrystal()
@@ -118,11 +85,8 @@ namespace Simulant.Content.U7a.Presets
         }
 
         private AreaMechanic Avoid(string name, ActionArea area, Vector2 center, float heading = 0, int? target = null)
-            => new AreaMechanic
+            => new AreaMechanic(name, area, center)
             {
-                Name = name,
-                Area = area,
-                Center = center,
                 Heading = heading,
                 MaxPlayers = 0,
                 FailureSeverity = MechanicFailureSeverity.Warning,
@@ -133,7 +97,7 @@ namespace Simulant.Content.U7a.Presets
         private void ResolveSand(int wave)
         {
             EntityManager.RunMechanic(new MechanicGroup(Enumerable.Range(0, 6).Where(i => _plan.HourglassWave(i) == wave)
-                .Select(i => Avoid($"第 {wave + 1} 组沙漏", ActionArea.FromAction(40299), _plan.Hourglass(i))).ToArray())
+                .Select(i => Avoid($"第 {wave + 1} 组沙漏", ActionArea.FromAction(40299), _plan.Hourglass(i))))
             {
                 Name = "沙漏范围判定"
             });
@@ -211,7 +175,7 @@ namespace Simulant.Content.U7a.Presets
                 }
             }
 
-            EntityManager.RunMechanic(new MechanicGroup(mechanics.ToArray())
+            EntityManager.RunMechanic(new MechanicGroup(mechanics)
             {
                 Name = "冰风暗同时结算"
             });
@@ -233,11 +197,10 @@ namespace Simulant.Content.U7a.Presets
                 var position = _plan.HeadPosition(side, time);
                 _heads[index].ActorMove(new Vector3(position, 0), Heading(_plan.HeadPosition(side, time + 0.1) - position), 30);
                 var radius = _headHits[index] == 0 ? 2f : 1f;
-                var touched = Enumerable.Range(0, 8).Where(slot => !(_cleansed[slot] && _plan.IsRed(slot)) && Vector2.Distance(Party[slot].JudgementPosition, position) <= radius)
-                    .OrderBy(slot => Vector2.DistanceSquared(Party[slot].JudgementPosition, position)).ToArray();
+                var touched = FindContact(position, radius, slot => !(_cleansed[slot] && _plan.IsRed(slot)));
 
-                if (touched.Length != 0)
-                    TouchHead(index, touched[0], position);
+                if (touched.HasValue)
+                    TouchHead(index, touched.Value, position);
             }
 
             for (var index = 0; index < 4; index++)
@@ -245,15 +208,21 @@ namespace Simulant.Content.U7a.Presets
                 if (_puddles[index] == null || _taken[index] || time < _puddleReadyAt[index])
                     continue;
 
-                var touched = Enumerable.Range(0, 8).Where(slot => !_cleansed[slot] && !_plan.IsRed(slot) && Vector2.Distance(Party[slot].JudgementPosition, _puddlePositions[index]) <= 1)
-                    .OrderBy(slot => Vector2.DistanceSquared(Party[slot].JudgementPosition, _puddlePositions[index])).ToArray();
+                var touched = FindContact(_puddlePositions[index], 1, slot => !_cleansed[slot] && !_plan.IsRed(slot));
 
-                if (touched.Length != 0)
-                    TakePuddle(index, touched[0]);
+                if (touched.HasValue)
+                    TakePuddle(index, touched.Value);
             }
 
             Scheduler.ScheduleAfter(0.1, WatchHeads, "龙头与白圈接触检查");
         }
+
+        private int? FindContact(Vector2 center, float radius, Func<int, bool> eligible)
+            => Enumerable.Range(0, Party.Count).Where(eligible)
+                .Select(slot => (Slot: slot, Position: Party[slot].JudgementPosition))
+                .Where(member => Vector2.Distance(member.Position, center) <= radius)
+                .OrderBy(member => Vector2.DistanceSquared(member.Position, center))
+                .Select(member => (int?)member.Slot).FirstOrDefault();
 
         private void TouchHead(int head, int slot, Vector2 center)
         {
@@ -262,11 +231,8 @@ namespace Simulant.Content.U7a.Presets
             var area = ActionArea.FromAction(40241);
             var name = $"{CrystallizeTimePlan.Roles[slot]} 的第 {_headHits[head] + 1} 次龙头接触爆炸";
 
-            EntityManager.RunMechanic(ProtectCrystal(new AreaMechanic
+            EntityManager.RunMechanic(ProtectCrystal(new AreaMechanic(name, area, center)
             {
-                Name = name,
-                Area = area,
-                Center = center,
                 RequiredPlayers = 1,
                 Check = members => slot != expected ? "该龙头应由 " + CrystallizeTimePlan.Roles[expected] + " 接触。" : null,
                 Visual = result =>
@@ -299,8 +265,7 @@ namespace Simulant.Content.U7a.Presets
                 },
                 Succeeded = result =>
                 {
-                    _cleansed[slot] = true;
-                    ClearStatus(slot, 3263);
+                    CleanseDragonCurse(slot);
                     _headHits[head]++;
 
                     if (_headHits[head] == 2)
@@ -343,8 +308,7 @@ namespace Simulant.Content.U7a.Presets
         private void TakePuddle(int index, int slot)
         {
             _taken[index] = true;
-            _cleansed[slot] = true;
-            ClearStatus(slot, 3264);
+            CleanseDragonCurse(slot);
             var puddle = _puddles[index];
             puddle.SetEventState(7);
             // 先让已吃掉的白圈消退；停止模拟时也由实体管理器回收，不遗留 EObj 槽位。
@@ -372,6 +336,14 @@ namespace Simulant.Content.U7a.Presets
                 var leave = _plan.LeavePuddle(Party[slot].Pos, Now);
                 Scheduler.Schedule(_origin + leave.Start, () => Move(slot, leave.Area, leave.Arrival, urgent: true), "吃白圈后撤出下一道光波");
             }
+        }
+
+        private ushort DragonCurseStatus(int slot) => _plan.IsRed(slot) ? (ushort)3263 : (ushort)3264;
+
+        private void CleanseDragonCurse(int slot)
+        {
+            _cleansed[slot] = true;
+            ClearStatus(slot, DragonCurseStatus(slot));
         }
 
         private void CheckCleansed(IEnumerable<int> slots, string name)

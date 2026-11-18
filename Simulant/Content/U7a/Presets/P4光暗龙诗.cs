@@ -75,6 +75,8 @@ namespace Simulant.Content.U7a.Presets
         protected override double OpeningAdvance => FastOpening ? 3.7 : 0;
         private DarklitPlan _plan;
         private int _firstHit = -1;
+        private const int TowerPlayers = 2;
+        private static readonly ActionArea TowerArea = ActionArea.Circle(4);
         private readonly int[] _towerStates = { -1, -1 };
 
         public DarklitLogic(PluginHost host, SimPresetBase preset) : base(host, preset)
@@ -180,7 +182,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 foreach (var slot in _plan.Cycle)
                 {
-                    Party[slot].ActorControl(ActorControlCategory.TetherCancel);
+                    Party[slot].CancelTether();
                     ClearStatus(slot, 2255);
                 }
                 for (var slot = 0; slot < 8; slot++)
@@ -200,7 +202,7 @@ namespace Simulant.Content.U7a.Presets
             var snapshot = PartySnapshot.Capture(Party);
             for (var tower = 0; tower < 2; tower++)
             {
-                var state = snapshot.InArea(ActionArea.Circle(4), _plan.Tower(tower)).Count == 2 ? 0x80 : 0x20;
+                var state = snapshot.InArea(TowerArea, _plan.Tower(tower)).Count == TowerPlayers ? 0x80 : 0x20;
                 if (_towerStates[tower] != state)
                 {
                     Map((uint)(0x2A + tower), (ushort)state);
@@ -215,11 +217,11 @@ namespace Simulant.Content.U7a.Presets
             for (var index = 0; index < 4; index++)
             {
                 var slot = _plan.Cycle[index];
-                Party[slot].ActorControl(ActorControlCategory.TetherCancel);
+                Party[slot].CancelTether();
                 if (id == 111)
                     ClearStatus(slot, 2253);
                 Status(slot, id == 110 ? (ushort)2253 : (ushort)2255, id == 110 ? 7 : 14.6f);
-                Party[slot].ActorControl(ActorControlCategory.Tether, 0, id, Party[_plan.Cycle[(index + 1) % 4]].Id, 15);
+                Party[slot].TetherTo(Party[_plan.Cycle[(index + 1) % 4]], id);
             }
         }
 
@@ -228,15 +230,12 @@ namespace Simulant.Content.U7a.Presets
             var towers = new List<SimMechanic>();
             for (var half = 0; half < 2; half++)
             {
-                var expected = _plan.Soakers.Skip(half * 2).Take(2).ToArray();
+                var expected = _plan.Soakers.Skip(half * TowerPlayers).Take(TowerPlayers).ToArray();
                 var point = _plan.Tower(half);
                 var helper = half;
-                towers.Add(new AreaMechanic
+                towers.Add(new AreaMechanic(half == 0 ? "北侧双人塔" : "南侧双人塔", TowerArea, point)
                 {
-                    Name = half == 0 ? "北侧双人塔" : "南侧双人塔",
-                    Area = ActionArea.Circle(4),
-                    Center = point,
-                    RequiredPlayers = 2,
+                    RequiredPlayers = TowerPlayers,
                     Check = members => members.Any(p => !_plan.Cycle.Contains(p.Slot)) ? "无连线玩家不应踩塔。" : null,
                     Visual = result => PointEffect(helper, 40213, point, hitTargets: result.HitActors),
                     Failed = result => Report(result.DescribeFailure("双人塔", expected)
@@ -244,7 +243,7 @@ namespace Simulant.Content.U7a.Presets
                             ? new[] { Self } : Array.Empty<int>()), result)
                 });
             }
-            Run(towers.ToArray());
+            Run(towers);
         }
 
         private void ResolveProteans()
@@ -264,7 +263,7 @@ namespace Simulant.Content.U7a.Presets
                         ? new[] { Self } : Array.Empty<int>(), "可能是自身站歪了"), result);
                 mechanics.Add(bait);
             }
-            Run(mechanics.ToArray());
+            Run(mechanics);
         }
 
         private void ResolveDance(bool second)
