@@ -112,6 +112,8 @@ namespace Simulant.UI
             this.chkLogFilterAll.AutoCheck = false;
             this.chkLogFilterAll.CheckState = CheckState.Indeterminate;
             this.chkLogFilterAll.Font = new Font("Microsoft YaHei UI", 9F);
+            this.chkLogFilterAll.AutoSize = true;
+            this.chkLogFilterAll.MinimumSize = new Size(53, 27);
             this.chkLogFilterAll.Size = new Size(53, 27);
             this.chkLogFilterAll.Margin = new Padding(0, 2, 6, 5);
             this.chkLogFilterAll.Name = "chkLogFilterAll";
@@ -127,6 +129,8 @@ namespace Simulant.UI
             this.chkLogFilterError.CheckState = CheckState.Checked;
             this.chkLogFilterError.AutoCheck = false;
             this.chkLogFilterError.Font = new Font("Microsoft YaHei UI", 9F);
+            this.chkLogFilterError.AutoSize = true;
+            this.chkLogFilterError.MinimumSize = new Size(53, 27);
             this.chkLogFilterError.Size = new Size(53, 27);
             this.chkLogFilterError.Margin = new Padding(0, 2, 6, 5);
             this.chkLogFilterError.Name = "chkLogFilterError";
@@ -142,6 +146,8 @@ namespace Simulant.UI
             this.chkLogWarning.CheckState = CheckState.Checked;
             this.chkLogWarning.AutoCheck = false;
             this.chkLogWarning.Font = new Font("Microsoft YaHei UI", 9F);
+            this.chkLogWarning.AutoSize = true;
+            this.chkLogWarning.MinimumSize = new Size(53, 27);
             this.chkLogWarning.Size = new Size(53, 27);
             this.chkLogWarning.Margin = new Padding(0, 2, 6, 5);
             this.chkLogWarning.Name = "chkLogWarning";
@@ -157,6 +163,8 @@ namespace Simulant.UI
             this.chkLogFilterRuntime.CheckState = CheckState.Checked;
             this.chkLogFilterRuntime.AutoCheck = false;
             this.chkLogFilterRuntime.Font = new Font("Microsoft YaHei UI", 9F);
+            this.chkLogFilterRuntime.AutoSize = true;
+            this.chkLogFilterRuntime.MinimumSize = new Size(53, 27);
             this.chkLogFilterRuntime.Size = new Size(53, 27);
             this.chkLogFilterRuntime.Margin = new Padding(0, 2, 6, 5);
             this.chkLogFilterRuntime.Name = "chkLogFilterRuntime";
@@ -172,6 +180,8 @@ namespace Simulant.UI
             this.chkLogFilterSim.CheckState = CheckState.Checked;
             this.chkLogFilterSim.AutoCheck = false;
             this.chkLogFilterSim.Font = new Font("Microsoft YaHei UI", 9F);
+            this.chkLogFilterSim.AutoSize = true;
+            this.chkLogFilterSim.MinimumSize = new Size(53, 27);
             this.chkLogFilterSim.Size = new Size(53, 27);
             this.chkLogFilterSim.Margin = new Padding(0, 2, 6, 5);
             this.chkLogFilterSim.Name = "chkLogFilterSim";
@@ -185,6 +195,8 @@ namespace Simulant.UI
             this.chkLogFilterVerbose.Tone = CheckBoxTone.Neutral;
             this.chkLogFilterVerbose.AutoCheck = false;
             this.chkLogFilterVerbose.Font = new Font("Microsoft YaHei UI", 9F);
+            this.chkLogFilterVerbose.AutoSize = true;
+            this.chkLogFilterVerbose.MinimumSize = new Size(53, 27);
             this.chkLogFilterVerbose.Size = new Size(53, 27);
             this.chkLogFilterVerbose.Margin = new Padding(0, 2, 6, 5);
             this.chkLogFilterVerbose.Name = "chkLogFilterVerbose";

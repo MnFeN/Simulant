@@ -26,6 +26,9 @@ namespace Simulant.UI
 
     public class CheckBoxEx : CheckBox
     {
+        private const int ChipTextLeft = 16;
+        private const int ChipTextPadding = ChipTextLeft + 5;
+
         private CheckBoxStyle _style;
         private CheckBoxTone _tone;
         private Color _accent;
@@ -80,6 +83,14 @@ namespace Simulant.UI
                 _useAccentText = value;
                 Invalidate();
             }
+        }
+
+        public override Size GetPreferredSize(Size proposedSize)
+        {
+            var size = base.GetPreferredSize(proposedSize);
+            if (Style == CheckBoxStyle.Chip)
+                size.Width = Math.Max(size.Width, TextRenderer.MeasureText(Text, Font).Width + ChipTextPadding);
+            return size;
         }
 
         private Color ResolveAccent()
@@ -140,7 +151,7 @@ namespace Simulant.UI
             }
 
             var ink = Enabled ? (UseAccentText ? active ? accent : WorkbenchTheme.Muted : ForeColor) : WorkbenchTheme.Dim;
-            PaintText(graphics, new Rectangle(16, 0, Math.Max(0, Width - 21), Height), ink);
+            PaintText(graphics, new Rectangle(ChipTextLeft, 0, Math.Max(0, Width - ChipTextPadding), Height), ink);
         }
 
         private void PaintToggleButton(Graphics graphics, Color border)

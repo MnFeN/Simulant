@@ -20,10 +20,22 @@ namespace Simulant.UI
         private Regex _regex;
         private bool _invalidRegex;
         private readonly ErrorProvider _filterErrors;
+        private readonly string _allLogsLabel;
+        private readonly Dictionary<LogType, (CheckBoxEx Chip, string Label)> _logFilters;
 
         public LogView()
         {
             InitializeComponent();
+            _allLogsLabel = chkLogFilterAll.Text;
+            _logFilters = new Dictionary<LogType, (CheckBoxEx Chip, string Label)>
+            {
+                { LogType.Error, (chkLogFilterError, chkLogFilterError.Text) },
+                { LogType.Warning, (chkLogWarning, chkLogWarning.Text) },
+                { LogType.Runtime, (chkLogFilterRuntime, chkLogFilterRuntime.Text) },
+                { LogType.Sim, (chkLogFilterSim, chkLogFilterSim.Text) },
+                { LogType.Verbose, (chkLogFilterVerbose, chkLogFilterVerbose.Text) }
+            };
+            UpdateLogCounts();
             _filterErrors = new ErrorProvider(components)
             {
                 ContainerControl = this,
@@ -61,27 +73,25 @@ namespace Simulant.UI
                 return;
 
             _logSnapshot = _host.PluginLog.Snapshot();
+            UpdateLogCounts();
             ApplyLogFilter();
         }
 
-        private bool IsLogTypeEnabled(LogType type)
+        private void UpdateLogCounts()
         {
-            switch (type)
+            toolbar.SuspendLayout();
+            chkLogFilterAll.Text = FormattableString.Invariant($"{_allLogsLabel} {_logSnapshot.Values.Sum(logs => logs.Count)}");
+            foreach (var pair in _logFilters)
             {
-                case LogType.Error:
-                    return chkLogFilterError.Checked;
-                case LogType.Warning:
-                    return chkLogWarning.Checked;
-                case LogType.Runtime:
-                    return chkLogFilterRuntime.Checked;
-                case LogType.Sim:
-                    return chkLogFilterSim.Checked;
-                case LogType.Verbose:
-                    return chkLogFilterVerbose.Checked;
-                default:
-                    return false;
+                var count = _logSnapshot.TryGetValue(pair.Key, out var logs) ? logs.Count : 0;
+                var (chip, label) = pair.Value;
+                chip.Text = FormattableString.Invariant($"{label} {count}");
             }
+            toolbar.ResumeLayout();
         }
+
+        private bool IsLogTypeEnabled(LogType type)
+            => _logFilters.TryGetValue(type, out var filter) && filter.Chip.Checked;
 
         private void ApplyLogFilter()
         {
@@ -276,14 +286,8 @@ namespace Simulant.UI
             }
         }
 
-        private IEnumerable<CheckBox> GetLogFilterItems()
-        {
-            yield return chkLogFilterError;
-            yield return chkLogWarning;
-            yield return chkLogFilterRuntime;
-            yield return chkLogFilterSim;
-            yield return chkLogFilterVerbose;
-        }
+        private IEnumerable<CheckBoxEx> GetLogFilterItems()
+            => _logFilters.Values.Select(filter => filter.Chip);
 
         private void chkLogFilterAll_MouseDown(object sender, MouseEventArgs e)
         {
@@ -414,6 +418,7 @@ namespace Simulant.UI
 
             _host.PluginLog.Remove(selectedItems);
             _logSnapshot = _host.PluginLog.Snapshot();
+            UpdateLogCounts();
             var removed = new HashSet<LogItem>(selectedItems);
             // 无效正则会暂停自动筛选，但用户明确删除的日志仍应立即从当前列表移除。
             ReplaceLogRows(_virtualData.Where(item => !removed.Contains(item)).ToList());
@@ -427,6 +432,7 @@ namespace Simulant.UI
         {
             _host?.PluginLog?.Clear();
             _logSnapshot.Clear();
+            UpdateLogCounts();
             _virtualData.Clear();
 
             dgvLog.RowCount = 0;
