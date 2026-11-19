@@ -47,8 +47,6 @@ Work in progress. Collaboration is welcome.
 
   This intercepts all incoming and outgoing packets except heartbeat packets, putting you into local mode.
 
-  For now, do not interact with scene entities (such as the inn door) while in this mode, otherwise you will get stuck.
-
 - Select a map on the left, or enter a map ID. If the map has phases/simulations available, you can pick one from the dropdown list.
 
   To filter for the currently implemented demos, check "Show only maps with preset areas" in the map selection window.

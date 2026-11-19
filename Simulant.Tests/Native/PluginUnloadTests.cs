@@ -89,7 +89,8 @@ namespace Simulant.Tests.Native
                 "恢复音乐",
                 "恢复收包",
                 "恢复发包",
-                "释放代码洞"
+                "释放代码洞",
+                "恢复场景交互"
             };
             var last = -1;
 
@@ -341,6 +342,7 @@ namespace Simulant.Tests.Native
                 PluginHost.Instance = Host;
                 SeedHook("_receive", UnloadMemory.Receive, false);
                 SeedHook("_send", UnloadMemory.Send, true);
+                SeedHook("_interaction", UnloadMemory.Interaction, false);
 
                 if (interruptedEntry)
                     Memory.Failure = "加载地图";
@@ -455,7 +457,7 @@ namespace Simulant.Tests.Native
         public static readonly IntPtr Game = new IntPtr(0x100000), EventPointer = new IntPtr(0x200000),
             BgmPointer = new IntPtr(0x300000), Scene = new IntPtr(0x320000), Player = new IntPtr(0x40000),
             Receive = new IntPtr(0xA00000), Send = new IntPtr(0xB00000), Cave = new IntPtr(0xC00000),
-            LayoutPointer = new IntPtr(0xD00000), Layout = new IntPtr(0xD20000);
+            LayoutPointer = new IntPtr(0xD00000), Layout = new IntPtr(0xD20000), Interaction = new IntPtr(0xE00000);
         private readonly FakeLocalMemory _storage = new FakeLocalMemory();
         private readonly List<string> _events;
         public string Failure;
@@ -519,8 +521,8 @@ namespace Simulant.Tests.Native
 
         public override int WriteBytes(IntPtr address, byte[] bytes)
         {
-            PluginUnloadTests.Assert(address == Receive || address == Send, "不能恢复不属于本次宿主的函数入口。");
-            Step(address == Receive ? "恢复收包" : "恢复发包");
+            PluginUnloadTests.Assert(address == Receive || address == Send || address == Interaction, "不能恢复不属于本次宿主的函数入口。");
+            Step(address == Interaction ? "恢复场景交互" : address == Receive ? "恢复收包" : "恢复发包");
             return bytes.Length;
         }
 

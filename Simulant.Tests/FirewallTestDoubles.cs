@@ -162,6 +162,14 @@ namespace Simulant.Game
     }
 }
 
+namespace Simulant.Game.FFCS.Client.Game.Control
+{
+    internal static class TargetSystem
+    {
+        internal static IntPtr InteractWithObjectFuncPtr { get; set; }
+    }
+}
+
 namespace Simulant.Game.FFCS.Client.System.Framework
 {
     public struct Framework

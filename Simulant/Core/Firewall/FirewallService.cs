@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Simulant.Core.Firewall
 {
-    internal sealed class FirewallService
+    internal sealed partial class FirewallService
     {
         private sealed class HookState
         {
@@ -28,9 +28,12 @@ namespace Simulant.Core.Firewall
         private readonly object _gate = new object();
         private HookState _receive;
         private HookState _send;
+        private HookState _interaction;
         // 进程切换清理失败后，后续重试仍需识别已经结束的旧进程。
         private bool _processResetPending;
         private const int SendHookLength = 15;
+        // xor eax, eax; ret; nop; nop
+        private static readonly byte[] ReturnZeroPatch = { 0x31, 0xC0, 0xC3, 0x90, 0x90 };
 
         public FirewallService(PluginHost host)
         {
@@ -52,7 +55,7 @@ namespace Simulant.Core.Firewall
             get
             {
                 lock (_gate)
-                    return _receive?.NeedsRestore == true || _send?.NeedsRestore == true;
+                    return _receive?.NeedsRestore == true || _send?.NeedsRestore == true || _interaction?.NeedsRestore == true;
             }
         }
 
@@ -62,7 +65,7 @@ namespace Simulant.Core.Firewall
             get
             {
                 lock (_gate)
-                    return _receive != null || _send != null;
+                    return _receive != null || _send != null || _interaction != null;
             }
         }
 
@@ -70,6 +73,7 @@ namespace Simulant.Core.Firewall
         {
             EnableWithRollback(() =>
             {
+                InteractionHookEnableCore();
                 ReceiveHookEnableCore();
                 SendHookEnableCore();
             });
@@ -98,18 +102,14 @@ namespace Simulant.Core.Firewall
         {
             lock (_gate)
             {
-                if (_receive == null && _send == null)
-                    return false;
-                if ((_receive != null && !HasCapturedProcessExited(_receive)) ||
-                    (_send != null && !HasCapturedProcessExited(_send)))
+                var states = new[] { _receive, _send, _interaction }.Where(state => state != null).ToArray();
+                if (states.Length == 0 || states.Any(state => !HasCapturedProcessExited(state)))
                     return false;
 
-                if (_receive != null)
-                    ResetExitedHook(_receive);
-                if (_send != null)
-                    ResetExitedHook(_send);
-                _receive = null;
-                _send = null;
+                foreach (var state in states)
+                    ResetExitedHook(state);
+
+                _receive = _send = _interaction = null;
                 ResetProcessModeIfCleared();
                 LogSafely(() => _host.PlayerActions?.Reset());
                 return true;
@@ -140,13 +140,14 @@ namespace Simulant.Core.Firewall
         {
             lock (_gate)
             {
-                if ((_receive != null && !_receive.Enabled) || (_send != null && !_send.Enabled))
+                if ((_receive != null && !_receive.Enabled) || (_send != null && !_send.Enabled) ||
+                    (_interaction != null && !_interaction.Enabled))
                     throw new InvalidOperationException("防火墙仍有未完成的清理，请先关闭并重试。");
 
                 if (!IsEnabled)
                     _host.EnsureFirewallAllowed();
 
-                if (_receive == null && _send == null)
+                if (_receive == null && _send == null && _interaction == null)
                     _host.CancelCastBeforeFirewall();
 
                 try
@@ -172,37 +173,31 @@ namespace Simulant.Core.Firewall
         {
             List<Exception> errors = null;
 
-            try
+            void Restore(Action restore)
             {
-                ReceiveHookDisableCore();
-            }
-            catch (Exception error)
-            {
-                errors = new List<Exception>
+                try
                 {
-                    error
-                };
+                    restore();
+                }
+                catch (Exception error)
+                {
+                    if (errors == null)
+                        errors = new List<Exception>();
+
+                    errors.Add(error);
+                }
             }
 
-            try
-            {
-                SendHookDisableCore();
-            }
-            catch (Exception error)
-            {
-                if (errors == null)
-                    errors = new List<Exception>();
-
-                errors.Add(error);
-            }
-
+            Restore(ReceiveHookDisableCore);
+            Restore(SendHookDisableCore);
+            Restore(RestoreInteractionWhenNetworkRestored);
             ResetProcessModeIfCleared();
             return errors;
         }
 
         private void ResetProcessModeIfCleared()
         {
-            if (_receive == null && _send == null)
+            if (_receive == null && _send == null && _interaction == null)
                 _processResetPending = false;
         }
 
@@ -221,7 +216,7 @@ namespace Simulant.Core.Firewall
 
             var vFuncOnReceivePtr = dispatcher.Ptr.GetVFuncPtr(1);
             LogSafely(() => _host.LogVerbose($"OnReceivePacket at {(ulong)vFuncOnReceivePtr:X}"));
-            var state = CaptureHook(memory, processHandle, vFuncOnReceivePtr, 5);
+            var state = CaptureHook(memory, processHandle, vFuncOnReceivePtr, ReturnZeroPatch.Length);
             _receive = state;
 
             try
@@ -234,15 +229,7 @@ namespace Simulant.Core.Firewall
             }
 
             // 可以拦截全部收包，恢复后不会掉线
-            // patch:
-            // xor eax, eax     31 C0
-            // ret              C3
-            state.NeedsRestore = true;
-            WriteExact(state, state.Target, new byte[]
-            {
-                0x31, 0xC0, 0xC3, 0x90, 0x90
-            });
-            state.Enabled = true;
+            InstallReturnZeroHook(state);
             LogSafely(() => _host.LogRuntime("收包 Hook 已开启，拦截全部收包。"));
         }
 
@@ -251,6 +238,7 @@ namespace Simulant.Core.Firewall
             lock (_gate)
             {
                 ReceiveHookDisableCore();
+                RestoreInteractionWhenNetworkRestored();
                 ResetProcessModeIfCleared();
             }
         }
@@ -283,14 +271,7 @@ namespace Simulant.Core.Firewall
                 return;
             }
 
-            state.Enabled = false;
-
-            if (state.NeedsRestore)
-            {
-                WriteExact(state, state.Target, state.Original);
-                state.NeedsRestore = false;
-            }
-
+            RestoreEntry(state);
             state.RestoreNetworkTimeout?.Invoke();
             _receive = null;
             LogSafely(() => _host.LogRuntime("收包 Hook 已关闭，恢复正常收包。"));
@@ -430,6 +411,7 @@ namespace Simulant.Core.Firewall
             lock (_gate)
             {
                 SendHookDisableCore();
+                RestoreInteractionWhenNetworkRestored();
                 ResetProcessModeIfCleared();
             }
         }
@@ -461,14 +443,7 @@ namespace Simulant.Core.Firewall
                 return;
             }
 
-            state.Enabled = false;
-
-            // 恢复原函数入口指令
-            if (state.NeedsRestore)
-            {
-                WriteExact(state, state.Target, state.Original);
-                state.NeedsRestore = false;
-            }
+            RestoreEntry(state);
 
             // 释放代码洞
             if (state.Cave != IntPtr.Zero)
@@ -492,7 +467,7 @@ namespace Simulant.Core.Firewall
             if (memory == null || !memory.IsProcessOpen || memory.ProcessHandle == IntPtr.Zero)
                 throw new InvalidOperationException("防火墙无法访问当前游戏进程。");
 
-            var existing = _receive ?? _send;
+            var existing = _receive ?? _send ?? _interaction;
 
             if (existing != null && (!ReferenceEquals(existing.Memory, memory) ||
                 existing.ProcessHandle != memory.ProcessHandle))
@@ -523,6 +498,23 @@ namespace Simulant.Core.Firewall
                 throw new InvalidOperationException("防火墙未能完整读取函数入口，不能写入补丁。");
 
             return state;
+        }
+
+        private static void InstallReturnZeroHook(HookState state)
+        {
+            state.NeedsRestore = true;
+            WriteExact(state, state.Target, ReturnZeroPatch);
+            state.Enabled = true;
+        }
+
+        private static void RestoreEntry(HookState state)
+        {
+            state.Enabled = false;
+            if (!state.NeedsRestore)
+                return;
+
+            WriteExact(state, state.Target, state.Original);
+            state.NeedsRestore = false;
         }
 
         private static void EnsureCapturedProcess(HookState state)

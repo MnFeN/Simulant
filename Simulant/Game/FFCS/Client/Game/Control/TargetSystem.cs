@@ -11,6 +11,11 @@ namespace Simulant.Game.FFCS.Client.Game.Control
         [SigPattern("48 8D 0D * * * * E8 ?? ?? ?? ?? 48 3B C6 0F 95 C0")]
         public static IntPtr InstancePtr { get; set; }
 
+        // 交互入口签名参考 Hyperborea/Memory.cs 的 TargetSystem_InteractWithObjectHook。
+        // https://github.com/MnFeN/Hyperborea/blob/ee7c028e4b8475845b8f3d1bbd5957f5282181a2/Hyperborea/Memory.cs#L28-L30
+        [SigPattern("48 89 5C 24 ?? 48 89 6C 24 ?? 56 48 83 EC 20 48 8B E9 41 0F B6 F0")]
+        internal static IntPtr InteractWithObjectFuncPtr { get; set; }
+
         public static TargetSystem Instance() => InstancePtr.As<TargetSystem>();
         public MemoryField<IntPtr> Target => Ptr.Field<IntPtr>(0x80);
         public MemoryField<IntPtr> SoftTarget => Ptr.Field<IntPtr>(0x88);

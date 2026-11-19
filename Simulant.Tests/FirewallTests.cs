@@ -3,6 +3,7 @@ using SimuMagic;
 using Simulant.Core;
 using Simulant.Core.Firewall;
 using Simulant.Game;
+using Simulant.Game.FFCS.Client.Game.Control;
 using Simulant.Game.FFCS.Client.System.Framework;
 using System;
 using System.Diagnostics;
@@ -75,6 +76,8 @@ namespace Simulant.Tests
                     0x31, 0xC0, 0xC3, 0x90, 0x90
                 }),
                     "收包补丁字节不能因状态管理修改而改变。");
+                Assert(scene.Memory.Writes[0].Address == scene.Interaction && scene.InteractionBlocked,
+                    "场景交互入口应在收发包拦截前关闭。");
                 var cave = scene.Memory.Allocated.Single();
                 var expectedEntry = new byte[]
                 {
@@ -116,6 +119,7 @@ namespace Simulant.Tests
                     "重复开启不能重写入口或再次分配代码洞。");
                 scene.Service.Disable();
                 scene.AssertRestored();
+                Assert(scene.Memory.Writes.Last().Address == scene.Interaction, "恢复网络入口后再恢复场景交互。");
                 Assert(!scene.Service.IsEnabled && !scene.Service.HasActiveHooks && !scene.Service.HasPendingCleanup,
                     "正常关闭后不能保留已清理记录。");
                 writes = scene.Memory.Writes.Count;
@@ -128,7 +132,7 @@ namespace Simulant.Tests
         public static void FirewallEnableFailuresRollBackEveryCompletedStage()
         {
             // 分别覆盖收包短写、分配失败、代码洞短写/异常、入口短写/异常及心跳地址缺失。
-            for (var stage = 0; stage < 8; stage++)
+            for (var stage = 0; stage < 10; stage++)
             {
                 using (var scene = new FirewallScene())
                 {
@@ -138,14 +142,16 @@ namespace Simulant.Tests
                     scene.Memory.WriteResult = (address, bytes) =>
                     {
                         var receivePatch = address == scene.Receive && bytes[0] == 0x31;
-                        var cavePatch = address != scene.Receive && address != scene.Send;
+                        var cavePatch = address != scene.Receive && address != scene.Send && address != scene.Interaction;
+                        var interactionPatch = address == scene.Interaction && bytes[0] == 0x31;
                         var sendPatch = address == scene.Send && bytes[0] == 0xFF;
 
                         if ((selectedStage == 0 && receivePatch) || (selectedStage == 3 && cavePatch) ||
-                            (selectedStage == 5 && sendPatch))
+                            (selectedStage == 5 && sendPatch) || (selectedStage == 8 && interactionPatch))
                             return bytes.Length - 1;
 
-                        if ((selectedStage == 4 && cavePatch) || (selectedStage == 6 && sendPatch))
+                        if ((selectedStage == 4 && cavePatch) || (selectedStage == 6 && sendPatch) ||
+                            (selectedStage == 9 && interactionPatch))
                             throw failure;
 
                         return null;
@@ -162,7 +168,7 @@ namespace Simulant.Tests
 
                     var error = Throws<InvalidOperationException>(scene.Service.Enable);
 
-                    if (stage == 2 || stage == 4 || stage == 6)
+                    if (stage == 2 || stage == 4 || stage == 6 || stage == 9)
                         Assert(ReferenceEquals(error, failure), "成功回滚后必须保留最初的原生异常。");
 
                     scene.AssertRestored();
@@ -171,7 +177,7 @@ namespace Simulant.Tests
                     Assert(scene.Memory.Freed.Count == scene.Memory.Allocated.Count,
                         "已经分配但未启用的代码洞也必须回收，阶段：" + stage);
 
-                    if (stage < 5 || stage == 7)
+                    if (stage < 5 || stage >= 7)
                         Assert(!scene.Memory.Writes.Any(write => write.Address == scene.Send),
                             "发包入口尚未写入时，回滚不应触碰它。");
                 }
@@ -250,6 +256,7 @@ namespace Simulant.Tests
                         Throws<AggregateException>(scene.Service.Disable);
                         Assert(scene.Service.HasPendingCleanup && scene.Service.HasActiveHooks && !scene.Service.IsEnabled,
                         "恢复失败后必须保留失败入口，同时撤销完整启用状态。");
+                        Assert(scene.InteractionBlocked, "收发包仍被拦截时，应继续禁止场景交互。");
                         Assert(scene.Memory.Freed.Count == (failReceive ? 1 : 0),
                         "只有发包入口已恢复后才可释放代码洞，另一端失败不能阻止清理成功端。");
                         var successfulWrites = scene.Memory.Writes.Count(write => write.Address == successfulTarget);
@@ -537,6 +544,7 @@ namespace Simulant.Tests
                         AssertUntouched(nextMemory);
 
                         // 在当前 B 进程重新安装后，未收到新的进程切换就仍应使用普通关闭规则。
+                        nextMemory.Blocks[TargetSystem.InteractWithObjectFuncPtr] = (byte[])scene.InteractionOriginal.Clone();
                         nextMemory.Blocks[Framework.ReceiveTarget] = (byte[])scene.ReceiveOriginal.Clone();
                         nextMemory.Blocks[AddressStore.OnSendPacketFuncPtr] = (byte[])scene.SendOriginal.Clone();
                         nextMemory.Blocks[AddressStore.HeartBeatOpcodeLocatePtr + 4] = new byte[]
@@ -590,9 +598,45 @@ namespace Simulant.Tests
                 ExternalProcessMemory nextMemory = null;
                 Framework.BeforeResolve = () => nextMemory = scene.SwitchCurrentProcess();
                 Throws<InvalidOperationException>(scene.Service.Enable);
-                Assert(scene.Memory.Writes.Count == 0 && !scene.Service.HasPendingCleanup,
+                scene.AssertRestored();
+                Assert(scene.Memory.Writes.All(write => write.Address == scene.Interaction) && !scene.Service.HasPendingCleanup,
                     "解析入口期间内存实例发生变化时不能把新进程地址写入旧进程。");
                 AssertUntouched(nextMemory);
+            }
+        }
+
+        public static void FirewallRejectsMissingOrModifiedInteractionEntry()
+        {
+            using (var scene = new FirewallScene())
+            {
+                TargetSystem.InteractWithObjectFuncPtr = IntPtr.Zero;
+                Throws<InvalidOperationException>(scene.Service.Enable);
+                TargetSystem.InteractWithObjectFuncPtr = scene.Interaction;
+                var modified = new byte[] { 0xE9, 0x01, 0x02, 0x03, 0x04 };
+                scene.Memory.Blocks[scene.Interaction] = modified;
+                Throws<InvalidOperationException>(scene.Service.Enable);
+                Assert(scene.Memory.Writes.Count == 0 && !scene.Service.HasPendingCleanup && !scene.Service.IsEnabled &&
+                    scene.Memory.Blocks[scene.Interaction].SequenceEqual(modified),
+                    "交互入口缺失或已被修改时，应保持防火墙关闭并保留原字节。");
+            }
+        }
+
+        public static void FirewallInteractionRestoreCanBeRetried()
+        {
+            using (var scene = new FirewallScene())
+            {
+                scene.Service.Enable();
+                scene.Memory.WriteResult = (address, bytes) => address == scene.Interaction ? (int?)0 : null;
+                Throws<AggregateException>(scene.Service.Disable);
+                Assert(scene.Service.HasPendingCleanup && scene.Service.HasActiveHooks && !scene.Service.IsEnabled &&
+                    scene.InteractionBlocked && scene.Parser.NetworkTimeout == 60,
+                    "交互恢复失败时应保留原始字节供重试，网络入口仍可恢复。");
+                var writes = scene.Memory.Writes.Count;
+                scene.Memory.WriteResult = null;
+                scene.Service.Disable();
+                Assert(scene.Memory.Writes.Skip(writes).Single().Address == scene.Interaction,
+                    "重试时只应恢复尚未恢复的场景交互入口。");
+                scene.AssertRestored();
             }
         }
 
@@ -682,6 +726,10 @@ namespace Simulant.Tests
             internal readonly IntPtr Receive = new IntPtr(0x1000);
             internal readonly IntPtr Send = new IntPtr(0x2000);
             internal readonly IntPtr Heartbeat = new IntPtr(0x3000);
+            internal readonly IntPtr Interaction = new IntPtr(0x3500);
+            internal readonly byte[] InteractionOriginal = { 0x48, 0x89, 0x5C, 0x24, 0x10 };
+
+            internal bool InteractionBlocked => Memory.Blocks[Interaction].SequenceEqual(new byte[] { 0x31, 0xC0, 0xC3, 0x90, 0x90 });
             internal readonly byte[] ReceiveOriginal =
             {
                 0x48,
@@ -715,6 +763,7 @@ namespace Simulant.Tests
 
             internal FirewallScene()
             {
+                Memory.Blocks[Interaction] = (byte[])InteractionOriginal.Clone();
                 Memory.Blocks[Receive] = (byte[])ReceiveOriginal.Clone();
                 Memory.Blocks[Send] = (byte[])SendOriginal.Clone();
                 Memory.Blocks[Heartbeat + 4] = new byte[]
@@ -726,6 +775,7 @@ namespace Simulant.Tests
                 {
                     Memory = Memory
                 };
+                TargetSystem.InteractWithObjectFuncPtr = Interaction;
                 AddressStore.OnSendPacketFuncPtr = Send;
                 AddressStore.HeartBeatOpcodeLocatePtr = Heartbeat;
                 Framework.ReceiveTarget = Receive;
@@ -747,11 +797,13 @@ namespace Simulant.Tests
                 AddressStore.OnSendPacketFuncPtr = new IntPtr(0x9000);
                 AddressStore.HeartBeatOpcodeLocatePtr = new IntPtr(0xA000);
                 Framework.ReceiveTarget = new IntPtr(0xB000);
+                TargetSystem.InteractWithObjectFuncPtr = new IntPtr(0xC000);
                 return next;
             }
 
             internal void AssertRestored()
-                => Assert(Memory.Blocks[Receive].SequenceEqual(ReceiveOriginal) &&
+                => Assert(Memory.Blocks[Interaction].SequenceEqual(InteractionOriginal) &&
+                    Memory.Blocks[Receive].SequenceEqual(ReceiveOriginal) &&
                     Memory.Blocks[Send].SequenceEqual(SendOriginal) && Parser.NetworkTimeout == 60,
                     "两个原函数入口及解析插件诊断阈值都必须恢复到开启前的状态。");
 
@@ -766,6 +818,7 @@ namespace Simulant.Tests
                 AddressStore.OnSendPacketFuncPtr = IntPtr.Zero;
                 AddressStore.HeartBeatOpcodeLocatePtr = IntPtr.Zero;
                 Framework.ReceiveTarget = IntPtr.Zero;
+                TargetSystem.InteractWithObjectFuncPtr = IntPtr.Zero;
             }
         }
     }

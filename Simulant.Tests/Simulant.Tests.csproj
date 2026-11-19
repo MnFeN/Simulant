@@ -92,6 +92,8 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="..\Simulant\UI\Controls\NumericTextBoxEx.cs" />
+    <Compile Include="..\Simulant\UI\Controls\TextBoxEx.cs" />
+    <Compile Include="..\Simulant\UI\Controls\NativeControlPaint.cs" />
     <Compile Include="..\Simulant\UI\Controls\ScrollBarTheme.cs" />
     <Compile Include="..\Simulant\UI\Controls\SimulantMark.cs">
       <SubType>Component</SubType>
@@ -181,6 +183,9 @@
     <Compile Include="FirewallTestDoubles.cs" />
     <Compile Include="..\Simulant\ACT\XivPluginInterop.cs">
       <Link>ACT\XivPluginInterop.cs</Link>
+    </Compile>
+    <Compile Include="..\Simulant\Core\Firewall\FirewallService.Interaction.cs">
+      <Link>Firewall\FirewallService.Interaction.cs</Link>
     </Compile>
     <Compile Include="..\Simulant\Core\Firewall\FirewallService.cs">
       <Link>Firewall\FirewallService.cs</Link>
