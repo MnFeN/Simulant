@@ -31,6 +31,8 @@ namespace Simulant.UI
         {
             _lifetimeToken = _lifetime.Token;
             InitializeComponent();
+            Icon = PluginWindowIcon;
+            chkKeepOnTop.CheckedChanged += (_, __) => TopMost = chkKeepOnTop.Checked;
             ScrollBarTheme.Attach(panelShapes);
         }
 

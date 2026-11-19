@@ -62,6 +62,7 @@ namespace Simulant.UI
             this.chkShape17 = new Simulant.UI.CheckBoxEx();
             this.panelTop = new System.Windows.Forms.TableLayoutPanel();
             this.chkNewOnly = new Simulant.UI.CheckBoxEx();
+            this.chkKeepOnTop = new Simulant.UI.CheckBoxEx();
             this.lblResult = new System.Windows.Forms.Label();
             this.panelButtons = new System.Windows.Forms.FlowLayoutPanel();
             this.btnReset = new Simulant.UI.ButtonEx();
@@ -589,13 +590,15 @@ namespace Simulant.UI
             // 
             this.panelTop.AutoSize = true;
             this.panelTop.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.panelTop.ColumnCount = 3;
+            this.panelTop.ColumnCount = 4;
             this.panelTop.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
             this.panelTop.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.panelTop.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.panelTop.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 130F));
             this.panelTop.Controls.Add(this.chkNewOnly, 0, 0);
             this.panelTop.Controls.Add(this.lblResult, 1, 0);
             this.panelTop.Controls.Add(this.panelButtons, 2, 0);
+            this.panelTop.Controls.Add(this.chkKeepOnTop, 3, 0);
             this.panelTop.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelTop.Location = new System.Drawing.Point(0, 0);
             this.panelTop.Name = "panelTop";
@@ -618,13 +621,24 @@ namespace Simulant.UI
             this.toolTip.SetToolTip(this.chkNewOnly, "仅显示在最新版本中新增的技能。当前暂不比较旧版本，所有技能均视为非新增。");
             this.chkNewOnly.UseVisualStyleBackColor = false;
             // 
+            // chkKeepOnTop
+            //
+            this.chkKeepOnTop.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.chkKeepOnTop.Location = new System.Drawing.Point(1023, 0);
+            this.chkKeepOnTop.Margin = System.Windows.Forms.Padding.Empty;
+            this.chkKeepOnTop.Name = "chkKeepOnTop";
+            this.chkKeepOnTop.Size = new System.Drawing.Size(130, 44);
+            this.chkKeepOnTop.Style = Simulant.UI.CheckBoxStyle.Switch;
+            this.chkKeepOnTop.TabIndex = 2;
+            this.chkKeepOnTop.Text = "窗口置顶";
+            //
             // lblResult
             // 
             this.lblResult.AutoSize = true;
             this.lblResult.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblResult.Location = new System.Drawing.Point(147, 0);
             this.lblResult.Name = "lblResult";
-            this.lblResult.Size = new System.Drawing.Size(781, 44);
+            this.lblResult.Size = new System.Drawing.Size(651, 44);
             this.lblResult.TabIndex = 3;
             this.lblResult.Text = "正在准备……";
             this.lblResult.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -638,7 +652,7 @@ namespace Simulant.UI
             this.panelButtons.Controls.Add(this.btnSearch);
             this.panelButtons.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelButtons.FlowDirection = System.Windows.Forms.FlowDirection.RightToLeft;
-            this.panelButtons.Location = new System.Drawing.Point(934, 3);
+            this.panelButtons.Location = new System.Drawing.Point(804, 3);
             this.panelButtons.Name = "panelButtons";
             this.panelButtons.Size = new System.Drawing.Size(216, 38);
             this.panelButtons.TabIndex = 1;
@@ -948,6 +962,7 @@ namespace Simulant.UI
         private System.Windows.Forms.FlowLayoutPanel panelShapes;
         private System.Windows.Forms.TableLayoutPanel panelFilters;
         private CheckBoxEx chkNewOnly;
+        private CheckBoxEx chkKeepOnTop;
         private CheckBoxEx chkShapeAll;
         private System.Windows.Forms.Label lblResult;
         private ButtonEx btnSearch;

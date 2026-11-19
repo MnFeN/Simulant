@@ -12,8 +12,6 @@ namespace Simulant.UI
 {
     internal sealed partial class EnvironmentEditorForm : FormEx
     {
-        private static readonly Icon WindowIcon = new Icon(typeof(EnvironmentEditorForm), "Simulant.ico");
-
         private readonly PluginHost _host;
         private readonly Timer _poll = new Timer { Interval = 500 };
         private readonly LabelEx _region = MakeLabel("等待游戏区域", LabelTone.Heading);
@@ -44,7 +42,7 @@ namespace Simulant.UI
             Text = "场景调整";
             StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = true;
-            Icon = WindowIcon;
+            Icon = PluginWindowIcon;
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1100, 550);
             MinimumSize = new Size(330, 420);

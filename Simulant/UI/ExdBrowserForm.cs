@@ -25,6 +25,7 @@ namespace Simulant.UI
         {
             _token = _lifetime.Token;
             InitializeComponent();
+            Icon = PluginWindowIcon;
         }
 
         protected override void OnLoad(EventArgs e)

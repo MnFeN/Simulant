@@ -9,6 +9,8 @@ namespace Simulant.UI
 {
     public class FormEx : Form
     {
+        protected static Icon PluginWindowIcon { get; } = new Icon(typeof(FormEx), "Simulant.ico");
+
         public FormEx()
         {
             BackColor = WorkbenchTheme.Canvas;

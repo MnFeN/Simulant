@@ -166,34 +166,12 @@ namespace Simulant.UI
             var resources = new ToolStripMenuItem("游戏资源");
 
             _exdResourceMenuItem = new ToolStripMenuItem("通用 exd", null, (_, __) =>
-            {
-                if (_exdBrowserForm == null || _exdBrowserForm.IsDisposed)
-                {
-                    _exdBrowserForm = new ExdBrowserForm();
-                    _exdBrowserForm.Show(this);
-                }
-                else
-                {
-                    _exdBrowserForm.Show();
-                    _exdBrowserForm.Activate();
-                }
-            });
+                ShowToolWindow(ref _exdBrowserForm, () => new ExdBrowserForm()));
 
             resources.DropDownItems.Add(_exdResourceMenuItem);
 
             _actionResourceMenuItem = new ToolStripMenuItem("Action", null, (_, __) =>
-            {
-                if (_actionListForm == null || _actionListForm.IsDisposed)
-                {
-                    _actionListForm = new ActionListForm(_host);
-                    _actionListForm.Show(this);
-                }
-                else
-                {
-                    _actionListForm.Show();
-                    _actionListForm.Activate();
-                }
-            });
+                ShowToolWindow(ref _actionListForm, () => new ActionListForm(_host)));
 
             resources.DropDownItems.Add(_actionResourceMenuItem);
             menu.Items.Add(resources);
@@ -621,18 +599,22 @@ namespace Simulant.UI
             if (_host == null)
                 return;
 
-            if (_environmentEditorForm == null || _environmentEditorForm.IsDisposed)
-            {
-                _environmentEditorForm = new EnvironmentEditorForm(_host);
-                _environmentEditorForm.Show();
-            }
-            else
-            {
-                if (_environmentEditorForm.WindowState == FormWindowState.Minimized)
-                    _environmentEditorForm.WindowState = FormWindowState.Normal;
+            ShowToolWindow(ref _environmentEditorForm, () => new EnvironmentEditorForm(_host));
+        }
 
-                _environmentEditorForm.Activate();
+        private static void ShowToolWindow<T>(ref T window, Func<T> create) where T : Form
+        {
+            if (window == null || window.IsDisposed)
+            {
+                window = create();
+                window.ShowInTaskbar = true;
             }
+
+            if (window.WindowState == FormWindowState.Minimized)
+                window.WindowState = FormWindowState.Normal;
+
+            window.Show();
+            window.Activate();
         }
 
         private void btnSimExit_Click(object sender, EventArgs e)
