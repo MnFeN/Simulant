@@ -165,13 +165,11 @@ namespace Simulant.UI
             });
             var resources = new ToolStripMenuItem("游戏资源");
 
-            _exdResourceMenuItem = new ToolStripMenuItem("通用 exd", null, (_, __) =>
-                ShowToolWindow(ref _exdBrowserForm, () => new ExdBrowserForm()));
+            _exdResourceMenuItem = new ToolStripMenuItem("通用 exd", null, (_, __) => OpenExdBrowser());
 
             resources.DropDownItems.Add(_exdResourceMenuItem);
 
-            _actionResourceMenuItem = new ToolStripMenuItem("Action", null, (_, __) =>
-                ShowToolWindow(ref _actionListForm, () => new ActionListForm(_host)));
+            _actionResourceMenuItem = new ToolStripMenuItem("Action", null, (_, __) => OpenActionList());
 
             resources.DropDownItems.Add(_actionResourceMenuItem);
             menu.Items.Add(resources);
@@ -214,14 +212,30 @@ namespace Simulant.UI
         internal void ReceiveSimulationCommand(string command)
         {
             System.Action action;
-            if (string.Equals(command?.Trim(), "start", StringComparison.OrdinalIgnoreCase))
-                action = presetControl.StartCurrentSession;
-            else if (string.Equals(command?.Trim(), "stop", StringComparison.OrdinalIgnoreCase))
-                action = StopCurrentSession;
-            else if (string.Equals(command?.Trim(), "retry", StringComparison.OrdinalIgnoreCase))
-                action = presetControl.RetryCurrentSession;
-            else
-                return;
+            switch (command?.Trim().ToLowerInvariant())
+            {
+                case "start":
+                    action = presetControl.StartCurrentSession;
+                    break;
+                case "stop":
+                    action = StopCurrentSession;
+                    break;
+                case "retry":
+                    action = presetControl.RetryCurrentSession;
+                    break;
+                case "a":
+                case "action":
+                    action = OpenActionList;
+                    break;
+                case "exd":
+                    action = OpenExdBrowser;
+                    break;
+                case "env":
+                    action = OpenEnvironmentEditor;
+                    break;
+                default:
+                    return;
+            }
 
             if (IsDisposed || Disposing || _host.Disposed || !IsHandleCreated)
                 return;
@@ -273,7 +287,7 @@ namespace Simulant.UI
                 return;
             }
 
-            var gameDataReady = _host.GameDataReady && !_host.GameDataLoading;
+            var gameDataReady = GameDataAvailable;
             var pluginReady = _host.PluginReady && !_host.IsInitializing;
             var firewallEnabled = _host.FirewallEnabled;
             var firewallReady = pluginReady && firewallEnabled;
@@ -594,12 +608,31 @@ namespace Simulant.UI
             }
         }
 
-        private void btnEnvironment_Click(object sender, EventArgs e)
-        {
-            if (_host == null)
-                return;
+        private bool GameDataAvailable => _host.GameDataReady && !_host.GameDataLoading;
 
-            ShowToolWindow(ref _environmentEditorForm, () => new EnvironmentEditorForm(_host));
+        private void OpenActionList()
+            => ShowResourceWindow(ref _actionListForm, () => new ActionListForm(_host));
+
+        private void OpenExdBrowser()
+            => ShowResourceWindow(ref _exdBrowserForm, () => new ExdBrowserForm());
+
+        private void ShowResourceWindow<T>(ref T window, Func<T> create) where T : Form
+        {
+            if (!GameDataAvailable)
+            {
+                _host.LogWarning("游戏数据尚未就绪，请等待加载完成后再打开检索窗口。");
+                return;
+            }
+
+            ShowToolWindow(ref window, create);
+        }
+
+        private void btnEnvironment_Click(object sender, EventArgs e) => OpenEnvironmentEditor();
+
+        private void OpenEnvironmentEditor()
+        {
+            if (_host != null)
+                ShowToolWindow(ref _environmentEditorForm, () => new EnvironmentEditorForm(_host));
         }
 
         private static void ShowToolWindow<T>(ref T window, Func<T> create) where T : Form
