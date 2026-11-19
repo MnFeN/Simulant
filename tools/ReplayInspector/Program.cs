@@ -11,43 +11,91 @@ namespace Simulant.ReplayTool
         {
             if (args.Length == 0 || args[0] == "--help")
             {
-                Console.WriteLine("回放只读检查工具\n用法：Simulant.ReplayInspector.exe <回放.dat> [--output <新输出目录>] [--profile CN7.57|CN7.58]\n不指定版本时只输出候选；指定版本仍需核对录制版本，不会自动把内部构建号当作补丁号。");
+                Console.WriteLine("回放只读检查和转换工具");
+                Console.WriteLine("Simulant.ReplayInspector.exe <回放.dat> [--output <新目录>] [--profile CN7.57|CN7.58]");
+                Console.WriteLine("Simulant.ReplayInspector.exe convert <回放.dat> --profile CN7.58 [--start-ms <毫秒>] [--end-ms <毫秒>] [--output <新目录>]");
+                Console.WriteLine("Simulant.ReplayInspector.exe generate <timeline.json> --output <新C#文件>");
                 return args.Length == 0 ? 2 : 0;
             }
 
             try
             {
+                var convert = args[0] == "convert";
+                var generate = args[0] == "generate";
+                var inputIndex = convert || generate ? 1 : 0;
+                if (args.Length <= inputIndex)
+                    throw new ArgumentException("缺少输入文件。");
+
+                var input = args[inputIndex];
                 string output = null, profile = null;
-
-                for (var i = 1; i < args.Length; i++)
+                var startMs = 0u;
+                var endMs = uint.MaxValue;
+                for (var i = inputIndex + 1; i < args.Length; i++)
                 {
-                    if ((args[i] != "--output" && args[i] != "--profile") || i + 1 >= args.Length)
-                        throw new ArgumentException("无法识别或缺少值的参数：" + args[i]);
+                    var option = args[i];
+                    if (++i >= args.Length)
+                        throw new ArgumentException("缺少参数值：" + option);
 
-                    var option = args[i++];
+                    switch (option)
+                    {
+                        case "--output":
+                            output = args[i];
+                            break;
+                        case "--profile" when !generate:
+                            profile = args[i];
+                            break;
+                        case "--start-ms" when convert:
+                            startMs = ParseMilliseconds(args[i], option);
+                            break;
+                        case "--end-ms" when convert:
+                            endMs = ParseMilliseconds(args[i], option);
+                            break;
+                        default:
+                            throw new ArgumentException("无法识别参数：" + option);
+                    }
+                }
 
-                    if (option == "--output")
-                        output = args[i];
-                    else
-                        profile = args[i];
+                if (generate)
+                {
+                    if (output == null)
+                        throw new ArgumentException("请指定 --output 和新的 C# 文件名。");
+                    ReplayConversion.Generate(input, output);
+                    Console.WriteLine("C# 时间轴底稿：" + Path.GetFullPath(output));
+                    return 0;
                 }
 
                 if (output == null)
                     output = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "reports",
-                        Path.GetFileNameWithoutExtension(args[0]) + "-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff", CultureInfo.InvariantCulture) + "Z");
+                        Path.GetFileNameWithoutExtension(input) + "-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff", CultureInfo.InvariantCulture) + "Z");
 
-                var result = ReplayInspector.Export(args[0], output, profile);
+                if (convert)
+                {
+                    ReplayConversion.Convert(input, output, profile, startMs, endMs);
+                    Console.WriteLine("导出完成：" + Path.GetFullPath(output));
+                    Console.WriteLine("时间轴位于 timeline.json 和 timeline.g.cs，整份回放的调查清单位于 summary.md 和 TSV 文件。");
+                    return 0;
+                }
+
+                var result = ReplayInspector.Export(input, output, profile);
                 Console.WriteLine(FormattableString.Invariant($"读取完成：{result.PacketCount} 条记录，{result.OpcodeCount} 种 opcode，最大时间 {result.MaxTimestampMs / 1000.0:F3} 秒。"));
                 Console.WriteLine("原文件 SHA-256：" + result.Sha256);
                 Console.WriteLine("输出目录：" + result.OutputDirectory);
-                Console.WriteLine("请先查看 summary.md 与 opcodes.csv；全部记录位于 packets.csv。此阶段不生成或执行模拟时间轴。");
+                Console.WriteLine("请先查看 summary.md 与 opcodes.csv；全部记录位于 packets.csv。");
                 return 0;
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine("回放读取失败：" + ex.Message);
+                Console.Error.WriteLine("回放处理失败：" + ex.Message);
                 return 1;
             }
+        }
+
+        private static uint ParseMilliseconds(string value, string option)
+        {
+            if (!uint.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var milliseconds))
+                throw new ArgumentException(option + " 需要非负的整数毫秒。");
+
+            return milliseconds;
         }
     }
 }

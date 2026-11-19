@@ -15,7 +15,11 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Compile Include="Program.cs" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml" />
+    <Compile Include="*.cs" />
+    <Compile Include="..\..\Simulant\Game\PacketCodec.cs"><Link>Game\PacketCodec.cs</Link></Compile>
+    <Compile Include="..\..\Simulant\Utils\Maths\Angles.cs"><Link>Utils\Maths\Angles.cs</Link></Compile>
     <Compile Include="..\..\Simulant\Replay\*.cs"><Link>Replay\%(Filename)%(Extension)</Link></Compile>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

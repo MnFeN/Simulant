@@ -67,6 +67,20 @@ namespace Simulant.Replay
         // 旧版回放表用于已知稳定包的对齐；生成包使用当前 FFCS，名单使用项目已核对的原生收包布局。
         private static readonly Dictionary<string, int[]> Lengths = new Dictionary<string, int[]>
         {
+            { "InitZone", new[] { 0x88 } },
+            { "BossStatusEffectList", new[] { 0x2E8 } },
+            { "UpdatePartyMemberPositions", new[] { 0x40 } },
+            { "ModelEquip", new[] { 0x48 } },
+            { "StatusLoopVfx", new[] { 0x08 } },
+            { "CharacterDrawData", new[] { 0x08 } },
+            { "MapEffectStateSnapshot", new[] { 0x88 } },
+            { "MapEffect4", new[] { 0x18 } },
+            { "MapEffect8", new[] { 0x30 } },
+            { "MapEffect12", new[] { 0x40 } },
+            { "ContentDirectorEvent", new[] { 0x18 } },
+            { "ContentDirectorUiState", new[] { 0x20 } },
+            { "ContentDirectorSlotAssignments", new[] { 0x08 } },
+            { "ActorTimelineBatch", new[] { 0x40 } },
             {
                 "ActorMove",
                 new[]
@@ -1239,7 +1253,7 @@ namespace Simulant.Replay
             },
         };
 
-        // 2026-11-16 核对 opcode-worker 的 7.58.json；仅迁入战斗回放相关的服务器包。
+        // 7.58 对照实录与该客户端的回放分发函数，避免同 opcode 的上游别名被误用于回放。
         private static readonly Dictionary<ushort, string> China758Opcodes = new Dictionary<ushort, string>
         {
             [0x00AE] = "ActorMove",
@@ -1257,7 +1271,7 @@ namespace Simulant.Replay
             [0x02FD] = "NpcSpawn2",
             [0x02FC] = "PlayerSpawn",
             [0x00DB] = "ObjectSpawn",
-            [0x010B] = "DespawnCharacter",
+            [0x010B] = "ObjectDespawn",
             [0x0097] = "MapEffect",
             [0x0247] = "MapEffect4",
             [0x0165] = "MapEffect8",
@@ -1273,9 +1287,10 @@ namespace Simulant.Replay
             [0x0077] = "EffectResultBasic32",
             [0x01A6] = "EffectResultBasic64",
             [0x015D] = "StatusEffectList",
+            [0x0320] = "BossStatusEffectList",
             [0x00A4] = "StatusEffectList2",
             [0x035D] = "StatusEffectList3",
-            [0x02F8] = "StatusEffectListDouble",
+            [0x02F8] = "StatusEffectListPlayerDouble",
             [0x03AC] = "UpdateHpMpTp",
             [0x02DA] = "UpdateHate",
             [0x03D2] = "UpdateHater",
@@ -1284,8 +1299,27 @@ namespace Simulant.Replay
             [0x02E3] = "FirstAttack",
             [0x00E9] = "PlaceFieldMarker",
             [0x0177] = "PlaceFieldMarkerPreset",
-            [0x025C] = "CountdownInitiate",
+            [0x025C] = "Countdown",
             [0x0089] = "CountdownCancel",
+            [0x00AB] = "InitZone",
+            [0x01BA] = "DespawnCharacter",
+            [0x02B0] = "PrepareZoning",
+            [0x0323] = "ActorGauge",
+            [0x03B2] = "UpdatePartyMemberPositions",
+            [0x0345] = "NpcYell",
+            [0x0172] = "ModelEquip",
+            [0x01DE] = "SystemLogMessage",
+            [0x039F] = "EventStart",
+            [0x00B6] = "EventFinish",
+            [0x020B] = "EventPlay",
+            [0x006D] = "EventPlay16",
+            [0x02D2] = "StatusLoopVfx",
+            [0x02DD] = "CharacterDrawData",
+            [0x00C5] = "MapEffectStateSnapshot",
+            [0x021D] = "ContentDirectorEvent",
+            [0x0246] = "ContentDirectorSlotAssignments",
+            [0x02E6] = "ContentDirectorUiState",
+            [0x03DB] = "ActorTimelineBatch",
         };
 
         public static ReplayPacketClassification Classify(uint gameVersion, ushort opcode,

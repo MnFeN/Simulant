@@ -21,6 +21,7 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Xml" />
+    <Reference Include="System.Runtime.Serialization" />
     <Compile Include="Program.cs" />
     <Compile Include="PositionHistoryTests.cs" />
     <Compile Include="..\Simulant\Simulation\Runtime\PositionHistory.cs" />
@@ -91,8 +92,12 @@
     <Compile Include="..\Simulant\UI\Controls\LabelEx.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="..\Simulant\UI\Controls\NumericTextBoxEx.cs" />
-    <Compile Include="..\Simulant\UI\Controls\TextBoxEx.cs" />
+    <Compile Include="..\Simulant\UI\Controls\NumericTextBoxEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\Simulant\UI\Controls\TextBoxEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="..\Simulant\UI\Controls\NativeControlPaint.cs" />
     <Compile Include="..\Simulant\UI\Controls\ScrollBarTheme.cs" />
     <Compile Include="..\Simulant\UI\Controls\SimulantMark.cs">
@@ -222,6 +227,9 @@
     </Compile>
     <Compile Include="..\Simulant\Game\FFCS\Client\Game\Character\CharacterEnums.cs">
       <Link>Game\CharacterEnums.cs</Link>
+    </Compile>
+    <Compile Include="..\tools\ReplayInspector\ReplayTimeline*.cs">
+      <Link>Replay\%(Filename)%(Extension)</Link>
     </Compile>
     <Compile Include="..\Simulant\Replay\*.cs">
       <Link>Replay\%(Filename)%(Extension)</Link>

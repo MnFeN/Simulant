@@ -22,15 +22,8 @@ namespace Simulant.Replay
             internal ReplayPacketClassification Classification;
         }
 
-        public static ReplayInspectionResult Export(string inputPath, string outputDirectory, string profile = null)
+        internal static string ValidateOutputDirectory(string input, string outputDirectory)
         {
-            if (string.IsNullOrWhiteSpace(inputPath))
-                throw new ArgumentException("请指定回放文件。", nameof(inputPath));
-
-            if (string.IsNullOrWhiteSpace(outputDirectory))
-                throw new ArgumentException("请指定输出目录。", nameof(outputDirectory));
-
-            var input = Path.GetFullPath(inputPath);
             var output = Path.GetFullPath(outputDirectory);
             var comparedOutput = output.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             var sourceDirectory = Path.GetDirectoryName(input).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -45,6 +38,20 @@ namespace Simulant.Replay
             for (var ancestor = new DirectoryInfo(output); ancestor != null; ancestor = ancestor.Parent)
                 if (ancestor.Exists && (ancestor.Attributes & FileAttributes.ReparsePoint) != 0)
                     throw new IOException("输出路径经过目录链接，无法保证避开原始回放目录，请使用实际目录。");
+
+            return output;
+        }
+
+        public static ReplayInspectionResult Export(string inputPath, string outputDirectory, string profile = null)
+        {
+            if (string.IsNullOrWhiteSpace(inputPath))
+                throw new ArgumentException("请指定回放文件。", nameof(inputPath));
+
+            if (string.IsNullOrWhiteSpace(outputDirectory))
+                throw new ArgumentException("请指定输出目录。", nameof(outputDirectory));
+
+            var input = Path.GetFullPath(inputPath);
+            var output = ValidateOutputDirectory(input, outputDirectory);
 
             // 提前检查参数，避免无效版本选项留下输出文件。
             ReplayPacketCatalog.Classify(0, 0, 0, profile);

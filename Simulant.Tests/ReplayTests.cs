@@ -25,6 +25,71 @@ namespace Simulant.Tests
             Assert(wrongProfile.Name != "ActorCast", "不能跨版本共用同一个 opcode 映射。");
         }
 
+        public static void ReplayConversionKeepsStateAndUsesWireEffectLayout()
+        {
+            const uint Boss = 0x40012345;
+            const uint Player = 0x10054321;
+            const ushort Action = 0x1234;
+            var document = new ReplayTimelineDocument { StartMs = 1000, EndMs = 2000 };
+            var decoder = new ReplayTimelineDecoder(document);
+
+            var npc = new byte[0x290];
+            npc[0x81] = 2;
+            npc[0x7E] = 10;
+            SetUInt32(npc, 0x40, 123);
+            decoder.Read(new ReplayPacket(1, 900, 0x176, 0, Boss, npc), "NpcSpawn");
+            var player = new byte[0x298];
+            player[0x91] = 1;
+            decoder.Read(new ReplayPacket(2, 1600, 0x2FC, 0, Player, player), "PlayerSpawn");
+
+            var map = new byte[0x88];
+            SetUInt16(map, 6, 4);
+            decoder.Read(new ReplayPacket(3, 2300, 0xC5, 800, Player, map), "MapEffectStateSnapshot");
+            decoder.CaptureInitial();
+            Assert(document.InitialState.Any(e => e.Kind == "MapEffectState" && e.MapSlot == 0 && e.SharedTimelineState == 4),
+                "起点场地状态必须包含进图快照的第零槽。");
+
+            var cast = new byte[0x20];
+            SetUInt16(cast, 0, Action);
+            cast[2] = 1;
+            SetUInt32(cast, 4, Action);
+            SetUInt32(cast, 0x0C, Player);
+            decoder.Read(new ReplayPacket(4, 2450, 0x160, 1000, Boss, cast), "ActorCast");
+
+            var ability = new byte[0x278];
+            SetUInt32(ability, 0, Player);
+            SetUInt32(ability, 8, Action);
+            SetUInt32(ability, 0x0C, 55);
+            SetUInt16(ability, 0x1C, Action);
+            ability[0x1F] = 1;
+            ability[0x21] = 2;
+            ability[0x2A] = 3;
+            SetUInt16(ability, 0x30, 321);
+            SetUInt32(ability, 0x230, Player);
+            SetUInt32(ability, 0x238, Boss);
+            decoder.Read(new ReplayPacket(5, 2500, 0x233, 1234, Boss, ability), "ActionEffect8");
+
+            var effect = document.Events.Single(e => e.Kind == "ActionEffect");
+            Assert(effect.TimeMs == 234 && effect.Target == 2 && effect.Targets.Select(target => target.Actor).SequenceEqual(new int?[] { 2, 1 }) &&
+                effect.Targets[0].Effects.Single().Type == 3 && effect.Targets[0].Effects.Single().Value == 321,
+                "群体结算必须从正文 +0x2A 读取效果，并归一化目标身份和时间。");
+
+            SetUInt32(ability, 0, Boss);
+            SetUInt32(ability, 0x230, Boss);
+            var use = decoder.Read(new ReplayPacket(6, 3200, 0x233, 1234, Player, ability), "ActionEffect8");
+            Assert(use == ReplayPacketUse.Filtered && document.Events.Count(e => e.Kind == "ActionEffect") == 1,
+                "应过滤玩家对战斗 NPC 的攻击，同时保留敌方技能。");
+
+            using (var output = new StringWriter())
+            {
+                new ReplayTimelineGenerator(document, output).Write();
+                var code = output.ToString();
+                Assert(code.Contains("executeOnFinish: false") && code.Contains("ExecuteActionEffect(0x1234, Actor(2)") &&
+                    code.Contains("hitTargets: new[] { Actor(2), Actor(1) }"),
+                    "读条独立于结算，生成的结算须保留演出目标和完整命中名单。");
+            }
+        }
+
         public static void ReplayReadsHeaderChaptersAndPackets()
         {
             var bytes = CreateReplay(new Packet(0x123, 1500, 0x10203040, new byte[]
