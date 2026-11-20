@@ -127,7 +127,7 @@ namespace Simulant.Content.U7a.Presets
             }, boss =>
                        {
                            var mechanic = new SimTimeline();
-                           var lines = new List<Simulant.Core.Entity.EventObject>();
+                           var lines = new Simulant.Core.Entity.EventObject[6];
 
                            mechanic.At(0, () =>
                            {
@@ -136,14 +136,15 @@ namespace Simulant.Content.U7a.Presets
                                // 读条的同时生成 EObj，但不播放动画。
                                var eObjsPose = CalculateEObjsPose();
 
-                               for (int i = 0; i < 6; i++)
+                               // 实体 ID 随生成递增，按 ID 从大到小判定
+                               for (int i = lines.Length - 1; i >= 0; i--)
                                {
                                    var (pos, heading) = eObjsPose[i];
-                                   lines.Add(EntityManager.SpawnEObj((ushort)i, 2014199, pos, heading));
+                                   lines[i] = EntityManager.SpawnEObj((ushort)i, 2014199, pos, heading);
                                }
                            }, "地火读条与生成直线");
 
-                           mechanic.At(8, () => lines.ForEach(e => e.PlayAnimation(0x2)), "地火细线出现");
+                           mechanic.At(8, () => Array.ForEach(lines, e => e.PlayAnimation(0x2)), "地火细线出现");
 
                            mechanic.Repeat(10, 4, 3, group =>
                            {
