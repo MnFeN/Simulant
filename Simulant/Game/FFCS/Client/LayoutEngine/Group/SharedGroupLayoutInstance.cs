@@ -9,8 +9,10 @@ namespace Simulant.Game.FFCS.Client.LayoutEngine.Group
     // https://github.com/aers/FFXIVClientStructs/blob/aad0de66f0a6b49f257d224499dd685ceba567da/FFXIVClientStructs/FFXIV/Client/LayoutEngine/Group/SharedGroupLayoutInstance.cs
     internal struct SharedGroupLayoutInstance : IMemoryObject
     {
+        // 从 FFCS 的 FixedSizeArray16<byte> _timelineIndices 取长度，供项目的 MemoryArray 使用。
         internal const int TimelineSlotCount = 16;
 
+        // 项目的远程内存视图。ILayoutInstance 是上游声明的首个基类。
         public IntPtr Ptr { get; set; }
 
         internal ILayoutInstance LayoutInstance => Ptr.As<ILayoutInstance>();
