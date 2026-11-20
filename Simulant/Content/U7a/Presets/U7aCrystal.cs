@@ -12,6 +12,8 @@ namespace Simulant.Content.U7a.Presets
     /// <summary>两个 P4 练习共用的水晶与浮空幻影场景。</summary>
     internal static class U7aCrystal
     {
+        internal static readonly Vector2 Position = new Vector2(100, 84);
+
         /// <summary>在原有范围判定中检查水晶，命中时保留原演出并追加击碎和失败处理。</summary>
         internal static AreaMechanic Protect(AreaMechanic mechanic, Func<Vector2, bool> intersects,
             Action breakCrystal, Action<MechanicResult> reportFailure)
@@ -53,25 +55,24 @@ namespace Simulant.Content.U7a.Presets
         internal static void Spawn(SimEntityManager entities, SimScheduler scheduler, Action<SimActor> ready, uint health = 169245)
         {
             // 水晶、琳和盖娅是三个独立实体；幻影先播放回放中的动作，再切换冻结姿势。
-            var crystal = new Vector2(100, 82);
             var specs = new[]
             {
                 new NetworkNpcSpawnSpec
                 {
                     BNpcBaseId = 17841, BNpcNameId = 13559, LayoutId = 0xA55C07,
-                    Pos = new Vector3(crystal, 0), Heading = 0,
+                    Pos = new Vector3(Position, 0), Heading = 0,
                     MaxHealthPoints = 201481, HealthPoints = health, DisplayFlags = 0x40003
                 },
                 new NetworkNpcSpawnSpec
                 {
                     BNpcBaseId = 17844, BNpcNameId = 9829, LayoutId = 0xA5AF23,
-                    Pos = new Vector3(crystal + new Vector2(0.7124f, 0), 0), Heading = -0.837806f,
+                    Pos = new Vector3(Position + new Vector2(0.7124f, 0), 0), Heading = -0.837806f,
                     MaxHealthPoints = 188300, ModelState = 7, Targetable = false
                 },
                 new NetworkNpcSpawnSpec
                 {
                     BNpcBaseId = 17845, BNpcNameId = 9830, LayoutId = 0xA5AF24,
-                    Pos = new Vector3(crystal - new Vector2(0.7124f, 0), 0), Heading = 1.221691f,
+                    Pos = new Vector3(Position - new Vector2(0.7124f, 0), 0), Heading = 1.221691f,
                     MaxHealthPoints = 188300, ModelState = 121, Targetable = false
                 }
             };

@@ -160,8 +160,8 @@ namespace Simulant.Content.U7a.Presets
 
             // 北侧点名者必须比队友更靠场中；跟着队友站位会使分摊波及水晶。
             var targeted = Waters.Contains(slot);
-            return SimPosition.AnnularSector(crystal, safeDistance + (targeted ? 0.55f : -1),
-                Deg(RightSafe ? 8 : -8), targeted ? 0.45f : 0.5f, Deg(3));
+            return SimPosition.AnnularSector(crystal, safeDistance + (targeted ? 1.05f : -1),
+                Deg(RightSafe ? 15 : -15), targeted ? 0.95f : 1, Deg(targeted ? 5 : 13));
         }
         internal SimPosition FirstBait(int slot) => SimPosition.Ellipse(Center +
             (slot == FirstTank ? new Vector2(RightSafe ? 15 : -15, 11) : new Vector2(RightSafe ? 2 : -2, 0)), 0.45f);

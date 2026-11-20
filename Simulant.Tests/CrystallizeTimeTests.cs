@@ -89,7 +89,7 @@ namespace Simulant.Tests
                 foreach (var angle in new[] { 0.0, 1.0 })
                 {
                     var target = targetArea.Sample(radius, angle, Math.PI);
-                    Assert(Vector2.Distance(target, CrystallizeTimePlan.Crystal) > 11.14,
+                    Assert(Vector2.Distance(target, U7aCrystal.Position) > 11.14,
                         "分摊点名者的完整随机区必须避开水晶，并保留至少 1.64 米余量。");
                     foreach (var participantRadius in new[] { 0.0, 1.0 })
                     foreach (var participantAngle in new[] { 0.0, 1.0 })
@@ -429,7 +429,7 @@ namespace Simulant.Tests
                         scheduler.Schedule(2.985, () => actor.MoveForMechanic(SimPosition.Ellipse(destination, 0), 5.645, 7, urgent: true));
                         scheduler.Schedule(5.93, () =>
                         {
-                            Assert(!ActionArea.Circle(6).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, actor.Pos),
+                            Assert(!ActionArea.Circle(6).IntersectsCircle(U7aCrystal.Position, 3.5f, actor.Pos),
                                 $"分摊判定时仍在水晶附近：起点 {start}，终点 {destination}，当前位置 {actor.Pos}。");
                             Assert(plan.Stack.Contains(actor.Pos),
                                 $"极限借风角度仍须赶上分摊：起点 {start}，终点 {destination}，当前位置 {actor.Pos}。");
@@ -720,8 +720,8 @@ namespace Simulant.Tests
 
                                     var water = initial[plan.Slot(CrystalDebuff.BlueWater)];
                                     Assert(Enumerable.Range(0, 8).Where(i => Vector2.Distance(initial[i], water) <= 6).OrderBy(i => i).SequenceEqual(plan.WaterGroup.OrderBy(i => i)), "初始随机区域不能改变水分摊人数。");
-                                    Assert(!ActionArea.Circle(6).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, water) &&
-                                        !ActionArea.Circle(6).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, plan.StackFor(plan.Slot(CrystalDebuff.BlueEarth)).Sample(random)),
+                                    Assert(!ActionArea.Circle(6).IntersectsCircle(U7aCrystal.Position, 3.5f, water) &&
+                                        !ActionArea.Circle(6).IntersectsCircle(U7aCrystal.Position, 3.5f, plan.StackFor(plan.Slot(CrystalDebuff.BlueEarth)).Sample(random)),
                                         "水、土与暗的安全点必须连同水晶碰撞半径一起避开。");
 
                                     foreach (var side in new[]
@@ -731,10 +731,10 @@ namespace Simulant.Tests
                                     })
                                     {
                                         var ice = initial[plan.Red(CrystalDebuff.RedIce, side)];
-                                        Assert(!ActionArea.Donut(3, 12).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, ice) &&
-                                            !ActionArea.Circle(12).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, ice) &&
-                                            !ActionArea.Circle(12).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, plan.RedHead(side).Sample(random)) &&
-                                            !ActionArea.Circle(15).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, plan.Wind(side).Sample(random)),
+                                        Assert(!ActionArea.Donut(3, 12).IntersectsCircle(U7aCrystal.Position, 3.5f, ice) &&
+                                            !ActionArea.Circle(12).IntersectsCircle(U7aCrystal.Position, 3.5f, ice) &&
+                                            !ActionArea.Circle(12).IntersectsCircle(U7aCrystal.Position, 3.5f, plan.RedHead(side).Sample(random)) &&
+                                            !ActionArea.Circle(15).IntersectsCircle(U7aCrystal.Position, 3.5f, plan.Wind(side).Sample(random)),
                                             "红冰、龙头接触与红风不能波及水晶。");
                                     }
 
@@ -746,7 +746,7 @@ namespace Simulant.Tests
                                         Assert(Vector2.Distance(plan.WindApproach.Midpoint(), rider) / 7.8 + 0.2 < 24.837 - (CrystallizeTimePlan.SandHits[0] + 2),
                                             "最晚穿入一秒后开始跟随，仍应来得及到达借风区域。");
                                         Assert(Vector2.Distance(rider, wind) < 3, "蓝冰和红风之间应保持在冰封内圈内。");
-                                        Assert(!ActionArea.Donut(3, 12).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, rider),
+                                        Assert(!ActionArea.Donut(3, 12).IntersectsCircle(U7aCrystal.Position, 3.5f, rider),
                                             "蓝冰借风站位不能波及水晶。");
                                         var landing = rider + Vector2.Normalize(rider - wind) * 30;
                                         Assert(Vector2.Distance(landing, CrystallizeTimePlan.Center) < 19, "随机击退角度不能把假队员送到场外。");
@@ -773,7 +773,7 @@ namespace Simulant.Tests
                                     for (var i = 0; i < 8; i++)
                                     {
                                         Assert(Vector2.Distance(spreads[i], CrystallizeTimePlan.Center) < 20 &&
-                                            !ActionArea.Circle(5).IntersectsCircle(CrystallizeTimePlan.Crystal, 3.5f, spreads[i]),
+                                            !ActionArea.Circle(5).IntersectsCircle(U7aCrystal.Position, 3.5f, spreads[i]),
                                             "分散不能出界，技能边缘也不能接触水晶碰撞体。");
 
                                         for (var j = i + 1; j < 8; j++)
@@ -791,7 +791,7 @@ namespace Simulant.Tests
             var random = new Random(7360);
             var area = ActionArea.Circle(5);
             var positions = Enumerable.Range(0, 8).Select(i => new Vector2(100 + 10 * i, 110)).ToArray();
-            var crystal = CrystallizeTimePlan.Crystal;
+            var crystal = U7aCrystal.Position;
             positions[0] = crystal + new Vector2(8.5f, 0);
             positions[1] = positions[0] + Vector2.UnitX;
             Assert(CrystallizeTimePlan.SpiritTakerTarget(positions, 0, area, crystal, 3.5f, random) == 0,
@@ -838,7 +838,7 @@ namespace Simulant.Tests
                         var tolerance = spread[i].DeviationRadius;
                         Assert(Vector2.Distance(center, CrystallizeTimePlan.Center) + tolerance < 20,
                             "整个分散容差范围都不能越过电网。");
-                        Assert(Vector2.Distance(center, CrystallizeTimePlan.Crystal) - tolerance > 8.5,
+                        Assert(Vector2.Distance(center, U7aCrystal.Position) - tolerance > 8.5,
                             "整个分散容差范围都必须避开 5 米碎灵伤害与 3.5 米水晶。");
                         Assert(Vector2.Distance(center, plan.Rewind(i).Midpoint()) + tolerance + plan.Rewind(i).DeviationRadius <
                             (47.375 - CrystallizeTimePlan.RewindTime - 0.1) * 7.8,

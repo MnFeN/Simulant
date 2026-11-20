@@ -52,7 +52,6 @@ namespace Simulant.Content.U7a.Presets
     internal sealed class CrystallizeTimePlan
     {
         internal static readonly Vector2 Center = new Vector2(100, 100);
-        internal static readonly Vector2 Crystal = new Vector2(100, 84);
         internal static readonly string[] Roles =
         {
             "MT",

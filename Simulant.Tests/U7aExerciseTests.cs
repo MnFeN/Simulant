@@ -242,7 +242,7 @@ namespace Simulant.Tests
                                     for (var i = 0; i < 8; i++)
                                     {
                                         Check(spread.Where((_, j) => i != j).All(point => Vector2.Distance(point, spread[i]) > 5), "跳跃分散不可重叠。");
-                                        Check(Vector2.Distance(spread[i], new Vector2(100, 82)) > 8.5f, "跳跃分散不可击中北侧水晶。");
+                                        Check(Vector2.Distance(spread[i], U7aCrystal.Position) > 8.5f, "跳跃分散不可击中北侧水晶。");
                                     }
                                 }
         }
@@ -576,7 +576,7 @@ namespace Simulant.Tests
                         }
                     for (var slot = 0; slot < 8; slot++)
                     {
-                        var region = plan.Stack(slot, new Vector2(100, 82), 9.5f);
+                        var region = plan.Stack(slot, U7aCrystal.Position, 9.5f);
                         Check(!area.Contains(region.Midpoint(), plan.WingOrigin, (float)Math.PI), "两组分摊的标准站位应避开半场刀。");
                     }
                 }
@@ -585,7 +585,11 @@ namespace Simulant.Tests
         public static void DarklitNorthStackTeachesTheTargetToStepInward()
         {
             var random = new Random(40301);
-            var crystal = new Vector2(100, 82);
+            var edges = new[] { 0d, 1d };
+            Vector2[] Corners(SimPosition region)
+                => edges.SelectMany(radius => edges.Select(angle => region.Sample(radius, angle, Math.PI))).ToArray();
+
+            var crystal = U7aCrystal.Position;
             const float crystalRadius = 3.5f;
             var area = ActionArea.Circle(6);
             var safeDistance = 6 + crystalRadius;
@@ -600,14 +604,19 @@ namespace Simulant.Tests
                         for (var slot = 0; slot < 8; slot++)
                         {
                             Check((plan.RightSafe ? positions[slot].X - 100 : 100 - positions[slot].X) > 0,
-                                "南北两组分摊的整个范围均应处于半场刀安全侧。");
+                                "南北两组分摊的随机落点应处于半场刀安全侧。");
                             if (plan.Quadrants[slot] < 2)
                             {
-                                var radius = Vector2.Distance(positions[slot], crystal);
                                 var targeted = plan.Waters.Contains(slot);
-                                Check(targeted ? radius >= safeDistance + 0.0999f && radius <= safeDistance + 1.0001f :
-                                    radius >= safeDistance - 1.5001f && radius <= safeDistance - 0.4999f,
-                                    "北侧分摊点名者和参与者必须分别使用指定的两层径向范围。");
+                                var corners = Corners(regions[slot]).Select(point => point - crystal).ToArray();
+                                var radii = corners.Select(offset => offset.Length()).ToArray();
+                                var angles = corners.Select(offset => Math.Atan2(plan.RightSafe ? offset.X : -offset.X, offset.Y)).ToArray();
+                                Check(Math.Abs(radii.Min() - (safeDistance + (targeted ? 0.1f : -2))) < 0.0001 &&
+                                    Math.Abs(radii.Max() - (safeDistance + (targeted ? 2 : 0))) < 0.0001,
+                                    "北侧点名者在水晶判定边界外 0.1 至 2 米，其他三人在边界内 0 至 2 米。");
+                                Check(Math.Abs(angles.Min() - Deg(targeted ? 10 : 2)) < 0.0001 &&
+                                    Math.Abs(angles.Max() - Deg(targeted ? 20 : 28)) < 0.0001,
+                                    "北侧点名者朝安全侧偏 10 至 20 度，其他三人偏 2 至 28 度。");
                                 Check(area.IntersectsCircle(crystal, crystalRadius, positions[slot]) != targeted,
                                     "北侧点名者在自身范围内应安全；若跟到参与者的范围，则必定击中水晶。");
                             }
@@ -620,9 +629,22 @@ namespace Simulant.Tests
                         foreach (var target in plan.Waters)
                             for (var slot = 0; slot < 8; slot++)
                             {
+                                if (slot == target)
+                                    continue;
+
+                                var sameGroup = plan.Quadrants[target] / 2 == plan.Quadrants[slot] / 2;
+                                if (sameGroup && plan.Quadrants[target] < 2)
+                                {
+                                    // 两个同心扇环的最大夹角在角边界，固定角度后最远距离在半径两端。
+                                    var memberCorners = Corners(regions[slot]);
+                                    Check(Corners(regions[target]).All(center => memberCorners.All(point => area.Contains(point, center, 0))),
+                                        "北侧点名者在扇环任一点均应覆盖本组队员的完整扇环。");
+                                    continue;
+                                }
+
                                 var distance = Vector2.Distance(regions[target].Midpoint(), regions[slot].Midpoint());
                                 var tolerance = regions[target].DeviationRadius + regions[slot].DeviationRadius;
-                                Check(plan.Quadrants[target] / 2 == plan.Quadrants[slot] / 2 ? distance + tolerance < 6 : distance - tolerance > 6,
+                                Check(sameGroup ? distance + tolerance < 6 : distance - tolerance > 6,
                                     "南北分摊的完整容差范围必须恰好包含本组四人，且不波及另一组。");
                             }
                     }
