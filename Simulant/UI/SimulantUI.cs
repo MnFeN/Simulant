@@ -3,6 +3,7 @@ using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
+using Simulant.Core.Firewall;
 using Simulant.Game;
 using Simulant.Game.Data;
 using Lumina.Excel.Sheets;
@@ -341,20 +342,25 @@ namespace Simulant.UI
 
         private void TryEnableFirewall()
         {
+            var firewall = _host.FirewallService;
             try
             {
-                _host.FirewallService.Enable();
+                firewall.Enable();
                 _host.LogSim("防火墙已成功开启。");
             }
             catch (Exception ex)
             {
                 _host.LogError("防火墙开启失败：" + ex.Message);
-                SetFirewallToggleChecked(_host.FirewallService.HasPendingCleanup);
+                SetFirewallToggleChecked(firewall.HasPendingCleanup);
+                return;
             }
             finally
             {
                 UpdateControlStates();
             }
+
+            if (!firewall.IsInteractionBlocked)
+                MessageBox.Show(this, FirewallService.InteractionWarning, "防火墙警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private void TryDisableFirewall()

@@ -951,7 +951,12 @@ namespace Simulant.Core
             }
 
             if (cleanupError != null)
-                LogError("切换进程时清理旧连接失败，请重试关闭防火墙：" + cleanupError);
+            {
+                var message = FirewallService?.HasPendingCleanup == true
+                    ? "切换进程时清理旧连接失败，请重试关闭防火墙："
+                    : "切换进程时清理旧连接失败：";
+                LogError(message + cleanupError);
+            }
 
             return true;
         }

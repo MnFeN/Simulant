@@ -89,9 +89,21 @@ namespace Simulant.Game
 
         internal static void Disconnect()
         {
-            Connection?.Dispose();
-            Connection = null;
-            SigAddressScanner.Clear();
+            var connection = Connection;
+            try
+            {
+                connection?.Dispose();
+            }
+            catch (Exception error) when (error.GetType().Assembly == typeof(ExternalProcessMemory).Assembly &&
+                error.GetType().FullName == "ReadWriteMemoryException" && connection.Memory.Process?.HasExited == true)
+            {
+                // SimuMagic 恢复执行入口时目标进程已退出，其 finally 仍会关闭本地进程句柄。
+            }
+            finally
+            {
+                Connection = null;
+                SigAddressScanner.Clear();
+            }
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]

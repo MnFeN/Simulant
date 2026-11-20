@@ -132,7 +132,7 @@ namespace Simulant.Tests
         public static void FirewallEnableFailuresRollBackEveryCompletedStage()
         {
             // 分别覆盖收包短写、分配失败、代码洞短写/异常、入口短写/异常及心跳地址缺失。
-            for (var stage = 0; stage < 10; stage++)
+            for (var stage = 0; stage < 8; stage++)
             {
                 using (var scene = new FirewallScene())
                 {
@@ -143,15 +143,13 @@ namespace Simulant.Tests
                     {
                         var receivePatch = address == scene.Receive && bytes[0] == 0x31;
                         var cavePatch = address != scene.Receive && address != scene.Send && address != scene.Interaction;
-                        var interactionPatch = address == scene.Interaction && bytes[0] == 0x31;
                         var sendPatch = address == scene.Send && bytes[0] == 0xFF;
 
                         if ((selectedStage == 0 && receivePatch) || (selectedStage == 3 && cavePatch) ||
-                            (selectedStage == 5 && sendPatch) || (selectedStage == 8 && interactionPatch))
+                            (selectedStage == 5 && sendPatch))
                             return bytes.Length - 1;
 
-                        if ((selectedStage == 4 && cavePatch) || (selectedStage == 6 && sendPatch) ||
-                            (selectedStage == 9 && interactionPatch))
+                        if ((selectedStage == 4 && cavePatch) || (selectedStage == 6 && sendPatch))
                             throw failure;
 
                         return null;
@@ -168,7 +166,7 @@ namespace Simulant.Tests
 
                     var error = Throws<InvalidOperationException>(scene.Service.Enable);
 
-                    if (stage == 2 || stage == 4 || stage == 6 || stage == 9)
+                    if (stage == 2 || stage == 4 || stage == 6)
                         Assert(ReferenceEquals(error, failure), "成功回滚后必须保留最初的原生异常。");
 
                     scene.AssertRestored();
@@ -605,19 +603,65 @@ namespace Simulant.Tests
             }
         }
 
-        public static void FirewallRejectsMissingOrModifiedInteractionEntry()
+        public static void FirewallWarnsAndEnablesWhenInteractionEntryIsUnavailable()
+        {
+            var modified = new byte[] { 0xE9, 0x01, 0x02, 0x03, 0x04 };
+            for (var scenario = 0; scenario < 3; scenario++)
+            {
+                using (var scene = new FirewallScene())
+                {
+                    var entry = scenario == 1 ? modified : scene.InteractionOriginal;
+                    scene.Memory.Blocks[scene.Interaction] = (byte[])entry.Clone();
+                    if (scenario == 0)
+                        TargetSystem.InteractWithObjectFuncPtr = IntPtr.Zero;
+                    if (scenario == 2)
+                        scene.Memory.ReadResult = (address, count) => scene.Memory.Blocks[address]
+                            .Take(address == scene.Interaction ? count - 1 : count).ToArray();
+
+                    var warned = false;
+                    scene.Host.FirewallLog = message => warned |= message.Contains(FirewallService.InteractionWarning);
+                    scene.Service.Enable();
+                    Assert(scene.Service.IsEnabled && !scene.Service.IsInteractionBlocked && warned,
+                        "交互入口缺失、被修改或未完整读出时，应警告并继续开启收发包拦截。");
+                    scene.Service.Disable();
+                    Assert(!scene.Memory.Writes.Any(write => write.Address == scene.Interaction) &&
+                        scene.Memory.Blocks[scene.Interaction].SequenceEqual(entry) && !scene.Service.HasPendingCleanup,
+                        "开启和关闭期间都不能改写未接管的交互入口。");
+                }
+            }
+        }
+
+        public static void FirewallContinuesOnlyAfterFailedInteractionWriteIsRestored()
         {
             using (var scene = new FirewallScene())
             {
-                TargetSystem.InteractWithObjectFuncPtr = IntPtr.Zero;
-                Throws<InvalidOperationException>(scene.Service.Enable);
-                TargetSystem.InteractWithObjectFuncPtr = scene.Interaction;
-                var modified = new byte[] { 0xE9, 0x01, 0x02, 0x03, 0x04 };
-                scene.Memory.Blocks[scene.Interaction] = modified;
-                Throws<InvalidOperationException>(scene.Service.Enable);
-                Assert(scene.Memory.Writes.Count == 0 && !scene.Service.HasPendingCleanup && !scene.Service.IsEnabled &&
-                    scene.Memory.Blocks[scene.Interaction].SequenceEqual(modified),
-                    "交互入口缺失或已被修改时，应保持防火墙关闭并保留原字节。");
+                var warned = false;
+                scene.Host.FirewallLog = message => warned |= message.Contains(FirewallService.InteractionWarning);
+                scene.Memory.WriteResult = (address, bytes) =>
+                    address == scene.Interaction && bytes[0] == 0x31 ? (int?)(bytes.Length - 1) : null;
+
+                scene.Service.Enable();
+                Assert(scene.Service.IsEnabled && !scene.Service.IsInteractionBlocked && warned,
+                    "交互入口写入失败但已恢复时，应警告并开启收发包拦截。");
+                Assert(scene.Memory.Writes.Take(2).All(write => write.Address == scene.Interaction) &&
+                    scene.Memory.Blocks[scene.Interaction].SequenceEqual(scene.InteractionOriginal),
+                    "交互短写必须在开启收发包拦截前恢复。");
+                scene.Service.Disable();
+                scene.AssertRestored();
+            }
+
+            using (var scene = new FirewallScene())
+            {
+                scene.Memory.WriteResult = (address, bytes) =>
+                    address == scene.Interaction ? (int?)(bytes.Length - 1) : null;
+
+                Throws<AggregateException>(scene.Service.Enable);
+                Assert(!scene.Service.IsEnabled && scene.Service.HasPendingCleanup &&
+                    scene.Memory.Writes.All(write => write.Address == scene.Interaction),
+                    "交互补丁尚未恢复时，必须保留清理记录并停止启用。");
+                scene.Memory.WriteResult = null;
+                scene.Service.Disable();
+                scene.AssertRestored();
             }
         }
 
