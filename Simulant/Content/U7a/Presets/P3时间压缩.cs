@@ -1,4 +1,5 @@
 using Simulant.Core;
+using Simulant.Core.Entity;
 using Simulant.Core.Environment;
 using Simulant.Game;
 using Simulant.Simulation;
@@ -55,9 +56,9 @@ namespace Simulant.Content.U7a.Presets
         [SimOption] public RelativityDebuff Initial { get; set; }
         [SimOption] public ExerciseDirection NorthDirection { get; set; }
         [SimOption] public bool FastOpening { get; set; }
-        protected override bool HasHourglasses => true;
         protected override double OpeningAdvance => FastOpening ? 8.7 : 0;
         private RelativityPlan _plan;
+        private readonly SimActor[] _hourglasses = new SimActor[8];
         private readonly Vector3[] _returns = new Vector3[8];
 
         public RelativityLogic(PluginHost host, SimPresetBase preset) : base(host, preset)
@@ -80,20 +81,19 @@ namespace Simulant.Content.U7a.Presets
             }, "显示回返头顶计时图标");
             timeline.At(10.81, () => HourglassMaps(2), "八方沙漏场地预兆");
             timeline.At(18.78, () => HourglassMaps(0x20), "沙漏场地效果进入等待阶段");
-            timeline.At(11.22, ShowHourglasses, "八座沙漏显现");
-            timeline.At(13.98, TetherHourglasses, "沙漏加减速连线");
+            timeline.At(11.22, SpawnHourglasses, "生成八座沙漏");
             timeline.At(14.06, () => Oracle.Cast(40293, target: Oracle), "限速读条");
             timeline.At(19.53, () =>
             {
                 for (var direction = 0; direction < 8; direction++)
                     if (RelativityPlan.HourglassWave(direction) != 1)
-                        Hourglasses[direction].CancelTether();
+                        _hourglasses[direction].CancelTether();
             }, "取消沙漏加减速连线");
             timeline.At(19.63, () =>
             {
                 for (var i = 0; i < 8; i++)
                     if (RelativityPlan.HourglassWave(i) != 1)
-                        Hourglasses[i].ExecuteActionEffect(RelativityPlan.HourglassWave(i) == 0 ? 40294u : 40295u, Hourglasses[i]);
+                        _hourglasses[i].ExecuteActionEffect(RelativityPlan.HourglassWave(i) == 0 ? 40294u : 40295u, _hourglasses[i]);
             }, "沙漏加减速演出");
 
             var fires = new[] { 21.85, 31.87, 41.87 };
@@ -110,7 +110,7 @@ namespace Simulant.Content.U7a.Presets
                     for (var direction = 0; direction < 8; direction++)
                         if (RelativityPlan.HourglassWave(direction) == wave)
                         {
-                            var actor = Hourglasses[direction];
+                            var actor = _hourglasses[direction];
                             Map(_plan.HourglassMapSlot(direction), 0x200);
                             EntityManager.SetStatus(actor, 2970, 4, (ushort)(_plan.Spins[direction] < 0 ? 0x15C : 0x10D), actor);
                         }
@@ -119,14 +119,14 @@ namespace Simulant.Content.U7a.Presets
                 {
                     for (var direction = 0; direction < 8; direction++)
                         if (RelativityPlan.HourglassWave(direction) == wave)
-                            Hourglasses[direction].Cast(40291, target: Hourglasses[direction], castTime: 3.7f);
+                            _hourglasses[direction].Cast(40291, target: _hourglasses[direction], castTime: 3.7f);
                 }, "沙漏罪熔毁读条");
                 timeline.At(new[] { 26.85, 36.81, 47.88 }[round], () =>
                 {
                     // 2970 是永久状态，剩余时间归零不会移除旋转标记；按回放的移除包主动结束。
                     for (var direction = 0; direction < 8; direction++)
                         if (RelativityPlan.HourglassWave(direction) == wave)
-                            EntityManager.RemoveStatus(Hourglasses[direction], 2970);
+                            EntityManager.RemoveStatus(_hourglasses[direction], 2970);
                 }, "移除沙漏旋转方向标记");
                 timeline.At(hits[round], () => LockLasers(wave), "锁定最近玩家并引导激光");
                 // 第一段之后固定等两秒，再让下一轮分散者穿出；不检测激光是否已经离开。
@@ -187,12 +187,29 @@ namespace Simulant.Content.U7a.Presets
             MoveAll(i => _plan.FirePosition(i, 0), 20.7, 22.05);
         }
 
-        private void ShowHourglasses()
+        private void SpawnHourglasses()
         {
-            for (var i = 0; i < 8; i++)
+            var remaining = _hourglasses.Length;
+            for (var i = 0; i < _hourglasses.Length; i++)
             {
-                Hourglasses[i].ActorMove(new Vector3(_plan.Hourglass(i), 0), Heading(Center - _plan.Hourglass(i)), 0);
-                Hourglasses[i].EnableDraw();
+                var slot = i;
+                var position = _plan.Hourglass(i);
+                EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
+                {
+                    BNpcBaseId = 17832,
+                    BNpcNameId = 9825,
+                    LayoutId = 0xA55C00,
+                    Level = 100,
+                    MaxHealthPoints = 188300,
+                    Pos = new Vector3(position, 0),
+                    Heading = Heading(Center - position),
+                    Targetable = false
+                }, actor =>
+                {
+                    _hourglasses[slot] = actor;
+                    if (--remaining == 0)
+                        Scheduler.Schedule(Math.Max(Origin + 13.98, Scheduler.ElapsedSeconds), TetherHourglasses, "沙漏加减速连线");
+                });
             }
         }
 
@@ -207,7 +224,7 @@ namespace Simulant.Content.U7a.Presets
         {
             for (var i = 0; i < 8; i++)
                 if (RelativityPlan.HourglassWave(i) != 1)
-                    Hourglasses[i].TetherTo(Oracle, RelativityPlan.HourglassWave(i) == 0 ? 134u : 133u);
+                    _hourglasses[i].TetherTo(Oracle, RelativityPlan.HourglassWave(i) == 0 ? 134u : 133u);
         }
 
         private void ResolveFire(int wave)

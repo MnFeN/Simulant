@@ -22,7 +22,6 @@ namespace Simulant.Content.U7a.Presets
         protected static readonly Vector2 Center = new Vector2(100, 100);
         protected static readonly string[] Roles = { "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4" };
         protected readonly SimActor[] Helpers = new SimActor[11];
-        protected readonly SimActor[] Hourglasses = new SimActor[8];
         protected SimActor Oracle;
         protected SimActor Shiva;
         protected SimActor Wyrm;
@@ -31,7 +30,6 @@ namespace Simulant.Content.U7a.Presets
         protected double Now => Scheduler.ElapsedSeconds - Origin;
         protected int Self => (int)PlayerSlot - 1;
         protected virtual bool IsP4 => false;
-        protected virtual bool HasHourglasses => false;
         protected virtual double OpeningAdvance => 0;
         private readonly HashSet<uint> _mapChanges = new HashSet<uint>();
         private readonly HashSet<int> _marked = new HashSet<int>();
@@ -66,29 +64,26 @@ namespace Simulant.Content.U7a.Presets
                 Party[slot].Heading = (float)Math.PI;
             }
 
-            var remaining = Helpers.Length + (HasHourglasses ? 8 : 0) + (IsP4 ? 6 : 1);
+            var remaining = Helpers.Length + (IsP4 ? 6 : 1);
             void Ready()
             {
                 if (--remaining == 0)
                     Scheduler.ScheduleAfter(2, BeginExercise, "场景就绪后开始机制");
             }
 
-            void Spawn(uint id, uint name, Vector2 position, Action<SimActor> accept, bool hidden = false, ushort? model = null)
+            void Spawn(uint id, uint name, Vector2 position, Action<SimActor> accept, ushort? model = null)
                 => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
                 {
                     BNpcBaseId = id,
                     BNpcNameId = name,
                     ModelCharaId = model,
-                    LayoutId = id == 17831 ? 0xA55BFFu : id == 17832 ? 0xA55C00u : id == 17833 ? 0xA55C01u : id == 17835 ? 0xA55C02u : 0,
+                    LayoutId = id == 17831 ? 0xA55BFFu : id == 17833 ? 0xA55C01u : id == 17835 ? 0xA55C02u : 0,
                     Pos = new Vector3(position, 0),
                     Heading = (float)Math.PI,
-                    Level = 100,
-                    Targetable = !hidden
+                    Level = 100
                 }, actor =>
                 {
                     accept(actor);
-                    if (hidden)
-                        actor.Entity.DisableDraw();
                     Ready();
                 });
 
@@ -108,13 +103,6 @@ namespace Simulant.Content.U7a.Presets
                     Ready();
                 }, health: 201481);
             }
-
-            if (HasHourglasses)
-                for (var i = 0; i < 8; i++)
-                {
-                    var index = i;
-                    Spawn(17832, 9825, Center, actor => Hourglasses[index] = actor, true);
-                }
 
             for (var i = 0; i < Helpers.Length; i++)
             {
