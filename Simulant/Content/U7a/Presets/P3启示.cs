@@ -262,16 +262,11 @@ namespace Simulant.Content.U7a.Presets
 
         private void Knockback()
         {
+            // 回放：技能包 39.599 秒；录制者 40.350～40.870 秒击退，40.953 秒恢复普通移动。
+            SimKnockback.Resolve(Scheduler, Party, KnockbackEffect.RadialFromRow(_dance, 201),
+                movementAt: Origin + 40.35, name: "至黑之舞击退位移开始");
             Oracle.ActorMove(new Vector3(_dance, 0), _danceHeading, 0);
             Oracle.ExecuteActionEffectAt(40183, new Vector3(_dance, 0), _danceHeading);
-            // 回放：技能包 39.599 秒；录制者 40.350～40.870 秒击退，40.953 秒恢复普通移动。
-            // 击退方向、落点和免疫统一交由实体层在位移开始时按当前值处理。
-            Scheduler.Schedule(Origin + 40.35, () =>
-            {
-                for (var i = 0; i < 8; i++)
-                    // 技能 40183 的击退效果：Value=201、Param0=0；距离 21，Speed=40。
-                    Party[i].KnockbackFromEffect(_dance, 201);
-            }, "至黑之舞击退位移开始");
         }
 
         private void SpawnLights()

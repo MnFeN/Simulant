@@ -2,6 +2,7 @@ using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
+using Simulant.Simulation.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -154,14 +155,8 @@ namespace Simulant.Content.U7a.Presets
                     {
                         var center = Party[target].Pos;
                         visual(result);
-
-                        foreach (var member in result.Participants.Where(m => m.Slot != target))
-                        {
-                            var actor = Party[member.Slot];
-                            // 受击名单使用历史判定，实际击退从当前站位向外展开。
-                            actor.SuspendBehavior(0.9);
-                            actor.KnockbackFrom(center, 30, 0.8f);
-                        }
+                        SimKnockback.Resolve(Scheduler, result.HitActors, KnockbackEffect.Radial(center, 30, 0.8f),
+                            exclude: Party[target], suspendFor: 0.9);
                     };
 
                     mechanics.Add(mechanic);
@@ -384,9 +379,8 @@ namespace Simulant.Content.U7a.Presets
                 target
             }, 0, area, result =>
             {
-                // 主目标承受跳跃；其他受击者交由实体层按当前坐标和防击退状态处理。
-                foreach (var member in result.Participants.Where(member => member.Slot != target))
-                    Party[member.Slot].KnockbackFrom(center, 40, 0.8f);
+                SimKnockback.Resolve(Scheduler, result.HitActors, KnockbackEffect.Radial(center, 40, 0.8f),
+                    exclude: Party[target]);
             });
             // 回放：47.375 秒演出包，48.309 秒伤害结算；波及队友的记录也是约 0.935 秒后结算。
             // 锁定站位后先播放跳跃，落地才击退并报错，避免失败中断取消尚未执行的击退。
@@ -400,33 +394,31 @@ namespace Simulant.Content.U7a.Presets
         {
             var positions = Party.Select(actor => actor.JudgementPosition).ToArray();
             var order = CrystallizeTimePlan.FrontFour(positions, wave, wave == 0 ? _plan.FirstSide : _plan.SecondSide);
+            var front = order.Take(4).ToArray();
+
+            // 回放：ActionEffect 为 53.241 / 57.697 秒，击退移动从 54.625 / 59.065 秒开始。
+            SimKnockback.Resolve(Scheduler, Party, KnockbackEffect.DirectionalFromRow(Heading(_plan.WaveDirection(wave)), 108),
+                movementAt: _origin + (wave == 0 ? 54.625 : 59.065),
+                beforeMovement: () =>
+                {
+                    if (wave == 0)
+                        _firstFront = front;
+                    foreach (var slot in front)
+                        Status(slot, 2941, 6);
+                },
+                afterMovement: () => CheckWingOrder(wave, order, front), name: "圣翼命中与击退");
             _shiva.Execute(40332);
 
             foreach (var actor in Party)
                 actor.SuspendBehavior(wave == 0 ? 6.9 : 2.4);
-
-            // 回放：ActionEffect 为 53.241 / 57.697 秒，击退移动从 54.625 / 59.065 秒开始。
-            // 只锁定伤害排队；击退应用时由实体层检查当前防击退状态。
-            Scheduler.Schedule(_origin + (wave == 0 ? 54.625 : 59.065), () => ResolveWing(wave, order), "圣翼命中与击退");
         }
 
-        private void ResolveWing(int wave, int[] order)
+        private void CheckWingOrder(int wave, int[] order, int[] front)
         {
-            var front = order.Take(4).ToArray();
             var tankCount = _plan.IsY && wave == 1 ? 2 : 1;
             var wrongTank = !_plan.WingTanksCorrect(order, wave);
             // Y 字的重复前排伤害按已有减伤处理，只检查第一次首位、第二次前两位的坦克。
             var repeated = wave == 0 || _plan.IsY ? Array.Empty<int>() : front.Intersect(_firstFront).ToArray();
-
-            if (wave == 0)
-                _firstFront = front;
-
-            foreach (var slot in front)
-                Status(slot, 2941, 6);
-
-            for (var slot = 0; slot < Party.Count; slot++)
-                // 两次技能 40332 的击退效果均为 Value=108、Param0=0；距离 20，Speed=40。
-                Party[slot].KnockbackFromEffect(Heading(_plan.WaveDirection(wave)), 108);
 
             // 先提交全队击退动画，再报告排队错误。
             if (wrongTank || repeated.Length != 0)

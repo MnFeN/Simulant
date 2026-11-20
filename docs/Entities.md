@@ -192,9 +192,9 @@ boss.MoveTo(new Vector2(100, 90), speed: 6, animationId: 13,
 
 防火墙期间由宿主独立监听默语命令，`/e sim ac 沉稳咏唱`、`/e sim ac 亲疏自行` 和 `/e sim ac 冲刺` 始终作用于本机玩家，冲刺持续十秒。冲刺状态 50 的 `Param` 必须为 30，表示加速 30%；填 0 只会显示图标而不提高本机移速。该参数已从国服回放的完整状态包核对，也与 [AnoMech 的冲刺处理](https://github.com/anomek/AnoMech/blob/1646a7068c2071a3d1fd9e3c84550dfd3f1b6ade/AnoMech/Core/UserActions/SprintHandler.cs)一致，由客户端原生状态逻辑改变移速。没有运行副本或副本已经停止时仍可使用；状态操作交给独立调度器，不阻塞日志线程。换图、关闭防火墙、切换进程或卸载时清理自己施加的状态。副本直接检测角色实际的防击退状态，不依赖施加者属于哪个会话。
 
-`SimActor.Knockback` 默认检查这两种模拟状态；不受免疫影响的击退可传 `ignoreImmunity: true`。回返传送不属于击退，仍正常执行。状态到期、移除或槽位被替换后立即失去免疫，重复使用则刷新期限，不会被旧的到期节点提前清除。
+`SimKnockback.Resolve` 默认检查这两种模拟状态。效果无视免疫时可传 `ignoreImmunity: true`。回返传送使用独立入口。状态到期、移除或槽位被替换后立即失去免疫。重复使用会刷新期限，旧的到期节点不会提前清除新状态。
 
-所有击退均为本地处理，公共入口在实际位移应用时读取当前位置与当前防击退状态，不受“模拟判定延迟”影响。径向击退使用 `KnockbackFrom(center, distance, duration)`，或传中心坐标的 `KnockbackFromEffect(center, knockbackId)` 查表版本；固定方向仍传角度。副本只提供中心或方向、效果参数及应用时间，不缓存历史角度或免疫结果。技能命中、分摊、前排伤害等服务器判定仍各自保留原来的站位快照。
+在技能结算节点调用 `SimKnockback.Resolve(scheduler, hitActors, effect, movementAt: time)`。传入范围判定的命中名单，全团必中的技能直接传小队。使用 `KnockbackEffect.Radial` 或 `Directional` 指定中心或方向及位移参数，也可用对应的 `FromRow` 工厂按效果行查表。入口锁定结算时的免疫结果，省略 `movementAt` 时立即执行。实际位移从实时坐标计算方向与终点。
 
 ## 身份与失效
 

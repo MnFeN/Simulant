@@ -287,7 +287,7 @@ namespace Simulant.Tests
                             actor.StopMoving();
                             var direction = Vector2.Normalize(actor.Pos - actualWind);
                             var landing = actor.Pos + direction * 30;
-                            actor.Knockback((float)Math.Atan2(direction.X, direction.Y), 30, 0.8f);
+                            SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.Radial(actualWind, 30, 0.8f));
                             scheduler.Schedule(3.45, () => Assert(Vector2.Distance(actor.Pos, landing) < 0.025,
                                 "结束跟随后，击退仍应完整到达落点。"));
                             scheduler.Schedule(2.603, () => actor.MoveForMechanic(plan.Stack, 5.263, 6, urgent: true));
@@ -352,7 +352,7 @@ namespace Simulant.Tests
                             var landing = actor.Pos + direction * 30;
                             Assert(Vector2.Distance(landing, CrystallizeTimePlan.Center) < 20,
                                 "借风击退的完整落点不能出界。");
-                            actor.Knockback((float)Math.Atan2(direction.X, direction.Y), 30, 0.8f);
+                            SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.Radial(wind, 30, 0.8f));
                             scheduler.Schedule(0.99, () => Assert(Vector2.Distance(actor.Pos, landing) < 0.025,
                                 "后续分摊指令不能截断击退，必须先到达完整落点。"));
                         }
@@ -424,8 +424,7 @@ namespace Simulant.Tests
                         {
                             actor.StopMoving();
                             start = actor.Pos;
-                            var direction = Vector2.Normalize(start - wind.Pos);
-                            actor.Knockback((float)Math.Atan2(direction.X, direction.Y), 30, 0.8f);
+                            SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.Radial(wind.Pos, 30, 0.8f));
                         });
                         scheduler.Schedule(2.985, () => actor.MoveForMechanic(SimPosition.Ellipse(destination, 0), 5.645, 7, urgent: true));
                         scheduler.Schedule(5.93, () =>

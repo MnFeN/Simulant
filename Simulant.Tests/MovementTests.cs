@@ -20,16 +20,16 @@ namespace Simulant.Tests
                 Distance = 21,
                 Speed = 40
             };
-            var apply = new Action<SimActor>[]
+            var effects = new[]
             {
-                actor => actor.Knockback(0, 8, 0.2f),
-                actor => actor.KnockbackFrom(Vector2.Zero, 8, 0.2f),
-                actor => actor.KnockbackFromEffect(0, 201),
-                actor => actor.KnockbackFromEffect(Vector2.Zero, 201)
+                KnockbackEffect.Directional(0, 8, 0.2f),
+                KnockbackEffect.Radial(Vector2.Zero, 8, 0.2f),
+                KnockbackEffect.DirectionalFromRow(0, 201),
+                KnockbackEffect.RadialFromRow(Vector2.Zero, 201)
             };
             using (var scheduler = new SimScheduler())
             using (var movement = new SimMovementController(scheduler))
-                foreach (var knockback in apply)
+                foreach (var effect in effects)
                     foreach (var initiallyImmune in new[] { false, true })
                     {
                         var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
@@ -37,10 +37,10 @@ namespace Simulant.Tests
                         status.Value = initiallyImmune ? (ushort)160 : (ushort)0;
                         actor.StartJudgementSampling(scheduler, 0.35);
                         status.Value = 1209;
-                        knockback(actor);
+                        SimKnockback.Resolve(scheduler, new[] { actor }, effect);
                         Assert(actor.Entity.NativeKnockbackCalls == 0, "所有击退入口都应立即认可当前防击退状态，不能等待历史记录。");
                         status.Value = 0;
-                        knockback(actor);
+                        SimKnockback.Resolve(scheduler, new[] { actor }, effect);
                         Assert(actor.Entity.NativeKnockbackCalls == 1, "防击退消失后，所有击退入口都应立即恢复，不能沿用历史免疫。");
                     }
         }
@@ -62,18 +62,59 @@ namespace Simulant.Tests
                 local.Pos = remote.Pos = new Vector2(4, 0);
                 Assert(local.JudgementPosition == new Vector2(0, -4), "检查应保留与当前坐标不同的历史判定位置。");
 
-                local.KnockbackFromEffect(Vector2.Zero, 201);
-                remote.KnockbackFromEffect(Vector2.Zero, 201);
+                SimKnockback.Resolve(scheduler, new[] { local, remote }, KnockbackEffect.RadialFromRow(Vector2.Zero, 201));
                 Assert(Math.Abs(local.Entity.NativeKnockbackHeading - Math.PI / 2) < 0.00001 &&
                     local.Entity.NativeKnockbackDistance == 21 && Math.Abs(local.Entity.NativeKnockbackDuration - 0.525f) < 0.00001,
                     "自身查表径向击退必须从当前位置向东，不能按历史位置向北。");
                 Near(new Vector2(25, 0), movement.PositionAfterKnockback(remote));
 
                 local.Pos = new Vector2(0, 4);
-                local.KnockbackFrom(Vector2.Zero, 8, 0.2f);
+                local.Entity.Native.StatusManager.GetStatus(0).StatusId.Value = 160;
+                SimKnockback.Resolve(scheduler, new[] { local }, KnockbackEffect.Radial(Vector2.Zero, 8, 0.2f), ignoreImmunity: true);
                 Assert(local.Entity.NativeKnockbackCalls == 2 && local.Entity.NativeKnockbackHeading == 0 &&
                     local.Entity.NativeKnockbackDistance == 8 && local.JudgementPosition == new Vector2(0, -4),
-                    "直接指定距离的径向击退也应使用当前坐标，并保留普通伤害使用的历史记录。");
+                    "不受免疫限制的径向击退也应采用当前坐标，并保留伤害判定历史。");
+            }
+        }
+
+        public static void DelayedKnockbackLocksImmunityAndReadsLivePosition()
+        {
+            Exception failure = null;
+            using (var done = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler((error, _) =>
+            {
+                failure = error;
+                done.Set();
+            }))
+            using (var movement = new SimMovementController(scheduler))
+            {
+                var hit = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
+                var immune = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
+                var excluded = CreateActor(new EntityTestWorld(), movement, scheduler, 0);
+                var hitStatus = hit.Entity.Native.StatusManager.GetStatus(0).StatusId;
+                var immuneStatus = immune.Entity.Native.StatusManager.GetStatus(0).StatusId;
+                hit.Pos = new Vector2(4, 0);
+                immuneStatus.Value = 160;
+
+                SimKnockback.Resolve(scheduler, new[] { hit, immune, excluded }, KnockbackEffect.Radial(Vector2.Zero, 8, 0.2f),
+                    movementAt: 0.05, exclude: excluded,
+                    beforeMovement: () =>
+                    {
+                        Assert(!hit.IsMoving, "位移节点执行前不能启动击退。");
+                        hitStatus.Value = 1209;
+                        immuneStatus.Value = 0;
+                        hit.Pos = new Vector2(0, 4);
+                    },
+                    afterMovement: () =>
+                    {
+                        Near(new Vector2(0, 12), movement.PositionAfterKnockback(hit));
+                        Assert(immune.Entity.NativeKnockbackCalls == 0, "判定时有防击退的角色仍免疫，即使位移前状态过期。");
+                        Assert(excluded.Entity.NativeKnockbackCalls == 0, "排除的主目标不应被击退。");
+                        done.Set();
+                    });
+
+                scheduler.Start();
+                Assert(done.Wait(2000) && failure == null, "延迟击退判定失败：" + failure);
             }
         }
 
@@ -112,8 +153,8 @@ namespace Simulant.Tests
                         if (Math.Abs(position.Y - distance) < 0.001)
                             finishedAt = Math.Min(finishedAt, scheduler.ElapsedSeconds);
                     };
-                    local.KnockbackFromEffect(0, (ushort)sample.Id, (byte)sample.Extra);
-                    remote.KnockbackFromEffect(0, (ushort)sample.Id, (byte)sample.Extra);
+                    SimKnockback.Resolve(scheduler, new[] { local, remote },
+                        KnockbackEffect.DirectionalFromRow(0, (ushort)sample.Id, (byte)sample.Extra));
                     Assert(local.Entity.NativeKnockbackCalls == 1 && local.Entity.NativeKnockbackDistance == distance &&
                         Math.Abs(local.Entity.NativeKnockbackDuration - sample.Duration) < 0.00001,
                         "自身原生击退必须按效果行、追加距离和表内速度计算时长。");
@@ -149,7 +190,7 @@ namespace Simulant.Tests
                     var rejected = false;
                     try
                     {
-                        actor.KnockbackFromEffect(0, id);
+                        SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.DirectionalFromRow(0, id));
                     }
                     catch (InvalidOperationException)
                     {
@@ -187,8 +228,7 @@ namespace Simulant.Tests
                     sentAt.Add(scheduler.ElapsedSeconds);
                 };
 
-                local.Knockback((float)Deg(90), 20, 0.8f);
-                remote.Knockback((float)Deg(90), 20, 0.8f);
+                SimKnockback.Resolve(scheduler, new[] { local, remote }, KnockbackEffect.Directional((float)Deg(90), 20, 0.8f));
                 Assert(local.Entity.NativeKnockbackCalls == 1 && local.Entity.NetworkMoves.Count == 0,
                     "自身必须保留已实测正常的原生击退，不能发送不生效的 ActorMove。");
                 Assert(scheduler.PendingCount == 1, "击退轨迹必须复用移动控制器的单个更新节点。");
@@ -224,7 +264,7 @@ namespace Simulant.Tests
                 movement.MoveNetworkTo(actor, new Vector2(20, 20));
                 movement.MoveTo(actor, new Vector2(20, 20));
                 Assert(!actor.IsMoving, "眩晕期间新发的网络或本地走路命令均不得生效。");
-                actor.Knockback(0, 10, 1);
+                SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.Directional(0, 10, 1));
                 movement.StopVoluntary(actor);
                 Assert(actor.IsMoving, "眩晕期间仍应允许强制击退，状态轮询不能取消击退轨迹。");
                 movement.Stop(actor);
@@ -248,7 +288,7 @@ namespace Simulant.Tests
             {
                 var actor = CreateActor(new EntityTestWorld(), movement, scheduler, 2);
                 actor.Entity.OnActorMove = (pos, _, __) => actor.Entity.Pos3D = pos;
-                actor.Knockback(0, 20, 0.8f);
+                SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.Directional(0, 20, 0.8f));
                 var packets = 0;
 
                 scheduler.Schedule(0.15, () =>

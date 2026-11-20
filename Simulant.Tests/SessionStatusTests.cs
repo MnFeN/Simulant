@@ -72,12 +72,13 @@ namespace Simulant.Tests
                     "本机技能只影响指定玩家，不影响其他角色。");
                 Assert(scene.Statuses.GetStatus(0).StatusId.Get() == 1209 && scene.Statuses.GetStatus(0).RemainingTime.Get() == 6,
                     "亲疏自行应施加六秒对应状态。");
-                scene.Player.Knockback(0, 20, 0.8f);
+                var effect = KnockbackEffect.Directional(0, 20, 0.8f);
+                SimKnockback.Resolve(scene._scheduler, new[] { scene.Player }, effect);
                 Assert(scene.Player.Entity.NativeKnockbackCalls == 0, "有防击退状态时不应调用本机击退。");
-                scene.Player.Knockback(0, 20, 0.8f, ignoreImmunity: true);
+                SimKnockback.Resolve(scene._scheduler, new[] { scene.Player }, effect, ignoreImmunity: true);
                 Assert(scene.Player.Entity.NativeKnockbackCalls == 1, "不可免疫的击退应仍能执行。");
                 scene.Manager.RemoveStatus(scene.Player, 1209);
-                scene.Player.Knockback(0, 20, 0.8f);
+                SimKnockback.Resolve(scene._scheduler, new[] { scene.Player }, effect);
                 Assert(scene.Player.Entity.NativeKnockbackCalls == 2, "状态移除后恢复击退。");
 
                 var external = scene.Statuses.GetStatus(0);
@@ -129,7 +130,7 @@ namespace Simulant.Tests
                 scene.Manager.UseKnockbackImmunity(fake);
                 Assert(fake.Entity.Native.StatusManager.GetStatus(0).StatusId.Get() == 160,
                     "读条职业的假队员应使用沉稳咏唱。");
-                fake.Knockback(0, 20, 0.8f);
+                SimKnockback.Resolve(scene._scheduler, new[] { fake }, KnockbackEffect.Directional(0, 20, 0.8f));
                 Assert(fake.Entity.NetworkMoves.Count == 0, "假队员有防击退时也不能发送击退移动包。");
 
                 scene.Statuses.GetStatus(0).StatusId.Value = 1209;

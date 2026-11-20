@@ -308,8 +308,8 @@ namespace Simulant.Content.U7a.Presets
             };
             mechanic.Visual = result =>
             {
-                foreach (var member in result.Participants.Where(p => p.Slot != target))
-                    Party[member.Slot].KnockbackFrom(center, 40, 0.8f);
+                SimKnockback.Resolve(Scheduler, result.HitActors, KnockbackEffect.Radial(center, 40, 0.8f),
+                    exclude: Party[target]);
             };
             Run(ProtectCrystal(mechanic, target));
         }

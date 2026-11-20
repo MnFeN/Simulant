@@ -252,6 +252,9 @@
     <Compile Include="..\Simulant\Simulation\Runtime\SimActor.cs">
       <Link>Runtime\SimActor.cs</Link>
     </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimKnockback.cs">
+      <Link>Runtime\SimKnockback.cs</Link>
+    </Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimActorBehavior*.cs">
       <Link>Runtime\%(Filename)%(Extension)</Link>
     </Compile>

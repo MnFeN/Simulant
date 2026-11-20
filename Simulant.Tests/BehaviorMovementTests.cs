@@ -60,7 +60,7 @@ namespace Simulant.Tests
                                         if (scheduler.IsRunning)
                                             scheduler.ScheduleAfter(0.08, () => actor.Entity.Pos3D = next);
                                     };
-                                    actor.KnockbackFromEffect((float)heading, 201);
+                                    SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.DirectionalFromRow((float)heading, 201));
                                     scheduler.Schedule(0.15, () => actor.MoveForMechanic(destination, 2.25, 3.85, urgent: true, gapClose: true));
                                     actors.Add(actor);
                                     destinations.Add(destination);
@@ -167,7 +167,7 @@ namespace Simulant.Tests
                         if (scheduler.IsRunning)
                             scheduler.ScheduleAfter(0.25, () => actor.Entity.Pos3D = next);
                     };
-                    actor.Knockback((float)Deg(90), 6, 0.2f);
+                    SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.Directional((float)Deg(90), 6, 0.2f));
                     actors.Add(actor);
                 }
                 var destination = new Vector2(9, 5);
@@ -530,7 +530,7 @@ namespace Simulant.Tests
             using (var behavior = new SimActorBehaviorController(scheduler, movement, casts))
             {
                 var actor = CreateActor(behavior, movement, casts);
-                actor.Knockback((float)Deg(90), 20, 0.3f);
+                SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.Directional((float)Deg(90), 20, 0.3f));
                 scheduler.Schedule(0.1, () => actor.MoveForMechanic(new Vector2(22, 0), 1.5, 2, urgent: true));
                 scheduler.Schedule(0.45, () => Assert(Vector2.Distance(actor.Pos, new Vector2(20, 0)) < 0.025,
                     "击退期间收到下一条移动指令，仍须先到击退落点，不能截断轨迹。"));
