@@ -285,7 +285,10 @@ namespace Simulant.Content.U7a.Presets
             {
                 Oracle.ActorMove(Oracle.Entity.Pos3D, heading, 0);
                 Oracle.ExecuteActionEffect(second ? 40285u : 40284u, Party[target], heading, result.HitActors);
-                Scheduler.ScheduleAfter(1.05, () => Oracle.ActorMove(new Vector3(landing, 0), heading, 0), "真夜舞蹈落点同步");
+                // 尚无真夜舞蹈波及队员的样本，模拟借用同阶段碎灵一击（40289）的击退距离和速度。
+                SimKnockback.Resolve(Scheduler, result.HitActors, KnockbackEffect.RadialFromRow(targetPosition, SpiritTakerKnockbackRow),
+                    movementAt: Scheduler.ElapsedSeconds + 1.05, exclude: Party[target],
+                    beforeMovement: () => Oracle.ActorMove(new Vector3(landing, 0), heading, 0), name: "真夜舞蹈落点与击退");
                 Status(target, 3323, 10);
                 if (!second)
                     _firstHit = target;

@@ -228,23 +228,23 @@ namespace Simulant.Content.U7a.Presets
         {
             var snapshot = PartySnapshot.Capture(Party);
             var target = snapshot.Members.OrderByDescending(p => Vector2.DistanceSquared(p.Position, Oracle.Pos)).First().Slot;
-            _dance = JumpLanding(Oracle, snapshot.Get(target).Position);
-            _danceHeading = Heading(snapshot.Get(target).Position - Oracle.Pos);
+            var targetPosition = snapshot.Get(target).Position;
+            _dance = JumpLanding(Oracle, targetPosition);
+            _danceHeading = Heading(targetPosition - Oracle.Pos);
             var buster = Spread("至黑之舞死刑", target, 40182, false);
             buster.LockedSnapshot = snapshot;
             buster.Check = _ => target != _plan.TankSlot ? $"应由 {Roles[_plan.TankSlot]} 引导，实际为 {Roles[target]}。" : null;
             buster.Failed = result => Report(result.DescribeBaitFailure("至黑之舞死刑", new[] { _plan.TankSlot }, _plan.TankSlot, target)
                 .WithAttribution(target == Self || _plan.TankSlot == Self || result.Participants.Any(p => p.Slot == Self)
                     ? new[] { Self } : Array.Empty<int>()), result);
-            buster.Visual = _ =>
+            buster.Visual = result =>
             {
                 Oracle.ActorMove(Oracle.Entity.Pos3D, _danceHeading, 0);
-                Oracle.ExecuteActionEffect(40182, Party[target], _danceHeading);
-                Scheduler.ScheduleAfter(1.02, () =>
-                {
-                    Oracle.ActorMove(new Vector3(_dance, 0), _danceHeading, 0);
-                    ReturnForKnockback(target);
-                }, "至黑之舞落点同步");
+                Oracle.ExecuteActionEffect(40182, Party[target], _danceHeading, result.HitActors);
+                SimKnockback.Resolve(Scheduler, result.HitActors, KnockbackEffect.RadialFromRow(targetPosition, SpiritTakerKnockbackRow),
+                    movementAt: Scheduler.ElapsedSeconds + 1.02, exclude: Party[target],
+                    beforeMovement: () => Oracle.ActorMove(new Vector3(_dance, 0), _danceHeading, 0),
+                    afterMovement: () => ReturnForKnockback(target), name: "至黑之舞落点与死刑击退");
             };
             Run(buster);
             for (var i = 0; i < 8; i++)
