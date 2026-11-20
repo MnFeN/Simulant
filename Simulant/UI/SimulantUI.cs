@@ -3,7 +3,7 @@ using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
-using Simulant.Core.Firewall;
+using Simulant.Core.Zone;
 using Simulant.Game;
 using Simulant.Game.Data;
 using Lumina.Excel.Sheets;
@@ -30,6 +30,7 @@ namespace Simulant.UI
         private ToolStripMenuItem _exdResourceMenuItem;
         private ExdBrowserForm _exdBrowserForm;
         private EnvironmentEditorForm _environmentEditorForm;
+        private GreenScreenForm _greenScreenForm;
         private Form _resizeHost;
         private bool _resizeLayoutSuspended;
 
@@ -51,6 +52,7 @@ namespace Simulant.UI
             Disposed += (_, __) => _actionListForm?.Close();
             Disposed += (_, __) => _exdBrowserForm?.Close();
             Disposed += (_, __) => _environmentEditorForm?.Close();
+            Disposed += (_, __) => _greenScreenForm?.Close();
         }
 
         protected override void OnParentChanged(EventArgs e)
@@ -174,6 +176,7 @@ namespace Simulant.UI
 
             resources.DropDownItems.Add(_actionResourceMenuItem);
             menu.Items.Add(resources);
+            menu.Items.Add("绿幕控制", null, (_, __) => OpenGreenScreen());
             debug.DropDown.ShowItemToolTips = true;
             menu.Items.Add(debug);
             BindDebugMenuItem(menu, _addEntityMenuItem, ConfigureNetworkEntityMenu(), btnAddBNpc_Click);
@@ -353,15 +356,11 @@ namespace Simulant.UI
             {
                 _host.LogError("防火墙开启失败：" + ex.Message);
                 SetFirewallToggleChecked(firewall.HasPendingCleanup);
-                return;
             }
             finally
             {
                 UpdateControlStates();
             }
-
-            if (!firewall.IsInteractionBlocked)
-                MessageBox.Show(this, FirewallService.InteractionWarning, "防火墙警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private void TryDisableFirewall()
@@ -476,7 +475,8 @@ namespace Simulant.UI
 
             if (territoryId > 0 && GameDataService.Instance.GetSheet<TerritoryType>().TryGetRow((uint)_selectedTerritoryId, out var territory))
             {
-                territoryName = territory.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
+                territoryName = territoryId == GreenScreenStage.TerritoryId ? GreenScreenStage.Name
+                    : territory.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
 
                 if (!string.IsNullOrWhiteSpace(territory.ContentFinderCondition.ValueNullable?.Name.ExtractText()))
                 {
@@ -606,7 +606,11 @@ namespace Simulant.UI
                 if (!_host.ZoneService.TryEnterTerritory(_selectedTerritoryId))
                     return;
 
-                await _host.ZoneService.EnterPhase(phaseData);
+                if (await _host.ZoneService.EnterPhase(phaseData) && !IsDisposed && !Disposing && !_host.Disposed
+                    && _host.ZoneService.ActiveGreenScreen != null)
+                {
+                    OpenGreenScreen();
+                }
             }
             finally
             {
@@ -622,6 +626,9 @@ namespace Simulant.UI
 
         private void OpenExdBrowser()
             => ShowResourceWindow(ref _exdBrowserForm, () => new ExdBrowserForm());
+
+        private void OpenGreenScreen()
+            => ShowToolWindow(ref _greenScreenForm, () => new GreenScreenForm(_host));
 
         private void ShowResourceWindow<T>(ref T window, Func<T> create) where T : Form
         {

@@ -1,5 +1,6 @@
 ﻿using Simulant.Utils;
 using Simulant.Core.Environment;
+using Simulant.Core.Zone;
 using Simulant.Game.Data;
 using Lumina.Excel.Sheets;
 using System;
@@ -129,7 +130,8 @@ namespace Simulant.UI
                 {
                     Id = i,
                     IdString = i.ToStringInvariant(),
-                    PlaceName = territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty,
+                    PlaceName = i == GreenScreenStage.TerritoryId ? GreenScreenStage.Name
+                        : territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty,
                     InstanceName = territory?.ContentFinderCondition.ValueNullable?.Name.ExtractText() ?? string.Empty,
                     RegionName = territory?.PlaceNameRegion.ValueNullable?.Name.ExtractText() ?? string.Empty,
                     TypeName = ((TerritoryIntendedUseEnum?)territory?.TerritoryIntendedUse.RowId)?.ToString() ?? string.Empty,

@@ -53,13 +53,5 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         public MemoryField<ushort> SharedTimelineState => Ptr.Field<ushort>(0x1B2); // 从 payload 0x2C 写入的
         public MemoryField<uint> SharedGroupState => Ptr.Field<uint>(0x1B4); // 从 payload 0x30 写入的
         public MemoryField<byte> PendingOrRefreshState => Ptr.Field<byte>(0x1B8);
-
-        [SigPattern("E8 * * * * E9 ? ? ? ? 4D 85 F6 0F 84 ? ? ? ? 8B 44 24 70 BE ? ? ? ?")]
-        public static IntPtr PlayAnimationFuncPtr { get; set; }
-
-        // a2: sharedTimelineState, 似乎可以随意传参，实际值未观察到影响动画行为
-        // a3: bitMask, 相当于 MapEffect 的 slotMask (flags)，目前同样仅观察到单比特值，如 0x1 0x80 0x200
-        public void PlayAnimation(ushort sharedTimelineState, ushort bitMask, ulong context = 0)
-            => PlayAnimationFuncPtr.Call(Ptr, sharedTimelineState, bitMask, context);
     }
 }

@@ -1,6 +1,5 @@
 using Simulant.Game.FFCS.Client.System.Resource.Handle;
 using System;
-using System.Runtime.InteropServices;
 
 namespace Simulant.Game
 {
@@ -33,7 +32,7 @@ namespace Simulant.Game
             GameFunctions.CheckStatus(ResourceHandle.GetAsyncFuncPtr, ResourceHandle.DecRefFuncPtr);
             GameFunctions.CheckStatus(ParseResourceFuncPtr, SetupCompleteFuncPtr, ResourceVTable);
 
-            var parameters = new GetResourceParameters
+            var parameters = new ResourceHandle.GetResourceParameters
             {
                 Priority = 5,
                 ListenerIndex = 0xFF,
@@ -45,8 +44,7 @@ namespace Simulant.Game
 
             try
             {
-                var loadFields = handle.Ptr.As<ResourceHandleLoadFields>();
-                if (handle.Ptr.ReadPtr() != ResourceVTable || !loadFields.SkipsSqPackRead ||
+                if (handle.Ptr.ReadPtr() != ResourceVTable || !handle.SkipsSqPackRead ||
                     handle.ReadState.Get() != 1 || handle.LoadState.Get() != 1)
                     throw new InvalidOperationException("AVFX 资源句柄未进入预期的等待状态。");
 
@@ -69,7 +67,7 @@ namespace Simulant.Game
                 if (!resourceFields.IsPrepared)
                     throw new InvalidOperationException("客户端未能完成 AVFX 渲染资源的初始化。");
 
-                loadFields.ReadResult.Set(1);
+                handle.ReadResult.Set(1);
                 handle.ReadState.Set(2);
                 return handle;
             }
@@ -80,25 +78,7 @@ namespace Simulant.Game
             }
         }
 
-        // FFCS 未声明这些字段。KodakkuAssist 的同名类型只透传指针。
-        // 字段来自国服 GetAsync 及资源加载流程。此处只声明内存加载使用的字段。
-        [StructLayout(LayoutKind.Explicit, Size = 0x34)]
-        private struct GetResourceParameters
-        {
-            [FieldOffset(0x18)] internal byte Priority;
-            [FieldOffset(0x19)] internal byte ListenerIndex;
-            [FieldOffset(0x26)] internal byte SkipSqPackRead;
-        }
-
         // 以下为 FFCS 未声明的字段和内部对象，按成员归属保留在本地。
-        // ResourceHandle 的读入结果和跳过文件读取标志由原生资源加载流程访问。
-        private struct ResourceHandleLoadFields : IMemoryObject
-        {
-            public IntPtr Ptr { get; set; }
-            internal MemoryField<byte> ReadResult => Ptr.Field<byte>(0x69);
-            internal bool SkipsSqPackRead => (Ptr.Read<byte>(0x6A) & 0x80) != 0;
-        }
-
         private struct VfxResourceObjectFields : IMemoryObject
         {
             public IntPtr Ptr { get; set; }

@@ -25,9 +25,24 @@ namespace Simulant.Core.Zone
         private Vector3? _entrancePosition;
         private uint _simulatedTerritoryId;
         private int _worldVersion;
+        private GreenScreenStage _greenScreen;
         public ZoneService(PluginHost host)
         {
             _host = host;
+        }
+
+        internal GreenScreenStage ActiveGreenScreen
+        {
+            get
+            {
+                GreenScreenStage stage;
+                lock (_stateGate)
+                {
+                    stage = _isInSimulatedTerritory && _simulatedTerritoryId == GreenScreenStage.TerritoryId ? _greenScreen : null;
+                }
+
+                return stage?.IsReady == true ? stage : null;
+            }
         }
 
         // 用于下次切换区域时清理旧 instance
@@ -76,6 +91,7 @@ namespace Simulant.Core.Zone
         // 外部换图/进程退出时只丢弃归属，不在新世界中清理旧副本实例。
         internal void InvalidateWorld()
         {
+            GreenScreenStage greenScreen;
             lock (_stateGate)
             {
                 _worldVersion++;
@@ -86,9 +102,12 @@ namespace Simulant.Core.Zone
                 _returnLoadRequested = false;
                 _loadedInstanceContentId = null;
                 _entrancePosition = null;
+                greenScreen = _greenScreen;
+                _greenScreen = null;
             }
 
             CancelPendingPhase();
+            ReleaseGreenScreen(greenScreen);
         }
 
         private void EnsureWorld(int worldVersion)
@@ -102,10 +121,12 @@ namespace Simulant.Core.Zone
         {
             CancelPendingPhase();
 
+            GreenScreenStage newStage = null;
             try
             {
                 int worldVersion;
                 bool recordInitialState;
+                GreenScreenStage greenScreen = null;
 
                 lock (_stateGate)
                 {
@@ -114,12 +135,17 @@ namespace Simulant.Core.Zone
 
                     worldVersion = _worldVersion;
                     recordInitialState = !_initialTerritoryId.HasValue;
+                    if (territoryId == GreenScreenStage.TerritoryId)
+                        greenScreen = _greenScreen;
                 }
 
                 var gameMain = GameMain.Instance;
 
                 if (gameMain.IsNull())
                     throw new InvalidOperationException("GameMain.Instance 为空。");
+
+                if (territoryId == GreenScreenStage.TerritoryId && greenScreen == null)
+                    greenScreen = newStage = GreenScreenStage.Load();
 
                 // 只有从非模拟状态进入区域时，才记录真实地图和位置
                 if (recordInitialState)
@@ -133,6 +159,12 @@ namespace Simulant.Core.Zone
                 {
                     EnsureWorld(worldVersion);
                     _isInSimulatedTerritory = false;
+                    _greenScreen?.BeginTransition();
+                    if (newStage != null)
+                    {
+                        _greenScreen = newStage;
+                        newStage = null;
+                    }
                 }
 
                 LoadTerritoryInternal(territoryId, territory, worldVersion, storyProgress);
@@ -144,10 +176,10 @@ namespace Simulant.Core.Zone
                     _simulatedTerritoryId = (uint)territoryId;
                 }
 
-                var finalTerritoryId = territory.HasValue ? (int)territory.Value.RowId : territoryId;
                 _openingEntrance = OpenEntranceAsync(territory, worldVersion);
-                var placeName = territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? "未知区域";
-                _host.LogSim($"已进入区域：{placeName} ({finalTerritoryId})");
+                var placeName = greenScreen != null ? GreenScreenStage.Name
+                    : territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? "未知区域";
+                _host.LogSim($"已进入区域：{placeName} ({territoryId})");
 
                 return true;
             }
@@ -159,6 +191,10 @@ namespace Simulant.Core.Zone
             {
                 _host.LogError("进入区域失败：" + ex.ToString());
                 return false;
+            }
+            finally
+            {
+                ReleaseGreenScreen(newStage);
             }
         }
 
@@ -230,6 +266,7 @@ namespace Simulant.Core.Zone
                 {
                     EnsureWorld(worldVersion);
                     _isInSimulatedTerritory = false;
+                    _greenScreen?.BeginTransition();
                 }
 
                 if (!returnLoadRequested)
@@ -249,6 +286,7 @@ namespace Simulant.Core.Zone
                 EnsureWorld(worldVersion);
                 _host.EnvironmentService.SetBgm(0);
 
+                GreenScreenStage greenScreen;
                 lock (_stateGate)
                 {
                     EnsureWorld(worldVersion);
@@ -259,7 +297,10 @@ namespace Simulant.Core.Zone
                     _initialTerritoryId = null;
                     _initialPosition = null;
                     _returnLoadRequested = false;
+                    greenScreen = _greenScreen;
+                    _greenScreen = null;
                 }
+                ReleaseGreenScreen(greenScreen);
 
                 var finalTerritoryId = territory.HasValue ? (int)territory.Value.RowId : territoryId;
                 var placeName = territory?.PlaceName.ValueNullable?.Name.ExtractText() ?? "未知区域";
@@ -275,6 +316,18 @@ namespace Simulant.Core.Zone
             {
                 _host.LogError("返回真实区域失败：" + ex.Message);
                 return false;
+            }
+        }
+
+        private void ReleaseGreenScreen(GreenScreenStage stage)
+        {
+            try
+            {
+                stage?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _host.LogWarning("未能释放绿幕场景资源：" + ex.Message);
             }
         }
 
@@ -357,6 +410,7 @@ namespace Simulant.Core.Zone
             int worldVersion;
             uint territoryId;
             Vector3? spawn;
+            GreenScreenStage greenScreen;
 
             lock (_stateGate)
             {
@@ -365,7 +419,8 @@ namespace Simulant.Core.Zone
 
                 worldVersion = _worldVersion;
                 territoryId = _simulatedTerritoryId;
-                spawn = phaseData.Spawn ?? _entrancePosition;
+                greenScreen = territoryId == GreenScreenStage.TerritoryId ? _greenScreen : null;
+                spawn = phaseData.Spawn ?? (greenScreen != null ? new Vector3(0, 0, 0.1f) : _entrancePosition);
             }
 
             var clock = Stopwatch.StartNew();
@@ -377,7 +432,7 @@ namespace Simulant.Core.Zone
                 EnsureWorld(worldVersion);
             }
 
-            void Prepare(CancellationToken token)
+            void SetSpawn(CancellationToken token)
             {
                 CheckCurrent(token);
 
@@ -421,6 +476,13 @@ namespace Simulant.Core.Zone
             void Apply(CancellationToken token)
             {
                 CheckCurrent(token);
+                if (greenScreen != null)
+                {
+                    greenScreen.ActivateFloor();
+                    SetSpawn(token);
+                    _host.LogRuntime("区域 1 已加载绿幕地板，角色已放置到场地内。");
+                }
+
                 _host.EnvironmentService.SetWeather(phaseData.Weather);
                 CheckCurrent(token);
                 _host.EnvironmentService.SetBgm(phaseData.BGM);
@@ -437,7 +499,11 @@ namespace Simulant.Core.Zone
                 _host.LogVerbose(FormattableString.Invariant($"[场地初始化] 区域 {territoryId}，{clock.Elapsed.TotalSeconds:F3} 秒：地图已就绪，已提交阶段「{phaseData.Name}」的天气、BGM 和场地效果。"));
             }
 
-            return _phaseApplication.ApplyAsync(Prepare, Apply, Ready);
+            return _phaseApplication.ApplyAsync(token =>
+            {
+                if (greenScreen == null)
+                    SetSpawn(token);
+            }, Apply, Ready);
         }
 
         private void LoadTerritoryInternal(int territoryId, TerritoryType? territory, int worldVersion, int storyProgress = 0,

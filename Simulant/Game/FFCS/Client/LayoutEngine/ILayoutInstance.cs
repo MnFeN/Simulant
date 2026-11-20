@@ -10,8 +10,11 @@ namespace Simulant.Game.FFCS.Client.LayoutEngine
     {
         public IntPtr Ptr { get; set; }
 
+        internal LayoutManager Layout => Ptr.ReadPtr(0x10).As<LayoutManager>();
         internal MemoryField<uint> SubId => Ptr.Field<uint>(0x20);
         internal MemoryField<byte> Flags1 => Ptr.Field<byte>(0x29);
+        private MemoryField<byte> Flags3 => Ptr.Field<byte>(0x2B);
+        internal bool IsActive => (Flags3.Get() & (1 << 4)) != 0; // FFCS BitField<bool>(IsActive, 4).
 
         // FFCS BitField<int>(NestingLevel, 4, 3).
         internal static int GetNestingLevel(byte flags1) => (flags1 >> 4) & 7;
@@ -20,6 +23,7 @@ namespace Simulant.Game.FFCS.Client.LayoutEngine
         internal bool IsPrimaryLoaded() => Ptr.CallVFunc<bool>(22);
 
         internal void SetColliderActive(bool active) => Ptr.CallVFunc(37, active);
+        internal void SetActive(bool active) => Ptr.CallVFunc(63, active);
     }
 
     // FFCS 的 Client.LayoutEngine.Transform 定义在同一文件内。
@@ -38,6 +42,8 @@ namespace Simulant.Game.FFCS.Client.LayoutEngine
 
     internal enum InstanceType : byte
     {
+        BgPart = 1,
+        Light = 3,
         SharedGroup = 6,
     }
 }

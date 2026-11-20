@@ -16,6 +16,7 @@ namespace Simulant.Game.FFCS.Client.LayoutEngine
         public MemoryField<int> InitState => Ptr.Field<int>(0x018); // 7 is fully loaded and ready, <7 are various stages of init
         public MemoryField<uint> TerritoryTypeId => Ptr.Field<uint>(0x020); // TerritoryType row id
         public MemoryField<uint> CfcId => Ptr.Field<uint>(0x024); // ContentFinderCondition row id
+        internal IManagerBase ManagerBase => Ptr.As<IManagerBase>();
 
         // Maps instance type to the map keyed by (InstanceId << 32) | SubId.
         internal MemoryField<StdMap> InstancesByType => Ptr.Field<StdMap>(0x268);
