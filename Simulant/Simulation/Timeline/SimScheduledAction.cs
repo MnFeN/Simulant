@@ -15,17 +15,20 @@ namespace Simulant.Simulation.Timeline
         internal readonly double Seconds;
         internal readonly long Sequence;
         internal readonly string Name;
+        internal readonly bool FinishOnMechanicFailure;
         internal Action Action;
         internal int HeapIndex = -1;
         internal int State;
 
-        internal SimScheduledAction(SimScheduler scheduler, double seconds, long sequence, Action action, string name)
+        internal SimScheduledAction(SimScheduler scheduler, double seconds, long sequence, Action action, string name,
+            bool finishOnMechanicFailure)
         {
             _scheduler = scheduler;
             Seconds = seconds;
             Sequence = sequence;
             Action = action;
             Name = name;
+            FinishOnMechanicFailure = finishOnMechanicFailure;
         }
 
         public bool IsCancelled => Volatile.Read(ref State) == Cancelled;

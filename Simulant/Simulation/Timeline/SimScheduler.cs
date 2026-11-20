@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Simulant.Simulation.Mechanics;
 
 namespace Simulant.Simulation.Timeline
 {
@@ -11,21 +12,32 @@ namespace Simulant.Simulation.Timeline
     /// </summary>
     public sealed class SimScheduler : IDisposable
     {
+        private const double MechanicFailureDelay = 2;
         private readonly object _gate = new object();
         private readonly Stopwatch _clock = new Stopwatch();
         private readonly List<SimScheduledAction> _heap = new List<SimScheduledAction>();
         private readonly Action<Exception, string> _errorHandler;
+        private readonly Action _interruptAfterFailure;
         private readonly Thread _worker;
         private long _sequence;
         private bool _started;
         private bool _cancelled;
+        private bool _failed;
+        private bool _drainingFailure;
         private bool _disposed;
         private bool _executing;
         private double _currentNodeSeconds;
+        private double _nativePresentationUntil;
 
         public SimScheduler(Action<Exception, string> errorHandler = null)
+            : this(errorHandler, null)
+        {
+        }
+
+        internal SimScheduler(Action<Exception, string> errorHandler, Action interruptAfterFailure)
         {
             _errorHandler = errorHandler;
+            _interruptAfterFailure = interruptAfterFailure;
             _worker = new Thread(Run)
             {
                 IsBackground = true,
@@ -57,11 +69,20 @@ namespace Simulant.Simulation.Timeline
             get
             {
                 lock (_gate)
-                    return _started && !_cancelled;
+                    return _started && !_cancelled && !_drainingFailure;
             }
         }
 
         public bool IsSchedulerThread => Thread.CurrentThread == _worker;
+
+        internal bool IsDrainingFailure
+        {
+            get
+            {
+                lock (_gate)
+                    return _drainingFailure;
+            }
+        }
 
         /// <summary>Starts the clock and worker. Nodes may be queued before this call. Repeated calls are harmless.</summary>
         public void Start()
@@ -90,6 +111,9 @@ namespace Simulant.Simulation.Timeline
 
         /// <summary>Queues a node at an absolute time from Start. Past deadlines run as soon as possible.</summary>
         public SimScheduledAction Schedule(double seconds, Action action, string name = null)
+            => Schedule(seconds, action, name, finishOnMechanicFailure: false);
+
+        internal SimScheduledAction Schedule(double seconds, Action action, string name, bool finishOnMechanicFailure)
         {
             SimTimeline.ValidateSeconds(seconds, nameof(seconds));
             SimTimeline.ValidateAction(action, nameof(action));
@@ -97,7 +121,7 @@ namespace Simulant.Simulation.Timeline
             lock (_gate)
             {
                 ThrowIfStopped();
-                var node = Enqueue(seconds, action, name);
+                var node = Enqueue(seconds, action, name, finishOnMechanicFailure);
                 Monitor.Pulse(_gate);
                 return node;
             }
@@ -105,6 +129,9 @@ namespace Simulant.Simulation.Timeline
 
         /// <summary>Queues a node relative to the actual current clock time, including when called by a node.</summary>
         public SimScheduledAction ScheduleAfter(double seconds, Action action, string name = null)
+            => ScheduleAfter(seconds, action, name, finishOnMechanicFailure: false);
+
+        internal SimScheduledAction ScheduleAfter(double seconds, Action action, string name, bool finishOnMechanicFailure)
         {
             SimTimeline.ValidateSeconds(seconds, nameof(seconds));
             SimTimeline.ValidateAction(action, nameof(action));
@@ -114,14 +141,15 @@ namespace Simulant.Simulation.Timeline
                 ThrowIfStopped();
                 var time = _clock.Elapsed.TotalSeconds + seconds;
                 SimTimeline.ValidateSeconds(time, nameof(seconds));
-                var node = Enqueue(time, action, name);
+                var node = Enqueue(time, action, name, finishOnMechanicFailure);
                 Monitor.Pulse(_gate);
                 return node;
             }
         }
 
         /// <summary>供机制添加可取消节点；节点内部以计划时间为基准，避免开始演出的耗时推迟判定。</summary>
-        internal SimScheduledAction ScheduleRelativeToNode(double seconds, Action action, string name = null)
+        internal SimScheduledAction ScheduleRelativeToNode(double seconds, Action action, string name = null,
+            bool finishOnMechanicFailure = false)
         {
             SimTimeline.ValidateSeconds(seconds, nameof(seconds));
             SimTimeline.ValidateAction(action, nameof(action));
@@ -132,7 +160,7 @@ namespace Simulant.Simulation.Timeline
                 var anchor = IsSchedulerThread && _executing ? _currentNodeSeconds : _clock.Elapsed.TotalSeconds;
                 var time = anchor + seconds;
                 SimTimeline.ValidateSeconds(time, nameof(seconds));
-                var node = Enqueue(time, action, name);
+                var node = Enqueue(time, action, name, finishOnMechanicFailure);
                 Monitor.Pulse(_gate);
                 return node;
             }
@@ -197,29 +225,13 @@ namespace Simulant.Simulation.Timeline
                 _worker.Join();
         }
 
-        /// <summary>中断后在原调度线程等待演出，不再运行节点；手动停止或卸载可立即唤醒。</summary>
-        internal void WaitForFailureDisplay(double seconds)
+        /// <summary>记录已经交给客户端执行的位移结束时间。</summary>
+        internal void TrackNativePresentation(double duration)
         {
-            SimTimeline.ValidateSeconds(seconds, nameof(seconds));
-
-            if (!IsSchedulerThread)
-                throw new InvalidOperationException("演出等待只能在调度线程执行。");
-
-            var wait = Stopwatch.StartNew();
-
             lock (_gate)
             {
-                while (_cancelled && !_disposed)
-                {
-                    var remaining = seconds - wait.Elapsed.TotalSeconds;
-
-                    if (remaining <= 0)
-                        return;
-
-                    var milliseconds = remaining >= int.MaxValue / 1000.0
-                        ? int.MaxValue : Math.Max(1, (int)Math.Ceiling(remaining * 1000));
-                    Monitor.Wait(_gate, milliseconds);
-                }
+                _nativePresentationUntil = Math.Max(_nativePresentationUntil, _clock.Elapsed.TotalSeconds + duration);
+                Monitor.Pulse(_gate);
             }
         }
 
@@ -268,90 +280,135 @@ namespace Simulant.Simulation.Timeline
 
         private void Run()
         {
-            while (true)
+            while (TryTakeNext(out var node, out var action))
             {
-                SimScheduledAction node;
-                Action action;
-
-                lock (_gate)
-                {
-                    while (true)
-                    {
-                        if (_cancelled)
-                            return;
-
-                        if (_heap.Count == 0)
-                        {
-                            Monitor.Wait(_gate);
-                            continue;
-                        }
-
-                        node = _heap[0];
-                        var remaining = node.Seconds - _clock.Elapsed.TotalSeconds;
-
-                        if (remaining > 0)
-                        {
-                            // Clamp before converting so very distant deadlines cannot overflow the wait.
-                            var milliseconds = remaining >= int.MaxValue / 1000.0
-                                ? int.MaxValue : Math.Max(1, (int)Math.Ceiling(remaining * 1000));
-                            Monitor.Wait(_gate, milliseconds);
-                            continue;
-                        }
-
-                        RemoveAt(0);
-                        Volatile.Write(ref node.State, SimScheduledAction.Running);
-                        action = node.Action;
-                        node.Action = null;
-                        _currentNodeSeconds = node.Seconds;
-                        _executing = true;
-                        break;
-                    }
-                }
-
                 try
                 {
                     action();
                 }
                 catch (Exception exception)
                 {
-                    bool report;
-
-                    lock (_gate)
-                    {
-                        // A callback may try to enqueue more work after another thread has stopped us.
-                        // That is normal shutdown, not a second simulation failure.
-                        report = !_cancelled;
-
-                        if (report)
-                            CancelCore();
-                    }
-
-                    if (report)
-                    {
-                        // Freeze scheduling before reporting: the handler may tear down simulation state.
-                        try
-                        {
-                            _errorHandler?.Invoke(exception, node.Name);
-                        }
-                        catch
-                        { /* An error reporter must not bring down the host process. */
-                        }
-                    }
+                    HandleNodeFailure(exception, node.Name);
                 }
                 finally
                 {
-                    lock (_gate)
-                    {
-                        _executing = false;
-                        Volatile.Write(ref node.State, SimScheduledAction.Completed);
-                    }
+                    Complete(node);
                 }
+            }
+
+            Cancel();
+            if (_failed)
+            {
+                try
+                {
+                    _interruptAfterFailure?.Invoke();
+                }
+                catch
+                { /* 清理回调失败后仍保留现场，等待显式停止。 */ }
             }
         }
 
-        private SimScheduledAction Enqueue(double seconds, Action action, string name)
+        private bool TryTakeNext(out SimScheduledAction node, out Action action)
         {
-            var node = new SimScheduledAction(this, seconds, _sequence++, action, name);
+            node = null;
+            action = null;
+
+            lock (_gate)
+            {
+                while (!_cancelled)
+                {
+                    if (_heap.Count == 0 && !_drainingFailure)
+                    {
+                        Monitor.Wait(_gate);
+                        continue;
+                    }
+
+                    var dueAt = _heap.Count == 0 ? _nativePresentationUntil : _heap[0].Seconds;
+                    var remaining = dueAt - _clock.Elapsed.TotalSeconds;
+                    if (remaining > 0)
+                    {
+                        var milliseconds = remaining >= int.MaxValue / 1000.0
+                            ? int.MaxValue : Math.Max(1, (int)Math.Ceiling(remaining * 1000));
+                        Monitor.Wait(_gate, milliseconds);
+                        continue;
+                    }
+
+                    if (_heap.Count == 0)
+                        return false;
+
+                    node = _heap[0];
+                    RemoveAt(0);
+                    Volatile.Write(ref node.State, SimScheduledAction.Running);
+                    action = node.Action;
+                    node.Action = null;
+                    _currentNodeSeconds = node.Seconds;
+                    _executing = true;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void Complete(SimScheduledAction node)
+        {
+            lock (_gate)
+            {
+                _executing = false;
+                Volatile.Write(ref node.State, SimScheduledAction.Completed);
+            }
+        }
+
+        private void HandleNodeFailure(Exception exception, string name)
+        {
+            lock (_gate)
+            {
+                // 其他线程已停止时，当前节点的退出不再报告为新错误。
+                if (_cancelled)
+                    return;
+
+                if (exception is SimMechanicFailedException && _interruptAfterFailure != null)
+                {
+                    // 从第一次失败开始计时，期间后续判定仍按原时间运行并报告结果。
+                    if (!_failed)
+                        Enqueue(_clock.Elapsed.TotalSeconds + MechanicFailureDelay, BeginFailureDrain, "机制失败后中断时间轴");
+                }
+                else
+                    CancelCore();
+
+                _failed = true;
+            }
+
+            try
+            {
+                _errorHandler?.Invoke(exception, name);
+            }
+            catch
+            { /* An error reporter must not bring down the host process. */
+            }
+        }
+
+        private void BeginFailureDrain()
+        {
+            lock (_gate)
+            {
+                _drainingFailure = true;
+                foreach (var node in _heap.ToArray())
+                    if (!node.FinishOnMechanicFailure)
+                        Cancel(node);
+            }
+        }
+
+        private SimScheduledAction Enqueue(double seconds, Action action, string name, bool finishOnMechanicFailure = false)
+        {
+            var node = new SimScheduledAction(this, seconds, _sequence++, action, name, finishOnMechanicFailure);
+            if (_drainingFailure && !finishOnMechanicFailure)
+            {
+                node.Action = null;
+                Volatile.Write(ref node.State, SimScheduledAction.Cancelled);
+                return node;
+            }
+
             node.HeapIndex = _heap.Count;
             _heap.Add(node);
             SiftUp(node.HeapIndex);

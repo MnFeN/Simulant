@@ -164,7 +164,7 @@ namespace Simulant.Content.U7b.Presets
                         {
                             if (actor.IsActive)
                                 actor.ActorMove(position, heading, 90);
-                        }, $"第 {round.Number} 轮跳跃落地 {source + 1}");
+                        }, $"第 {round.Number} 轮跳跃落地 {source + 1}", finishOnMechanicFailure: true);
                     },
                 };
             });

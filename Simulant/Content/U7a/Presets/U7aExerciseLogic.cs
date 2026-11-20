@@ -18,6 +18,7 @@ namespace Simulant.Content.U7a.Presets
     /// <summary>绝伊甸练习共用的小队、场景和判定演出；机制各自定义选项、解法与时间轴。</summary>
     internal abstract class U7aExerciseLogic : SimLogicBase
     {
+        protected const ushort SpiritTakerKnockbackRow = 173;
         protected static readonly Vector2 Center = new Vector2(100, 100);
         protected static readonly string[] Roles = { "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4" };
         protected readonly SimActor[] Helpers = new SimActor[11];
@@ -300,11 +301,15 @@ namespace Simulant.Content.U7a.Presets
             mechanic.ResolveAfter = 0.934;
             var landing = JumpLanding(source, center);
             var heading = Heading(center - source.Pos);
-            mechanic.Started = context =>
+            mechanic.Started = _ =>
             {
                 source.ActorMove(source.Entity.Pos3D, heading, 0);
                 source.ExecuteActionEffect(40289, Party[target], heading);
-                context.ScheduleAfter(0.716, () => source.ActorMove(new Vector3(landing, 0), heading, 0), "碎灵一击落点同步");
+                Scheduler.ScheduleRelativeToNode(0.716, () =>
+                {
+                    if (source.IsActive)
+                        source.ActorMove(new Vector3(landing, 0), heading, 0);
+                }, "碎灵一击落点同步", finishOnMechanicFailure: true);
             };
             mechanic.Visual = result =>
             {

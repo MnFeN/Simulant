@@ -180,7 +180,10 @@ namespace Simulant.Simulation.Runtime
             if (network)
                 StartNetworkMovement(actor, target, speed, (byte)Math.Max(1, Math.Min(255, speed * 10)), true, null);
             else
+            {
                 actor.Entity.Knockback(heading, distance, duration);
+                _scheduler.TrackNativePresentation(duration);
+            }
         }
 
         private void StartNetworkMovement(SimActor actor, Vector2 target, float speed, byte speedParam,
@@ -355,12 +358,13 @@ namespace Simulant.Simulation.Runtime
                     return;
 
                 var now = _scheduler.ElapsedSeconds;
+                var drainingFailure = _scheduler.IsDrainingFailure;
 
                 for (var i = _moving.Count - 1; i >= 0; --i)
                 {
                     var movement = _moving[i];
 
-                    if (movement.Arrived)
+                    if (movement.Arrived || (drainingFailure && !movement.Knockback))
                         continue;
 
                     // 混用本地插值时，网络角色仍只每 100 ms 读取一次状态和位置。
@@ -654,11 +658,12 @@ namespace Simulant.Simulation.Runtime
                 _tick = null;
 
             var now = _scheduler.ElapsedSeconds;
+            var drainingFailure = _scheduler.IsDrainingFailure;
             var dueAt = double.PositiveInfinity;
 
             foreach (var movement in _moving)
             {
-                if (movement.Arrived)
+                if (movement.Arrived || (drainingFailure && !movement.Knockback))
                     continue;
 
                 var next = !movement.Network ? now + TickIntervalSeconds :
@@ -680,7 +685,9 @@ namespace Simulant.Simulation.Runtime
             if (_tick == null)
             {
                 _tickDueAt = dueAt;
-                _tick = _scheduler.ScheduleAfter(Math.Max(0, dueAt - now), _onTick, "更新实体移动");
+                // 击退与普通移动共用此节点，失败期间只推进已经提交的击退。
+                _tick = _scheduler.ScheduleAfter(Math.Max(0, dueAt - now), _onTick, "更新实体移动",
+                    finishOnMechanicFailure: true);
             }
         }
 

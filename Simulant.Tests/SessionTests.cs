@@ -1,6 +1,7 @@
 using Simulant.ACT;
 using Simulant.Core;
 using Simulant.Simulation;
+using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Options;
 using Simulant.Simulation.Runtime;
@@ -8,6 +9,7 @@ using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 
 namespace Simulant.Tests
@@ -176,7 +178,7 @@ namespace Simulant.Tests
                 {
                     session.Start();
                     Assert(SpinWait.SpinUntil(() => !session.IsRunning && session.HasPendingCleanup, TimeoutMs),
-                        "已报告的机制错误仍应立即中断流程并保留现场。");
+                        "已报告的机制错误应在宽限期结束后中断并保留现场。");
                     session.Stop();
                     Assert(GameChat.ChatCommands.Count == 1 &&
                         GameChat.ChatCommands[0].Contains("已经输出完整错误"),
@@ -204,6 +206,11 @@ namespace Simulant.Tests
                     });
 
                     probe.Logic.Scheduler.ScheduleAfter(0.05, () => laterNodes++);
+                    probe.Logic.Scheduler.ScheduleAfter(0.6, () =>
+                    {
+                        throw new SimMechanicFailedException("近点圆人数错误。");
+                    });
+                    probe.Logic.Scheduler.ScheduleAfter(2.25, () => laterNodes++);
                 };
 
                 using (var session = CreateSession(host, probe))
@@ -211,17 +218,82 @@ namespace Simulant.Tests
                     GameChat.OnChatCommand = _ => displaying.Set();
                     session.Start();
                     Wait(displaying, "机制失败的聊天提示");
-                    Assert(!session.IsRunning && session.HasPendingCleanup && actor.Entity.IsAlive && probe.StopCount == 0,
-                        "异常后应取消战斗时间轴，但保留实体让已提交的技能继续演出。");
-                    Assert(probe.Logic.Scheduler.PendingCount == 0, "保留演出时不得继续执行后续战斗节点。");
-                    Assert(GameChat.ChatCommands.Count == 1 &&
-                        GameChat.ChatCommands[0] == "塔内人数错误。",
-                        "机制失败应通过 command 回调发送一条包含提示音、换行和原始原因的消息。");
-                    Assert(!probe.Cleaned.Wait(150) && host.EntitySpawner.Deleted.Count == 0,
+                    Assert(session.IsRunning && actor.Entity.IsAlive && probe.StopCount == 0,
+                        "首次机制失败应立即提示，时间轴仍在宽限期内运行。");
+                    Assert(SpinWait.SpinUntil(() => !session.IsRunning, TimeoutMs) && session.HasPendingCleanup,
+                        "宽限期结束后应停止时间轴并保留现场。");
+                    Assert(GameChat.ChatCommands.SequenceEqual(new[] { "塔内人数错误。", "近点圆人数错误。" }),
+                        "宽限期内的两次失败均应发出原始提示。");
+                    Assert(probe.Logic.Scheduler.PendingCount == 0 && laterNodes == 1,
+                        "应执行宽限期内的判定，第二次错误不得延长首次错误设定的截止时间。");
+                    Assert(actor.Entity.IsAlive && probe.StopCount == 0 && host.EntitySpawner.Deleted.Count == 0,
                         "中断后不得自动清场，必须等待显式停止。");
                     session.Stop();
-                    Assert(laterNodes == 0 && probe.StopCount == 1 && !actor.Entity.IsAlive && !session.HasPendingCleanup,
-                        "手动停止后必须只清理一次，期间不能放行后续技能。");
+                    Assert(probe.StopCount == 1 && !actor.Entity.IsAlive && !session.HasPendingCleanup,
+                        "手动停止后必须只清理一次。");
+                }
+            }
+        }
+
+        public static void MechanicFailureLetsCommittedKnockbackFinish()
+        {
+            using (var probe = new SessionProbe())
+            using (var landed = new ManualResetEventSlim())
+            {
+                var host = new PluginHost();
+                var center = new Vector2(100, 100);
+                SimActor bait = null, local = null, remote = null, outside = null;
+                var landingSynced = false;
+                var continued = false;
+
+                probe.StartAction = () =>
+                {
+                    var manager = probe.Logic.EntityManager;
+                    var scheduler = probe.Logic.Scheduler;
+                    var world = host.EntitySpawner.World;
+                    bait = manager.Attach(world.CreateCharacter(1));
+                    var localPlayer = world.CreateCharacter(0);
+                    localPlayer.Pos = new Vector2(100, 104);
+                    local = manager.Attach(localPlayer);
+                    remote = manager.Attach(world.CreateCharacter(2));
+                    outside = manager.Attach(world.CreateCharacter(3));
+                    bait.Pos = center;
+                    remote.Pos = new Vector2(104, 100);
+                    outside.Pos = new Vector2(109, 100);
+                    manager.Party.AddRange(new[] { bait, local, remote, outside });
+                    remote.Entity.OnActorMove = (position, _, speed) =>
+                    {
+                        remote.Entity.Pos3D = position;
+                        if (speed == 0 && Math.Abs(position.X - 114) < 0.001)
+                            landed.Set();
+                    };
+
+                    manager.RunMechanic(new AreaMechanic("跳跃死刑", ActionArea.Circle(8), center)
+                    {
+                        MaxPlayers = 1,
+                        Visual = result => SimKnockback.Resolve(scheduler, result.HitActors,
+                            KnockbackEffect.Radial(center, 10, 0.2f), movementAt: scheduler.ElapsedSeconds + 2.3,
+                            exclude: bait, beforeMovement: () => landingSynced = true,
+                            afterMovement: () => continued = true),
+                    });
+                    scheduler.ScheduleAfter(2.15, () => continued = true, "宽限期之后的判定");
+                };
+
+                using (var session = CreateSession(host, probe))
+                {
+                    session.Start();
+                    Assert(landed.Wait(TimeoutMs), "失败后假队员应完成击退：" +
+                        string.Join(" | ", host.Errors.Concat(GameChat.ChatCommands)) +
+                        $"；启用 {session.IsRunning}，队员位置 {remote?.Pos}，移动包 {remote?.Entity.NetworkMoves.Count}。");
+                    Assert(!session.IsRunning && session.HasPendingCleanup && landingSynced && !continued,
+                        "失败应停止后续流程，同时保留已提交的落点和击退。");
+                    Assert(local.Entity.NativeKnockbackCalls == 1 && bait.Entity.NativeKnockbackCalls == 0 &&
+                        outside.Entity.NativeKnockbackCalls == 0,
+                        $"只有范围内的非主目标受击，实际原生击退次数为自身 {local.Entity.NativeKnockbackCalls}，" +
+                        $"主目标 {bait.Entity.NativeKnockbackCalls}，范围外 {outside.Entity.NativeKnockbackCalls}。");
+                    Assert(remote.Entity.NetworkMoves.Any(move =>
+                        move.Flags == Simulant.Game.FFCS.Client.Game.Network.ActorMoveFlags.Knockback),
+                        "假队员必须收到击退轨迹。");
                 }
             }
         }
@@ -411,6 +483,8 @@ namespace Simulant.Tests
                     Wait(reported, "聊天提示失败的日志");
                     Assert(session.HasPendingCleanup && actor.Entity.IsAlive && probe.StopCount == 0,
                         "聊天回调失败不能触发清场或丢失清理责任。");
+                    Assert(SpinWait.SpinUntil(() => !session.IsRunning, TimeoutMs),
+                        "宽限期结束后应允许重新开始。");
                     probe.StartAction = () => restarted.Set();
                     session.Start();
                     Wait(restarted, "中断后的再次启动");

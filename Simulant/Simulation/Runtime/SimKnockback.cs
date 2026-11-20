@@ -91,11 +91,12 @@ namespace Simulant.Simulation.Runtime
                     if (hit.KnockedBack)
                         hit.Actor.ApplyKnockback(effect.Heading, effect.Center, distance, duration);
                 }
-                afterMovement?.Invoke();
+                if (!scheduler.IsDrainingFailure)
+                    afterMovement?.Invoke();
             }
 
             if (movementAt.HasValue)
-                scheduler.Schedule(movementAt.Value, Apply, name ?? "击退位移开始");
+                scheduler.Schedule(movementAt.Value, Apply, name ?? "击退位移开始", finishOnMechanicFailure: true);
             else
                 Apply();
         }

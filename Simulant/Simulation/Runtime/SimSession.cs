@@ -68,7 +68,7 @@ namespace Simulant.Simulation.Runtime
                 if (HasPendingCleanup)
                     throw new InvalidOperationException("上次模拟的实体或场地标点尚未完全清理，请先停止并重试清理。");
 
-                _scheduler = new SimScheduler(HandleFailure);
+                _scheduler = new SimScheduler(HandleFailure, InterruptAfterFailure);
 
                 try
                 {
@@ -126,32 +126,25 @@ namespace Simulant.Simulation.Runtime
             {
                 try
                 {
-                    try
-                    {
-                        if (!alreadyReported)
-                            GameChat.SendEcho(reason, playSound: true);
-                    }
-                    catch (Exception chatError)
-                    {
-                        _host.LogWarning("模拟错误的聊天提示发送失败：" + chatError.Message);
-                    }
+                    if (!alreadyReported)
+                        GameChat.SendEcho(reason, playSound: true);
                 }
-                finally
+                catch (Exception chatError)
                 {
-                    // 当前判定的演出已提交；取消后续机制后留出两秒，再停止角色行为。
-                    // 普通执行异常仍立即中断，手动停止可提前结束等待。
-                    if (error is SimMechanicFailedException)
-                        _scheduler.WaitForFailureDisplay(2);
-
-                    try
-                    {
-                        _entityManager.Interrupt();
-                    }
-                    catch (Exception interruptError)
-                    {
-                        _host.LogError("中断模拟行为失败，已保留清理责任：" + interruptError);
-                    }
+                    _host.LogWarning("模拟错误的聊天提示发送失败：" + chatError.Message);
                 }
+            }
+        }
+
+        private void InterruptAfterFailure()
+        {
+            try
+            {
+                _entityManager.Interrupt();
+            }
+            catch (Exception interruptError)
+            {
+                _host.LogError("中断模拟行为失败，已保留清理责任：" + interruptError);
             }
         }
 
