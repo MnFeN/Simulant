@@ -185,12 +185,21 @@ namespace Simulant.Content.U7a.Presets
 
             // 开场暗点名先避开第一轮沙漏；五人土分摊在沙漏结算后另行集合。
             if (Debuffs[slot] == CrystalDebuff.BlueDark)
-                return Corner(NorthSlowSide, 12.220099f, -14.809091f);
-            return Corner(IsRed(slot) ? RedSide[slot] : -NorthSlowSide, 12.220099f, 14.809091f);
+                return Corner(180, -NorthSlowSide);
+            return Corner(0, IsRed(slot) ? RedSide[slot] : -NorthSlowSide);
         }
 
-        // 圆心到场中为 19.2 米、到相邻沙漏为 12.8 米；0.8 米相切圆内使用 0.7 米容差。
-        private static SimPosition Corner(int side, float x, float y) => Circle(Center + new Vector2(side * x, y), 0.7f);
+        /// <summary>
+        /// 沙漏与场地边缘的交点处的角落安全区，以交点前方指向开口的扇形定义。
+        /// </summary>
+        private static SimPosition Corner(double sandHeading, int openingSide)
+        {
+            // 以南侧沙漏右方为模板，从场边与沙漏边界的交点朝原站位前移 0.3 米作圆心。
+            var origin = Center + 16.904352f * Direction(sandHeading)
+                + (openingSide * 10.502559f) * Direction(sandHeading + 90);
+            // 取 0–2.7 米与 ±13°，离场边和沙漏最近约为 0.064 米和 0.048 米。
+            return SimPosition.AnnularSector(origin, 1.35f, Deg(sandHeading + openingSide * 138), 1.35f, Deg(13));
+        }
         internal SimPosition Stack => Sector(16, 135 * NorthSlowSide, 3, 7);
         // 点名者缩小随机区；距水晶的最小距离约 11.15 米，与参与者最远相距 4.97 米。
         internal SimPosition StackFor(int slot) => Debuffs[slot] == CrystalDebuff.BlueEarth
@@ -213,10 +222,10 @@ namespace Simulant.Content.U7a.Presets
             if (side == NorthSlowSide)
                 return Stack;
 
-            return Corner(side, 18.935099f, 3.178371f);
+            return Corner(side * 120, -side);
         }
 
-        internal SimPosition WindWait => Corner(NorthSlowSide, 6.714999f, 17.987462f);
+        internal SimPosition WindWait => Corner(NorthSlowSide * 60, -NorthSlowSide);
         internal SimPosition RedIceNorth => Circle(Center + new Vector2(0, -16));
 
         internal IEnumerable<Move> RedIceRoute(int side, double contactTime)

@@ -99,7 +99,7 @@ namespace Simulant.Tests
             }
         }
 
-        public static void RedIceCornerHasClearanceOnBothEdges()
+        public static void SandCornersUseSafeForwardAnnularSectors()
         {
             var random = new Random(7362);
             foreach (var purple in new[]
@@ -110,32 +110,43 @@ namespace Simulant.Tests
             {
                 var plan = new CrystallizeTimePlan(0, CrystalDebuff.RedIce, CrystalWave.LeftUp, purple, random);
                 var side = -plan.NorthSlowSide;
-                var area = plan.RedAfterIce(side);
-                var sand = plan.Hourglass(side > 0 ? 2 : 4);
-                Assert(Math.Abs(Vector2.Distance(area.Midpoint(), CrystallizeTimePlan.Center) - 19.2) < 0.001 &&
-                    Math.Abs(Vector2.Distance(area.Midpoint(), sand) - 12.8) < 0.001,
-                    "贴边点的 0.8 米圆应同时与场边和北侧沙漏范围相切。");
-
                 var corners = Enumerable.Range(0, 8).Where(slot => plan.Debuffs[slot] != CrystalDebuff.RedIce)
-                    .Select(plan.Initial).Concat(new[]
+                    .Select(slot => (Area: plan.Initial(slot), Sand: plan.Debuffs[slot] == CrystalDebuff.BlueDark ? 3 : 0))
+                    .Concat(new[]
                     {
-                        area,
-                        plan.WindWait
+                        (Area: plan.RedAfterIce(side), Sand: side > 0 ? 2 : 4),
+                        (Area: plan.WindWait, Sand: plan.NorthSlowSide > 0 ? 1 : 5)
                     });
-                foreach (var corner in corners)
+                foreach (var (area, sandIndex) in corners)
                 {
-                    var center = corner.Midpoint();
-                    Assert(Math.Abs(Vector2.Distance(center, CrystallizeTimePlan.Center) - 19.2) < 0.001 &&
-                        Enumerable.Range(0, 6).Any(i => Math.Abs(Vector2.Distance(center, plan.Hourglass(i)) - 12.8) < 0.001) &&
-                        Math.Abs(corner.DeviationRadius - 0.7) < 0.001,
-                        "所有角落等待区都应使用相切小圆的固定圆心与 0.7 米容差。");
+                    var sand = plan.Hourglass(sandIndex);
+                    var center = CrystallizeTimePlan.Center;
+                    var radial = Vector2.Normalize(sand - center);
+                    var lateral = new Vector2(radial.Y, -radial.X);
+                    var opening = Math.Sign(Vector2.Dot(area.Pos - center, lateral));
+                    var intersection = center + radial * 17.136364f + lateral * (opening * 10.312373f);
+                    Assert(area.Contains(area.Pos) && Math.Abs(Vector2.Distance(intersection, area.Pos) - 0.3f) < 0.001f,
+                        "扇形包含圆心，圆心位于场边与沙漏交点前方约 0.3 米。");
+
+                    var inner = area.Sample(0, 0.5, Math.PI) - area.Pos;
+                    var outer = area.Sample(1, 0.5, Math.PI) - area.Pos;
+                    Assert(inner.LengthSquared() < 0.000001f && Math.Abs(outer.Length() - 2.7f) < 0.001f,
+                        "所有场边扇形的内外半径应为 0 和 2.7 米。");
+                    var angularEdge = area.Sample(1, 0, Math.PI) - area.Pos;
+                    Assert(Math.Abs(Vector2.Dot(Vector2.Normalize(outer), Vector2.Normalize(angularEdge)) - Math.Cos(13 * Math.PI / 180)) < 0.001,
+                        "扇形的角度半宽应为 13°。");
+
+                    for (var radialStep = 0; radialStep <= 24; radialStep++)
+                    for (var angleStep = 0; angleStep <= 24; angleStep++)
+                    {
+                        var point = area.Sample(radialStep / 24.0, angleStep / 24.0, Math.PI);
+                        Assert(Vector2.Distance(point, center) <= 19.937f && Vector2.Distance(point, sand) >= 12.048f,
+                            "扇形的边界和内部应至少离场边 0.063 米、离沙漏 0.048 米。");
+                    }
                 }
 
                 for (var sample = 0; sample < 500; sample++)
                 {
-                    var point = area.Sample(random);
-                    Assert(Vector2.Distance(point, CrystallizeTimePlan.Center) < 19.901 && Vector2.Distance(point, sand) > 12.099,
-                        "0.7 米随机容差仍应为沙漏和电网留下至少 0.1 米余量。");
                     var north = plan.RedIceNorth.Sample(random);
                     Assert(new[]
                     {
