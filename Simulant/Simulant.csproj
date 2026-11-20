@@ -224,12 +224,14 @@
 		<EmbeddedResource Include="..\Lumina.ACT\Licenses\*" Link="Resources\Licenses\%(Filename)%(Extension)" LogicalName="Simulant.Licenses.%(Filename)%(Extension)" />
 	</ItemGroup>
 
-	<!-- 发布只保留插件本体；依赖、调试符号和配置文件仍可正常生成到构建目录。 -->
-	<Target Name="PublishOnlyPluginAssembly" AfterTargets="ComputeFilesToPublish">
+	<!-- 发布包含插件本体和当前版本号。 -->
+	<Target Name="CollectPluginPublishFiles" AfterTargets="ComputeFilesToPublish">
+		<WriteLinesToFile File="$(IntermediateOutputPath)version.txt" Lines="$(Version)" Overwrite="true" WriteOnlyWhenDifferent="true" />
 		<ItemGroup>
 			<!-- SDK 默认可能发布 obj 中未合并的程序集；必须指定构建目录中已合并的成品。 -->
 			<ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" />
 			<ResolvedFileToPublish Include="$(TargetPath)" RelativePath="$(TargetFileName)" CopyToPublishDirectory="Always" />
+			<ResolvedFileToPublish Include="$(IntermediateOutputPath)version.txt" RelativePath="version.txt" CopyToPublishDirectory="Always" />
 		</ItemGroup>
 	</Target>
 
