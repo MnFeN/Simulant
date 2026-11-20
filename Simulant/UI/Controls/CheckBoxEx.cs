@@ -26,6 +26,8 @@ namespace Simulant.UI
 
     public class CheckBoxEx : CheckBox
     {
+        private const int SwitchTextLeft = 42;
+        private const int CheckTextLeft = 18;
         private const int ChipTextLeft = 16;
         private const int ChipTextPadding = ChipTextLeft + 5;
 
@@ -88,8 +90,12 @@ namespace Simulant.UI
         public override Size GetPreferredSize(Size proposedSize)
         {
             var size = base.GetPreferredSize(proposedSize);
-            if (Style == CheckBoxStyle.Chip)
+            if (Style == CheckBoxStyle.Switch && !string.IsNullOrEmpty(Text))
+                size.Width = Math.Max(size.Width, SwitchTextLeft + TextRenderer.MeasureText(Text, Font).Width + 4);
+            else if (Style == CheckBoxStyle.Chip)
                 size.Width = Math.Max(size.Width, TextRenderer.MeasureText(Text, Font).Width + ChipTextPadding);
+            else if (Style == CheckBoxStyle.CheckBox && !string.IsNullOrEmpty(Text))
+                size.Width = Math.Max(size.Width, CheckTextLeft + TextRenderer.MeasureText(Text, Font).Width + 4);
             return size;
         }
 
@@ -190,7 +196,7 @@ namespace Simulant.UI
                     track.Top + (height - dot) / 2, dot, dot);
 
             if (!string.IsNullOrEmpty(Text))
-                PaintText(graphics, new Rectangle(42, 0, Math.Max(0, Width - 42), Height),
+                PaintText(graphics, new Rectangle(SwitchTextLeft, 0, Math.Max(0, Width - SwitchTextLeft), Height),
                     Enabled ? ForeColor : WorkbenchTheme.Dim);
         }
 

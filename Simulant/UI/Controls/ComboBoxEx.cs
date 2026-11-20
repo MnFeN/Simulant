@@ -52,6 +52,15 @@ namespace Simulant.UI
             UpdateItemHeight();
         }
 
+        public override Size GetPreferredSize(Size proposedSize)
+        {
+            var size = base.GetPreferredSize(proposedSize);
+            // The native selection field can be taller than the reported preferred height.
+            if (DropDownStyle == ComboBoxStyle.DropDownList)
+                size.Height = Math.Max(size.Height, Height);
+            return size;
+        }
+
         private void UpdateItemHeight()
         {
             if (DrawMode == DrawMode.OwnerDrawFixed)

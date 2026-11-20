@@ -22,6 +22,19 @@ namespace Simulant.Game
         /// <summary>同步调用游戏原生函数，并以 <typeparamref name="T"/> 类型返回结果。</summary>
         public T Call<T>(IntPtr address, params object[] args) where T : struct => CallCore<T>(address, args, true);
 
+        /// <summary>通过原生调用调度器，在同一次帧锁内执行一组操作。</summary>
+        internal void RunInFrame(Action action)
+        {
+#if SIMULANT_NATIVE_TESTS
+            if (_calls != null)
+            {
+                action();
+                return;
+            }
+#endif
+            _scheduler.Execute(action);
+        }
+
         private T CallCore<T>(IntPtr address, object[] args, bool hasReturnValue) where T : struct
         {
             if (args == null)

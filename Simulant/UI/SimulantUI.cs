@@ -274,6 +274,7 @@ namespace Simulant.UI
             StopCurrentSession();
             _host.StopDebugEntities();
             _host.CompleteEntityWorldChange();
+            _environmentEditorForm?.RefreshStudioState();
             UpdateControlStates();
         }
 

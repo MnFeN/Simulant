@@ -67,6 +67,70 @@ namespace Simulant.Core
                 throw new InvalidOperationException("请等待插件连接游戏并完成区域切换；未开启开发者模式时，调试操作必须启用防火墙。");
         }
 
+        internal void SetStudioEnabled(bool enabled)
+        {
+            // 资源加载、实例创建和临时引用释放使用同一个游戏连接。
+            lock (_initLock)
+                Studio.SetEnabled(enabled);
+        }
+
+        internal void ChangeStudioSettings(Environment.StudioSettings settings)
+        {
+            lock (_initLock)
+                Studio.ChangeSettings(settings);
+        }
+
+        internal void SaveStudioSettings()
+        {
+            lock (_initLock)
+            {
+                var settings = Studio.Settings;
+                if (Configuration.Studio.Equals(settings))
+                    return;
+
+                var snapshot = Configuration.Copy();
+                snapshot.Studio = settings;
+                snapshot.Save(ConfigurationPath);
+                Configuration = snapshot;
+            }
+        }
+
+        internal bool TryGetStudioPlayerTransform(out System.Numerics.Vector3 position, out float heading)
+        {
+            lock (_initLock)
+            {
+                position = default;
+                heading = 0f;
+                return PluginReady && !Disposed && !IsInitializing && !IsSwitchingTerritory &&
+                    GameInterop.IsReady && Studio.TryGetPlayerTransform(out position, out heading);
+            }
+        }
+
+        internal void PollStudio()
+        {
+            if (!Monitor.TryEnter(_initLock))
+                return;
+
+            Exception failure = null;
+            try
+            {
+                if (!Disposed && PluginReady && !IsInitializing)
+                    Studio.Update();
+            }
+            catch (Exception error)
+            {
+                Studio.StopTracking();
+                failure = error;
+            }
+            finally
+            {
+                Monitor.Exit(_initLock);
+            }
+
+            if (failure != null)
+                LogWarning("更新摄影棚失败：" + failure);
+        }
+
         internal void EnsureFirewallAllowed()
         {
             if (!PluginReady || IsInitializing || Disposed || IsSwitchingTerritory)
@@ -107,6 +171,7 @@ namespace Simulant.Core
         internal Firewall.FirewallService FirewallService;
         internal ZoneService ZoneService;
         internal Environment.EnvironmentService EnvironmentService;
+        internal Environment.StudioService Studio { get; }
         internal EntityProvider EntityProvider;
         internal EntitySpawner EntitySpawner;
         internal Party.SimPartyService PartyService;
@@ -305,6 +370,8 @@ namespace Simulant.Core
 
             Cleanup(() => _ui?.StopCurrentSession());
             Cleanup(StopDebugEntities);
+            lock (_initLock)
+                Studio?.StopTracking();
             Cleanup(VfxManager.Clear);
             Cleanup(() => PlayerActions?.Reset());
             Cleanup(() => PartyService?.RestoreAll());
@@ -354,6 +421,7 @@ namespace Simulant.Core
             FirewallService = new Firewall.FirewallService(this);
             ZoneService = new ZoneService(this);
             EnvironmentService = new Environment.EnvironmentService(this);
+            Studio = new Environment.StudioService(this);
             EntityRegistry = new EntityRegistry();
             EntityProvider = new EntityProvider(EntityRegistry,
                 () => XivPluginInterop.plugin?.DataRepository.GetCurrentPlayerID() ?? 0);
@@ -455,9 +523,10 @@ namespace Simulant.Core
             lock (_initLock)
             {
                 var snapshot = configuration.Copy();
-                // 全局设置窗口可能打开较久，保留期间自动保存的预设选项和悬浮窗位置。
+                // 全局设置窗口可能打开较久，保留期间自动保存的预设、悬浮窗和摄影棚设置。
                 snapshot.Presets = Configuration.Copy().Presets;
                 snapshot.QuickControlsLocation = Configuration.QuickControlsLocation;
+                snapshot.Studio = Configuration.Studio;
                 snapshot.Save(ConfigurationPath);
 
                 Configuration = snapshot;
@@ -658,6 +727,7 @@ namespace Simulant.Core
                     {
                         Disposed = true;
                         PluginReady = false;
+                        Studio?.StopTracking();
                     }
 
                     if (_ui != null && !_ui.IsDisposed)
@@ -924,7 +994,8 @@ namespace Simulant.Core
                     Commands?.Stop();
 
                 Interlocked.Increment(ref _worldGeneration);
-                VfxManager.InvalidateWorld();
+                Studio?.StopTracking();
+                VfxManager.InvalidateProcess();
                 _entityZoneId = _subscribedXivPlugin?.DataRepository?.GetCurrentTerritoryID();
                 ZoneService?.InvalidateWorld();
                 PartyService?.InvalidateWorld();
@@ -988,6 +1059,7 @@ namespace Simulant.Core
 
                 _entityZoneId = zoneId;
                 Interlocked.Increment(ref _worldGeneration);
+                Studio?.StopTracking();
                 VfxManager.InvalidateWorld();
                 ZoneService?.InvalidateWorld();
                 PartyService?.InvalidateWorld();

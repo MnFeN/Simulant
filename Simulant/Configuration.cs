@@ -1,3 +1,4 @@
+using Simulant.Core.Environment;
 using Simulant.Simulation.Runtime;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,10 @@ namespace Simulant
         public bool DeveloperMode { get; set; }
         public string FfxivPath { get; set; } = string.Empty;
 
+        public StudioSettings Studio { get; set; } = StudioSettings.Default;
+
+        public bool ShouldSerializeStudio() => !Studio.Equals(StudioSettings.Default);
+
         [XmlArrayItem("Preset")]
         public List<PresetConfiguration> Presets { get; set; } = new List<PresetConfiguration>();
 
@@ -46,6 +51,7 @@ namespace Simulant
                 GenerateActLogs = GenerateActLogs,
                 DeveloperMode = DeveloperMode,
                 FfxivPath = FfxivPath?.Trim() ?? string.Empty,
+                Studio = Studio.WithClampedSize(),
                 Presets = (Presets ?? new List<PresetConfiguration>()).Where(preset => preset.Options.Count != 0)
                     .Select(preset => new PresetConfiguration
                     {

@@ -113,6 +113,7 @@
     <Compile Include="..\Simulant\Core\PluginUpdater.cs">
       <Link>Core\PluginUpdater.cs</Link>
     </Compile>
+    <Compile Include="..\Simulant\Core\Environment\StudioSettings.cs" />
     <Compile Include="..\Simulant\Configuration.cs">
       <Link>Configuration.cs</Link>
     </Compile>

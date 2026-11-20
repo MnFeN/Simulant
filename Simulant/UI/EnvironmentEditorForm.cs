@@ -49,6 +49,7 @@ namespace Simulant.UI
             Padding = new Padding(16);
 
             _keepOnTop.CheckedChanged += (_, __) => TopMost = _keepOnTop.Checked;
+            _keepOnTop.Checked = true;
             _refresh.Click += (_, __) => UpdateView(true);
             var header = new PanelEx { Dock = DockStyle.Fill, Padding = new Padding(14, 10, 10, 10), Margin = new Padding(0, 0, 0, 10) };
             header.Controls.Add(_region);
@@ -57,7 +58,12 @@ namespace Simulant.UI
 
             _tabs.TabPages.Add(BuildWeatherTab());
             _tabs.TabPages.Add(BuildMapTab());
-            _tabs.SelectedIndexChanged += (_, __) => RefreshMapEffects();
+            _tabs.TabPages.Add(BuildStudioTab());
+            _tabs.SelectedIndexChanged += (_, __) =>
+            {
+                RefreshMapEffects();
+                RefreshStudioState();
+            };
 
             var root = MakeRows();
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
@@ -68,7 +74,11 @@ namespace Simulant.UI
             root.Controls.Add(_feedback, 0, 2);
             Controls.Add(root);
 
-            _poll.Tick += (_, __) => UpdateView();
+            _poll.Tick += (_, __) =>
+            {
+                RefreshStudioState();
+                UpdateView();
+            };
             RefreshEffectInput();
         }
 
@@ -383,10 +393,19 @@ namespace Simulant.UI
             _feedback.Text = error == null ? text : $"{text} {error.Message}";
         }
 
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            (ActiveControl as NumericTextBoxEx)?.CommitEdit();
+            base.OnFormClosing(e);
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
+                FlushStudioSettings();
+                _studioSaveTimer.Dispose();
+                _studioHints.Dispose();
                 _poll.Dispose();
                 _resources?.Dispose();
             }

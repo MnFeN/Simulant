@@ -11,6 +11,8 @@ namespace Simulant.Game
 
         private RemoteInput(byte[] bytes) => Bytes = bytes;
 
+        internal static RemoteInput FromBytes(byte[] bytes) => new RemoteInput(bytes);
+
         /// <summary>创建以空字符结尾的输入字符串，默认使用 UTF-8 编码。</summary>
         public static RemoteInput CString(string text, Encoding encoding = null)
         {

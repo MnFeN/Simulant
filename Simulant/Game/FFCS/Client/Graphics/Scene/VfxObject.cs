@@ -1,3 +1,5 @@
+using Simulant.Game.FFCS.Client.Graphics.Vfx;
+using Simulant.Game.FFCS.Client.System.Resource.Handle;
 using System;
 using System.Numerics;
 
@@ -18,12 +20,30 @@ namespace Simulant.Game.FFCS.Client.Graphics.Scene
         [SigPattern("0F 28 CA E8 * * * * 80 A3", "83 89 ? ? ? ? ? F3 0F 11 89")]
         public static IntPtr FadeOutFuncPtr { get; set; }
 
+        // FFCS 未声明 VfxObject 的虚表签名，从构造函数写入主虚表的 LEA 取址。
+        [SigPattern("48 8B 5C 24 ?? 48 8D 05 * * * * 48 89 07 48 8D 05 ?? ?? ?? ?? 48 89 87 90 00 00 00")]
+        internal static IntPtr VTablePtr { get; set; }
+
         public IntPtr Ptr { get; set; }
 
         public MemoryField<Vector3> Position => Ptr.Field<Vector3>(0x50);
         public MemoryField<Quaternion> Rotation => Ptr.Field<Quaternion>(0x60);
         public MemoryField<Vector3> Scale => Ptr.Field<Vector3>(0x70);
         public MemoryField<Vector4> Color => Ptr.Field<Vector4>(0x260);
+        internal VfxResourceInstance VfxResourceInstance => Ptr.ReadPtr(0x2A0).As<VfxResourceInstance>();
+
+        internal bool MatchesResource(ResourceHandle resource, uint resourceId)
+        {
+            if (Ptr.ReadPtr() != VTablePtr || Ptr.As<Object>().ParentObject.IsNull())
+                return false;
+
+            var instance = VfxResourceInstance;
+            if (instance.IsNull())
+                return false;
+
+            var package = instance.VfxResourceObject;
+            return !package.IsNull() && package.ApricotResourceHandle.Ptr == resource.Ptr && resource.Id.Get() == resourceId;
+        }
 
         public static VfxObject CreateStatic(string path, string pool)
         {

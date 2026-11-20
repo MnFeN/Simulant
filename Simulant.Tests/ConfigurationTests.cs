@@ -1,3 +1,4 @@
+using Simulant.Core.Environment;
 using System;
 using System.Globalization;
 using System.IO;
@@ -8,6 +9,42 @@ namespace Simulant.Tests
 {
     internal static class ConfigurationTests
     {
+        public static void StudioSettingsRoundTripAndRestoreDefaults()
+        {
+            WithPath(path =>
+            {
+                var configuration = Configuration.Load(path);
+                var defaults = configuration.Studio;
+                Assert(defaults.RelativeXY && defaults.RelativeZ && !defaults.RelativeAngle && defaults.Angle == 0f,
+                    "摄影棚角度默认使用绝对 0 度，坐标保留原有相对模式。");
+
+                var draft = configuration.Copy();
+                var studio = draft.Studio;
+                studio.Position = new System.Numerics.Vector3(3f, -5f, 10f);
+                studio.RelativeXY = false;
+                studio.RelativeAngle = true;
+                studio.Angle = 45f;
+                studio.Size = new System.Numerics.Vector3(20f, 16f, 8f);
+                studio.Color = new System.Numerics.Vector4(0.5f, 0.25f, 1f, 0.75f);
+                studio.FloorType = StudioFloorType.Decal;
+                studio.DrawLayer = StudioDrawLayer.Base;
+                studio.DepthTest = false;
+                studio.DepthWrite = true;
+                studio.EnvironmentLight = 30;
+                studio.DirectionalLight = 70;
+                draft.Studio = studio;
+                draft.Save(path);
+
+                Assert(configuration.Studio.Equals(defaults), "编辑摄影棚副本不应改变当前配置。");
+                Assert(Configuration.Load(path).Studio.Equals(studio), "摄影棚参数应完整保存并恢复。");
+
+                draft.Studio = defaults;
+                draft.Save(path);
+                Assert(!File.ReadAllText(path).Contains("<Studio>") && Configuration.Load(path).Studio.Equals(defaults),
+                    "恢复默认后可省略摄影棚节点，重新读取应得到相同默认值。");
+            });
+        }
+
         public static void QuickControlLocationPersistsAndOldConfigurationsKeepDefault()
         {
             WithPath(path =>

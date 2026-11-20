@@ -128,7 +128,7 @@ namespace Simulant.UI
             return true;
         }
 
-        private void CommitEdit()
+        internal void CommitEdit()
         {
             if (Text == _valueText)
                 return;
