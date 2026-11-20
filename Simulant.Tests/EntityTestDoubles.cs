@@ -37,6 +37,14 @@ namespace Simulant.Core.Entity
         public void Redraw()
         {
         }
+
+        internal (Simulant.Game.ActorControlCategory Category, uint A1, uint A2, uint A3, uint A4) LastActorControl { get; private set; }
+
+        public IntPtr ActorControl(Simulant.Game.ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
+        {
+            LastActorControl = (category, a1, a2, a3, a4);
+            return IntPtr.Zero;
+        }
     }
 
     public sealed partial class Character : EntityBase
@@ -168,14 +176,6 @@ namespace Simulant.Core.Entity
         public void ExecuteActionEffectAt(uint actionId, Vector3 position, float heading, float animationLock = 0)
         {
             ActionEffects.Add(actionId);
-        }
-
-        internal (Simulant.Game.ActorControlCategory Category, uint A1, uint A2, uint A3, uint A4) LastActorControl { get; private set; }
-
-        public IntPtr ActorControl(Simulant.Game.ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
-        {
-            LastActorControl = (category, a1, a2, a3, a4);
-            return IntPtr.Zero;
         }
 
         internal byte[] NameBytes = new byte[64];

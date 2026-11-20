@@ -144,7 +144,7 @@ namespace Simulant.Content.U7a.Presets
                                }
                            }, "地火读条与生成直线");
 
-                           mechanic.At(8, () => Array.ForEach(lines, e => e.PlayAnimation(0x2)), "地火细线出现");
+                           mechanic.At(8, () => Array.ForEach(lines, e => EntityManager.PlayEObjAnimation(e, 0x1, 0x2)), "地火细线出现");
 
                            mechanic.Repeat(10, 4, 3, group =>
                            {
@@ -172,13 +172,13 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(0, () =>
             {
                 _host.LogVerbose(FormattableString.Invariant($"地火线 {lineEObj.Id} @ {lineEObj.Address.Hex()} 开始时间轴: Pos = <{pos.X:F2}, {pos.Y:F2}>, Heading = {heading:F2}"));
-                lineEObj.PlayAnimation(0x10);
+                EntityManager.PlayEObjAnimation(lineEObj, 0x20, 0x10);
                 // 初始的矩形 Omen，技能实际没有其他效果。
                 DummyCast(pos, heading, 0x9D73, 10, 5); // 光
                 DummyCast(pos, oppositeHeading, 0x9CB6, 10, 5); // 暗
             }, "地火光暗预兆");
 
-            timeline.At(7, () => lineEObj.PlayAnimation(0x8), "地火箭头出现");
+            timeline.At(7, () => EntityManager.PlayEObjAnimation(lineEObj, 0, 0x8), "地火箭头出现");
             timeline.At(7, StepsTimeline(pos, heading, isLight: true));
             timeline.At(7, StepsTimeline(pos, oppositeHeading, isLight: false));
             return timeline;

@@ -1,5 +1,6 @@
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
+using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Core.Party;
 using Simulant.Simulation.Timeline;
@@ -264,6 +265,13 @@ namespace Simulant.Simulation.Runtime
                 _owned.Add(entity);
                 return entity;
             }
+        }
+
+        internal void PlayEObjAnimation(EventObject entity, ushort sharedTimelineState, ushort bitMask)
+        {
+            const ActorControlCategory category = ActorControlCategory.EObjAnimation;
+            entity.ActorControl(category, sharedTimelineState, bitMask);
+            CombatLog?.ActorControl(entity.Id, category, sharedTimelineState, bitMask, 0, 0);
         }
 
         public SimActor Attach(Character entity)

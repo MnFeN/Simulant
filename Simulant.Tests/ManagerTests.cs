@@ -1,5 +1,6 @@
 using Simulant.Core;
 using Simulant.Core.Entity;
+using Simulant.Game;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation.Runtime;
@@ -16,6 +17,38 @@ namespace Simulant.Tests
 {
     internal static class ManagerTests
     {
+        public static void EventObjectAnimationWritesActorControlExtraWhenEnabled()
+        {
+            using (var scheduler = new SimScheduler())
+            {
+                var enabled = false;
+                var logs = new List<(int Id, string Payload)>();
+                var manager = new SimEntityManager(new EntitySpawner())
+                {
+                    Scheduler = scheduler,
+                    CombatLog = new SimCombatLog(() => enabled, (id, payload, time) => logs.Add((id, payload)), null)
+                };
+                var entity = manager.SpawnEObj(0, 2014199, Vector3.Zero);
+
+                manager.PlayEObjAnimation(entity, 1, 2);
+                Assert(entity.LastActorControl == (ActorControlCategory.EObjAnimation, 1u, 2u, 0u, 0u) && logs.Count == 0,
+                    "关闭日志选项时仍应播放 EObj 动画。");
+
+                enabled = true;
+                manager.PlayEObjAnimation(entity, 1, 2);
+                manager.PlayEObjAnimation(entity, 0x20, 0x10);
+                manager.PlayEObjAnimation(entity, 0, 8);
+
+                Assert(entity.LastActorControl == (ActorControlCategory.EObjAnimation, 0u, 8u, 0u, 0u) && logs.SequenceEqual(new[]
+                {
+                    (273, $"{entity.Id:X8}|019D|1|2|0|0"),
+                    (273, $"{entity.Id:X8}|019D|20|10|0|0"),
+                    (273, $"{entity.Id:X8}|019D|0|8|0|0")
+                }), "每次播放 EObj 动画应以同一实体 ID 及参数写入一条 273 日志。");
+                manager.Clear();
+            }
+        }
+
         public static void ManagerClearsOwnedEntitiesAndOnlyDetachesBorrowedActors()
         {
             var spawner = new EntitySpawner();

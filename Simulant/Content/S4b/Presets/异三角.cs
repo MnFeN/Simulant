@@ -92,9 +92,9 @@ namespace Simulant.Content.S4b.Presets
             (Triangle triangle, byte index) = GetRandomTriangleFromList();
             var eobj = EntityManager.SpawnEObj(triangle.CreateSpawnSpec(index));
             var timeline = new SimTimeline();
-            timeline.At(1.1, () => eobj.PlayAnimation(0x20), "异三角出现");
-            timeline.At(2.6, () => eobj.PlayAnimation(0x80), "异三角旋转");
-            timeline.At(9.6, () => eobj.PlayAnimation(0x8), "异三角消失");
+            timeline.At(1.1, () => EntityManager.PlayEObjAnimation(eobj, 0, 0x20), "异三角出现");
+            timeline.At(2.6, () => EntityManager.PlayEObjAnimation(eobj, 0, 0x80), "异三角旋转");
+            timeline.At(9.6, () => EntityManager.PlayEObjAnimation(eobj, 0, 0x8), "异三角消失");
 
             timeline.At(9.7, () =>
             {

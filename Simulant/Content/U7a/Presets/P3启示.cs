@@ -300,16 +300,16 @@ namespace Simulant.Content.U7a.Presets
                 {
                     if (beat <= 1)
                     {
-                        _lights[8].PlayAnimation(4, 1);
-                        _lights[9].PlayAnimation(4, 1);
+                        EntityManager.PlayEObjAnimation(_lights[8], 4, 1);
+                        EntityManager.PlayEObjAnimation(_lights[9], 4, 1);
                     }
                     // 顺逆时针分别使用 0x10/0x20、0x40/0x80 播放及收尾；每拍最多续播三组圆弧。
                     var animation = (ushort)(_plan.Turn > 0 ? beat == 4 ? 0x20 : 0x10 : beat == 4 ? 0x80 : 0x40);
                     for (var trail = Math.Max(0, beat - 2); trail <= beat; trail++)
                     {
                         var direction = ApocalypsePlan.Mod(_plan.StartDirection - _plan.Turn * trail, 8);
-                        _lights[direction].PlayAnimation(4, animation);
-                        _lights[(direction + 4) % 8].PlayAnimation(4, animation);
+                        EntityManager.PlayEObjAnimation(_lights[direction], 4, animation);
+                        EntityManager.PlayEObjAnimation(_lights[(direction + 4) % 8], 4, animation);
                     }
                 }, "启示光点步进演出");
             }
