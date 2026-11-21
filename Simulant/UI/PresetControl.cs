@@ -21,7 +21,7 @@ namespace Simulant.UI
         private int _stopVersion;
         private readonly System.Windows.Forms.Timer _sessionStateTimer;
         private readonly OptionEditor _optionEditor;
-        private QuickControlForm _quickControls;
+        private FormEx.StaWindow<QuickControlForm> _quickControls;
         private bool _displayedRunning;
         private bool _displayedPendingCleanup;
         private bool _displayedReadyToStart;
@@ -52,7 +52,7 @@ namespace Simulant.UI
 
             Disposed += (sender, e) =>
             {
-                _quickControls?.Dispose();
+                CloseQuickControls();
                 StopCurrentSession();
             };
             ClearPreset();
@@ -330,21 +330,8 @@ namespace Simulant.UI
 
             if (!show)
             {
-                _quickControls?.Dispose();
-                _quickControls = null;
+                CloseQuickControls();
                 return;
-            }
-
-            if (_quickControls == null || _quickControls.IsDisposed)
-            {
-                _quickControls = new QuickControlForm(StartCurrentSession, RetryCurrentSession, StopCurrentSession, _host.Commands.Dispatch,
-                    _host.LogWarning, _host.PlayerActions.Cooldown)
-                {
-                    IsGameForeground = () => _host.IsGameForeground
-                };
-                if (_host.Configuration.QuickControlsLocation.HasValue)
-                    _quickControls.RestoreLocation(_host.Configuration.QuickControlsLocation.Value);
-                _quickControls.LocationCommitted += _host.SaveQuickControlsLocation;
             }
 
             bool? surecast = null;
@@ -365,8 +352,48 @@ namespace Simulant.UI
                     // 换图或掉线时身份可能已失效，保留窗口但禁用技能。
                 }
             }
-            _quickControls.UpdateState(btnStart.Enabled, btnRetry.Enabled, btnEnd.Enabled, surecast, invulnerability);
+            var canStart = btnStart.Enabled;
+            var canRetry = btnRetry.Enabled;
+            var canStop = btnEnd.Enabled;
+            Action<QuickControlForm> update = form => form.UpdateState(canStart, canRetry, canStop, surecast, invulnerability);
+            if (_quickControls?.TryPost(update) == true)
+                return;
+
+            var host = _host;
+            var location = host.Configuration.QuickControlsLocation;
+            _quickControls = FormEx.ShowOnSta(() =>
+            {
+                var form = new QuickControlForm(() => PostQuickControlAction(StartCurrentSession),
+                    () => PostQuickControlAction(RetryCurrentSession), () => PostQuickControlAction(StopCurrentSession),
+                    command => PostQuickControlAction(() => host.Commands.Dispatch(command)), host.LogWarning, host.PlayerActions.Cooldown)
+                {
+                    IsGameForeground = () => host.IsGameForeground
+                };
+                if (location.HasValue)
+                    form.RestoreLocation(location.Value);
+                form.LocationCommitted += host.SaveQuickControlsLocation;
+                return form;
+            }, error => host.LogError("快捷控制窗口出错：" + error.Message), update);
         }
 
+        internal void CloseQuickControls()
+        {
+            _quickControls?.Dispose();
+            _quickControls = null;
+        }
+
+        private void PostQuickControlAction(Action action)
+        {
+            if (IsDisposed || Disposing || _host.Disposed || !IsHandleCreated)
+                return;
+
+            BeginInvoke((Action)(() =>
+            {
+                if (IsDisposed || Disposing || _host.Disposed)
+                    return;
+                try { action(); }
+                catch (Exception error) { _host.LogWarning("执行快捷控制失败：" + error.Message); }
+            }));
+        }
     }
 }

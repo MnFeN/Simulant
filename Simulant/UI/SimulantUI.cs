@@ -12,6 +12,7 @@ using Simulant.Simulation;
 using Simulant.Utils;
 using System;
 using System.Buffers.Text;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -26,11 +27,11 @@ namespace Simulant.UI
         private ToolStripMenuItem _addEntityMenuItem;
         private ToolStripMenuItem _debugMenuItem;
         private ToolStripMenuItem _actionResourceMenuItem;
-        private ActionListForm _actionListForm;
+        private FormEx.StaWindow<ActionListForm> _actionListForm;
         private ToolStripMenuItem _exdResourceMenuItem;
-        private ExdBrowserForm _exdBrowserForm;
-        private EnvironmentEditorForm _environmentEditorForm;
-        private GreenScreenForm _greenScreenForm;
+        private FormEx.StaWindow<ExdBrowserForm> _exdBrowserForm;
+        private FormEx.StaWindow<EnvironmentEditorForm> _environmentEditorForm;
+        private FormEx.StaWindow<GreenScreenForm> _greenScreenForm;
         private Form _resizeHost;
         private bool _resizeLayoutSuspended;
 
@@ -49,10 +50,7 @@ namespace Simulant.UI
             presetControl.Bind(_host);
             UpdateTerritoryData(0);
             UpdateControlStates();
-            Disposed += (_, __) => _actionListForm?.Close();
-            Disposed += (_, __) => _exdBrowserForm?.Close();
-            Disposed += (_, __) => _environmentEditorForm?.Close();
-            Disposed += (_, __) => _greenScreenForm?.Close();
+            Disposed += (_, __) => CloseToolWindows();
         }
 
         protected override void OnParentChanged(EventArgs e)
@@ -277,7 +275,7 @@ namespace Simulant.UI
             StopCurrentSession();
             _host.StopDebugEntities();
             _host.CompleteEntityWorldChange();
-            _environmentEditorForm?.RefreshStudioState();
+            _environmentEditorForm?.TryPost(form => form.RefreshStudioState());
             UpdateControlStates();
         }
 
@@ -630,7 +628,7 @@ namespace Simulant.UI
         private void OpenGreenScreen()
             => ShowToolWindow(ref _greenScreenForm, () => new GreenScreenForm(_host));
 
-        private void ShowResourceWindow<T>(ref T window, Func<T> create) where T : Form
+        private void ShowResourceWindow<T>(ref FormEx.StaWindow<T> window, Func<T> create) where T : FormEx
         {
             if (!GameDataAvailable)
             {
@@ -649,19 +647,36 @@ namespace Simulant.UI
                 ShowToolWindow(ref _environmentEditorForm, () => new EnvironmentEditorForm(_host));
         }
 
-        private static void ShowToolWindow<T>(ref T window, Func<T> create) where T : Form
+        private void ShowToolWindow<T>(ref FormEx.StaWindow<T> window, Func<T> create) where T : FormEx
         {
-            if (window == null || window.IsDisposed)
+            if (window?.TryPost(form => form.ShowInForeground()) != true)
             {
-                window = create();
-                window.ShowInTaskbar = true;
+                window = FormEx.ShowOnSta(() =>
+                {
+                    var form = create();
+                    form.ShowInTaskbar = true;
+                    return form;
+                }, error => _host.LogError("工具窗口出错：" + error.Message));
             }
+        }
 
-            if (window.WindowState == FormWindowState.Minimized)
-                window.WindowState = FormWindowState.Normal;
+        internal void CloseToolWindows()
+        {
+            List<Exception> failures = null;
+            TryClose(() => _actionListForm?.Dispose());
+            TryClose(() => _exdBrowserForm?.Dispose());
+            TryClose(() => _environmentEditorForm?.Dispose());
+            TryClose(() => _greenScreenForm?.Dispose());
+            TryClose(presetControl.CloseQuickControls);
 
-            window.Show();
-            window.Activate();
+            if (failures != null)
+                throw new AggregateException(failures);
+
+            void TryClose(System.Action close)
+            {
+                try { close(); }
+                catch (Exception error) { (failures ?? (failures = new List<Exception>())).Add(error); }
+            }
         }
 
         private void btnSimExit_Click(object sender, EventArgs e)

@@ -8,14 +8,6 @@ namespace Simulant.UI
         public SimpleInputForm()
         {
             InitializeComponent();
-
-            Shown += (_, __) =>
-            {
-                TopMost = true;
-                Activate();
-                BringToFront();
-                TopMost = false;
-            };
         }
 
         public SimpleInputForm(string title, string description, string defaultValue = "") : this()

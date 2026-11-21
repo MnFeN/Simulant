@@ -773,6 +773,7 @@ namespace Simulant.Core
                     // 资源清理失败可留待重试，但不能阻止返回真实环境并恢复通信。
                     TryCleanup("卸载时取消阶段等待失败", () => ZoneService?.CancelPendingPhase());
 
+                    TryCleanup("卸载时关闭工具窗口失败", () => _ui?.CloseToolWindows());
                     TryCleanup("卸载时停止模拟失败", () => _ui?.StopCurrentSession());
                     TryCleanup("卸载时停止调试失败", StopDebugEntities);
                     TryCleanup("卸载时清理模拟技能失败", () => PlayerActions?.Reset());
