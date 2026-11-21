@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <ProjectReference Include="..\..\Lumina.ACT\Lumina.Core\Lumina.Core.csproj" />
+    <Compile Include="..\..\Simulant\Game\Data\GameDataService.cs" Link="GameDataService.cs" />
+    <Compile Include="..\..\Simulant\Game\Data\NpcIndexCsv.cs" Link="NpcIndexCsv.cs" />
+  </ItemGroup>
+</Project>
