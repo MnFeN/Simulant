@@ -131,17 +131,19 @@ namespace Simulant.Simulation.Runtime
         /// <param name="castTime">可选的实际咏唱秒数，未指定时使用技能表时长减 0.3 秒。</param>
         /// <param name="effectDelay">读条结束至结算演出的秒数；默认 0.3 秒，瞬发默认 0。</param>
         /// <param name="executeOnFinish">是否自动播放结算；由机制判定节点显式执行时设为 false。</param>
+        /// <param name="packetTargetCapacity">自动结算时用于生成日志的实战结算包目标容量。</param>
         public void Cast(uint actionId, float? omenDelay = 0, SimActor target = null,
-            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null, float? effectDelay = null, bool executeOnFinish = true)
+            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null, float? effectDelay = null,
+            bool executeOnFinish = true, int? packetTargetCapacity = null)
         {
             BehaviorController?.ManualAction(this);
-            _casts.Cast(this, actionId, omenDelay, target, omenPosition, omenHeading, castTime, effectDelay, executeOnFinish);
+            _casts.Cast(this, actionId, omenDelay, target, omenPosition, omenHeading, castTime, effectDelay, executeOnFinish, packetTargetCapacity);
         }
 
-        public void Execute(uint actionId, IEnumerable<SimActor> hitTargets = null)
+        public void Execute(uint actionId, IEnumerable<SimActor> hitTargets = null, int? packetTargetCapacity = null)
         {
             BehaviorController?.ManualAction(this);
-            _casts.Execute(this, actionId, hitTargets: hitTargets);
+            _casts.Execute(this, actionId, hitTargets: hitTargets, packetTargetCapacity: packetTargetCapacity);
         }
 
         public void ConfigureBehavior(SimActorBehaviorOptions options)

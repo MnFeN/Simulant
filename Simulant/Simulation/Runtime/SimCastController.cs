@@ -41,7 +41,8 @@ namespace Simulant.Simulation.Runtime
         }
 
         public void Cast(SimActor actor, uint actionId, float? omenDelay = 0, SimActor target = null,
-            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null, float? effectDelay = null, bool executeOnFinish = true)
+            Vector3? omenPosition = null, float? omenHeading = null, float? castTime = null, float? effectDelay = null,
+            bool executeOnFinish = true, int? packetTargetCapacity = null)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -91,7 +92,7 @@ namespace Simulant.Simulation.Runtime
                         state.CastCompletion = _scheduler.ScheduleAfter(duration,
                             () => FinishCast(actor, state), "技能 " + actionId + " 读条完成");
                     state.Completion = _scheduler.ScheduleAfter(duration + (executeOnFinish ? delayAfterCast : 0),
-                        () => Complete(actor, state, action, executeOnFinish), "技能 " + actionId + " 结算演出");
+                        () => Complete(actor, state, action, executeOnFinish, packetTargetCapacity), "技能 " + actionId + " 结算演出");
 
                     if (action.Omen.RowId > 0 && omenDelay.HasValue)
                     {
@@ -119,7 +120,8 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        public void Execute(SimActor actor, uint actionId, SimActor target = null, IEnumerable<SimActor> hitTargets = null)
+        public void Execute(SimActor actor, uint actionId, SimActor target = null, IEnumerable<SimActor> hitTargets = null,
+            int? packetTargetCapacity = null)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -137,7 +139,7 @@ namespace Simulant.Simulation.Runtime
                 if (_disposed || !actor.IsActive || _casts.ContainsKey(actor))
                     return;
 
-                ExecuteCore(actor, action, target, hitTargets: hitTargets);
+                ExecuteCore(actor, action, target, hitTargets: hitTargets, packetTargetCapacity: packetTargetCapacity);
             }
         }
 
@@ -219,7 +221,7 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        private void Complete(SimActor actor, CastState state, ActionRow action, bool executeOnFinish)
+        private void Complete(SimActor actor, CastState state, ActionRow action, bool executeOnFinish, int? packetTargetCapacity)
         {
             lock (_gate)
             {
@@ -250,7 +252,7 @@ namespace Simulant.Simulation.Runtime
                 var actionAfterCleanup = actor.Entity.CastingActionId;
 
                 if (actionAfterCleanup == 0 || actionAfterCleanup == state.ActionId)
-                    ExecuteCore(actor, action, state.Target, state.OmenPosition, state.OmenHeading);
+                    ExecuteCore(actor, action, state.Target, state.OmenPosition, state.OmenHeading, packetTargetCapacity: packetTargetCapacity);
             }
         }
 
@@ -258,14 +260,16 @@ namespace Simulant.Simulation.Runtime
             => !_disposed && _casts.TryGetValue(actor, out var current) && ReferenceEquals(current, state);
 
         private void ExecuteCore(SimActor actor, ActionRow action, SimActor target,
-            Vector3? effectOrigin = null, float? effectHeading = null, IEnumerable<SimActor> hitTargets = null)
+            Vector3? effectOrigin = null, float? effectHeading = null, IEnumerable<SimActor> hitTargets = null,
+            int? packetTargetCapacity = null)
         {
             if (target != null)
             {
                 if (target.IsActive && target.Entity.IsTargetable && target.Entity.HP != 0)
                 {
                     actor.Entity.ExecuteActionEffect(action.RowId, target.Entity);
-                    actor.CombatLog?.Ability(actor.Entity, action.RowId, target.Entity, effectOrigin, effectHeading, 0, hitTargets);
+                    actor.CombatLog?.Ability(actor.Entity, action.RowId, target.Entity, effectOrigin, effectHeading, 0, hitTargets,
+                        packetTargetCapacity);
                 }
 
                 return;
@@ -279,7 +283,7 @@ namespace Simulant.Simulation.Runtime
                 actor.Entity.PlayBlendTimeline((ushort)timeline);
             }
 
-            actor.CombatLog?.Ability(actor.Entity, action.RowId, null, effectOrigin, effectHeading, 0, hitTargets);
+            actor.CombatLog?.Ability(actor.Entity, action.RowId, null, effectOrigin, effectHeading, 0, hitTargets, packetTargetCapacity);
             _log?.Invoke($"已执行技能：{action.RowId}；结束动画：{timeline}");
         }
 

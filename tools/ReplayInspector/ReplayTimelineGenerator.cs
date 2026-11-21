@@ -186,9 +186,10 @@ namespace Simulant.Replay
                     if (entity.Kind != "Npc" || e.ActionType != 1 || e.ActionId != e.SpellId || !e.ActionId.HasValue || heading == null)
                         return null;
                     var hitTargets = HitTargetsArgument(e.Targets);
+                    var packetCapacity = e.PacketTargetCapacity.HasValue ? $", packetTargetCapacity: {e.PacketTargetCapacity.Value}" : string.Empty;
                     return !e.Target.HasValue && pos != null
-                        ? $"{actor}?.ExecuteActionEffectAt({Hex(e.ActionId.Value)}, {pos}, {heading}, {Float(e.AnimationLock ?? 0f)}{hitTargets})"
-                        : $"{actor}?.ExecuteActionEffect({Hex(e.ActionId.Value)}, {target}, {heading}{hitTargets})";
+                        ? $"{actor}?.ExecuteActionEffectAt({Hex(e.ActionId.Value)}, {pos}, {heading}, {Float(e.AnimationLock ?? 0f)}{hitTargets}{packetCapacity})"
+                        : $"{actor}?.ExecuteActionEffect({Hex(e.ActionId.Value)}, {target}, {heading}{hitTargets}{packetCapacity})";
                 case "StatusSet":
                     return e.Status?.Source != null && e.Status.Seconds > 0 && ReplayPosition.Finite(e.Status.Seconds)
                         ? $"SetStatus({id}, {e.Status.Id}, {Float(e.Status.Seconds)}, {e.Status.Param}, {e.Status.Source})" : null;

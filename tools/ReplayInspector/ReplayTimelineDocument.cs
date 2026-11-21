@@ -95,6 +95,7 @@ namespace Simulant.Replay
         [DataMember(EmitDefaultValue = false)] public ushort? MoveFlags { get; set; }
         [DataMember(EmitDefaultValue = false)] public ReplayStatus Status { get; set; }
         [DataMember(EmitDefaultValue = false)] public ReplayActionTarget[] Targets { get; set; }
+        [DataMember(EmitDefaultValue = false)] public int? PacketTargetCapacity { get; set; }
         [DataMember(EmitDefaultValue = false)] public uint? Sequence { get; set; }
         [DataMember(EmitDefaultValue = false)] public ushort? SourceSequence { get; set; }
         [DataMember(EmitDefaultValue = false)] public int? TargetIndex { get; set; }

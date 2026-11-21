@@ -41,15 +41,20 @@ namespace Simulant.Tests
                         omenHeading: -(float)Math.PI / 2, castTime: 1.25f, executeOnFinish: false);
                     caster.StopCasting();
                     caster.ExecuteActionEffectAt(0x123, new Vector3(90, 80, 5), -(float)Math.PI / 2,
-                        hitTargets: new[] { target1, target2 });
-                    caster.ExecuteActionEffectAt(0x123, new Vector3(90, 80, 5), 0);
+                        hitTargets: new[] { target1, target2 }, packetTargetCapacity: 8);
+                    caster.ExecuteActionEffectAt(0x123, new Vector3(90, 80, 5), 0, packetTargetCapacity: 8);
+                    scene.AddAction(0x9D31, 0);
+                    caster.Execute(0x9D31, new[] { target1 }, packetTargetCapacity: 8);
+                    caster.ExecuteActionEffect(0x123, target1, packetTargetCapacity: 1);
+                    caster.Cast(0x123, omenDelay: null, target: target1, castTime: 0, packetTargetCapacity: 8);
+                    scene.RunPast(0.1);
                 }
                 finally
                 {
                     Thread.CurrentThread.CurrentCulture = culture;
                 }
 
-                Assert(events.Select(entry => entry.Id).SequenceEqual(new[] { 20, 263, 23, 22, 22, 264, 21, 264 }),
+                Assert(events.Select(entry => entry.Id).SequenceEqual(new[] { 20, 263, 23, 22, 22, 264, 21, 264, 22, 264, 21, 264, 22, 264 }),
                     "开始咏唱、敌方中断、多目标与空目标技能应分别记录对应的协议行。");
                 Assert(events[0].Timestamp == events[1].Timestamp &&
                     events[0].Fields[6] == "1.250" && events[0].Fields[10] == "0.00" &&
@@ -66,6 +71,9 @@ namespace Simulant.Tests
                     "两条 16 行必须具有匹配的时间、序号、索引及总目标数，且与 108 的序号对应。");
                 Assert(events[6].Fields[4] == "E0000000" && events[6].Fields[44] == "0",
                     "无命中仍发送无目标的 15 行，目标数为零。");
+                Assert(events[8].Fields[2] == "9D31" && events[8].Fields[4] == target1.Id.ToString("X8") &&
+                    events[8].Fields[43] == "0" && events[8].Fields[44] == "1",
+                    "ActionEffect8 的圣龙气息只命中一人仍写 16 行，目标序号为 0，人数为 1。");
             }
         }
 

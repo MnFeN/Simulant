@@ -520,6 +520,7 @@ namespace Simulant.Replay
             effect.SourceSequence = UInt16(b, 0x18);
             effect.AnimationLock = Float(b, 0x10);
             effect.AnimationVariation = b[0x1E];
+            effect.PacketTargetCapacity = capacity;
             effect.Targets = new ReplayActionTarget[b[0x21]];
 
             for (var i = 0; i < effect.Targets.Length; i++)

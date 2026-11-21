@@ -235,7 +235,8 @@ namespace Simulant.Content.U7a.Presets
                     var helper = _helpers[16 + head];
                     // 辅助施法者立即定位到本次碰撞处；ActorMove 的插值尚未结束时不能播放原地特效。
                     helper.ActorSetPos(new Vector3(center, 0), 0);
-                    helper.Execute(40241, result.HitActors);
+                    // 实战的圣龙气息用 ActionEffect8，单人命中也记录 16 行。
+                    helper.Execute(40241, result.HitActors, packetTargetCapacity: 8);
                 },
                 Failed = result =>
                 {
@@ -251,10 +252,7 @@ namespace Simulant.Content.U7a.Presets
                     var selfHint = slot != Self ? "自身未避开龙头爆炸" : wrongTarget ? "自身接触了其他队员应处理的龙头" :
                         "自身可能接触龙头过晚或接触位置不当，导致爆炸波及队友或水晶";
 
-                    Report(result.DescribeFailure(name, new[]
-                    {
-                        expected
-                    }, slot)
+                    Report(result.DescribeFailure(name, new[] { expected }, slot)
                         .WithDetail(detail)
                         .WithAttribution(offenders, selfHint), result);
                 },

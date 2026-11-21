@@ -12,20 +12,20 @@ namespace Simulant.Simulation.Runtime
         internal SimCombatLog CombatLog { get; set; }
         internal Func<uint, Core.Entity.Character> FindLogActor { get; set; }
 
-        /// <summary>播放原生技能。hitTargets 是机制判定的结算目标，与演出所用的目标可以不同。</summary>
+        /// <summary>播放原生技能。hitTargets 是机制判定的结算目标，packetTargetCapacity 是实战结算包的目标容量。</summary>
         public void ExecuteActionEffect(uint actionId, SimActor target, float? heading = null,
-            IEnumerable<SimActor> hitTargets = null)
+            IEnumerable<SimActor> hitTargets = null, int? packetTargetCapacity = null)
         {
             Entity.ExecuteActionEffect(actionId, target?.Entity, heading);
-            CombatLog?.Ability(Entity, actionId, target?.Entity, null, heading, 0, hitTargets);
+            CombatLog?.Ability(Entity, actionId, target?.Entity, null, heading, 0, hitTargets, packetTargetCapacity);
         }
 
         /// <summary>播放指定落点的技能。如果机制已判定命中名单，传入 hitTargets 以生成逐目标日志。</summary>
         public void ExecuteActionEffectAt(uint actionId, Vector3 position, float heading, float animationLock = 0,
-            IEnumerable<SimActor> hitTargets = null)
+            IEnumerable<SimActor> hitTargets = null, int? packetTargetCapacity = null)
         {
             Entity.ExecuteActionEffectAt(actionId, position, heading, animationLock);
-            CombatLog?.Ability(Entity, actionId, null, position, heading, animationLock, hitTargets);
+            CombatLog?.Ability(Entity, actionId, null, position, heading, animationLock, hitTargets, packetTargetCapacity);
         }
 
         public void ActorMove(Vector3 position, float heading, byte speed = 20, ActorMoveFlags flags = ActorMoveFlags.None)

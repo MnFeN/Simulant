@@ -70,7 +70,8 @@ namespace Simulant.Tests
             decoder.Read(new ReplayPacket(5, 2500, 0x233, 1234, Boss, ability), "ActionEffect8");
 
             var effect = document.Events.Single(e => e.Kind == "ActionEffect");
-            Assert(effect.TimeMs == 234 && effect.Target == 2 && effect.Targets.Select(target => target.Actor).SequenceEqual(new int?[] { 2, 1 }) &&
+            Assert(effect.TimeMs == 234 && effect.Target == 2 && effect.PacketTargetCapacity == 8 &&
+                effect.Targets.Select(target => target.Actor).SequenceEqual(new int?[] { 2, 1 }) &&
                 effect.Targets[0].Effects.Single().Type == 3 && effect.Targets[0].Effects.Single().Value == 321,
                 "群体结算必须从正文 +0x2A 读取效果，并归一化目标身份和时间。");
 
@@ -85,8 +86,8 @@ namespace Simulant.Tests
                 new ReplayTimelineGenerator(document, output).Write();
                 var code = output.ToString();
                 Assert(code.Contains("executeOnFinish: false") && code.Contains("ExecuteActionEffect(0x1234, Actor(2)") &&
-                    code.Contains("hitTargets: new[] { Actor(2), Actor(1) }"),
-                    "读条独立于结算，生成的结算须保留演出目标和完整命中名单。");
+                    code.Contains("hitTargets: new[] { Actor(2), Actor(1) }, packetTargetCapacity: 8"),
+                    "读条独立于结算，生成的结算须保留演出目标、完整命中名单和原始包容量。");
             }
         }
 

@@ -59,9 +59,9 @@ namespace Simulant.Simulation.Runtime
             });
         }
 
-        /// <summary>一次结算共用一个技能序号。多目标逐个生成 16 行，与唯一的 108 行关联。</summary>
+        /// <summary>一次结算共用一个技能序号。15/16 依网络包的目标容量决定，实际命中人数单独记录。</summary>
         internal void Ability(Character source, uint actionId, Character animationTarget, Vector3? effectOrigin,
-            float? effectHeading, float animationLock, IEnumerable<SimActor> hitTargets)
+            float? effectHeading, float animationLock, IEnumerable<SimActor> hitTargets, int? packetTargetCapacity)
         {
             Record(time =>
             {
@@ -74,6 +74,8 @@ namespace Simulant.Simulation.Runtime
                     ? (animationTarget == null ? Array.Empty<Character>() : new[] { animationTarget })
                     : hitTargets.Where(target => target?.IsActive == true).Select(target => target.Entity).Distinct().ToArray();
                 var count = actualHits.Length;
+                // 解析插件对无目标结算始终写 15 行。手写结算没有包容量时沿用原来的行号规则。
+                var lineType = count != 0 && (packetTargetCapacity ?? count) > 1 ? 22 : 21;
                 var sourceFields = Vitals(source);
                 const string emptyEffects = "0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0";
                 var sourceAndSkill = $"{Actor(source.Id, source)}|{Skill(actionId, action)}";
@@ -92,7 +94,7 @@ namespace Simulant.Simulation.Runtime
                     ? $"1|{PacketPosition(origin, timeRotation, 3)}"
                     : FormattableString.Invariant($"0||||{rotation:F3}");
                 foreach (var row in rows)
-                    Write(count > 1 ? 22 : 21, time, row);
+                    Write(lineType, time, row);
 
                 Write(264, time, $"{source.Id:X8}|{actionId:X4}|{sequence:X8}|{extra}|{targetId:X8}");
             });
