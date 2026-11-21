@@ -86,7 +86,7 @@ namespace Simulant.Game.Data
 
                                 if (file != null)
                                     using (file.Reader)
-                                        content = ReadTimeline(file.Data);
+                                        content = (ExtractVfxPaths(file.Data), ActionTimelineModel.ReadTimeline(file.Data).HasAnimation);
                             }
                             catch (Exception error)
                             {
@@ -129,29 +129,6 @@ namespace Simulant.Game.Data
         internal static string[] ExtractVfxPaths(byte[] data)
             => AvfxPaths.Matches(Encoding.GetEncoding(28591).GetString(data)).Cast<Match>().Select(match => match.Value)
                 .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
-
-        private static (string[] VfxPaths, bool HasAnimation) ReadTimeline(byte[] data)
-        {
-            var paths = ExtractVfxPaths(data);
-            if (data.Length < 12 || Encoding.ASCII.GetString(data, 0, 4) != "TMLB")
-                return (paths, false);
-
-            var hasAnimation = false;
-            var offset = 12;
-            for (var remaining = BitConverter.ToInt32(data, 8); remaining > 0; remaining--)
-            {
-                if (offset > data.Length - 8)
-                    return (paths, false);
-                var type = Encoding.ASCII.GetString(data, offset, 4);
-                var length = BitConverter.ToInt32(data, offset + 4);
-                if (length < 8 || length > data.Length - offset)
-                    return (paths, false);
-
-                hasAnimation |= type == "C010" || type == "C002" || type == "C053";
-                offset += length;
-            }
-            return (paths, hasAnimation);
-        }
 
         internal static string ShapeName(int shape)
         {

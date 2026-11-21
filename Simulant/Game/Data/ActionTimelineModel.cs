@@ -1,9 +1,11 @@
+using Lumina.Data;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -47,6 +49,45 @@ namespace Simulant.Game.Data
 
         internal static string GetName(ExcelSheet<BNpcName> names, uint nameId)
             => nameId != 0 && names.TryGetRow(nameId, out var row) ? row.Singular.ExtractText() : "";
+
+        internal TimeSpan? GetTimelineDuration(GameDataService data, string key)
+        {
+            var file = data.GetFile<FileResource>(GetTimelinePath(key, Skeleton));
+            if (file == null)
+                return null;
+
+            using (file.Reader)
+            {
+                var length = ReadTimeline(file.Data).LengthUnits;
+                return length > 0 ? TimeSpan.FromSeconds(length / 30.0) : (TimeSpan?)null;
+            }
+        }
+
+        internal static (bool HasAnimation, short LengthUnits) ReadTimeline(byte[] data)
+        {
+            if (data.Length < 12 || Encoding.ASCII.GetString(data, 0, 4) != "TMLB")
+                return default;
+
+            var hasAnimation = false;
+            short lengthUnits = 0;
+            var offset = 12;
+            for (var remaining = BitConverter.ToInt32(data, 8); remaining > 0; remaining--)
+            {
+                if (offset > data.Length - 8)
+                    return default;
+                var type = Encoding.ASCII.GetString(data, offset, 4);
+                var length = BitConverter.ToInt32(data, offset + 4);
+                if (length < 8 || length > data.Length - offset)
+                    return default;
+
+                // TMDH.Length 是整条时间轴的长度，每个时间单位为 1/30 秒。
+                if (type == "TMDH" && length >= 16)
+                    lengthUnits = BitConverter.ToInt16(data, offset + 12);
+                hasAnimation |= type == "C010" || type == "C002" || type == "C053";
+                offset += length;
+            }
+            return (hasAnimation, lengthUnits);
+        }
 
         internal static ActionTimelineModel? FindCompatible(GameDataService data, string key,
             (uint BaseId, uint NameId) caster, bool recorded)
@@ -118,6 +159,9 @@ namespace Simulant.Game.Data
         }
 
         private static bool HasTimeline(GameDataService data, string key, string skeleton)
-            => data.FileExists("chara/action/" + key.Replace(SkeletonToken, skeleton) + ".tmb");
+            => data.FileExists(GetTimelinePath(key, skeleton));
+
+        private static string GetTimelinePath(string key, string skeleton)
+            => "chara/action/" + key.Replace(SkeletonToken, skeleton) + ".tmb";
     }
 }

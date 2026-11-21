@@ -22,6 +22,7 @@ namespace Simulant.UI
         private SimEntityManager _timelineEntities;
         private SimActor _timelineActor;
         private ushort _previewTimelineId;
+        private int _timelineDisplayMilliseconds;
         private long _drawRequestedAt;
         private string _timelineResult;
 
@@ -140,12 +141,15 @@ namespace Simulant.UI
                     return;
                 }
 
+                var selected = model.Value;
+                var duration = await Task.Run(() => selected.GetTimelineDuration(data, row.AnimationEnd), _lifetimeToken);
+                _lifetimeToken.ThrowIfCancellationRequested();
                 _host.EnsureDebugAllowed();
 
                 if (!player.IsAlive)
                     throw new InvalidOperationException("查找期间已切换区域，请重新预览。");
 
-                StartTimelinePreview(player, model.Value, unchecked((ushort)row.AnimationEndId));
+                StartTimelinePreview(player, selected, unchecked((ushort)row.AnimationEndId), duration);
             }
             catch (OperationCanceledException)
             {
@@ -232,7 +236,7 @@ namespace Simulant.UI
             }
         }
 
-        private void StartTimelinePreview(Character player, ActionTimelineModel model, ushort timelineId)
+        private void StartTimelinePreview(Character player, ActionTimelineModel model, ushort timelineId, TimeSpan? duration)
         {
             ClearTimelinePreview();
             _timelineEntities = _host.DebugEntities;
@@ -254,7 +258,7 @@ namespace Simulant.UI
                 _timelineActor.EnableDraw();
                 var targetable = native.TargetableStatus;
                 targetable.Set(targetable.Get() & ~ObjectTargetableFlags.IsTargetable);
-                WaitForTimelineModel(timelineId, model.ToString());
+                WaitForTimelineModel(timelineId, model.ToString(), duration);
             }
             catch
             {
@@ -287,7 +291,7 @@ namespace Simulant.UI
             }
         }
 
-        private void WaitForTimelineModel(ushort timelineId, string model)
+        private void WaitForTimelineModel(ushort timelineId, string model, TimeSpan? duration)
         {
             if (_timelineTimer == null)
             {
@@ -296,6 +300,7 @@ namespace Simulant.UI
             }
             _drawRequestedAt = Stopwatch.GetTimestamp();
             _previewTimelineId = timelineId;
+            _timelineDisplayMilliseconds = duration.HasValue ? (int)duration.Value.TotalMilliseconds + 3000 : 20000;
             _timelineResult = $"已播放时间轴 {timelineId} · {model}";
             lblResult.Text = "正在加载预览模型……";
             _timelineTimer.Interval = 100;
@@ -323,7 +328,7 @@ namespace Simulant.UI
                 _timelineActor.Entity.PlayBlendTimeline(_previewTimelineId);
                 _previewTimelineId = 0;
                 lblResult.Text = _timelineResult;
-                _timelineTimer.Interval = 20000;
+                _timelineTimer.Interval = _timelineDisplayMilliseconds;
             }
             catch (Exception error)
             {
