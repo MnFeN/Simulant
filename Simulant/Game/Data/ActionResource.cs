@@ -33,7 +33,14 @@ namespace Simulant.Game.Data
         public bool IsPlayer { get; set; }
         public bool IsNew => false;
         public string[] VfxPaths { get; set; } = Array.Empty<string>();
+        public bool HasTimelineAnimation { get; set; }
         public string HexId => Id.ToString("X", CultureInfo.InvariantCulture);
+
+        internal bool HasModelTimeline => AnimationEndId != 0 && ActionTimelineModel.IsModelTimeline(AnimationEnd);
+        internal bool CanPlayOnNpc => HasModelTimeline || AnimationEndId != 0 && HasTimelineAnimation &&
+            ActionTimelineModel.IsSharedTimeline(AnimationEnd);
+        internal bool CanPlayOnSelf => AnimationEndId != 0 && HasTimelineAnimation && ActionTimelineModel.IsPlayerTimeline(AnimationEnd);
+        internal bool CanPreviewAnimation => VfxPaths.Length != 0 || CanPlayOnNpc || CanPlayOnSelf;
 
         public string DisplayName
         {
@@ -52,7 +59,7 @@ namespace Simulant.Game.Data
                 DefaultExcelLanguage = language
             }))
             {
-                var timelines = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+                var timelines = new Dictionary<string, (string[] VfxPaths, bool HasAnimation)>(StringComparer.OrdinalIgnoreCase);
                 var rows = new List<ActionResource>();
 
                 foreach (var row in data.GetExcelSheet<ActionRow>())
@@ -66,13 +73,12 @@ namespace Simulant.Game.Data
                         continue;
 
                     var timeline = row.AnimationEnd.ValueNullable?.Key.ExtractText() ?? "";
-
-                    if (!timelines.TryGetValue(timeline, out var vfxs))
+                    if (!timelines.TryGetValue(timeline, out var content))
                     {
-                        // 只提取时间轴中直接引用的特效，不需要旧脚本的外部映射 CSV。
-                        vfxs = Array.Empty<string>();
-
-                        if (timeline.IndexOf("gimmick", StringComparison.OrdinalIgnoreCase) >= 0)
+                        content = (Array.Empty<string>(), false);
+                        if (!ActionTimelineModel.IsSkeletonTemplate(timeline) && (ActionTimelineModel.IsPlayerTimeline(timeline) ||
+                            ActionTimelineModel.IsSharedTimeline(timeline) || ActionTimelineModel.IsModelTimeline(timeline) ||
+                            timeline.IndexOf("gimmick", StringComparison.OrdinalIgnoreCase) >= 0))
                         {
                             try
                             {
@@ -80,15 +86,15 @@ namespace Simulant.Game.Data
 
                                 if (file != null)
                                     using (file.Reader)
-                                        vfxs = ExtractVfxPaths(file.Data);
+                                        content = ReadTimeline(file.Data);
                             }
                             catch (Exception error)
                             {
-                                warning?.Invoke($"读取时间轴 {timeline} 的特效失败：{error.Message}");
+                                warning?.Invoke($"读取时间轴 {timeline} 失败：{error.Message}");
                             }
                         }
 
-                        timelines.Add(timeline, vfxs);
+                        timelines.Add(timeline, content);
                     }
 
                     rows.Add(new ActionResource
@@ -108,7 +114,8 @@ namespace Simulant.Game.Data
                         AnimationEnd = timeline,
                         CastVfxId = row.VFX.ValueNullable?.VFX.RowId ?? 0,
                         IsPlayer = row.IsPlayerAction,
-                        VfxPaths = vfxs
+                        VfxPaths = content.VfxPaths,
+                        HasTimelineAnimation = content.HasAnimation
                     });
                 }
 
@@ -122,6 +129,29 @@ namespace Simulant.Game.Data
         internal static string[] ExtractVfxPaths(byte[] data)
             => AvfxPaths.Matches(Encoding.GetEncoding(28591).GetString(data)).Cast<Match>().Select(match => match.Value)
                 .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+
+        private static (string[] VfxPaths, bool HasAnimation) ReadTimeline(byte[] data)
+        {
+            var paths = ExtractVfxPaths(data);
+            if (data.Length < 12 || Encoding.ASCII.GetString(data, 0, 4) != "TMLB")
+                return (paths, false);
+
+            var hasAnimation = false;
+            var offset = 12;
+            for (var remaining = BitConverter.ToInt32(data, 8); remaining > 0; remaining--)
+            {
+                if (offset > data.Length - 8)
+                    return (paths, false);
+                var type = Encoding.ASCII.GetString(data, offset, 4);
+                var length = BitConverter.ToInt32(data, offset + 4);
+                if (length < 8 || length > data.Length - offset)
+                    return (paths, false);
+
+                hasAnimation |= type == "C010" || type == "C002" || type == "C053";
+                offset += length;
+            }
+            return (paths, hasAnimation);
+        }
 
         internal static string ShapeName(int shape)
         {
@@ -193,8 +223,7 @@ namespace Simulant.Game.Data
                 case 10:
                     return copying ? Omen : OmenId == 0 ? "" : $"{Omen}  ({OmenId})";
                 case 11:
-                    return copying ? AnimationEnd : AnimationEndId == 0 ? "" :
-                    (VfxPaths.Length == 0 ? "" : $"[{VfxPaths.Length}] ") + $"{AnimationEnd}  ({AnimationEndId})";
+                    return copying ? AnimationEnd : AnimationEndId == 0 ? "" : $"{AnimationEnd}  ({AnimationEndId})";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(column));
             }
@@ -373,6 +402,8 @@ namespace Simulant.Game.Data
     internal sealed class ActionResourceFilter
     {
         public bool NewOnly;
+        public bool PreviewOnly;
+        public bool PlayerOnly;
         public bool[] Shapes;
         public string HexId, Name, Expression, Omen, AnimationEnd;
         public int SortColumn;
@@ -396,7 +427,8 @@ namespace Simulant.Game.Data
             {
                 cancellation.ThrowIfCancellationRequested();
 
-                if (NewOnly && !row.IsNew || shapeFilter && (row.Shape >= Shapes.Length || !Shapes[row.Shape]))
+                if (NewOnly && !row.IsNew || PreviewOnly && !row.CanPreviewAnimation || PlayerOnly && !row.IsPlayer ||
+                    shapeFilter && (row.Shape >= Shapes.Length || !Shapes[row.Shape]))
                     continue;
 
                 if (patterns[0] != null && !patterns[0].IsMatch(row.HexId) ||
@@ -460,12 +492,6 @@ namespace Simulant.Game.Data
                     break;
                 case "animationend":
                     value = row.AnimationEndId;
-                    break;
-                case "vfxcount":
-                    value = row.VfxPaths.Length;
-                    break;
-                case "isplayer":
-                    value = row.IsPlayer ? 1 : 0;
                     break;
                 default:
                     return token;

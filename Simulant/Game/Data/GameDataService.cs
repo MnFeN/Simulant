@@ -74,6 +74,17 @@ namespace Simulant.Game.Data
             }
         }
 
+        internal bool FileExists(string path)
+        {
+            lock (_gate)
+            {
+                if (_disposed)
+                    throw new ObjectDisposedException(nameof(GameDataService));
+
+                return _data.FileExists(path);
+            }
+        }
+
         internal void Activate()
         {
             GameDataService previous;

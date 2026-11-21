@@ -83,6 +83,9 @@
     <Compile Include="..\Simulant\UI\Controls\ContextMenuStripEx.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="..\Simulant\UI\Controls\SplitMenuItem.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="..\Simulant\UI\Controls\DataGridViewEx.cs">
       <SubType>Component</SubType>
     </Compile>

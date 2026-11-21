@@ -21,7 +21,7 @@ namespace Simulant.UI
         private CancellationTokenSource _search;
         private ActionResource[] _all = Array.Empty<ActionResource>();
         private ActionResource[] _view = Array.Empty<ActionResource>();
-        private bool _updatingShapes;
+        private bool _updatingFilters;
         private bool _loaded;
         private bool _workDisposed;
         private int _sortColumn;
@@ -53,6 +53,8 @@ namespace Simulant.UI
             MinimumSize = SizeFromClientSize(new System.Drawing.Size(
                 Math.Max(panelTop.PreferredSize.Width, panelFilters.PreferredSize.Width) + Padding.Horizontal,
                 panelTop.PreferredSize.Height + panelFilters.PreferredSize.Height + panelShapes.PreferredSize.Height / 2
+                + chkPreviewOnly.PreferredSize.Height + chkPreviewOnly.Margin.Vertical
+                + chkPlayerOnly.PreferredSize.Height + chkPlayerOnly.Margin.Vertical
                 + Padding.Vertical + panelTop.Margin.Vertical + panelFilters.Margin.Vertical));
 
 
@@ -127,6 +129,8 @@ namespace Simulant.UI
             var filter = new ActionResourceFilter
             {
                 NewOnly = chkNewOnly.Checked,
+                PreviewOnly = chkPreviewOnly.Checked,
+                PlayerOnly = chkPlayerOnly.Checked,
                 Shapes = ShapeChecks.Select(check => check.Checked).ToArray(),
                 HexId = txtHexId.Text,
                 Name = txtName.Text,
@@ -184,13 +188,14 @@ namespace Simulant.UI
 
         private async void btnReset_Click(object sender, EventArgs e)
         {
-            _updatingShapes = true;
+            _updatingFilters = true;
             chkNewOnly.Checked = chkShapeAll.Checked = false;
+            chkPreviewOnly.Checked = chkPlayerOnly.Checked = false;
 
             foreach (var check in ShapeChecks)
                 check.Checked = false;
 
-            _updatingShapes = false;
+            _updatingFilters = false;
             txtHexId.Clear();
             txtName.Clear();
             txtExpression.Clear();
@@ -203,31 +208,49 @@ namespace Simulant.UI
 
         private void chkShapeAll_CheckedChanged(object sender, EventArgs e)
         {
-            if (_updatingShapes)
+            if (_updatingFilters)
                 return;
 
-            _updatingShapes = true;
+            _updatingFilters = true;
 
             foreach (var check in ShapeChecks)
                 check.Checked = chkShapeAll.Checked;
 
-            _updatingShapes = false;
+            _updatingFilters = false;
         }
 
         private void Shape_CheckedChanged(object sender, EventArgs e)
         {
-            if (_updatingShapes)
+            if (_updatingFilters)
                 return;
 
-            _updatingShapes = true;
+            _updatingFilters = true;
             chkShapeAll.Checked = ShapeChecks.All(check => check.Checked);
-            _updatingShapes = false;
+            _updatingFilters = false;
+        }
+
+        private async void filterSwitch_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!_updatingFilters)
+                await SearchAsync();
         }
 
         private void gridActions_CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
         {
             if (e.RowIndex >= 0 && e.RowIndex < _view.Length)
                 e.Value = _view[e.RowIndex].CellValue(e.ColumnIndex);
+        }
+
+        private void gridActions_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.ColumnIndex != col11.Index || e.RowIndex < 0 || e.RowIndex >= _view.Length)
+                return;
+
+            var row = _view[e.RowIndex];
+            if (row.HasModelTimeline || row.CanPlayOnSelf || row.CanPlayOnNpc && row.VfxPaths.Length == 0)
+                e.CellStyle.ForeColor = e.CellStyle.SelectionForeColor = WorkbenchTheme.Yellow;
+            else if (row.VfxPaths.Length != 0)
+                e.CellStyle.ForeColor = e.CellStyle.SelectionForeColor = WorkbenchTheme.Blue;
         }
 
         private async void gridActions_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
@@ -273,8 +296,8 @@ namespace Simulant.UI
             miCopyCell.Enabled = row != null;
             miCopyTemplate.Enabled = gridActions.SelectedRows.Count != 0;
             miOmen.Visible = row != null && !string.IsNullOrWhiteSpace(row.Omen);
-            miGimmick.Visible = row != null && row.VfxPaths.Length != 0;
-            miOmen.Enabled = miGimmick.Enabled = _host?.CanRunDebug == true;
+            miOmen.Enabled = _host?.CanRunDebug == true;
+            ConfigureTimelineMenu(row, miOmen.Enabled && !_loadingTimelinePreview);
         }
 
         private void miCopyCell_Click(object sender, EventArgs e)
@@ -396,13 +419,8 @@ namespace Simulant.UI
             }
         }
 
-        private async void miGimmick_Click(object sender, EventArgs e)
+        private async Task PreviewTimelineVfxAsync(string[] paths)
         {
-            var paths = CurrentRow?.VfxPaths;
-
-            if (paths == null || paths.Length == 0)
-                return;
-
             try
             {
                 await Task.Run(() =>
@@ -451,6 +469,7 @@ namespace Simulant.UI
             _lifetime.Cancel();
             _search?.Cancel();
             _lifetime.Dispose();
+            TryClearTimelinePreview();
             try
             {
                 VfxManager.Remove(this);

@@ -190,6 +190,7 @@
 
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\Simulant.ico" LogicalName="Simulant.UI.Simulant.ico" />
+		<EmbeddedResource Include="Resources\NpcIndexes\*.csv" LogicalName="Simulant.Data.%(Filename)%(Extension)" />
 
 		<EmbeddedResource Update="Properties\Resources.resx">
 			<Generator>ResXFileCodeGenerator</Generator>

@@ -37,9 +37,9 @@ namespace Simulant.UI
             this.contextActions = new Simulant.UI.ContextMenuStripEx(this.components);
             this.miCopyCell = new System.Windows.Forms.ToolStripMenuItem();
             this.miCopyTemplate = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.miOmen = new System.Windows.Forms.ToolStripMenuItem();
-            this.miGimmick = new System.Windows.Forms.ToolStripMenuItem();
+            this.miPreviewTimeline = new Simulant.UI.SplitMenuItem();
+            this.layoutSidebar = new System.Windows.Forms.TableLayoutPanel();
             this.panelShapes = new System.Windows.Forms.FlowLayoutPanel();
             this.chkShapeAll = new Simulant.UI.CheckBoxEx();
             this.chkShape0 = new Simulant.UI.CheckBoxEx();
@@ -60,6 +60,8 @@ namespace Simulant.UI
             this.chkShape15 = new Simulant.UI.CheckBoxEx();
             this.chkShape16 = new Simulant.UI.CheckBoxEx();
             this.chkShape17 = new Simulant.UI.CheckBoxEx();
+            this.chkPreviewOnly = new Simulant.UI.CheckBoxEx();
+            this.chkPlayerOnly = new Simulant.UI.CheckBoxEx();
             this.panelTop = new System.Windows.Forms.TableLayoutPanel();
             this.chkNewOnly = new Simulant.UI.CheckBoxEx();
             this.chkKeepOnTop = new Simulant.UI.CheckBoxEx();
@@ -88,6 +90,7 @@ namespace Simulant.UI
             this.layoutMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.gridActions)).BeginInit();
             this.contextActions.SuspendLayout();
+            this.layoutSidebar.SuspendLayout();
             this.panelShapes.SuspendLayout();
             this.panelTop.SuspendLayout();
             this.panelButtons.SuspendLayout();
@@ -105,7 +108,7 @@ namespace Simulant.UI
             this.layoutMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.layoutMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
             this.layoutMain.Controls.Add(this.gridActions, 0, 0);
-            this.layoutMain.Controls.Add(this.panelShapes, 1, 0);
+            this.layoutMain.Controls.Add(this.layoutSidebar, 1, 0);
             this.layoutMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.layoutMain.Location = new System.Drawing.Point(0, 103);
             this.layoutMain.Name = "layoutMain";
@@ -146,6 +149,7 @@ namespace Simulant.UI
             this.gridActions.Size = new System.Drawing.Size(1016, 600);
             this.gridActions.TabIndex = 3;
             this.gridActions.VirtualMode = true;
+            this.gridActions.CellFormatting += new System.Windows.Forms.DataGridViewCellFormattingEventHandler(this.gridActions_CellFormatting);
             this.gridActions.CellMouseDown += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.gridActions_CellMouseDown);
             this.gridActions.CellValueNeeded += new System.Windows.Forms.DataGridViewCellValueEventHandler(this.gridActions_CellValueNeeded);
             this.gridActions.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.gridActions_ColumnHeaderMouseClick);
@@ -262,9 +266,8 @@ namespace Simulant.UI
             this.contextActions.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.miCopyCell,
             this.miCopyTemplate,
-            this.menuSeparator,
             this.miOmen,
-            this.miGimmick});
+            this.miPreviewTimeline});
             this.contextActions.Name = "contextActions";
             this.contextActions.Size = new System.Drawing.Size(448, 122);
             this.contextActions.Opening += new System.ComponentModel.CancelEventHandler(this.contextActions_Opening);
@@ -286,11 +289,6 @@ namespace Simulant.UI
             this.miCopyTemplate.Text = "将选中行复制为简易播报动作模板";
             this.miCopyTemplate.Click += new System.EventHandler(this.miCopyTemplate_Click);
             // 
-            // menuSeparator
-            // 
-            this.menuSeparator.Name = "menuSeparator";
-            this.menuSeparator.Size = new System.Drawing.Size(444, 6);
-            // 
             // miOmen
             // 
             this.miOmen.Name = "miOmen";
@@ -298,13 +296,49 @@ namespace Simulant.UI
             this.miOmen.Text = "显示 Omen";
             this.miOmen.Click += new System.EventHandler(this.miOmen_Click);
             // 
-            // miGimmick
-            // 
-            this.miGimmick.Name = "miGimmick";
-            this.miGimmick.Size = new System.Drawing.Size(447, 28);
-            this.miGimmick.Text = "显示 Gimmick VFX";
-            this.miGimmick.ToolTipText = "在当前目标（未选中目标时为自己）身上播放全部关联的时间轴特效。";
-            this.miGimmick.Click += new System.EventHandler(this.miGimmick_Click);
+            // miPreviewTimeline
+            //
+            this.miPreviewTimeline.Name = "miPreviewTimeline";
+            this.miPreviewTimeline.Text = "预览结束时间轴特效";
+            //
+            // layoutSidebar
+            //
+            this.layoutSidebar.AutoSize = true;
+            this.layoutSidebar.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.layoutSidebar.ColumnCount = 1;
+            this.layoutSidebar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.layoutSidebar.Controls.Add(this.panelShapes, 0, 0);
+            this.layoutSidebar.Controls.Add(this.chkPreviewOnly, 0, 1);
+            this.layoutSidebar.Controls.Add(this.chkPlayerOnly, 0, 2);
+            this.layoutSidebar.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.layoutSidebar.Margin = System.Windows.Forms.Padding.Empty;
+            this.layoutSidebar.Name = "layoutSidebar";
+            this.layoutSidebar.RowCount = 3;
+            this.layoutSidebar.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.layoutSidebar.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
+            this.layoutSidebar.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
+            this.layoutSidebar.TabIndex = 1;
+            //
+            // chkPreviewOnly
+            //
+            this.chkPreviewOnly.AutoSize = true;
+            this.chkPreviewOnly.Margin = new System.Windows.Forms.Padding(3, 8, 3, 3);
+            this.chkPreviewOnly.Name = "chkPreviewOnly";
+            this.chkPreviewOnly.Style = Simulant.UI.CheckBoxStyle.Switch;
+            this.chkPreviewOnly.TabIndex = 1;
+            this.chkPreviewOnly.Text = "可预览动画";
+            this.chkPreviewOnly.CheckedChanged += new System.EventHandler(this.filterSwitch_CheckedChanged);
+            this.toolTip.SetToolTip(this.chkPreviewOnly, "仅显示可以播放实体动画或独立特效的结束时间轴。");
+            //
+            // chkPlayerOnly
+            //
+            this.chkPlayerOnly.AutoSize = true;
+            this.chkPlayerOnly.Name = "chkPlayerOnly";
+            this.chkPlayerOnly.Style = Simulant.UI.CheckBoxStyle.Switch;
+            this.chkPlayerOnly.TabIndex = 2;
+            this.chkPlayerOnly.Text = "玩家技能";
+            this.chkPlayerOnly.CheckedChanged += new System.EventHandler(this.filterSwitch_CheckedChanged);
+            this.toolTip.SetToolTip(this.chkPlayerOnly, "仅显示玩家技能。");
             // 
             // panelShapes
             // 
@@ -332,10 +366,10 @@ namespace Simulant.UI
             this.panelShapes.Controls.Add(this.chkShape17);
             this.panelShapes.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelShapes.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
-            this.panelShapes.Location = new System.Drawing.Point(1025, 3);
+            this.panelShapes.Location = new System.Drawing.Point(3, 3);
             this.panelShapes.Name = "panelShapes";
             this.panelShapes.Size = new System.Drawing.Size(125, 600);
-            this.panelShapes.TabIndex = 1;
+            this.panelShapes.TabIndex = 0;
             this.panelShapes.WrapContents = false;
             this.panelShapes.Layout += new System.Windows.Forms.LayoutEventHandler(this.panelShapes_Layout);
             // 
@@ -934,6 +968,8 @@ namespace Simulant.UI
             this.contextActions.ResumeLayout(false);
             this.panelShapes.ResumeLayout(false);
             this.panelShapes.PerformLayout();
+            this.layoutSidebar.ResumeLayout(false);
+            this.layoutSidebar.PerformLayout();
             this.panelTop.ResumeLayout(false);
             this.panelTop.PerformLayout();
             this.panelButtons.ResumeLayout(false);
@@ -959,11 +995,14 @@ namespace Simulant.UI
         private System.Windows.Forms.TableLayoutPanel layoutMain;
         private System.Windows.Forms.TableLayoutPanel panelTop;
         private System.Windows.Forms.FlowLayoutPanel panelButtons;
+        private System.Windows.Forms.TableLayoutPanel layoutSidebar;
         private System.Windows.Forms.FlowLayoutPanel panelShapes;
         private System.Windows.Forms.TableLayoutPanel panelFilters;
         private CheckBoxEx chkNewOnly;
         private CheckBoxEx chkKeepOnTop;
         private CheckBoxEx chkShapeAll;
+        private CheckBoxEx chkPreviewOnly;
+        private CheckBoxEx chkPlayerOnly;
         private System.Windows.Forms.Label lblResult;
         private ButtonEx btnSearch;
         private ButtonEx btnExport;
@@ -1018,8 +1057,7 @@ namespace Simulant.UI
         private System.Windows.Forms.ToolStripMenuItem miCopyCell;
         private System.Windows.Forms.ToolStripMenuItem miCopyTemplate;
         private System.Windows.Forms.ToolStripMenuItem miOmen;
-        private System.Windows.Forms.ToolStripMenuItem miGimmick;
-        private System.Windows.Forms.ToolStripSeparator menuSeparator;
+        private SplitMenuItem miPreviewTimeline;
         private System.Windows.Forms.ToolTip toolTip;
     }
 }

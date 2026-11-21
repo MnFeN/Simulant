@@ -129,8 +129,7 @@
 属性名大小写不敏感：
 id：十进制 ID；t：咏唱秒数；omen：预兆 ID；shape：形状 ID（0—17）
 vfx：咏唱特效 ID；x、y：范围；category：技能类型
-attack：攻击类型；aspect：属性；animationEnd：结束时间轴 ID
-vfxCount：结束时间轴直接引用的特效数量；isPlayer：是否为玩家技能</value>
+attack：攻击类型；aspect：属性；animationEnd：结束时间轴 ID</value>
   </data>
   <data name="txtExpression.ToolTip" xml:space="preserve">
     <value>使用触发器数学语法，例如：ID &gt; 30000 &amp;&amp; min(X, Y) &gt; 0
@@ -138,7 +137,6 @@ vfxCount：结束时间轴直接引用的特效数量；isPlayer：是否为玩�
 属性名大小写不敏感：
 id：十进制 ID；t：咏唱秒数；omen：预兆 ID；shape：形状 ID（0—17）
 vfx：咏唱特效 ID；x、y：范围；category：技能类型
-attack：攻击类型；aspect：属性；animationEnd：结束时间轴 ID
-vfxCount：结束时间轴直接引用的特效数量；isPlayer：是否为玩家技能</value>
+attack：攻击类型；aspect：属性；animationEnd：结束时间轴 ID</value>
   </data>
 </root>

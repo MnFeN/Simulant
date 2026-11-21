@@ -24,8 +24,20 @@ namespace Simulant.UI
 
             protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
             {
-                e.TextColor = e.Item.Enabled ? WorkbenchTheme.Text : Dim;
+                var enabled = e.Item.Enabled && (!(e.Item is SplitMenuItem split) || split.DefaultAction != null);
+                e.TextColor = enabled ? WorkbenchTheme.Text : Dim;
                 base.OnRenderItemText(e);
+            }
+
+            protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
+            {
+                if (e.Item is SplitMenuItem split)
+                {
+                    split.ArrowBounds = e.ArrowRectangle;
+                    e.ArrowColor = split.Enabled ? WorkbenchTheme.Text : Dim;
+                }
+
+                base.OnRenderArrow(e);
             }
         }
 
