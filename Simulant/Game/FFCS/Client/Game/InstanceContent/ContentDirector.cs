@@ -30,10 +30,19 @@ namespace Simulant.Game.FFCS.Client.Game.InstanceContent
 
         /// <summary>播放场地效果绑定的动画。<br />
         /// · index 为 MapEffects 中的槽位。<br />
-        /// · timelineIndex 为要播放的动画编号。
+        /// · timelineIndex 为要播放的 16 位时间轴掩码。
         /// </summary>
         public bool PlayMapEffectTimeline(uint index, ushort timelineIndex)
-            => PlayMapEffectTimelineFuncPtr.Call<bool>(Ptr, index, timelineIndex);
+        {
+            if (Ptr == IntPtr.Zero || index >= MapEffectList.Capacity)
+                return false;
+
+            var effects = MapEffects;
+            if (effects.Ptr == IntPtr.Zero || index >= effects.ItemCount.Get() || effects.GetItem((int)index).LayoutId.Get() == 0)
+                return false;
+
+            return PlayMapEffectTimelineFuncPtr.Call<bool>(Ptr, index, timelineIndex);
+        }
 
         public uint GetCurrentLevel() => Ptr.CallVFunc<uint>(304);
 

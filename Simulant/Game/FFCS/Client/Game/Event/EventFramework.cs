@@ -101,7 +101,7 @@ namespace Simulant.Game.FFCS.Client.Game.Event
         [SigPattern("E8 * * * * E9 ? ? ? ? E8 ? ? ? ? 8B 54 24 70 48 8B C8 E8 ? ? ? ? E9 ? ? ? ? E8 ? ? ? ? 0F B6 54 24")]
         public static IntPtr SetupInstanceContentFuncPtr { get; set; }
 
-        /// <summary> fullContentId: 0x8003XXXX, contentId: XXXX </summary>
+        /// <summary>Creates a content director using the type in fullContentId (0x8003XXXX or 0x8004XXXX).</summary>
         public IntPtr SetupInstanceContent(uint fullContentId, uint contentId, uint a4 = 0)
             => SetupInstanceContentFuncPtr.Call<IntPtr>(Ptr, fullContentId, contentId, a4);
 
@@ -109,7 +109,7 @@ namespace Simulant.Game.FFCS.Client.Game.Event
         [SigPattern("48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 48 83 EC 70 48 8D B1")]
         public static IntPtr FinalizeInstanceContentFuncPtr { get; set; }
 
-        /// <summary> fullContentId: 0x8003XXXX, contentId: XXXX </summary>
+        /// <summary>Finalizes the content director with the specified full ID.</summary>
         public byte FinalizeInstanceContent(uint fullContentId = 0)
             => FinalizeInstanceContentFuncPtr.Call<byte>(Ptr, fullContentId);
     }

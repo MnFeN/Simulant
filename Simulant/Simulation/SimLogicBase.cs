@@ -39,7 +39,7 @@ namespace Simulant.Simulation
 
             // 常用地图效果用相邻位组成包标志，例如 00020001、00080004；低位不是上一条动画。
             if (EntityManager.CombatLog?.Enabled == true)
-                EntityManager.CombatLog.MapEffect(_host.ZoneService.InstanceDirectorId, slot,
+                EntityManager.CombatLog.MapEffect(_host.ZoneService.ContentDirectorId, slot,
                     lowFlags ?? (ushort)Math.Max(1, timeline >> 1), timeline);
             return true;
         }
@@ -51,7 +51,7 @@ namespace Simulant.Simulation
         /// <summary>为模拟中已有的 BattleTalk2 演出生成 10B 行，保留原包文本编号、时长和参数。</summary>
         protected void LogBattleTalk(uint actor, ushort npcName, ushort text, uint milliseconds,
             uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)
-            => EntityManager.CombatLog?.BattleTalk(actor, _host.ZoneService.InstanceDirectorId, npcName, text, milliseconds, a1, a2, a3, a4);
+            => EntityManager.CombatLog?.BattleTalk(actor, _host.ZoneService.ContentDirectorId, npcName, text, milliseconds, a1, a2, a3, a4);
 
         internal void Prepare()
         {

@@ -45,15 +45,18 @@ namespace Simulant.Core.Zone
             }
         }
 
-        // 用于下次切换区域时清理旧 instance
-        private ushort? _loadedInstanceContentId;
+        private const uint InstanceContentDirectorPrefix = 0x80030000;
+        private const uint PublicContentDirectorPrefix = 0x80040000;
 
-        internal uint InstanceDirectorId
+        // 保留完整编号，切换区域时用同一个编号清理旧 Director。
+        private uint _loadedContentDirectorId;
+
+        internal uint ContentDirectorId
         {
             get
             {
                 lock (_stateGate)
-                    return _loadedInstanceContentId is ushort id && id != 0 ? 0x80030000u + id : 0;
+                    return _loadedContentDirectorId;
             }
         }
 
@@ -100,7 +103,7 @@ namespace Simulant.Core.Zone
                 _initialTerritoryId = null;
                 _initialPosition = null;
                 _returnLoadRequested = false;
-                _loadedInstanceContentId = null;
+                _loadedContentDirectorId = 0;
                 _entrancePosition = null;
                 greenScreen = _greenScreen;
                 _greenScreen = null;
@@ -516,42 +519,42 @@ namespace Simulant.Core.Zone
                 _entrancePosition = null;
 
             _host.PrepareEntityWorldChange((uint)territoryId, exitingSimulation);
-            ushort? loadedInstanceContentId;
+            uint loadedDirectorId;
 
             lock (_stateGate)
             {
                 EnsureWorld(worldVersion);
-                loadedInstanceContentId = _loadedInstanceContentId;
+                loadedDirectorId = _loadedContentDirectorId;
             }
 
-            if (loadedInstanceContentId.HasValue && loadedInstanceContentId.Value != 0)
+            if (loadedDirectorId != 0)
             {
-                _host.LogVerbose($"FinalizeInstanceContent: {loadedInstanceContentId.Value}");
+                _host.LogVerbose($"FinalizeContentDirector: {loadedDirectorId:X8}");
                 EnsureWorld(worldVersion);
-                FinalizeInstanceContent(loadedInstanceContentId.Value);
+                EventFramework.Instance.FinalizeInstanceContent(loadedDirectorId);
 
                 lock (_stateGate)
                 {
                     EnsureWorld(worldVersion);
-                    _loadedInstanceContentId = null;
+                    _loadedContentDirectorId = 0;
                 }
             }
 
             EnsureWorld(worldVersion);
             DisableCurrentObjects(worldVersion);
 
-            var nextContentId = ResolveInstanceContentId(territory);
+            var nextDirectorId = ResolveContentDirectorId(territory);
 
-            if (nextContentId != 0)
+            if (nextDirectorId != 0)
             {
-                _host.LogVerbose($"SetupInstanceContent: {nextContentId}");
+                _host.LogVerbose($"SetupContentDirector: {nextDirectorId:X8}");
                 EnsureWorld(worldVersion);
-                SetupInstanceContent(nextContentId);
+                EventFramework.Instance.SetupInstanceContent(nextDirectorId, nextDirectorId & 0xFFFF);
 
                 lock (_stateGate)
                 {
                     EnsureWorld(worldVersion);
-                    _loadedInstanceContentId = nextContentId;
+                    _loadedContentDirectorId = nextDirectorId;
                 }
             }
 
@@ -568,7 +571,7 @@ namespace Simulant.Core.Zone
 
         private async Task OpenEntranceAsync(TerritoryType? territory, int worldVersion)
         {
-            if (!territory.HasValue || ResolveInstanceContentId(territory) == 0)
+            if (!territory.HasValue || (ResolveContentDirectorId(territory) & 0xFFFF0000) != InstanceContentDirectorPrefix)
                 return;
 
             var clock = Stopwatch.StartNew();
@@ -700,19 +703,18 @@ namespace Simulant.Core.Zone
             _host.LogVerbose($"DisableDraw 时实体总数：{count}");
         }
 
-        public void SetupInstanceContent(ushort contentId)
+        private static uint ResolveContentDirectorId(TerritoryType? territory)
         {
-            EventFramework.Instance.SetupInstanceContent(0x80030000u + contentId, contentId);
-        }
+            var content = territory?.ContentFinderCondition.ValueNullable?.Content;
+            if (!content.HasValue || content.Value.RowId == 0)
+                return 0;
 
-        public void FinalizeInstanceContent(ushort contentId)
-        {
-            EventFramework.Instance.FinalizeInstanceContent(0x80030000u + contentId);
-        }
-
-        private static ushort ResolveInstanceContentId(TerritoryType? territory)
-        {
-            return (ushort)(territory?.ContentFinderCondition.ValueNullable?.Content.RowId ?? 0);
+            var reference = content.Value;
+            if (reference.Is<InstanceContent>())
+                return InstanceContentDirectorPrefix | reference.RowId;
+            if (reference.Is<PublicContent>())
+                return PublicContentDirectorPrefix | reference.RowId;
+            return 0;
         }
     }
 }
