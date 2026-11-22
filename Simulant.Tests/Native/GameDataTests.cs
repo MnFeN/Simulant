@@ -62,6 +62,7 @@ namespace Simulant.Tests.Native
                 Check(!actions.TryGetRow(uint.MaxValue, out _), "不存在的行应返回 false。");
                 Check(actions.GetRow(31).ClassJob.Value.Name.ExtractText() == "斧术师", "技能跨表引用。");
                 VerifyEntranceBarriers(data);
+                VerifyDefaultMapEffectCounts(data);
 
                 Check(GameDataService.ResolveSqPackPath(Path.GetDirectoryName(data.SqPackPath)) == data.SqPackPath, "游戏目录解析。");
 
@@ -93,6 +94,18 @@ namespace Simulant.Tests.Native
 
             using (var reopened = new GameDataService(path))
                 Check(reopened.GetSheet<ActionRow>().GetRow(3).Name.ExtractText() == "冲刺", "重新打开客户端。");
+        }
+
+        private static void VerifyDefaultMapEffectCounts(GameDataService data)
+        {
+            var readDefaults = typeof(GameDataService).Assembly.GetType("Simulant.Game.Data.TerritoryEnvironmentData", true)
+                .GetMethod("ReadDefaults", BindingFlags.Static | BindingFlags.NonPublic);
+            foreach (var (territory, expected) in new[] { (1252u, 46), (1346u, 33), (1098u, 5), (901u, 5), (732u, 0) })
+            {
+                var defaults = ((byte Weather, ushort Bgm, int RequiredMapEffectCount))readDefaults.Invoke(null, new object[] { data, territory });
+                Check(defaults.RequiredMapEffectCount == expected,
+                    $"公共副本 {territory} 的槽位表长度应为 {expected}，包含最高有效槽位之前的空槽。");
+            }
         }
 
         private static void VerifyEntranceBarriers(GameDataService data)

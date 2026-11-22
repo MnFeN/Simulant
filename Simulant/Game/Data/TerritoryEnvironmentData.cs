@@ -1,4 +1,5 @@
 using Lumina.Data;
+using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
@@ -68,7 +69,8 @@ namespace Simulant.Game.Data
             var weather = weatherIds.FirstOrDefault(id => id > 2); // 天气 2 有时存在但光照看起来不对
             if (weather == 0)
                 weather = weatherIds.DefaultIfEmpty().Max();
-            var instance = territory.ContentFinderCondition.ValueNullable?.Content.GetValueOrDefault<InstanceContent>();
+            var content = territory.ContentFinderCondition.ValueNullable?.Content;
+            var instance = content?.GetValueOrDefault<InstanceContent>();
             var bgm = instance?.BGM.RowId ?? 0;
             if (bgm == 0)
             {
@@ -78,6 +80,14 @@ namespace Simulant.Game.Data
             }
 
             var groups = instance?.ContentDirectorManagedSG;
+            if (content?.GetValueOrDefault<PublicContent>() is PublicContent publicContent)
+            {
+                // 公共副本通过 Unknown0 引用 ContentDirectorManagedSG，已与国服场景的 LayoutId 核对。
+                // https://github.com/MnFeN/Hyperborea/blob/a5f30dbeb7d6d7e8f653ceda65c90315fff31feb/Hyperborea/MapEffectResolver.cs#L96-L106
+                groups = new SubrowRef<ContentDirectorManagedSG>(publicContent.ExcelPage.Module, publicContent.Unknown0,
+                    publicContent.ExcelPage.Language);
+            }
+
             var requiredCount = 0;
             if (groups.HasValue && groups.Value.RowId != 0 && groups.Value.TryGetValue(out var managedGroups))
             {
