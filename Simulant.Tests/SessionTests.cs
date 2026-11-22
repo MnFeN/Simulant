@@ -9,6 +9,7 @@ using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -665,6 +666,108 @@ namespace Simulant.Tests
             }
         }
 
+        public static void SessionWritesDirectorLogsAroundCleanupAndWaitsBeforeRestart()
+        {
+            var host = new PluginHost();
+            host.Configuration.GenerateActLogs = true;
+            host.ZoneService.ContentDirectorId = 0x800375BF;
+
+            const int actionId = 60001;
+            var actions = Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>();
+            actions.Add(actionId, new Lumina.Excel.Sheets.Action { RowId = actionId });
+            try
+            {
+                using (var probe = new SessionProbe())
+                using (var ready = new AutoResetEvent(false))
+                using (var session = CreateSession(host, probe))
+                {
+                    var logs = new List<(string Payload, long At, int Deleted, uint Cast, bool Running)>();
+                    var expected = new[]
+                    {
+                        "40000005|00|00|00|00",
+                        "40000013|00|00|00|00",
+                        "4000000F|00|00|00|00",
+                        "40000011|00|00|00|00",
+                        "40000006|00|00|00|00"
+                    };
+                    SimActor boss = null;
+                    SimScheduledAction later = null;
+                    long preparingAt = 0;
+                    long cleanupAt = 0;
+                    probe.PrepareAction = () => preparingAt = Stopwatch.GetTimestamp();
+                    probe.StartAction = () =>
+                    {
+                        boss = probe.Logic.EntityManager.SpawnBNpc(1);
+                        boss.Cast(actionId, castTime: 10);
+                        later = probe.Logic.Scheduler.ScheduleAfter(5, () => { });
+                        ready.Set();
+                    };
+                    probe.StopAction = () => cleanupAt = Stopwatch.GetTimestamp();
+                    probe.Logic.EntityManager.CombatLog = new SimCombatLog(() => host.Configuration.GenerateActLogs,
+                        (id, payload, _) =>
+                        {
+                            if (id == 33)
+                                logs.Add((payload, Stopwatch.GetTimestamp(), host.EntitySpawner.Deleted.Count,
+                                    boss.Entity.CastingActionId, session.IsRunning));
+                        }, host.LogWarning);
+
+                    session.Stop();
+                    Assert(logs.Count == 0, "会话启动前的清理不能产生团灭日志。");
+                    session.Start();
+                    Assert(ready.WaitOne(TimeoutMs) && boss.Entity.CastingActionId == actionId, "旧一轮应有正在执行的读条。");
+                    session.Stop();
+
+                    Assert(logs.Select(line => line.Payload).SequenceEqual(expected.Select(command => "800375BF|" + command)),
+                        "停止应按顺序发送五条 Director 日志。");
+                    Assert(later.IsCancelled && logs[0].Cast == 0 && !logs[0].Running && logs[0].Deleted == 0,
+                        "发送团灭前应取消旧读条和时间轴，实体应留到清理时回收。");
+                    Assert(logs[1].At <= cleanupAt && logs[1].Deleted == 0 && logs[2].Deleted == 1,
+                        "实体应在清理台词之后、重置 Director 之前回收。");
+                    for (var i = 1; i < logs.Count; i++)
+                        Assert((logs[i].At - logs[0].At) * 1000d / Stopwatch.Frequency >= 100 * i - 5,
+                            "每条日志都应等到相对于团灭起点的对应时刻。");
+
+                    session.Stop();
+                    Assert(logs.Count == 5, "重复停止不能再发一次团灭。");
+                    var restartNotBefore = session.RestartNotBefore;
+                    host.ZoneService.ContentDirectorId = 0;
+                    session.Start();
+                    Assert(ready.WaitOne(TimeoutMs) && preparingAt >= restartNotBefore &&
+                        (preparingAt - logs[0].At) * 1000d / Stopwatch.Frequency >= 495,
+                        "重新开始应至少等到旧轮团灭后的 0.5 秒。");
+
+                    var cleanupError = new InvalidOperationException("暂时无法回收实体。");
+                    probe.StopAction = () => throw cleanupError;
+                    try
+                    {
+                        Assert(ReferenceEquals(Throws<InvalidOperationException>(session.Stop), cleanupError) &&
+                            session.HasPendingCleanup && logs.Skip(5).Select(line => line.Payload)
+                            .SequenceEqual(expected.Select(command => "00000000|" + command)),
+                            "清理抛错时应以零 Director ID 写完整的重置日志，再交还清理异常。");
+                    }
+                    finally
+                    {
+                        probe.StopAction = null;
+                    }
+
+                    session.Stop();
+                    Assert(!session.HasPendingCleanup && logs.Count == 10, "重试回收不能再发一次团灭。");
+
+                    host.Configuration.GenerateActLogs = false;
+                    session.Start();
+                    Assert(ready.WaitOne(TimeoutMs), "关闭日志后应能开始模拟。");
+                    var stoppingAt = Stopwatch.GetTimestamp();
+                    session.Stop();
+                    Assert(session.RestartNotBefore > stoppingAt && logs.Count == 10,
+                        "日志开关应只控制写入，停止时序仍应执行。");
+                }
+            }
+            finally
+            {
+                actions.Remove(actionId);
+            }
+        }
+
         public static void SessionRetainsFailedCleanupAndRejectsRestart()
         {
             using (var probe = new SessionProbe())
@@ -1132,6 +1235,7 @@ namespace Simulant.Core
         internal Configuration Configuration { get; set; } = new Configuration();
         internal SimCommandListener Commands { get; } = new SimCommandListener(_ => { });
         internal SimActionService PlayerActions { get; }
+        internal TestZoneService ZoneService { get; } = new TestZoneService();
         internal bool FirewallEnabled { get; set; }
         internal bool PluginReady { get; set; } = true;
         internal bool Disposed { get; set; }
@@ -1148,6 +1252,11 @@ namespace Simulant.Core
         {
             internal Entity.Character Player;
             internal Entity.Character GetMyself() => Player;
+        }
+
+        internal sealed class TestZoneService
+        {
+            internal uint ContentDirectorId { get; set; }
         }
 
         internal readonly Entity.EntitySpawner EntitySpawner = new Entity.EntitySpawner();

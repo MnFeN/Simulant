@@ -5,12 +5,23 @@ using Simulant.Core.Environment;
 using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Timeline;
 using System;
+using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 
 namespace Simulant.Simulation.Runtime
 {
     public sealed class SimSession : IDisposable
     {
+        private enum DirectorCommand : uint
+        {
+            FadeOut = 0x40000005,
+            Recommence = 0x40000006,
+            Reset = 0x4000000F,
+            Ready = 0x40000011,
+            ClearBattleTalk = 0x40000013
+        }
+
         private readonly PluginHost _host;
         private readonly SimLogicBase _logic;
         private readonly SimEntityManager _entityManager;
@@ -22,10 +33,18 @@ namespace Simulant.Simulation.Runtime
         private volatile bool _waymarksPendingCleanup;
         private int _waymarkWorld;
         private volatile bool _disposed;
+        private bool _roundStarted;
+        private int _stopping;
+        private uint _directorId;
+        private long _wipeStartedAt;
 
         public int RandomSeed { get; }
         public bool IsRunning => _scheduler?.IsRunning == true;
         internal bool HasPendingCleanup => _entityManager.HasPendingCleanup || _waymarksPendingCleanup || Volatile.Read(ref _failureRetained) != 0;
+        internal long RestartNotBefore => _wipeStartedAt == 0 ? 0 : _wipeStartedAt + Stopwatch.Frequency / 2;
+
+        internal static int DelayMillisecondsUntil(long timestamp)
+            => (int)Math.Ceiling(Math.Max(0, timestamp - Stopwatch.GetTimestamp()) * 1000d / Stopwatch.Frequency);
 
         internal SimSession(PluginHost host, SimPresetBase preset, int? randomSeed = null)
         {
@@ -70,7 +89,10 @@ namespace Simulant.Simulation.Runtime
                 if (HasPendingCleanup)
                     throw new InvalidOperationException("上次模拟的实体或场地标点尚未完全清理，请先停止并重试清理。");
 
-                _scheduler = new SimScheduler(HandleFailure, InterruptAfterFailure);
+                WaitUntil(RestartNotBefore);
+                _wipeStartedAt = 0;
+
+                _scheduler = new SimScheduler(HandleFailure, () => Interrupt(cancelCasts: false));
 
                 try
                 {
@@ -97,10 +119,13 @@ namespace Simulant.Simulation.Runtime
                     }
 
                     _scheduler.Schedule(0, _logic.Start, "初始化模拟");
+                    _directorId = _host.ZoneService?.ContentDirectorId ?? 0;
+                    _roundStarted = true;
                     _scheduler.Start();
                 }
                 catch
                 {
+                    _roundStarted = false;
                     StopCore();
                     throw;
                 }
@@ -138,11 +163,11 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        private void InterruptAfterFailure()
+        private void Interrupt(bool cancelCasts)
         {
             try
             {
-                _entityManager.Interrupt();
+                _entityManager.Interrupt(cancelCasts);
             }
             catch (Exception interruptError)
             {
@@ -168,7 +193,64 @@ namespace Simulant.Simulation.Runtime
             _host.PlayerActions.EndSimulation(_entityManager);
             // Dispose 先取消并等待当前节点退出，再允许释放节点引用的原生实体。
             _scheduler?.Dispose();
-            Cleanup();
+            if (Interlocked.Exchange(ref _stopping, 1) != 0)
+                return;
+
+            try
+            {
+                if (!_roundStarted)
+                {
+                    Cleanup();
+                    return;
+                }
+
+                _roundStarted = false;
+                StopRound();
+            }
+            finally
+            {
+                Volatile.Write(ref _stopping, 0);
+            }
+        }
+
+        private void StopRound()
+        {
+            Interrupt(cancelCasts: true);
+            _wipeStartedAt = Stopwatch.GetTimestamp();
+            WriteDirectorLog(DirectorCommand.FadeOut);
+
+            WaitUntil(_wipeStartedAt, 100);
+            WriteDirectorLog(DirectorCommand.ClearBattleTalk);
+            ExceptionDispatchInfo cleanupError = null;
+            try
+            {
+                Cleanup();
+            }
+            catch (Exception error)
+            {
+                // 先写完触发器重置日志，再将清理异常交还调用者。
+                cleanupError = ExceptionDispatchInfo.Capture(error);
+            }
+
+            WaitUntil(_wipeStartedAt, 200);
+            WriteDirectorLog(DirectorCommand.Reset);
+            WaitUntil(_wipeStartedAt, 300);
+            WriteDirectorLog(DirectorCommand.Ready);
+            WaitUntil(_wipeStartedAt, 400);
+            WriteDirectorLog(DirectorCommand.Recommence);
+
+            cleanupError?.Throw();
+        }
+
+        private void WriteDirectorLog(DirectorCommand command)
+            => _entityManager.CombatLog.Director(_directorId, (uint)command, 0, 0, 0, 0);
+
+        private static void WaitUntil(long timestamp, int offsetMilliseconds = 0)
+        {
+            var deadline = timestamp + Stopwatch.Frequency * offsetMilliseconds / 1000;
+            int delay;
+            while ((delay = DelayMillisecondsUntil(deadline)) > 0)
+                Thread.Sleep(delay);
         }
 
         private void Cleanup()

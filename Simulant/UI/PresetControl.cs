@@ -17,7 +17,8 @@ namespace Simulant.UI
         private SimPresetBase _preset;
         private SimSession _session;
         private (int World, int Seed)? _lastAttempt;
-        private volatile bool _restoringPhase;
+        private long _restartNotBefore;
+        private volatile bool _preparingStart;
         private int _stopVersion;
         private readonly System.Windows.Forms.Timer _sessionStateTimer;
         private readonly OptionEditor _optionEditor;
@@ -210,10 +211,7 @@ namespace Simulant.UI
                 }
 
                 StopCurrentSession();
-                if (_session != null)
-                    return;
-
-                if (retry && !await RestorePhaseForRetry(preset))
+                if (_session != null || !await PrepareNextStart(preset, retry))
                     return;
 
                 if (IsDisposed || Disposing || !ReferenceEquals(_preset, preset) ||
@@ -237,19 +235,30 @@ namespace Simulant.UI
             }
         }
 
-        private async Task<bool> RestorePhaseForRetry(SimPresetBase preset)
+        private async Task<bool> PrepareNextStart(SimPresetBase preset, bool retry)
         {
+            var restartNotBefore = _restartNotBefore;
+            if (!retry && SimSession.DelayMillisecondsUntil(restartNotBefore) == 0)
+                return true;
+
             var version = Volatile.Read(ref _stopVersion);
-            _restoringPhase = true;
+            _preparingStart = true;
             try
             {
                 UpdateButtons();
-                // 停止或离开区域后，即使阶段恢复刚好完成，也不启动旧请求。
-                return await _host.ZoneService.EnterPhase(preset.Phase) && Volatile.Read(ref _stopVersion) == version;
+                if (retry && !await _host.ZoneService.EnterPhase(preset.Phase))
+                    return false;
+
+                int delay;
+                while ((delay = SimSession.DelayMillisecondsUntil(restartNotBefore)) > 0)
+                    await Task.Delay(delay);
+
+                // 停止或离开区域后，取消仍在等待启动的请求。
+                return Volatile.Read(ref _stopVersion) == version;
             }
             finally
             {
-                _restoringPhase = false;
+                _preparingStart = false;
             }
         }
 
@@ -262,16 +271,20 @@ namespace Simulant.UI
 
         internal void StopCurrentSession()
         {
+            var session = _session;
             try
             {
                 Interlocked.Increment(ref _stopVersion);
-                if (_restoringPhase)
+                if (_preparingStart)
                     _host.ZoneService.CancelPendingPhase();
 
-                _session?.Dispose();
+                session?.Dispose();
             }
             finally
             {
+                if (session != null)
+                    _restartNotBefore = Math.Max(_restartNotBefore, session.RestartNotBefore);
+
                 if (_session?.HasPendingCleanup == true)
                     _host?.LogError("模拟实体或场地标点尚未完全清理，已保留会话。请再次点击“停止”重试；清理完成前不能开始新模拟。");
                 else
@@ -290,8 +303,8 @@ namespace Simulant.UI
             if (!_host.GameDataReady || _host.GameDataLoading)
                 return "数据尚未加载完成，请稍后开始模拟。";
 
-            if (_host.IsSwitchingTerritory || _restoringPhase)
-                return "区域与阶段正在加载，请等待加载完成后再开始模拟。";
+            if (_host.IsSwitchingTerritory || _preparingStart)
+                return "区域或模拟正在准备，请等待就绪后再开始。";
 
             if (!_host.FirewallEnabled)
                 return "预设使用网络模拟实体，请先开启防火墙。";
@@ -313,10 +326,10 @@ namespace Simulant.UI
             _host?.LogVerbose($"UpdateButtons: hasHost = {hasHost}, hasPreset = {hasPreset}, isRunning = {isRunning}");
             btnStart.Enabled = hasHost && hasPreset && _preset.IsImplemented && _displayedReadyToStart;
             btnRetry.Enabled = btnStart.Enabled && _displayedReadyToRetry;
-            btnEnd.Enabled = hasHost && (isRunning || hasPendingCleanup || _restoringPhase);
-            lblRunState.Text = !hasPreset ? string.Empty : _restoringPhase ? "恢复阶段中" :
+            btnEnd.Enabled = hasHost && (isRunning || hasPendingCleanup || _preparingStart);
+            lblRunState.Text = !hasPreset ? string.Empty : _preparingStart ? "准备下一轮" :
                 isRunning ? "模拟中" : hasPendingCleanup ? "等待清理" : btnStart.Enabled ? "可开始" : "等待就绪";
-            lblRunState.ForeColor = _restoringPhase ? WorkbenchTheme.Muted :
+            lblRunState.ForeColor = _preparingStart ? WorkbenchTheme.Muted :
                 hasPendingCleanup ? WorkbenchTheme.Yellow :
                 isRunning || btnStart.Enabled ? WorkbenchTheme.Accent : WorkbenchTheme.Muted;
             UpdateQuickControls();

@@ -31,8 +31,8 @@ namespace Simulant.Simulation.Runtime
                 _mechanics.Remove(mechanic);
         }
 
-        /// <summary>中断机制和移动，保留角色、读条与已展示特效，交由显式停止时清理。</summary>
-        internal void Interrupt()
+        /// <summary>中断机制和移动，可同时取消读条。实体保留到会话清理。</summary>
+        internal void Interrupt(bool cancelCasts = false)
         {
             SimMechanic[] mechanics;
             SimActor[] actors;
@@ -58,6 +58,8 @@ namespace Simulant.Simulation.Runtime
             List<Exception> errors = null;
             TryCleanup(ClearMovementLocks);
             _behaviors?.Dispose();
+            if (cancelCasts && _casts != null)
+                TryCleanup(_casts.Dispose);
 
             foreach (var mechanic in mechanics)
             {
