@@ -48,6 +48,7 @@ namespace Simulant.Tests.Native
                 foreach (var failure in new[]
                 {
                     "回收实体",
+                    "回收事件对象",
                     "加载地图",
                     "设置区域",
                     "恢复位置",
@@ -55,9 +56,7 @@ namespace Simulant.Tests.Native
                     "恢复音乐",
                     "恢复收包",
                     "释放代码洞"
-                }
-
-                )
+                })
                     VerifyRetry(failure);
 
                 foreach (var test in typeof(PluginUnloadTests).GetMethods(BindingFlags.Public | BindingFlags.Static)
@@ -83,6 +82,7 @@ namespace Simulant.Tests.Native
             {
                 "停止预设",
                 "回收实体",
+                "回收事件对象",
                 "加载地图",
                 "设置区域",
                 "恢复位置",
@@ -136,7 +136,10 @@ namespace Simulant.Tests.Native
             scene.AssertCompleted(allowEntityResidual: failure == "回收实体");
             Assert(scene.Events.Count(item => item == "停止预设") == 1, "重试卸载不能重复执行预设 OnStop。");
 
-            if (failure != "加载地图" && failure != "设置区域")
+            if (failure == "回收事件对象")
+                Assert(loads == 0 && scene.Events.Count(item => item == "加载地图") == 1,
+                    "旧事件对象清理失败时应留在原地图，重试成功后再换图。");
+            else if (failure != "加载地图" && failure != "设置区域")
                 Assert(scene.Events.Count(item => item == "加载地图") == loads, "换图请求发出后，重试验证和清理不能重复切图。");
 
             Passed(failure + "失败保留记录，下一次禁用可完成卸载");
@@ -190,6 +193,23 @@ namespace Simulant.Tests.Native
             scene.Main.DeInitPlugin();
             scene.AssertCompleted();
             Passed("原场地就绪后才恢复位置和通信");
+        }
+
+        public static void SwitchFromQuestAreaClearsEventObjects()
+        {
+            foreach (var territoryId in new[] { 1170, 1171 })
+            {
+                var scene = new Scene(false, territoryId);
+                Assert(scene.EnterTerritory(65000), "应能从任务区域切到另一张模拟地图。");
+
+                var clear = scene.Events.IndexOf("回收事件对象");
+                var load = scene.Events.IndexOf("加载地图");
+                Assert(clear >= 0 && clear < load, "切换模拟地图前必须回收旧区域的事件对象。");
+
+                scene.Main.DeInitPlugin();
+                scene.AssertCompleted();
+                Passed(territoryId + " 切图时在加载新地图前回收事件对象");
+            }
         }
 
         public static void ExitAfterDisconnect()
@@ -279,7 +299,7 @@ namespace Simulant.Tests.Native
             internal bool PendingReturn => (bool)_zone.GetType().GetProperty("HasPendingReturn", Members).GetValue(_zone);
             internal bool FirewallPending => (bool)_firewall.GetType().GetProperty("HasPendingCleanup", Members).GetValue(_firewall);
 
-            internal Scene(bool interruptedEntry)
+            internal Scene(bool interruptedEntry, int territoryId = 65000)
             {
                 Current = this;
                 Memory = new UnloadMemory(Events);
@@ -298,6 +318,8 @@ namespace Simulant.Tests.Native
                 EventFramework.SetupInstanceContentFuncPtr = UnloadPlugin.SetupFunction;
                 EventFramework.FinalizeInstanceContentFuncPtr = UnloadPlugin.FinalizeFunction;
                 GameObjectManager.InstancePtr = new IntPtr(0x70000);
+                EventObjectManager.InstancePtr = UnloadMemory.EventObjects;
+                EventObjectManager.ClearFuncPtr = UnloadPlugin.ClearEventObjectsFunction;
                 ClientObjectManager.InstancePtr = new IntPtr(0x80000);
                 ClientObjectManager.DeleteObjectByIndexFuncPtr = UnloadPlugin.DeleteFunction;
                 BGMSystem.InstancePtr = UnloadMemory.BgmPointer;
@@ -347,7 +369,7 @@ namespace Simulant.Tests.Native
                 if (interruptedEntry)
                     Memory.Failure = "加载地图";
 
-                var entered = (bool)Invoke(_zone, "TryEnterTerritory", 65000, 0);
+                var entered = EnterTerritory(territoryId);
                 Assert(entered != interruptedEntry && PendingReturn, "测试必须通过真实区域入口取得返回责任。");
                 Memory.Failure = null;
                 Memory.Put(UnloadMemory.Player + 0xB0, new Vector3(100, 0, 100));
@@ -380,6 +402,8 @@ namespace Simulant.Tests.Native
                 Set(Host, "_debugEntities", new SimEntityManager(spawner));
                 Events.Clear();
             }
+
+            internal bool EnterTerritory(int territoryId) => (bool)Invoke(_zone, "TryEnterTerritory", territoryId, 0);
 
             private void SeedHook(string field, IntPtr target, bool cave)
             {
@@ -457,7 +481,8 @@ namespace Simulant.Tests.Native
         public static readonly IntPtr Game = new IntPtr(0x100000), EventPointer = new IntPtr(0x200000),
             BgmPointer = new IntPtr(0x300000), Scene = new IntPtr(0x320000), Player = new IntPtr(0x40000),
             Receive = new IntPtr(0xA00000), Send = new IntPtr(0xB00000), Cave = new IntPtr(0xC00000),
-            LayoutPointer = new IntPtr(0xD00000), Layout = new IntPtr(0xD20000), Interaction = new IntPtr(0xE00000);
+            LayoutPointer = new IntPtr(0xD00000), Layout = new IntPtr(0xD20000), Interaction = new IntPtr(0xE00000),
+            EventObjects = new IntPtr(0xF00000);
         private readonly FakeLocalMemory _storage = new FakeLocalMemory();
         private readonly List<string> _events;
         public string Failure;
@@ -538,7 +563,7 @@ namespace Simulant.Tests.Native
     {
         public static readonly IntPtr LoadFunction = new IntPtr(0x101), TerritoryFunction = new IntPtr(0x102),
             SetupFunction = new IntPtr(0x103), FinalizeFunction = new IntPtr(0x104), DeleteFunction = new IntPtr(0x105),
-            PositionFunction = new IntPtr(0x106);
+            PositionFunction = new IntPtr(0x106), ClearEventObjectsFunction = new IntPtr(0x107);
         public UnloadMemory Memory { get; }
 
         private readonly Action _deleted;
@@ -573,6 +598,12 @@ namespace Simulant.Tests.Native
         {
             if (function == TerritoryFunction)
                 Memory.Step("设置区域");
+            else if (function == ClearEventObjectsFunction)
+            {
+                PluginUnloadTests.Assert(args.Length == 1 && (IntPtr)args[0] == UnloadMemory.EventObjects,
+                    "应该使用 EventObjectManager 回收旧区域的事件对象。");
+                Memory.Step("回收事件对象");
+            }
             else if (function == DeleteFunction)
             {
                 Memory.Step("回收实体");

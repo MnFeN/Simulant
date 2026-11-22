@@ -414,6 +414,10 @@ namespace Simulant.Core.Zone
                 }
             }
 
+            // 事件对象即使隐藏了模型，也会在每帧访问旧地图的场景组。须在布局卸载前回收。
+            _host.LogVerbose("回收旧区域的事件对象");
+            EnsureWorld(worldVersion);
+            EventObjectManager.Instance.ThrowIfNull().Clear();
             EnsureWorld(worldVersion);
             DisableCurrentObjects(worldVersion);
 
