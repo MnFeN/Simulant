@@ -42,6 +42,8 @@ namespace Simulant.Simulation.Runtime
                 _acceptingEntities = false;
                 _partyEnmityPoll?.Cancel();
                 _partyEnmityPoll = null;
+                _enemyListPoll?.Cancel();
+                _enemyListPoll = null;
                 _networkGeneration++;
                 _networkPoll?.Cancel();
                 _networkPoll = null;

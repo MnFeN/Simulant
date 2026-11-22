@@ -27,7 +27,10 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(11, () =>
             {
                 foreach (var actor in _sand)
+                {
                     actor.EnableDraw();
+                    EntityManager.SetEnemyListVisibility(actor, true);
+                }
 
                 for (uint i = 0x22; i <= 0x27; i++)
                     Map(i, 2);
@@ -274,6 +277,9 @@ namespace Simulant.Content.U7a.Presets
             {
                 for (uint i = 0x22; i <= 0x27; i++)
                     Map(i, 8);
+
+                foreach (var actor in _sand)
+                    EntityManager.SetEnemyListVisibility(actor, false);
 
                 Map(0x28, 0x40);
             }, "回场前场地效果");

@@ -37,8 +37,13 @@ namespace Simulant.Simulation.Runtime
             var parent = spec.TetherTargetId;
             var tether = spec.TetherId;
             var animation = spec.AnimationState;
+            var enemyListVisibility = spec.EnemyListVisibility;
             QueueNetworkSpawn((out NetworkCharacterSpawnRequest request) => _spawner.BeginSpawnNetworkBNpc(spec, out request),
-                onReady, timeoutSeconds, actor => CombatLog?.SpawnNpc(actor.Id, parent, tether, animation));
+                onReady, timeoutSeconds, actor =>
+                {
+                    RegisterEnemy(actor, enemyListVisibility);
+                    CombatLog?.SpawnNpc(actor.Id, parent, tether, animation);
+                });
         }
 
         /// <summary>生成网络玩家，默认复制自身外貌并优先采用已知的职业装备；就绪后在调度线程交付。</summary>

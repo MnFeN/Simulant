@@ -43,6 +43,8 @@ namespace Simulant.Core.Entity
         public uint DisplayFlags = 0x4000B;
         /// <summary>角色进入战斗列表后，通过 ActorControl 初始化可选中状态；可见不等于可选中。</summary>
         public bool Targetable = true;
+        /// <summary>敌对列表的初始成员状态。未指定时首次可选中即加入，暂时不可选中时仍留在列表。</summary>
+        public bool? EnemyListVisibility;
         public byte CharacterDataFlags = 3;
         public byte LinkRange = 0x14;
 

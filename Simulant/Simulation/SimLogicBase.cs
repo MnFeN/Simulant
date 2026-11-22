@@ -371,6 +371,7 @@ namespace Simulant.Simulation
                 Pos = pos,
                 Heading = heading,
                 Targetable = false,
+                EnemyListVisibility = false,
             }, onReady);
         }
 

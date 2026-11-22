@@ -134,6 +134,8 @@ namespace Simulant.Content.U7a.Presets
 
         protected override void BuildTimeline(SimTimeline timeline)
         {
+            // 双读条参考回放里，希瓦和盖娅已用到 V、W，后续沙漏和龙头接着分配。
+            EntityManager.StartEnemyListLettersAt('V');
             _plan = new CrystallizeTimePlan(Self, InitialDebuff, Wave, Purple, Random, RedPriority, Solution);
             timeline.At(0, () => GeneratePartyMembers(PlayerSlot, PrepareActors), "准备时间结晶小队");
         }
@@ -190,7 +192,7 @@ namespace Simulant.Content.U7a.Presets
                 actor.SetTargetable(false);
             }, heading: 0);
 
-            for (var i = 0; i < 6; i++)
+            for (var i = _sand.Length - 1; i >= 0; i--)
             {
                 var index = i;
                 Spawn(17837, 9823, _plan.Hourglass(i), actor => _sand[index] = actor, true, 0xA55C04);
@@ -238,7 +240,7 @@ namespace Simulant.Content.U7a.Presets
         private void SpawnHeads()
         {
             // 回放在连线后 0.083 秒直接生成龙头，没有提前生成后的额外显现控制。
-            for (var i = 0; i < 2; i++)
+            for (var i = _heads.Length - 1; i >= 0; i--)
             {
                 var index = i;
                 EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
@@ -248,6 +250,7 @@ namespace Simulant.Content.U7a.Presets
                     LayoutId = 0xA55C03,
                     Level = 100,
                     Targetable = false,
+                    EnemyListVisibility = true,
                     Pos = new Vector3(i == 0 ? 98 : 102, 87, 0),
                     Heading = (float)Deg(i == 0 ? -90 : 90)
                 }, actor => _heads[index] = actor, timeoutSeconds: 3);

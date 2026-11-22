@@ -264,8 +264,11 @@ namespace Simulant.Content.U7a.Presets
                     if (_headHits[head] == 2)
                     {
                         _heads[head].Execute(40244);
-                        Scheduler.ScheduleAfter(0.7, () => _heads[head].Entity.DisableDraw(), "龙头消失",
-                            finishOnMechanicFailure: true);
+                        Scheduler.ScheduleAfter(0.7, () =>
+                        {
+                            _heads[head].Entity.DisableDraw();
+                            EntityManager.SetEnemyListVisibility(_heads[head], false);
+                        }, "龙头消失", finishOnMechanicFailure: true);
                         foreach (var move in _plan.RedWindRoute(Party[slot].Pos, Now))
                             Scheduler.Schedule(_origin + move.Start, () => Move(slot, move.Area, move.Arrival, urgent: true), "红风撞头后沿南侧撤离");
                     }

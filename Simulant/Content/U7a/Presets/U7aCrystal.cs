@@ -61,7 +61,8 @@ namespace Simulant.Content.U7a.Presets
                 {
                     BNpcBaseId = 17841, BNpcNameId = 13559, LayoutId = 0xA55C07,
                     Pos = new Vector3(Position, 0), Heading = 0,
-                    MaxHealthPoints = 201481, HealthPoints = health, DisplayFlags = 0x40003
+                    MaxHealthPoints = 201481, HealthPoints = health, DisplayFlags = 0x40003,
+                    EnemyListVisibility = false
                 },
                 new NetworkNpcSpawnSpec
                 {

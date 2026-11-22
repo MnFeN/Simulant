@@ -7,6 +7,7 @@ namespace Simulant.Game.FFCS.Client.Game.UI
     internal struct MarkingController : IMemoryObject
     {
         public const uint NoTarget = 0xE0000000;
+        internal const int LetterCount = 26;
 
         [SigPattern("48 8D 0D * * * * 4C 8B 85")]
         public static IntPtr InstancePtr { get; set; }
@@ -16,6 +17,9 @@ namespace Simulant.Game.FFCS.Client.Game.UI
 
         public static MarkingController Instance => InstancePtr.As<MarkingController>();
         public IntPtr Ptr { get; set; }
+
+        // https://github.com/aers/FFXIVClientStructs/blob/main/FFXIVClientStructs/FFXIV/Client/Game/UI/MarkingController.cs
+        internal MemoryArray<uint> LetterMarkers => Ptr.ArrayField<uint>(0x98, LetterCount);
 
         public void SetLocalMarker(MarkerType marker, uint entityId)
         {

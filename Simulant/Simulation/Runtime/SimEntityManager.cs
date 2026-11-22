@@ -32,6 +32,16 @@ namespace Simulant.Simulation.Runtime
         private bool _isClearing;
         private SimPartyService _partyService;
         private SimScheduledAction _partyEnmityPoll;
+        private SimScheduledAction _enemyListPoll;
+        private readonly List<EnemyListEntry> _enemyEntries = new List<EnemyListEntry>();
+        internal SimEnemyList EnemyList { get; set; }
+
+        private sealed class EnemyListEntry
+        {
+            internal SimActor Actor;
+            internal byte Enmity = 100;
+            internal bool? Visible;
+        }
 
         private readonly Dictionary<MarkerType, uint> _simMarkers = new Dictionary<MarkerType, uint>();
 
@@ -73,7 +83,7 @@ namespace Simulant.Simulation.Runtime
                 lock (_gate)
                     return _isClearing || _movementLockPlayer != null || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 || _names.Count != 0 ||
                         _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true ||
-                        _partyService?.IsOwnedBy(this) == true;
+                        _partyService?.IsOwnedBy(this) == true || EnemyList?.HasPendingCleanup == true;
             }
         }
 
@@ -101,6 +111,9 @@ namespace Simulant.Simulation.Runtime
 
                     if (_partyService?.IsOwnedBy(this) == true)
                         throw new InvalidOperationException("上次模拟的小队列表尚未恢复，请先重试清理。");
+
+                    if (EnemyList?.HasPendingCleanup == true)
+                        throw new InvalidOperationException("上次模拟的敌对列表尚未恢复，请先重试清理。");
 
                     if (_statuses.Count != 0 || _movementLockPlayer != null)
                         throw new InvalidOperationException("上次模拟的点名状态尚未清理，请先重试停止。");
@@ -165,6 +178,13 @@ namespace Simulant.Simulation.Runtime
                     throw new InvalidOperationException("请先显示模拟小队并指定有效目标。");
 
                 _partyService.SetEnmity(this, target.Id, Party, enmity);
+                var entry = _enemyEntries.Find(item => item.Actor == target);
+                if (entry != null)
+                {
+                    var self = Party.FindIndex(actor => actor.Entity.Identity.Slot == 0);
+                    if (self >= 0)
+                        entry.Enmity = (byte)enmity[self];
+                }
                 SetCombatTarget(target);
                 SchedulePartyEnmity();
             }
@@ -206,6 +226,68 @@ namespace Simulant.Simulation.Runtime
             }, "检查模拟目标的仇恨显示");
         }
 
+        internal void StartEnemyListLettersAt(char letter) => EnemyList?.StartLettersAt(letter);
+
+        /// <summary>设置本会话生成的敌人是否入列。目标可选中状态仍由原生实体控制。</summary>
+        public void SetEnemyListVisibility(SimActor actor, bool visible)
+        {
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                var entry = _enemyEntries.Find(item => item.Actor == actor);
+                if (entry != null)
+                    entry.Visible = visible;
+            }
+        }
+
+        private void RegisterEnemy(SimActor actor, bool? visible = null)
+        {
+            if (EnemyList == null)
+                return;
+
+            _enemyEntries.Add(new EnemyListEntry { Actor = actor, Visible = visible });
+            ScheduleEnemyList();
+        }
+
+        private void ScheduleEnemyList()
+        {
+            if (_enemyListPoll != null || (_enemyEntries.Count == 0 && !EnemyList.HasPendingCleanup))
+                return;
+
+            _enemyListPoll = _scheduler.ScheduleAfter(0.25, () =>
+            {
+                lock (_gate)
+                {
+                    _enemyListPoll = null;
+                    if (!_acceptingEntities || _isClearing)
+                        return;
+
+                    var self = _actors.Values.FirstOrDefault(actor => actor.Entity.Identity.Slot == 0 && actor.IsActive);
+                    if (self != null)
+                    {
+                        var enemies = new List<(uint EntityId, byte Enmity)>();
+                        foreach (var entry in _enemyEntries)
+                        {
+                            var actor = entry.Actor;
+                            if (!actor.IsActive || actor.Entity.HP == 0)
+                                continue;
+
+                            // 原生 HUD 独立判断可选中状态与行的亮度。辅助施法者的读条也不会使其入列。
+                            if (entry.Visible == false || (entry.Visible == null && !actor.Entity.IsTargetable))
+                                continue;
+
+                            entry.Visible = true;
+                            enemies.Add((actor.Id, entry.Enmity));
+                        }
+
+                        EnemyList.Refresh(self.Id, enemies);
+                    }
+
+                    ScheduleEnemyList();
+                }
+            }, "同步模拟敌对列表");
+        }
+
         public SimActor SpawnPlayer(Job job)
         {
             lock (_gate)
@@ -228,7 +310,9 @@ namespace Simulant.Simulation.Runtime
             lock (_gate)
             {
                 EnsureAcceptingEntities();
-                return Own(_spawner.SpawnBNpc(spec));
+                var actor = Own(_spawner.SpawnBNpc(spec));
+                RegisterEnemy(actor);
+                return actor;
             }
         }
 
@@ -325,6 +409,7 @@ namespace Simulant.Simulation.Runtime
                 finally
                 {
                     _actors.Remove(actor.Entity.Identity);
+                    _enemyEntries.RemoveAll(entry => entry.Actor == actor);
                     if (Party.Remove(actor) && _partyService?.IsOwnedBy(this) == true)
                         CombatLog?.Party(Party);
                 }
@@ -397,6 +482,8 @@ namespace Simulant.Simulation.Runtime
                 _acceptingEntities = false;
                 _partyEnmityPoll?.Cancel();
                 _partyEnmityPoll = null;
+                _enemyListPoll?.Cancel();
+                _enemyListPoll = null;
                 _networkGeneration++;
                 _networkPoll?.Cancel();
                 _networkPoll = null;
@@ -437,6 +524,7 @@ namespace Simulant.Simulation.Runtime
                 {
                     _actors.Clear();
                     Party.Clear();
+                    _enemyEntries.Clear();
                 }
 
                 // 先停止所有参与者的行为，再回收本会话生成的实体。借用玩家只解除关联。
@@ -446,8 +534,9 @@ namespace Simulant.Simulation.Runtime
                 TryCleanup(() => ClearStatuses());
                 TryCleanup(() => RestoreNames());
                 var partyRestored = _partyService == null || TryCleanup(() => _partyService.Restore(this));
+                var enemyListRestored = EnemyList == null || TryCleanup(EnemyList.Restore);
 
-                if (partyRestored)
+                if (partyRestored && enemyListRestored)
                     foreach (var entity in owned)
                     {
                         lock (_gate)

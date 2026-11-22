@@ -52,6 +52,9 @@ namespace Simulant.Tests.Native
                 Check("退战失败可重试，掉线或角色更换后放弃旧状态", VerifyCombatRestoreFailure);
                 Check("切换目标后仅按需补发仇恨并正确处理软目标", VerifyEnmityRefresh);
                 Check("仇恨收包期间切换目标不会误报失败", VerifyTargetChangeDuringEnmity);
+                Check("敌对列表通过一个入口发布、更新和清理独立目标", VerifyEnemyList);
+                Check("敌对字母自动循环分配，时间结晶十个目标能显示两只龙头", VerifyEnemyListLetters);
+                Check("敌对列表清理失败保留责任，换图后放弃旧列表", VerifyEnemyListRestore);
                 Check("成员移除更新名单且最终恢复原小队", VerifyRemoveMember);
                 Check("移除成员重新采集留下队员的当前血蓝与状态", VerifyRemoveMemberPreservesCurrentValues);
                 Console.WriteLine("真实小队服务故障注入通过：" + _passed + " 项。");
@@ -61,6 +64,120 @@ namespace Simulant.Tests.Native
             {
                 Console.Error.WriteLine("验证失败：模拟小队与仇恨恢复。\n" + error);
                 return 1;
+            }
+        }
+
+        private static void VerifyEnemyList()
+        {
+            Assert(Marshal.SizeOf(typeof(UpdateHaterPacket)) == 0x108 &&
+                Marshal.OffsetOf(typeof(UpdateHaterPacket), "EnemyCount").ToInt32() == 0 &&
+                Marshal.OffsetOf(typeof(UpdateHaterPacket), "_entries").ToInt32() == 4,
+                "敌对列表收包布局不匹配。");
+            Assert(Marshal.SizeOf(typeof(HaterInfo)) == 0x48 &&
+                Marshal.OffsetOf(typeof(HaterInfo), "EntityId").ToInt32() == 0x40 &&
+                Marshal.OffsetOf(typeof(HaterInfo), "Enmity").ToInt32() == 0x44,
+                "敌对列表原生条目布局不匹配。");
+            using (var scene = new Scene())
+            {
+                var native = (EntityId: 0x40001234u, Enmity: (byte)41);
+                var first = (EntityId: Scene.EnemyId, Enmity: (byte)90);
+                var second = (EntityId: Scene.EnemyId + 1, Enmity: (byte)65);
+                scene.Plugin.SetEnemies(new[] { native });
+
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, new[] { first, second });
+                Assert(scene.Plugin.EnemyPackets.Count == 1 && scene.Plugin.EnemyRecipient == Scene.SelfId &&
+                    scene.Plugin.ReadEnemies().SequenceEqual(new[] { native, first, second }),
+                    "应通过本机路由发布多敌人列表，并保留现有条目与其仇恨。");
+
+                scene.SelectTarget(IntPtr.Zero);
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, new[] { first, second });
+                Assert(scene.Plugin.EnemyPackets.Count == 1, "取消选择或列表未变时，无须再发送完整列表包。");
+
+                second.Enmity = 100;
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, new[] { second });
+                Assert(scene.Plugin.ReadEnemies().SequenceEqual(new[] { native, second }),
+                    "应移除已退场的目标，并同步仍在场目标的新仇恨。");
+
+                var many = Enumerable.Range(0, 40).Select(index => (0x40FF5000u + (uint)index, (byte)0)).ToArray();
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, many);
+                Assert(scene.Plugin.ReadEnemies().Length == UpdateHaterPacket.Capacity &&
+                    scene.Plugin.ReadEnemies().Last().EntityId == many[30].Item1,
+                    "原生列表容量内应保留现有条目，按顺序容纳模拟敌人。");
+
+                var packet = scene.Plugin.EnemyPackets.Last();
+                Assert(packet.GetEntry(31).EntityId == many[30].Item1, "第 32 个条目必须写入正确的包偏移。");
+                Throws<ArgumentOutOfRangeException>(() => packet.GetEntry(32));
+                scene.InvokeEnemyList("Restore");
+                Assert(scene.Plugin.ReadEnemies().SequenceEqual(new[] { native }) &&
+                    scene.Plugin.Memory.Allocations.All(scene.Plugin.Memory.Freed.Contains),
+                    "停止时应通过同一入口移除模拟行，并释放远程包地址。");
+            }
+        }
+
+        private static void VerifyEnemyListLetters()
+        {
+            using (var scene = new Scene())
+            {
+                const uint original = 0x40001234;
+                scene.Plugin.PutLetter(20, original);
+                var enemies = Enumerable.Range(0, 10).Select(i => (EntityId: Scene.EnemyId + (uint)i, Enmity: (byte)100)).ToArray();
+                scene.InvokeEnemyList("StartLettersAt", 'V');
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, enemies.Take(2).ToArray());
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, enemies.Take(8).ToArray());
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, enemies);
+
+                var letters = scene.Plugin.ReadLetters();
+                Assert(enemies.Select(enemy => (char)('A' + Array.IndexOf(letters, enemy.EntityId))).SequenceEqual("VWXYZABCDE"),
+                    "应按首次入列分配字母，绕过 Z 后继续从 A 开始。");
+                var shown = scene.Plugin.ReadEnemies().OrderBy(enemy => Array.IndexOf(letters, enemy.EntityId))
+                    .Take(8).Select(enemy => enemy.EntityId);
+                Assert(shown.SequenceEqual(new[] { 5, 6, 7, 8, 9, 0, 1, 2 }.Select(index => enemies[index].EntityId)),
+                    "原生排序后应先显示 A 至 E，再显示 V、W、X，包含 D 和 E 两只龙头。");
+
+                var controlCalls = scene.Plugin.ActorControls.Count;
+                var packets = scene.Plugin.EnemyPackets.Count;
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, enemies);
+                Assert(scene.Plugin.ActorControls.Count == controlCalls && scene.Plugin.EnemyPackets.Count == packets,
+                    "已入列敌人的字母应保持稳定，重复刷新无需重发。");
+
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, enemies.Take(8).ToArray());
+                Assert(scene.Plugin.ReadLetters()[3] == 0 && scene.Plugin.ReadLetters()[4] == 0 &&
+                    scene.Plugin.ReadLetters()[21] == enemies[0].EntityId,
+                    "龙头退场应释放其字母，首领仍应保留原字母。");
+
+                scene.Plugin.PutLetter(21, original + 1);
+                scene.InvokeEnemyList("Restore");
+                letters = scene.Plugin.ReadLetters();
+                Assert(letters[20] == original && letters[21] == original + 1 && letters.Count(id => id != 0) == 2,
+                    "清理只恢复自己仍持有的字母槽，保留原有和被游戏重新分配的槽。");
+            }
+        }
+
+        private static void VerifyEnemyListRestore()
+        {
+            using (var scene = new Scene())
+            {
+                var retained = (EntityId: 0x40001234u, Enmity: (byte)50);
+                var enemy = (EntityId: Scene.EnemyId, Enmity: (byte)85);
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, new[] { enemy });
+
+                // 游戏可以在模拟更新之间提交新的真实名单。
+                scene.Plugin.SetEnemies(new[] { retained, enemy });
+                scene.Plugin.IgnoreEnemyPacket = true;
+                Throws<InvalidOperationException>(() => scene.InvokeEnemyList("Restore"));
+                Assert(scene.EnemyCleanupPending, "原生收包未移除行时必须保留清理责任。");
+
+                scene.Plugin.IgnoreEnemyPacket = false;
+                scene.InvokeEnemyList("Restore");
+                Assert(!scene.EnemyCleanupPending && scene.Plugin.ReadEnemies().SequenceEqual(new[] { retained }),
+                    "重试只清除本会话行，并保留游戏刚加入的目标。");
+
+                scene.InvokeEnemyList("Refresh", Scene.SelfId, new[] { enemy });
+                var writes = scene.Plugin.EnemyPackets.Count;
+                Set(scene.Host, "_worldGeneration", 1);
+                scene.InvokeEnemyList("Restore");
+                Assert(!scene.EnemyCleanupPending && scene.Plugin.EnemyPackets.Count == writes,
+                    "世界变更后，清理不得向新世界发送旧列表包。");
             }
         }
 
@@ -800,12 +917,15 @@ namespace Simulant.Tests.Native
         private sealed class Scene : IDisposable
         {
             internal static readonly IntPtr GroupAddress = new IntPtr(0x100000), MainGroup = GroupAddress + 0x20,
-                UIAddress = new IntPtr(0x200000), HateAddress = UIAddress + 8, TargetAddress = new IntPtr(0x280000);
+                UIAddress = new IntPtr(0x200000), HateAddress = UIAddress + 8, MarkingAddress = UIAddress + 0x10990,
+                TargetAddress = new IntPtr(0x280000);
             internal const uint SelfId = 0x1001, EnemyId = 0x40FF1234;
             internal readonly PartyMemory Memory = new PartyMemory();
             internal readonly PartyPlugin Plugin;
+            internal readonly PluginHost Host;
             internal readonly object Owner = new object();
             internal readonly object Service;
+            internal readonly object EnemyService;
             internal readonly SimActor[] Actors;
             internal readonly SimActor Outsider;
             internal readonly EntityObservation?[] Observations = new EntityObservation?[10];
@@ -816,6 +936,7 @@ namespace Simulant.Tests.Native
             private readonly SimScheduler _scheduler = new SimScheduler();
             private readonly SimEntityManager _manager;
             internal bool Owned => (bool)Invoke("IsOwnedBy", Owner);
+            internal bool EnemyCleanupPending => (bool)EnemyService.GetType().GetProperty("HasPendingCleanup", Members).GetValue(EnemyService);
             internal bool InCombat => (Memory.Read<byte>(Actors[1].Entity.Address + 0x1D4) & 2) != 0;
 
             internal Scene()
@@ -824,10 +945,13 @@ namespace Simulant.Tests.Native
                 NativeTestContext.Use(Memory, Plugin);
                 GroupManager.InstancePtr = GroupAddress;
                 UIState.InstancePtr = UIAddress;
+                typeof(UIState).Assembly.GetType("Simulant.Game.FFCS.Client.Game.UI.MarkingController", true)
+                    .GetProperty("InstancePtr", BindingFlags.Static | BindingFlags.Public).SetValue(null, MarkingAddress);
                 TargetSystem.InstancePtr = TargetAddress;
                 PacketDispatcher.HandleUpdatePartyPacketFuncPtr = PartyPlugin.UpdateFunction;
                 PacketDispatcher.HandleStatusEffectListDoublePacketFuncPtr = PartyPlugin.VitalsFunction;
                 PacketDispatcher.HandleUpdateHatePacketFuncPtr = PartyPlugin.HateFunction;
+                PacketDispatcher.HandleUpdateHaterPacketFuncPtr = PartyPlugin.HaterFunction;
                 PacketDispatcher.HandleActorControlFuncPtr = PartyPlugin.ControlFunction;
                 Memory.Put(MainGroup + 0x7FC8, 321L);
                 Memory.Put(MainGroup + 0x7FD0, 654L);
@@ -915,6 +1039,7 @@ namespace Simulant.Tests.Native
                 Outsider = _manager.Attach((Character)registry.Get(8));
                 SelectTarget(Plugin.Entities[EnemyId]);
                 var host = (PluginHost)FormatterServices.GetUninitializedObject(typeof(PluginHost));
+                Host = host;
                 Set(host, "<PluginReady>k__BackingField", true);
                 Set(host, "EntityProvider", provider);
                 var firewallType = typeof(PluginHost).Assembly.GetType("Simulant.Core.Firewall.FirewallService", true);
@@ -942,13 +1067,18 @@ namespace Simulant.Tests.Native
                 {
                     host
                 }, null);
+                EnemyService = Activator.CreateInstance(typeof(PluginHost).Assembly.GetType("Simulant.Core.Entity.SimEnemyList", true),
+                    Members, null, new object[] { host }, null);
             }
 
-            internal object Invoke(string name, params object[] args)
+            internal object Invoke(string name, params object[] args) => InvokeService(Service, name, args);
+            internal object InvokeEnemyList(string name, params object[] args) => InvokeService(EnemyService, name, args);
+
+            private static object InvokeService(object service, string name, object[] args)
             {
                 try
                 {
-                    return Service.GetType().GetMethod(name, Members).Invoke(Service, args);
+                    return service.GetType().GetMethod(name, Members).Invoke(service, args);
                 }
                 catch (TargetInvocationException error)
                 {
@@ -1099,7 +1229,7 @@ namespace Simulant.Tests.Native
     {
         public static readonly IntPtr NameFunction = new IntPtr(0x101), UpdateFunction = new IntPtr(0x102),
             StatusFunction = new IntPtr(0x103), VitalsFunction = new IntPtr(0x104),
-            HateFunction = new IntPtr(0x105), ControlFunction = new IntPtr(0x106);
+            HateFunction = new IntPtr(0x105), ControlFunction = new IntPtr(0x106), HaterFunction = new IntPtr(0x107);
         public object[] LastStatusArguments;
         private readonly IntPtr _group;
         public PartyMemory Memory;
@@ -1107,6 +1237,8 @@ namespace Simulant.Tests.Native
         public bool FailVitals;
         public bool FailHate;
         public bool FailActorControl;
+        internal bool IgnoreEnemyPacket;
+        internal uint EnemyRecipient;
         public Action BeforeUpdateReturn;
         public Action BeforeHateReturn;
         public readonly List<UpdatePartyPacket> Packets = new List<UpdatePartyPacket>();
@@ -1114,6 +1246,7 @@ namespace Simulant.Tests.Native
         public readonly List<uint> VitalsTargets = new List<uint>();
         public readonly List<UpdateHatePacket> HatePackets = new List<UpdateHatePacket>();
         public readonly List<uint> HateTargets = new List<uint>();
+        internal readonly List<UpdateHaterPacket> EnemyPackets = new List<UpdateHaterPacket>();
         public readonly List<object[]> ActorControls = new List<object[]>();
         public readonly Dictionary<uint, IntPtr> Entities = new Dictionary<uint, IntPtr>();
         public readonly IntPtr[] LastOwners = new IntPtr[8];
@@ -1122,6 +1255,30 @@ namespace Simulant.Tests.Native
             Memory = memory;
             _group = group;
         }
+
+        internal void SetEnemies((uint EntityId, byte Enmity)[] entries)
+        {
+            var hater = UIState.InstancePtr + 0x110;
+            for (var i = 0; i < entries.Length; i++)
+            {
+                Memory.Put(hater + i * 0x48 + 0x40, entries[i].EntityId);
+                Memory.Put(hater + i * 0x48 + 0x44, (int)entries[i].Enmity);
+            }
+            Memory.Put(hater + 0x900, entries.Length);
+        }
+
+        internal (uint EntityId, byte Enmity)[] ReadEnemies()
+        {
+            var hater = UIState.InstancePtr + 0x110;
+            return Enumerable.Range(0, Memory.Read<int>(hater + 0x900)).Select(index =>
+                (Memory.Read<uint>(hater + index * 0x48 + 0x40), (byte)Memory.Read<int>(hater + index * 0x48 + 0x44))).ToArray();
+        }
+
+        internal void PutLetter(int slot, uint entityId)
+            => Memory.Put(UIState.InstancePtr + 0x10990 + 0x98 + slot * sizeof(uint), entityId);
+
+        internal uint[] ReadLetters() => Enumerable.Range(0, 26)
+            .Select(slot => Memory.Read<uint>(UIState.InstancePtr + 0x10990 + 0x98 + slot * sizeof(uint))).ToArray();
 
         public T Call<T>(IntPtr function, params object[] args)
             where T : struct
@@ -1178,7 +1335,15 @@ namespace Simulant.Tests.Native
             if (function == ControlFunction)
             {
                 ActorControls.Add(args);
-                PartyServiceTests.Assert(Convert.ToUInt16(args[1]) == 4, "小队测试仅允许设置入战状态。");
+                if (Convert.ToUInt16(args[1]) == (ushort)ActorControlCategory.SetHateLetter)
+                {
+                    var slot = (uint)args[2];
+                    PartyServiceTests.Assert((uint)args[0] == 0x1001 && slot < 26, "敌对字母应路由给本机玩家并使用有效槽。");
+                    PutLetter((int)slot, (uint)args[3]);
+                    return (T)(object)IntPtr.Zero;
+                }
+
+                PartyServiceTests.Assert(Convert.ToUInt16(args[1]) == 4, "小队测试仅允许设置入战或敌对字母。");
                 var address = Entities[Convert.ToUInt32(args[0])] + 0x1D4;
                 var flags = Memory.Read<byte>(address);
                 Memory.Put(address, (byte)(Convert.ToUInt32(args[2]) == 0 ? flags & ~2 : flags | 2));
@@ -1195,6 +1360,22 @@ namespace Simulant.Tests.Native
         public void Call(IntPtr function, params object[] args)
         {
             ValidateArguments(args);
+
+            if (function == HaterFunction)
+            {
+                PartyServiceTests.Assert(args.Length == 2 && args[0] is uint && args[1] is IntPtr,
+                    "敌对列表原生入口必须接收本机编号和远程包地址。");
+                var pointer = (IntPtr)args[1];
+                PartyServiceTests.Assert(Memory.Allocations.Contains(pointer) && !Memory.Freed.Contains(pointer),
+                    "敌对列表的远程包必须在调用时存活。");
+                var enemies = Memory.Read<UpdateHaterPacket>(pointer);
+                EnemyRecipient = (uint)args[0];
+                EnemyPackets.Add(enemies);
+                if (!IgnoreEnemyPacket)
+                    SetEnemies(Enumerable.Range(0, enemies.EnemyCount)
+                        .Select(enemies.GetEntry).Select(entry => (entry.EntityId, entry.Enmity)).ToArray());
+                return;
+            }
 
             if (function == VitalsFunction)
             {

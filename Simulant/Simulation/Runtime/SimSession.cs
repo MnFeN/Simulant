@@ -1,5 +1,6 @@
 using Simulant.ACT;
 using Simulant.Core;
+using Simulant.Core.Entity;
 using Simulant.Core.Environment;
 using Simulant.Simulation.Mechanics;
 using Simulant.Simulation.Timeline;
@@ -39,7 +40,8 @@ namespace Simulant.Simulation.Runtime
             _entityManager = new SimEntityManager(_host.EntitySpawner,
                 ex => _host.LogError("清理模拟实体失败：" + ex))
             {
-                CombatLog = new SimCombatLog(() => _host.Configuration.GenerateActLogs, XivNetworkLog.WriteLine, _host.LogWarning)
+                CombatLog = new SimCombatLog(() => _host.Configuration.GenerateActLogs, XivNetworkLog.WriteLine, _host.LogWarning),
+                EnemyList = new SimEnemyList(_host)
             };
 
             RandomSeed = randomSeed ?? (BitConverter.ToInt32(Guid.NewGuid().ToByteArray(), 0) & int.MaxValue);

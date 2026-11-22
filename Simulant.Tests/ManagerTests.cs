@@ -17,6 +17,77 @@ namespace Simulant.Tests
 {
     internal static class ManagerTests
     {
+        public static void EnemyListMembershipIsIndependentOfTargetabilityAndCasting()
+        {
+            Exception failure = null;
+            using (var scheduler = new SimScheduler((error, name) => failure = error))
+            using (var published = new ManualResetEventSlim())
+            {
+                var spawner = new EntitySpawner { NetworkReady = true };
+                var list = new SimEnemyList(null);
+                var manager = new SimEntityManager(spawner) { Scheduler = scheduler, EnemyList = list };
+                var self = spawner.World.CreateCharacter(0);
+                manager.Attach(self);
+                var boss = manager.SpawnBNpc(17823);
+                SimActor hourglass = null;
+                SimActor helper = null;
+                manager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
+                {
+                    BNpcBaseId = 17837,
+                    Targetable = false,
+                    EnemyListVisibility = true
+                }, actor =>
+                {
+                    hourglass = actor;
+                    actor.Entity.IsTargetable = false;
+                });
+                manager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
+                {
+                    BNpcBaseId = 9020,
+                    Targetable = false,
+                    EnemyListVisibility = false
+                }, actor =>
+                {
+                    helper = actor;
+                    actor.Entity.IsTargetable = false;
+                    actor.Entity.SetCastInfo(40299, 5);
+                });
+
+                var publications = 0;
+                list.OnRefresh = (playerId, enemies) =>
+                {
+                    Assert(playerId == self.Id && hourglass != null && helper != null,
+                        "使用自身 ID 发布列表，并等待网络实体就绪。");
+                    switch (++publications)
+                    {
+                        case 1:
+                            Assert(enemies.Select(enemy => enemy.EntityId).SequenceEqual(new[] { boss.Id, hourglass.Id }),
+                                "沙漏虽不可选中且尚未读条，仍应按机制入列。正在读条的辅助实体不入列。");
+                            boss.Entity.IsTargetable = false;
+                            helper.Entity.IsTargetable = true;
+                            manager.SetEnemyListVisibility(hourglass, false);
+                            break;
+                        case 2:
+                            Assert(enemies.Select(enemy => enemy.EntityId).SequenceEqual(new[] { boss.Id }),
+                                "不可选中的首领应保留，显式退场的沙漏和显式隐藏的可选中实体应移出。");
+                            boss.Entity.IsTargetable = true;
+                            manager.SetEnemyListVisibility(hourglass, true);
+                            break;
+                        case 3:
+                            Assert(enemies.Select(enemy => enemy.EntityId).SequenceEqual(new[] { boss.Id, hourglass.Id }),
+                                "首领恢复可选中后沿用原条目，沙漏可再次入列。");
+                            published.Set();
+                            break;
+                    }
+                };
+
+                scheduler.Start();
+                Assert(published.Wait(5000), "敌对列表未完成预期的生命周期：" + failure);
+                manager.Clear();
+                Assert(list.RestoreCount == 1 && scheduler.PendingCount == 0, "清理必须恢复原列表并取消轮询。");
+            }
+        }
+
         public static void EventObjectAnimationWritesActorControlExtraWhenEnabled()
         {
             using (var scheduler = new SimScheduler())

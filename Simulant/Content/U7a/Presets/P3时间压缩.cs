@@ -169,7 +169,12 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(57.78, () => Oracle.ExecuteActionEffect(40286, Oracle), "破盾一击读条结束演出");
             timeline.At(58.15, () => Run(Stack("破盾一击八人分摊", Random.Next(8), 8, Enumerable.Range(0, 8), 40287)), "破盾一击判定");
             timeline.At(59, Complete, "完成时间压缩练习");
-            timeline.At(61.23, () => HourglassMaps(8), "沙漏场地效果退场");
+            timeline.At(61.23, () =>
+            {
+                HourglassMaps(8);
+                foreach (var hourglass in _hourglasses)
+                    EntityManager.SetEnemyListVisibility(hourglass, false);
+            }, "沙漏退场");
             return timeline;
         }
 
@@ -203,7 +208,8 @@ namespace Simulant.Content.U7a.Presets
                     MaxHealthPoints = 188300,
                     Pos = new Vector3(position, 0),
                     Heading = Heading(Center - position),
-                    Targetable = false
+                    Targetable = false,
+                    EnemyListVisibility = true
                 }, actor =>
                 {
                     _hourglasses[slot] = actor;

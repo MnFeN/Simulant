@@ -8,6 +8,7 @@ using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -1161,6 +1162,34 @@ namespace Simulant.Core
         internal void LogRuntime(string message) => FirewallLog?.Invoke(message);
         internal void LogWarning(string message) => FirewallLog?.Invoke(message);
         internal void LogVerbose(string message) => FirewallLog?.Invoke(message);
+    }
+}
+
+namespace Simulant.Core.Entity
+{
+    internal sealed class SimEnemyList
+    {
+        internal SimEnemyList(PluginHost host)
+        {
+        }
+
+        internal bool HasPendingCleanup => false;
+        internal Action<uint, IReadOnlyList<(uint EntityId, byte Enmity)>> OnRefresh { get; set; }
+        internal int RestoreCount { get; private set; }
+
+        internal void StartLettersAt(char letter)
+        {
+        }
+
+        internal void Refresh(uint playerId, IReadOnlyList<(uint EntityId, byte Enmity)> enemies)
+        {
+            OnRefresh?.Invoke(playerId, enemies);
+        }
+
+        internal void Restore()
+        {
+            RestoreCount++;
+        }
     }
 }
 
