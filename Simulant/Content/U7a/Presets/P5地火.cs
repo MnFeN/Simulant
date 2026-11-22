@@ -4,6 +4,7 @@ using Simulant.Core.Entity;
 using Simulant.Game;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
+using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
@@ -126,11 +127,15 @@ namespace Simulant.Content.U7a.Presets
                 Heading = (float)PI,
             }, boss =>
                        {
+                           Party.Add(EntityManager.Attach(_host.EntityProvider.GetMyself()));
+                           EntityManager.SetPartyEnmity(boss, 100);
+                           boss.FollowTopEnmity = EnmityFollowMode.FacingOnly;
                            var mechanic = new SimTimeline();
                            var lines = new Simulant.Core.Entity.EventObject[6];
 
                            mechanic.At(0, () =>
                            {
+                               boss.FollowTopEnmity = EnmityFollowMode.Disabled;
                                boss.Cast(0x9D72);
 
                                // 读条的同时生成 EObj，但不播放动画。
@@ -145,6 +150,7 @@ namespace Simulant.Content.U7a.Presets
                            }, "地火读条与生成直线");
 
                            mechanic.At(8, () => Array.ForEach(lines, e => EntityManager.PlayEObjAnimation(e, 0x1, 0x2)), "地火细线出现");
+                           mechanic.At(9.15, () => boss.FollowTopEnmity = EnmityFollowMode.FacingOnly, "地火演出后跟随一仇转向");
 
                            mechanic.Repeat(10, 4, 3, group =>
                            {
@@ -152,8 +158,12 @@ namespace Simulant.Content.U7a.Presets
                                Play(SingleTimelineStartFromGlowing(lines[group * 2 + 1]));
                            }, "地火分组发光");
 
-                           mechanic.At(20, () => boss.FaceNetwork((float)(Deg((int)CenterDir4 * 90 - 180))), "本体转向安全点");
-                           mechanic.At(25, () => boss.Cast(0x9D76), "双分摊读条");
+                           mechanic.At(25, () =>
+                           {
+                               boss.FollowTopEnmity = EnmityFollowMode.Disabled;
+                               boss.Cast(0x9D76);
+                           }, "双分摊读条");
+                           mechanic.At(36.1, () => boss.FollowTopEnmity = EnmityFollowMode.FacingOnly, "双分摊后恢复转向");
                            mechanic.At(42, () => EntityManager.Delete(boss), "回收本体");
                            Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体就绪后开始地火");
                        }), "生成地火本体");

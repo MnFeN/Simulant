@@ -11,7 +11,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using static Simulant.Utils.Maths.Angles;
 
 namespace Simulant.Content.U5a.Presets
 {
@@ -133,6 +132,7 @@ namespace Simulant.Content.U5a.Presets
         {
             var myself = EntityManager.Attach(_host.EntityProvider.GetMyself());
             Party.Add(myself);
+            EntityManager.SetPartyEnmity(boss, 100);
             var order = Orders[(int)FlareOrder];
             var mechanic = new SimTimeline();
             mechanic.At(0, () => boss.Cast(0x488E), "神圣大审判读条");
@@ -148,11 +148,11 @@ namespace Simulant.Content.U5a.Presets
             }
 
             // 神圣大审判读条 2.7 秒，结束 3.5 秒后持续朝向玩家，直到株连开始读条。
-            mechanic.Repeat(6.2, 0.1, 79, _ => FacePlayer(boss, myself), "完美亚历山大朝向玩家");
+            mechanic.At(6.2, () => boss.FollowTopEnmity = EnmityFollowMode.FacingOnly, "完美亚历山大开始跟随一仇转向");
 
             mechanic.At(14.1, () =>
             {
-                FacePlayer(boss, myself);
+                boss.FollowTopEnmity = EnmityFollowMode.Disabled;
                 boss.Cast(0x4894, target: myself);
             }, "株连分摊读条并锁定面向");
 
@@ -167,23 +167,6 @@ namespace Simulant.Content.U5a.Presets
             // 保留最后的技能动画，手动取消仍由会话统一回收实体、预兆和标点。
             mechanic.At(24, () => EntityManager.Clear(), "回收神圣大审判实体");
             Scheduler.ScheduleAfter(3, () => Play(mechanic), "实体就绪后开始神圣大审判");
-        }
-
-        private static void FacePlayer(SimActor boss, SimActor myself)
-        {
-            if (!boss.IsActive || !myself.IsActive)
-                return;
-
-            var direction = myself.Pos - boss.Pos;
-
-            if (direction.LengthSquared() < 0.01f)
-                return;
-
-            var heading = (float)Math.Atan2(direction.X, direction.Y);
-            var difference = Math.IEEERemainder(heading - boss.Heading, Deg(360));
-
-            if (Math.Abs(difference) > 0.01)
-                boss.FaceNetwork(heading);
         }
 
         private void ResolveFlares(string name, List<SimActor> casters, SimActor myself)

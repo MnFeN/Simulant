@@ -17,6 +17,83 @@ namespace Simulant.Tests
 {
     internal static class ManagerTests
     {
+        public static void BossFollowsLiveEnmityWithNetworkMovementAndPausesForCasts()
+        {
+            Exception failure = null;
+            using (var scheduler = new SimScheduler((error, name) => failure = error))
+            using (var finished = new ManualResetEventSlim())
+            {
+                var spawner = new EntitySpawner { NetworkReady = true };
+                var manager = new SimEntityManager(spawner) { Scheduler = scheduler };
+                var player = manager.Attach(spawner.World.CreateCharacter(0));
+                var other = manager.SpawnBNpc(2);
+                manager.Party.Add(player);
+                player.Pos = new Vector2(14, 0);
+                player.Entity.HitboxRadius = 0.5f;
+
+                manager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec { BNpcBaseId = 17823 }, boss =>
+                {
+                    boss.Entity.HitboxRadius = 2;
+                    boss.Entity.OnActorMove = (position, heading, speed) =>
+                    {
+                        boss.Entity.Pos3D = position;
+                        boss.Entity.Heading = heading;
+                    };
+
+                    Assert(boss.FollowTopEnmity == EnmityFollowMode.Disabled, "普通网络 NPC 默认不开启追踪。");
+                    manager.SetPartyEnmity(boss, 100);
+                    boss.FollowTopEnmity = EnmityFollowMode.FacingOnly;
+                    scheduler.ScheduleAfter(0.24, () =>
+                    {
+                        Assert(boss.Pos == Vector2.Zero && Math.Abs(boss.Heading - Math.PI / 2) < 0.01 &&
+                            boss.Entity.NetworkMoves.Count > 0, "仅转向模式应通过 ActorMove 朝玩家转身并保持位置。");
+                        boss.FollowTopEnmity = EnmityFollowMode.MoveAndFace;
+                    });
+
+                    Vector2 pulled = default;
+                    var packets = 0;
+                    scheduler.ScheduleAfter(1.65, () =>
+                    {
+                        pulled = boss.Pos;
+                        Assert(Vector2.Distance(pulled, new Vector2(9.5f, 0)) < 0.1f &&
+                            boss.Entity.NetworkMoves.Count(move => move.Position.X > 0 && move.Position.X < pulled.X) >= 2,
+                            "Boss 应分段追到距一仇中心 4.5 米的位置。");
+                        boss.Entity.SetCastInfo(40203, 1);
+                        player.Pos = new Vector2(-15, 0);
+                        packets = boss.Entity.NetworkMoves.Count;
+                    });
+                    scheduler.ScheduleAfter(1.95, () =>
+                    {
+                        Assert(boss.Pos == pulled && boss.Entity.NetworkMoves.Count == packets, "跟随应在读条期间暂停。");
+                        boss.Entity.CastingActionId = 0;
+                        other.Pos = pulled + new Vector2(0, 14);
+                        manager.Party.Add(other);
+                        manager.ShowParty(new Simulant.Core.Party.SimPartyService());
+                        manager.SetPartyEnmity(boss, 30, 100);
+                        boss.FollowTopEnmity = EnmityFollowMode.FacingOnly;
+                    });
+                    scheduler.ScheduleAfter(2.25, () =>
+                    {
+                        Assert(boss.Pos == pulled && Math.Abs(boss.Heading) < 0.01,
+                            "同一个 Boss 应在换仇后原地改朝新的一仇。");
+                        boss.FollowTopEnmity = EnmityFollowMode.Disabled;
+                        other.Pos = pulled - new Vector2(14, 0);
+                        packets = boss.Entity.NetworkMoves.Count;
+                    });
+                    scheduler.ScheduleAfter(2.5, () =>
+                    {
+                        Assert(boss.Entity.NetworkMoves.Count == packets, "关闭跟随后不再自动发送 ActorMove。");
+                        finished.Set();
+                    });
+                });
+
+                scheduler.Start();
+                Assert(finished.Wait(5000), "Boss 跟随验证未完成：" + failure);
+                manager.Clear();
+                Assert(scheduler.PendingCount == 0, "清理应停止跟随及其行为节点。");
+            }
+        }
+
         public static void EnemyListMembershipIsIndependentOfTargetabilityAndCasting()
         {
             Exception failure = null;

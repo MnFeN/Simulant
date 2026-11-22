@@ -3,6 +3,7 @@ using Simulant.Game.Data;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using ActionRow = Lumina.Excel.Sheets.Action;
 using static Simulant.Utils.Maths.Angles;
@@ -187,6 +188,9 @@ namespace Simulant.Simulation.Runtime
                     return;
 
                 var now = _scheduler.ElapsedSeconds;
+                foreach (var boss in _bossStates)
+                    UpdateBossFollow(boss.Key, boss.Value, now);
+
                 var inCombat = _target != null && _target.IsActive;
                 var targetable = inCombat && _target.Entity.IsTargetable && _target.Entity.HP != 0;
 
@@ -388,8 +392,11 @@ namespace Simulant.Simulation.Runtime
             if (actor.IsMoving)
                 return;
 
-            var direction = _targetPosition - actor.Pos;
+            FaceDirection(actor, _targetPosition - actor.Pos, RunSpeed);
+        }
 
+        private static void FaceDirection(SimActor actor, Vector2 direction, byte speed)
+        {
             if (direction.LengthSquared() < 0.01f)
                 return;
 
@@ -397,7 +404,7 @@ namespace Simulant.Simulation.Runtime
             var difference = Math.Atan2(Math.Sin(heading - actor.Heading), Math.Cos(heading - actor.Heading));
 
             if (Math.Abs(difference) > 0.05)
-                actor.ActorMove(actor.Pos3D, heading, RunSpeed);
+                actor.ActorMove(actor.Pos3D, heading, speed);
         }
 
         private void CancelOwnCast(State state)
@@ -423,12 +430,10 @@ namespace Simulant.Simulation.Runtime
                 _tick = null;
             }
 
-            foreach (var state in _states.Values)
-                if (_target != null || state.Move != null || state.ManualMovement || state.InCombat || state.SelectedTarget != 0xE0000000)
-                {
-                    _tick = _scheduler.ScheduleAfter(immediate ? 0 : TickSeconds, _update, "更新假玩家战斗与走位意图");
-                    return;
-                }
+            if (_bossStates.Values.Any(state => state.Mode != EnmityFollowMode.Disabled) ||
+                _states.Values.Any(state => _target != null || state.Move != null || state.ManualMovement || state.InCombat ||
+                    state.SelectedTarget != 0xE0000000))
+                _tick = _scheduler.ScheduleAfter(immediate ? 0 : TickSeconds, _update, "更新模拟战斗与走位");
         }
 
         public void Dispose()
@@ -447,6 +452,7 @@ namespace Simulant.Simulation.Runtime
                     state.SprintEffect?.Cancel();
 
                 _states.Clear();
+                _bossStates.Clear();
                 _target = null;
             }
 

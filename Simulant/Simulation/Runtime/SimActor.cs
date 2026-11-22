@@ -16,6 +16,7 @@ namespace Simulant.Simulation.Runtime
         private readonly SimMovementController _movement;
         private int _detached;
         internal SimActorBehaviorController BehaviorController { get; set; }
+        internal SimActorBehaviorController BossBehaviorController { get; set; }
         internal bool MovementLocked { get; set; }
 
         internal SimActor(Character entity, SimCastController casts, SimMovementController movement)
@@ -33,6 +34,20 @@ namespace Simulant.Simulation.Runtime
         public bool IsInvulnerable => IsActive && Entity.IsInvulnerable;
         public uint Id => Entity.Id;
         public IntPtr Address => Entity.Address;
+
+        /// <summary>网络 Boss 对当前一仇的行为，默认为关闭。转向和追击均通过 ActorMove 同步。</summary>
+        public EnmityFollowMode FollowTopEnmity
+        {
+            get => BossBehaviorController?.GetEnmityFollowMode(this) ?? EnmityFollowMode.Disabled;
+            set
+            {
+                EnsureActive();
+                if (BossBehaviorController == null)
+                    throw new InvalidOperationException("只有本会话生成的网络战斗 NPC 可以跟随一仇。");
+
+                BossBehaviorController.SetEnmityFollowMode(this, value);
+            }
+        }
 
         private PositionHistory _judgementHistory;
         private SimScheduledAction _judgementSample;
@@ -137,6 +152,9 @@ namespace Simulant.Simulation.Runtime
             bool executeOnFinish = true, int? packetTargetCapacity = null)
         {
             BehaviorController?.ManualAction(this);
+            if (BossBehaviorController != null)
+                _movement.StopEnmityPursuit(this);
+
             _casts.Cast(this, actionId, omenDelay, target, omenPosition, omenHeading, castTime, effectDelay, executeOnFinish, packetTargetCapacity);
         }
 
@@ -202,6 +220,7 @@ namespace Simulant.Simulation.Runtime
                 throw new ArgumentOutOfRangeException(nameof(seconds), "行为暂停时间必须为非负有限数。");
 
             BehaviorController?.Suspend(this, seconds);
+            BossBehaviorController?.SuspendBoss(this, seconds);
             _casts.Cancel(this);
             _movement.Stop(this);
         }
@@ -282,6 +301,7 @@ namespace Simulant.Simulation.Runtime
         {
             _judgementSample?.Cancel();
             BehaviorController?.Remove(this);
+            BossBehaviorController?.RemoveBoss(this);
 
             if (Interlocked.Exchange(ref _detached, 1) != 0)
             {

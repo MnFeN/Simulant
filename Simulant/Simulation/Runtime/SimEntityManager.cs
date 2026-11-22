@@ -174,10 +174,15 @@ namespace Simulant.Simulation.Runtime
             {
                 EnsureAcceptingEntities();
 
-                if (!target.IsActive || _partyService?.IsOwnedBy(this) != true)
-                    throw new InvalidOperationException("请先显示模拟小队并指定有效目标。");
+                var partyShown = _partyService?.IsOwnedBy(this) == true;
+                var solo = Party.Count == 1 && Party[0]?.IsActive == true && Party[0].Entity.Identity.Slot == 0;
+                if (!target.IsActive || (!partyShown && !solo))
+                    throw new InvalidOperationException("请先准备模拟小队或单人练习者，并指定有效目标。");
 
-                _partyService.SetEnmity(this, target.Id, Party, enmity);
+                if (partyShown)
+                    _partyService.SetEnmity(this, target.Id, Party, enmity);
+                else if (enmity?.Length != 1 || enmity[0] < 0 || enmity[0] > 100)
+                    throw new ArgumentException("单人仇恨值必须在 0-100 之间。", nameof(enmity));
                 var entry = _enemyEntries.Find(item => item.Actor == target);
                 if (entry != null)
                 {
@@ -186,7 +191,9 @@ namespace Simulant.Simulation.Runtime
                         entry.Enmity = (byte)enmity[self];
                 }
                 SetCombatTarget(target);
-                SchedulePartyEnmity();
+                _behaviors.SetBossEnmity(target, Party, enmity);
+                if (partyShown)
+                    SchedulePartyEnmity();
             }
         }
 
@@ -322,10 +329,15 @@ namespace Simulant.Simulation.Runtime
             {
                 _owned.Add(entity);
                 var actor = Attach(entity);
+                var slot = entity.Identity.Slot;
 
-                if (entity.ObjectKind == Simulant.Game.FFCS.Client.Game.Object.ObjectKind.Pc &&
-                    entity.Identity.Slot >= 2 && entity.Identity.Slot < 200 && (entity.Identity.Slot & 1) == 0)
-                    _behaviors.Add(actor, PlayerBehavior);
+                if (slot >= 2 && slot < 200 && (slot & 1) == 0)
+                {
+                    if (entity.ObjectKind == Simulant.Game.FFCS.Client.Game.Object.ObjectKind.Pc)
+                        _behaviors.Add(actor, PlayerBehavior);
+                    else if (entity.ObjectKind == Simulant.Game.FFCS.Client.Game.Object.ObjectKind.BattleNpc)
+                        actor.BossBehaviorController = _behaviors;
+                }
 
                 return actor;
             }

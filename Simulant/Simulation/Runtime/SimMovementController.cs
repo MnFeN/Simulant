@@ -33,6 +33,7 @@ namespace Simulant.Simulation.Runtime
             public double NextPollAt;
             public bool Stopping;
             public bool Knockback;
+            public bool EnmityPursuit;
             public float FixedHeading;
         }
 
@@ -137,6 +138,28 @@ namespace Simulant.Simulation.Runtime
         internal void FollowNetworkTo(SimActor actor, Vector2 target, byte speedParam)
             => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, null, retarget: true);
 
+        internal void PursueEnmity(SimActor actor, Vector2 target, byte speedParam)
+            => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, null, retarget: true, enmityPursuit: true);
+
+        internal bool CanPursueEnmity(SimActor actor)
+        {
+            lock (_gate)
+            {
+                var index = Find(actor);
+                return index < 0 || _moving[index].EnmityPursuit;
+            }
+        }
+
+        internal void StopEnmityPursuit(SimActor actor)
+        {
+            lock (_gate)
+            {
+                var index = Find(actor);
+                if (index >= 0 && _moving[index].EnmityPursuit)
+                    Stop(actor);
+            }
+        }
+
         /// <summary>技能突进单独按演出时长同步位移，不使用普通跑步的冲刺速度上限。</summary>
         internal void DashTo(SimActor actor, Vector2 target, float duration)
         {
@@ -187,7 +210,7 @@ namespace Simulant.Simulation.Runtime
         }
 
         private void StartNetworkMovement(SimActor actor, Vector2 target, float speed, byte speedParam,
-            bool knockback, Action onArrived, bool retarget = false)
+            bool knockback, Action onArrived, bool retarget = false, bool enmityPursuit = false)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -218,12 +241,15 @@ namespace Simulant.Simulation.Runtime
                     return;
 
                 var index = Find(actor);
+                if (enmityPursuit && index >= 0 && !_moving[index].EnmityPursuit)
+                    return;
 
                 if (retarget && index >= 0)
                 {
                     var current = _moving[index];
 
-                    if (current.Network && !current.Knockback && !current.Stopping && !current.Arrived && current.OnArrived == null)
+                    if (current.Network && current.EnmityPursuit == enmityPursuit && !current.Knockback &&
+                        !current.Stopping && !current.Arrived && current.OnArrived == null)
                     {
                         if (current.Target == target && current.SpeedParam == speedParam)
                             return;
@@ -253,6 +279,7 @@ namespace Simulant.Simulation.Runtime
                     Speed = speed,
                     SpeedParam = speedParam,
                     Knockback = knockback,
+                    EnmityPursuit = enmityPursuit,
                     FixedHeading = knockback ? actor.Heading : 0,
                     OnArrived = onArrived
                 };
