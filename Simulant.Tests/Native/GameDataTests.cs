@@ -237,9 +237,21 @@ namespace Simulant.Tests.Native
             Check(LoadBarriers(1252).SpawnPosition == new Vector3(850.9487f, -704.1298f, 73.05965f),
                 "新月岛南部应优先使用 PublicContent 指定的出生范围。");
 
+            Check(LoadBarriers(1098).SpawnPosition == new Vector3(24.96969f, -103.0214f, 45.60817f),
+                "妖精领跳跳乐应读取当前副本条件对应赛道的玩家出生范围。");
+            Check(LoadBarriers(1099).SpawnPosition == new Vector3(-300, -317.5f, 0),
+                "正统优雷卡应使用当前地图的固定首领房间落点。");
             var palace = LoadBarriers(561);
-            Check(palace.LayoutIds.Length == 42 && palace.LayoutIds.Contains(6264186u) && !palace.SpawnPosition.HasValue,
-                "死者宫殿应识别房间模板里的 b0945 圈，并由实际楼层决定出生点。");
+            Check(palace.LayoutIds.Length == 42 && palace.LayoutIds.Contains(6264186u) &&
+                palace.SpawnPosition == new Vector3(-300, -205, 0.1167035f),
+                "死者宫殿应保留房间模板里的 b0945 圈，并使用固定首领房间的玩家出生范围。");
+            Check(LoadBarriers(607).SpawnPosition == new Vector3(405.5604f, 411.0027f, 54.97069f),
+                "死者宫殿最终区域应读取当前事件图层的玩家出生范围。");
+            foreach (var territory in new[] { 773u, 774u, 775u, 783u, 784u, 785u })
+                Check(LoadBarriers(territory).SpawnPosition is Vector3 spawn &&
+                    Vector3.Distance(spawn, new Vector3(-300, -295, 0)) < 0.001f,
+                    $"天之御柱区域 {territory} 缺少首领房间出生范围时，应使用封锁墙内的战斗区域。");
+
             var pilgrim = LoadBarriers(1289);
             Check(pilgrim.LayoutIds.Contains(11781484u) && pilgrim.LayoutIds.Contains(11936290u) && pilgrim.SpawnPosition.HasValue,
                 "朝圣交错路应同时识别房间模板和 EObj 绑定的圈，并从 EObj 获取回退出生点。");

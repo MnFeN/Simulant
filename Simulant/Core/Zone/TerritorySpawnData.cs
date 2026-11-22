@@ -11,6 +11,7 @@ namespace Simulant.Core.Zone
     internal sealed class TerritorySpawnData
     {
         private const uint GuildhestContentType = 3;
+        private const string DeepDungeonBossBarrierPath = "bgcommon/world/lvd/shared/for_vfx/sgvf_w_lvd_b0959.sgb";
         internal static readonly Vector3 GreenScreenPosition = new Vector3(0, 0, 0.1f);
 
         private TerritorySpawnData(uint[] barrierLayoutIds, SpawnPoint[] points)
@@ -61,9 +62,35 @@ namespace Simulant.Core.Zone
                 Add(spawn, SpawnPointSource.EntranceCircle, new EntranceCircle(circle.LayoutId, position));
             }
 
-            // 深层迷宫的房间模板坐标无法直接用作当前楼层的落点。
             if (territory.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.DeepDungeon)
+            {
+                // 随机房间使用模板坐标，首领房间的玩家出生范围直接使用场景坐标。
+                var roomFallbacks = new List<Vector3?>();
+                foreach (var layer in layers.Where(layer => layer.Name.StartsWith("LVD_Boss_", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var roomSpawns = layer.InstanceObjects.Where(IsPlayerPop).ToArray();
+                    if (roomSpawns.Length > 0)
+                    {
+                        foreach (var pop in roomSpawns)
+                            Add(Position(pop), SpawnPointSource.DeepDungeonBoss);
+                    }
+                    else
+                    {
+                        roomFallbacks.Add(FindBossRoomFallback(layer));
+                    }
+                }
+
+                foreach (var fallback in roomFallbacks)
+                    Add(fallback, SpawnPointSource.DeepDungeonBossRange);
+
+                // 有些阶段的终点是独立事件房间，另有玩家出生范围。
+                if (points.Count == 0)
+                    foreach (var layer in layers.Where(layer => layer.Name.StartsWith("LVD_Event_", StringComparison.OrdinalIgnoreCase)))
+                        foreach (var pop in layer.InstanceObjects.Where(IsPlayerPop))
+                            Add(Position(pop), SpawnPointSource.PlayerRange);
+
                 return new TerritorySpawnData(barrierIds, points.ToArray());
+            }
 
             var exitId = publicContent?.LGBEventRange ?? 0;
             foreach (var layer in layers)
@@ -105,6 +132,21 @@ namespace Simulant.Core.Zone
                 Add(Position(pop), SpawnPointSource.PlayerRange);
 
             return new TerritorySpawnData(barrierIds, points.ToArray());
+        }
+
+        private static Vector3? FindBossRoomFallback(LayerCommon.Layer layer)
+        {
+            var wall = layer.InstanceObjects.FirstOrDefault(item =>
+                item.Object is LayerCommon.SharedGroupInstanceObject group &&
+                string.Equals(group.AssetPath, DeepDungeonBossBarrierPath, StringComparison.OrdinalIgnoreCase));
+            if (wall.InstanceId == 0)
+                return null;
+
+            // 以封锁墙确认房间，取同层离墙最近的事件区中心，落点避开墙体。
+            var origin = Position(wall);
+            return layer.InstanceObjects.Where(item => item.Object is LayerCommon.EventRangeInstanceObject)
+                .Select(Position).OrderBy(position => Vector3.DistanceSquared(position, origin))
+                .Select(position => (Vector3?)position).FirstOrDefault();
         }
 
         private static bool IsPlayerPop(LayerCommon.InstanceObject item)

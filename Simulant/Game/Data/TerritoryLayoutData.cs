@@ -66,11 +66,12 @@ namespace Simulant.Game.Data
             for (var i = 0; i < count; i++)
             {
                 var record = records + i * recordSize;
-                if (file.Int32(record + 12) != territory.RowId)
+                // 区域和副本条件各占 16 位，跳跳乐等场景按二者区分版型。
+                if (file.UInt16(record + 12) != territory.RowId)
                     continue;
 
                 var key = unchecked((uint)file.Int32(record));
-                var cfc = file.Int32(record + 8);
+                var cfc = file.UInt16(record + 14);
                 if (cfc == territory.ContentFinderCondition.RowId)
                     return key;
                 if (cfc == 0 && territoryKey == 0)
