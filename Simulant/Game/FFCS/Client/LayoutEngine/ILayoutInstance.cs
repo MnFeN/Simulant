@@ -1,3 +1,5 @@
+using Simulant.Game.FFCS.Client.LayoutEngine.Layer;
+using Simulant.Game.FFCS.Common.Component.BGCollision;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -10,6 +12,7 @@ namespace Simulant.Game.FFCS.Client.LayoutEngine
     {
         public IntPtr Ptr { get; set; }
 
+        internal LayerManager Layer => Ptr.ReadPtr(0x08).As<LayerManager>();
         internal LayoutManager Layout => Ptr.ReadPtr(0x10).As<LayoutManager>();
         internal MemoryField<uint> SubId => Ptr.Field<uint>(0x20);
         internal MemoryField<byte> Flags1 => Ptr.Field<byte>(0x29);
@@ -22,6 +25,10 @@ namespace Simulant.Game.FFCS.Client.LayoutEngine
         /// <summary>If the primary object has been loaded.</summary>
         internal bool IsPrimaryLoaded() => Ptr.CallVFunc<bool>(22);
 
+        internal IntPtr GetPrimaryPath() => Ptr.CallVFunc<IntPtr>(7);
+        internal IntPtr GetSecondaryPath() => Ptr.CallVFunc<IntPtr>(31);
+        internal Collider GetCollider() => Ptr.CallVFunc<IntPtr>(34).As<Collider>();
+        internal Collider GetCollider2() => Ptr.CallVFunc<IntPtr>(35).As<Collider>();
         internal void SetColliderActive(bool active) => Ptr.CallVFunc(37, active);
         internal void SetActive(bool active) => Ptr.CallVFunc(63, active);
     }
@@ -45,5 +52,6 @@ namespace Simulant.Game.FFCS.Client.LayoutEngine
         BgPart = 1,
         Light = 3,
         SharedGroup = 6,
+        CollisionBox = 57, // generic collider
     }
 }

@@ -4,6 +4,7 @@ using System;
 using System.Drawing;
 using System.Globalization;
 using System.Numerics;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Simulant.UI
@@ -23,6 +24,7 @@ namespace Simulant.UI
         private readonly LabelEx _studioStatus = StudioLabel(string.Empty, LabelTone.Muted);
         private readonly ToolTip _studioHints = new ToolTip();
         private readonly Timer _studioSaveTimer = new Timer { Interval = 400 };
+        private readonly TabPageEx _studioTab;
         private readonly NumericTextBoxEx[] _studioPosition = new NumericTextBoxEx[4];
         private readonly CheckBoxEx _studioXYMode = StudioMode();
         private readonly CheckBoxEx _studioZMode = StudioMode();
@@ -41,6 +43,8 @@ namespace Simulant.UI
         private NumericTextBoxEx _studioEnvironmentLight;
         private NumericTextBoxEx _studioDirectionalLight;
         private bool _syncingStudio;
+        private bool _readingStudioState;
+        private int _studioStateRevision;
 
         private TabPageEx BuildStudioTab()
         {
@@ -71,15 +75,38 @@ namespace Simulant.UI
             _studioSaveTimer.Tick += (_, __) => FlushStudioSettings();
             var cards = MakeStudioGrid(SizeType.Percent, SizeType.Percent);
             cards.Dock = DockStyle.Top;
+            cards.ColumnCount = 1;
+            cards.ColumnStyles[0].Width = 100;
+            cards.RowCount = 4;
+            for (var index = 0; index < cards.RowCount; index++)
+            {
+                cards.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            }
+            cards.Controls.Add(position, 0, 0);
+            cards.Controls.Add(size, 0, 1);
+            cards.Controls.Add(color, 0, 2);
+            cards.Controls.Add(render, 0, 3);
+
             var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Margin = Padding.Empty };
             scroll.Controls.Add(cards);
             ScrollBarTheme.Attach(scroll);
-            bool? wideLayout = null;
+            var wideLayout = false;
+            int? wideWidth = null;
             void ArrangeCards()
             {
-                var cardWidth = Math.Max(Math.Max(StudioCardWidth(position), StudioCardWidth(size)),
-                    Math.Max(StudioCardWidth(color), StudioCardWidth(render)));
-                var wide = scroll.Width >= 2 * cardWidth + SystemInformation.VerticalScrollBarWidth;
+                if (!scroll.Visible || scroll.Width <= 0)
+                {
+                    return;
+                }
+
+                if (!wideWidth.HasValue)
+                {
+                    var cardWidth = Math.Max(Math.Max(StudioCardWidth(position), StudioCardWidth(size)),
+                        Math.Max(StudioCardWidth(color), StudioCardWidth(render)));
+                    wideWidth = 2 * cardWidth + SystemInformation.VerticalScrollBarWidth;
+                }
+
+                var wide = scroll.Width >= wideWidth.Value;
                 if (wideLayout == wide)
                     return;
 
@@ -87,18 +114,11 @@ namespace Simulant.UI
                 cards.SuspendLayout();
                 try
                 {
-                    cards.Controls.Clear();
-                    cards.RowStyles.Clear();
                     cards.ColumnCount = wide ? 2 : 1;
                     cards.ColumnStyles[0].Width = wide ? 50 : 100;
                     cards.RowCount = wide ? 2 : 4;
-                    for (var index = 0; index < cards.RowCount; index++)
-                        cards.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-                    cards.Controls.Add(position, 0, 0);
-                    cards.Controls.Add(size, 0, 1);
-                    cards.Controls.Add(color, wide ? 1 : 0, wide ? 0 : 2);
-                    cards.Controls.Add(render, wide ? 1 : 0, wide ? 1 : 3);
+                    cards.SetCellPosition(color, new TableLayoutPanelCellPosition(wide ? 1 : 0, wide ? 0 : 2));
+                    cards.SetCellPosition(render, new TableLayoutPanelCellPosition(wide ? 1 : 0, wide ? 1 : 3));
                 }
                 finally
                 {
@@ -106,10 +126,16 @@ namespace Simulant.UI
                 }
             }
 
+            void RefitCards(object sender, EventArgs args)
+            {
+                wideWidth = null;
+                ArrangeCards();
+            }
+
             scroll.SizeChanged += (_, __) => ArrangeCards();
-            scroll.FontChanged += (_, __) => ArrangeCards();
-            scroll.DpiChangedAfterParent += (_, __) => ArrangeCards();
-            ArrangeCards();
+            scroll.VisibleChanged += (_, __) => ArrangeCards();
+            scroll.FontChanged += RefitCards;
+            scroll.DpiChangedAfterParent += RefitCards;
 
             var body = MakeRows();
             body.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -412,23 +438,43 @@ namespace Simulant.UI
             return slider;
         }
 
-        internal void RefreshStudioState()
+        internal async void RefreshStudioState()
         {
-            if (IsDisposed || Disposing)
+            if (IsDisposed || Disposing || _tabs.SelectedTab != _studioTab || _readingStudioState)
                 return;
 
-            var enabled = _host.Studio.HasStudio;
-            _syncingStudio = true;
+            var revision = _studioStateRevision;
+            _readingStudioState = true;
             try
             {
-                _studioEnabled.Checked = enabled;
-                _studioEnabled.Enabled = enabled || _host.CanRunDebug;
-                _studioStatus.Text = enabled ? "换图自动关闭" :
-                    _host.CanRunDebug ? "未放置" : "等待游戏就绪";
+                var (enabled, canRun) = await Task.Run(() => (_host.Studio.HasStudio, _host.CanRunDebug));
+                if (IsDisposed || Disposing || _tabs.SelectedTab != _studioTab || revision != _studioStateRevision)
+                {
+                    return;
+                }
+
+                _syncingStudio = true;
+                try
+                {
+                    _studioEnabled.Checked = enabled;
+                    _studioEnabled.Enabled = enabled || canRun;
+                    _studioStatus.Text = enabled ? "换图自动关闭" : canRun ? "未放置" : "等待游戏就绪";
+                }
+                finally
+                {
+                    _syncingStudio = false;
+                }
+            }
+            catch (Exception error)
+            {
+                if (!IsDisposed && !Disposing && _tabs.SelectedTab == _studioTab)
+                {
+                    SetFeedback("读取摄影棚状态失败。", error);
+                }
             }
             finally
             {
-                _syncingStudio = false;
+                _readingStudioState = false;
             }
         }
 
@@ -437,6 +483,7 @@ namespace Simulant.UI
             if (_syncingStudio)
                 return;
 
+            _studioStateRevision++;
             try
             {
                 _host.SetStudioEnabled(_studioEnabled.Checked);

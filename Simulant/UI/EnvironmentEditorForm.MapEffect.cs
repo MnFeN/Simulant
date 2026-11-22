@@ -34,6 +34,7 @@ namespace Simulant.UI
         private bool _readingEffects;
         private bool _applyingEffects;
         private bool _syncingBits;
+        private bool _fittingMapColumns;
         private int _effectRevision;
 
         private TabPageEx BuildMapTab()
@@ -110,6 +111,7 @@ namespace Simulant.UI
             _mapSplit.Controls.Add(_slots, 0, 0);
             _mapSplit.Controls.Add(_bits, 1, 0);
             _mapSplit.SizeChanged += (_, __) => SizeMapGrid();
+            _mapSplit.VisibleChanged += (_, __) => SizeMapGrid();
             _slots.ColumnWidthChanged += (_, __) => SizeMapGrid();
             _slots.HandleCreated += (_, __) => FitMapStateColumns();
             _slots.FontChanged += (_, __) => FitMapStateColumns();
@@ -181,6 +183,11 @@ namespace Simulant.UI
 
         private void FitMapStateColumns()
         {
+            if (_fittingMapColumns)
+            {
+                return;
+            }
+
             var style = _slots.Columns[FirstStateColumn].DefaultCellStyle;
             var font = style.Font ?? _slots.Font;
             var markerWidth = Math.Max(TextRenderer.MeasureText(ActiveStateMarker, font).Width,
@@ -191,13 +198,33 @@ namespace Simulant.UI
                 columns.Max(column => column.GetPreferredWidth(DataGridViewAutoSizeColumnMode.ColumnHeader, true)));
 
             // Keep all state columns the same width regardless of which markers are visible.
-            foreach (var column in columns)
-                column.Width = width;
-            SizeMapGrid();
+            _fittingMapColumns = true;
+            _mapSplit.SuspendLayout();
+            try
+            {
+                foreach (var column in columns)
+                {
+                    if (column.Width != width)
+                    {
+                        column.Width = width;
+                    }
+                }
+            }
+            finally
+            {
+                _fittingMapColumns = false;
+                SizeMapGrid();
+                _mapSplit.ResumeLayout(true);
+            }
         }
 
         private void SizeMapGrid()
         {
+            if (!_mapSplit.Visible || _fittingMapColumns)
+            {
+                return;
+            }
+
             var left = _mapSplit.ClientSize.Width;
             if (_expandSidebar.Checked)
             {
@@ -209,10 +236,6 @@ namespace Simulant.UI
             if (_mapSplit.ColumnStyles[0].Width != left)
                 _mapSplit.ColumnStyles[0].Width = left;
         }
-
-        private int GetMapContentWidth(int height)
-            => GetGridContentWidth(_slots, height)
-                + (_expandSidebar.Checked ? _bits.Margin.Horizontal + GetGridContentWidth(_bits, height) : 0);
 
         private void ShowMapSlots((int Index, uint LayoutId)[] slots)
         {
@@ -293,18 +316,26 @@ namespace Simulant.UI
             try
             {
                 var current = await Task.Run(() => _host.EnvironmentService.ReadMapEffectPlayback(shown, ids));
-                if (!IsDisposed && !Disposing && ReferenceEquals(_resources, resources) && _shown.IsSameLayout(shown) && revision == _effectRevision)
+                if (!IsDisposed && !Disposing && _tabs.SelectedIndex == 1 && ReferenceEquals(_resources, resources) &&
+                    _shown.IsSameLayout(shown) && revision == _effectRevision)
                 {
+                    var detailsChanged = false;
                     for (var i = 0; i < current.Length; i++)
                     {
                         if (current[i].HasValue)
                         {
                             var (recorded, playing, lastStarted) = current[i].Value;
                             if (slots[i].Observe(recorded, playing, lastStarted, simulated))
+                            {
                                 PaintMapSlot(slots[i]);
+                                detailsChanged |= slots[i] == _inspectedSlot;
+                            }
                         }
                     }
-                    PaintMapDetails();
+                    if (detailsChanged)
+                    {
+                        PaintMapDetails();
+                    }
                 }
             }
             catch (Exception ex)

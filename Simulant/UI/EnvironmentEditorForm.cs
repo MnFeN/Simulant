@@ -33,19 +33,21 @@ namespace Simulant.UI
         private EditorResources _resources;
         private bool _hasSnapshot;
         private bool _loading;
+        private bool _reloadRequested;
         private int _weatherId = -1;
-        private Rectangle? _startupBounds;
 
         internal EnvironmentEditorForm(PluginHost host)
         {
+            SuspendLayout();
             _host = host;
+            _collisionInspector = new CollisionInspector(host);
             Text = "场景调整";
             StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = true;
             Icon = PluginWindowIcon;
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1100, 550);
-            MinimumSize = new Size(330, 420);
+            ClientSize = new Size(1100, 800);
+            MinimumSize = new Size(300, 200);
             Padding = new Padding(16);
 
             _keepOnTop.CheckedChanged += (_, __) => TopMost = _keepOnTop.Checked;
@@ -58,7 +60,10 @@ namespace Simulant.UI
 
             _tabs.TabPages.Add(BuildWeatherTab());
             _tabs.TabPages.Add(BuildMapTab());
-            _tabs.TabPages.Add(BuildStudioTab());
+            _studioTab = BuildStudioTab();
+            _tabs.TabPages.Add(_studioTab);
+            _collisionTab = BuildCollisionTab();
+            RefreshCollisionResults();
             _tabs.SelectedIndexChanged += (_, __) =>
             {
                 RefreshMapEffects();
@@ -76,10 +81,12 @@ namespace Simulant.UI
 
             _poll.Tick += (_, __) =>
             {
+                RefreshCollisionResults();
                 RefreshStudioState();
                 UpdateView();
             };
             RefreshEffectInput();
+            ResumeLayout(true);
         }
 
         private TabPageEx BuildWeatherTab()
@@ -176,34 +183,23 @@ namespace Simulant.UI
             return column;
         }
 
+        protected override void OnLoad(EventArgs e)
+        {
+            var area = Screen.FromControl(this).WorkingArea;
+            var width = Math.Min(Width, area.Width);
+            var height = Math.Min(Height, area.Height);
+            if (width != Width || height != Height)
+            {
+                Bounds = new Rectangle(area.Left + (area.Width - width) / 2, area.Top + (area.Height - height) / 2, width, height);
+            }
+            base.OnLoad(e);
+        }
+
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
-            FitStartupBounds();
-            _startupBounds = Bounds;
             UpdateView();
             _poll.Start();
-        }
-
-        private void FitStartupBounds()
-        {
-            FitMapStateColumns();
-
-            // Weather is laid out first. Both toolbars use the same height when they fit on one row.
-            var gridHeight = _weather.ClientSize.Height;
-            var weatherWidth = Math.Max(GetGridContentWidth(_weather, gridHeight), _weatherNow.PreferredSize.Width);
-            var mapToolbarWidth = _effectNow.PreferredSize.Width + _expandSidebar.Width + _expandSidebar.Margin.Horizontal
-                + _mask.Parent.PreferredSize.Width;
-            var mapWidth = Math.Max(GetMapContentWidth(gridHeight), mapToolbarWidth);
-            var tabWidth = Math.Max(weatherWidth + _tabs.TabPages[0].Padding.Horizontal, mapWidth + _tabs.TabPages[1].Padding.Horizontal)
-                + _tabs.ClientSize.Width - _tabs.DisplayRectangle.Width;
-            var headerWidth = _region.PreferredSize.Width + _region.Parent.Padding.Horizontal + _keepOnTop.Width + _refresh.Width;
-
-            var area = Screen.FromControl(this).WorkingArea;
-            var wanted = SizeFromClientSize(new Size(Math.Max(tabWidth, headerWidth) + Padding.Horizontal, ClientSize.Height));
-            var width = Math.Min(area.Width, Math.Max(MinimumSize.Width, wanted.Width));
-            var height = Math.Min(area.Height, Math.Max(MinimumSize.Height, wanted.Height));
-            Bounds = new Rectangle(area.Left + (area.Width - width) / 2, area.Top + (area.Height - height) / 2, width, height);
         }
 
         private static int GetGridContentWidth(DataGridView grid, int height)
@@ -221,10 +217,28 @@ namespace Simulant.UI
         /// <summary>区域或副本槽列表变化时重读资源。常规刷新读取生效的天气及 MapEffect 页中的槽位。</summary>
         private async void UpdateView(bool reload = false)
         {
+            if (_loading)
+            {
+                _reloadRequested |= reload;
+                return;
+            }
+
             var environment = _host.EnvironmentService;
+            _loading = true;
+            EditorResources pendingResources = null;
             try
             {
-                if (environment == null || !environment.TryReadCurrent(out var current))
+                var (available, current) = await Task.Run(() =>
+                {
+                    LiveEnvironment region = default;
+                    return (environment != null && environment.TryReadCurrent(out region), region);
+                });
+                if (IsDisposed || Disposing)
+                {
+                    return;
+                }
+
+                if (!available)
                 {
                     if (_hasSnapshot)
                         ResetView();
@@ -242,38 +256,43 @@ namespace Simulant.UI
 
                 if (_hasSnapshot)
                     ResetView();
-                if (_loading)
-                    return;
 
                 _hasSnapshot = true;
                 _shown = current;
                 _gameData = game;
-                var slots = ReadSlots(current);
                 _region.Text = $"区域 {current.TerritoryId} · 正在读取资源";
-                _loading = true;
-                EditorResources resources = null;
-                try
+                var loaded = await Task.Run(() =>
                 {
-                    resources = await Task.Run(() => EditorResources.Load(game, current.TerritoryId, slots));
-                    if (IsDisposed || !_hasSnapshot || !_shown.IsSameLayout(current) ||
-                        !environment.TryReadCurrent(out var live) || !current.IsSameLayout(live) ||
-                        !ReferenceEquals(game, GameDataService.Instance))
+                    var slots = ReadSlots(current);
+                    var resources = EditorResources.Load(game, current.TerritoryId, slots);
+                    try
                     {
-                        if (!IsDisposed)
-                            ResetView();
-                        return;
+                        var matches = environment.TryReadCurrent(out var live) && current.IsSameLayout(live);
+                        return (Slots: slots, Resources: resources, Matches: matches, Live: live);
                     }
-
-                    _resources = resources;
-                    resources = null;
-                    _shown = live;
-                    ShowResources(slots);
-                }
-                finally
+                    catch
+                    {
+                        resources.Dispose();
+                        throw;
+                    }
+                });
+                pendingResources = loaded.Resources;
+                if (IsDisposed || Disposing)
                 {
-                    resources?.Dispose();
-                    _loading = false;
+                    return;
                 }
+
+                if (!_hasSnapshot || !_shown.IsSameLayout(current) || !loaded.Matches ||
+                    !ReferenceEquals(game, GameDataService.Instance))
+                {
+                    ResetView();
+                    return;
+                }
+
+                _resources = pendingResources;
+                pendingResources = null;
+                _shown = loaded.Live;
+                ShowResources(loaded.Slots);
             }
             catch (Exception ex)
             {
@@ -281,6 +300,16 @@ namespace Simulant.UI
                 {
                     _region.Text = _hasSnapshot ? $"区域 {_shown.TerritoryId}" : "等待游戏区域";
                     SetFeedback("无法读取场景数据。", ex);
+                }
+            }
+            finally
+            {
+                pendingResources?.Dispose();
+                _loading = false;
+                if (_reloadRequested && !IsDisposed && !Disposing)
+                {
+                    _reloadRequested = false;
+                    UpdateView(true);
                 }
             }
         }
@@ -316,12 +345,6 @@ namespace Simulant.UI
 
             RefreshCurrent();
             RefreshEffectInput();
-            if (_startupBounds.HasValue)
-            {
-                if (WindowState == FormWindowState.Normal && Bounds == _startupBounds.Value)
-                    FitStartupBounds();
-                _startupBounds = null;
-            }
         }
 
         private void RefreshCurrent()
@@ -403,6 +426,7 @@ namespace Simulant.UI
         {
             if (disposing)
             {
+                DisposeCollisionTools();
                 FlushStudioSettings();
                 _studioSaveTimer.Dispose();
                 _studioHints.Dispose();
