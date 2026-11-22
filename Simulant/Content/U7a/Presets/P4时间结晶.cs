@@ -180,9 +180,18 @@ namespace Simulant.Content.U7a.Presets
                     Ready();
                 });
 
+            // Boss 就绪时登记回放开场仇恨，依次为 MT、ST、H1、H2、D1 至 D4。
             // 直接使用 Transformation 547 对应的圣龙模型，跳过 StanceChange 45 的变身动画。
-            Spawn(17833, 12809, Center + new Vector2(0, 5), actor => _shiva = actor, layout: 0xA55C01, heading: 0, modelCharaId: 4376);
-            Spawn(17835, 9832, Center, actor => _gaia = actor, layout: 0xA55C02);
+            Spawn(17833, 12809, Center + new Vector2(0, 5), actor =>
+            {
+                _shiva = actor;
+                EntityManager.SetPartyEnmity(actor, alsoSetCombatTarget: false, 100, 40, 6, 6, 7, 7, 7, 7);
+            }, layout: 0xA55C01, heading: 0, modelCharaId: 4376);
+            Spawn(17835, 9832, Center, actor =>
+            {
+                _gaia = actor;
+                EntityManager.SetPartyEnmity(actor, alsoSetCombatTarget: false, 63, 100, 5, 5, 10, 10, 10, 10);
+            }, layout: 0xA55C02);
 
             PrepareCrystal(Ready);
 

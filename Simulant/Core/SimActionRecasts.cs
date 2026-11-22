@@ -2,6 +2,7 @@ using Simulant.Core.Entity;
 using Simulant.Game;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
+using Simulant.Simulation.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,8 +23,10 @@ namespace Simulant.Core
         {
             _player = player;
             _process = GameInterop.Connection.Memory.ProcessHandle;
-            foreach (var action in Simulation.Runtime.SimEntityManager.LocalActions.Where(a => a == 3 || a == 7548 || a == 7559 ||
-                a == Simulation.Runtime.SimEntityManager.InvulnerabilityAction(player.Job)))
+            var invulnerability = SimEntityManager.InvulnerabilityAction(player.Job);
+            foreach (var action in SimEntityManager.LocalActions.Where(a => a == (uint)SimLocalAction.Sprint ||
+                a == (uint)SimLocalAction.ArmsLength || a == (uint)SimLocalAction.Surecast ||
+                a == invulnerability || (invulnerability != 0 && SimEntityManager.IsEnmityAction(a))))
             {
                 _durations[action] = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().GetRow(action).Recast100ms / 10f;
                 var manager = ActionManager.Instance;
@@ -33,6 +36,7 @@ namespace Simulant.Core
             }
         }
 
+        internal bool Supports(uint action) => _durations.ContainsKey(action);
         internal float Duration(uint action) => _durations[action];
         internal void Start(uint action) => ActionManager.Instance.SetCooldown(action, 0, Duration(action));
 

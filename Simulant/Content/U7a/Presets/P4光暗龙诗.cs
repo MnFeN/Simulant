@@ -91,6 +91,7 @@ namespace Simulant.Content.U7a.Presets
             var timeline = new SimTimeline();
             timeline.At(0, () =>
             {
+                EntityManager.SetSecondaryBossEnmity(Oracle);
                 Oracle.FaceNetwork(0);
                 Shiva.FaceNetwork((float)Math.PI);
                 Oracle.Entity.SetNetworkTarget(Oracle.Entity);

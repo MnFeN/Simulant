@@ -31,10 +31,16 @@ namespace Simulant.Core.Party
         private MemberDetails[] _memberDetails;
         private byte[] _hate;
         private int _worldVersion, _snapshotVersion;
-        private Entity.Character _enmityTarget, _combatPlayer;
-        private UpdateHatePacket _enmityPacket;
-        private IntPtr _targetSystem;
-        private bool _enmityDirty, _restoreCombat;
+        private readonly Dictionary<IntPtr, TargetEnmity> _targetEnmity = new Dictionary<IntPtr, TargetEnmity>();
+        private Entity.Character _combatPlayer;
+        private IntPtr _targetSystem, _displayedEnmityTarget;
+        private bool _restoreCombat;
+
+        private sealed class TargetEnmity
+        {
+            internal Entity.Character Target;
+            internal UpdateHatePacket Packet;
+        }
 
         private sealed class MemberDetails
         {
@@ -257,18 +263,19 @@ namespace Simulant.Core.Party
                 VerifyRoster(packet);
                 _shown = packet;
                 _shownActors = remaining;
-                var enmity = new UpdateHatePacket();
-
-                for (var i = 0; i < _enmityPacket.MemberCount; i++)
+                foreach (var target in _targetEnmity.Values)
                 {
-                    var entry = _enmityPacket.GetMember(i);
+                    var enmity = new UpdateHatePacket();
+                    for (var i = 0; i < target.Packet.MemberCount; i++)
+                    {
+                        var entry = target.Packet.GetMember(i);
+                        if (entry.EntityId != id)
+                            enmity.SetMember(enmity.MemberCount++, entry);
+                    }
 
-                    if (entry.EntityId != id)
-                        enmity.SetMember(enmity.MemberCount++, entry);
+                    target.Packet = enmity;
                 }
-
-                _enmityPacket = enmity;
-                _enmityDirty = true;
+                _displayedEnmityTarget = IntPtr.Zero;
                 RefreshEnmity(owner);
             }
         }
@@ -328,10 +335,11 @@ namespace Simulant.Core.Party
                     packet.SetMember(i, sorted[i]);
 
                 EnterCombat();
-                _enmityTarget = target;
                 _targetSystem = TargetSystem.InstancePtr;
-                _enmityPacket = packet;
-                _enmityDirty = true;
+                var address = target.Address;
+                _targetEnmity[address] = new TargetEnmity { Target = target, Packet = packet };
+                if (_displayedEnmityTarget == address)
+                    _displayedEnmityTarget = IntPtr.Zero;
                 RefreshEnmity(owner);
             }
         }
@@ -363,58 +371,59 @@ namespace Simulant.Core.Party
         {
             lock (_gate)
             {
-                if (!IsOwnedBy(owner) || _enmityTarget == null)
+                if (!IsOwnedBy(owner) || _targetEnmity.Count == 0)
                     return;
 
                 EnsureContext();
-
-                if (!_enmityTarget.IsAlive)
-                {
-                    _enmityTarget = null;
-                    return;
-                }
-
                 if (TargetSystem.InstancePtr != _targetSystem)
                     throw new InvalidOperationException("目标系统已变化，停止更新旧场景的仇恨。");
 
                 var selected = GetSelectedTarget();
 
-                if (selected != _enmityTarget.Address)
+                if (!_targetEnmity.TryGetValue(selected, out var state) || !state.Target.IsAlive)
                 {
-                    _enmityDirty = true;
+                    _targetEnmity.Remove(selected);
+                    _displayedEnmityTarget = IntPtr.Zero;
                     return;
                 }
 
-                if (!_enmityDirty && MatchesEnmity())
+                if (_displayedEnmityTarget == selected && MatchesEnmity(state.Packet))
                     return;
 
                 EnsureContext();
-                PacketDispatcher.HandleUpdateHatePacket(_enmityTarget.Id, _enmityPacket);
+                PacketDispatcher.HandleUpdateHatePacket(state.Target.Id, state.Packet);
                 EnsureContext();
 
                 // 显示数据未同步时下次补发，不因小队栏显示中断机制。
-                _enmityDirty = !MatchesEnmity();
+                _displayedEnmityTarget = MatchesEnmity(state.Packet) ? selected : IntPtr.Zero;
             }
         }
 
-        private static IntPtr GetSelectedTarget()
+        internal static IntPtr GetSelectedTarget(bool preferSoftTarget = false)
         {
+            if (TargetSystem.InstancePtr == IntPtr.Zero)
+                return IntPtr.Zero;
+
             var targets = TargetSystem.Instance();
             IntPtr target = targets.Target;
-            return target != IntPtr.Zero ? target : targets.SoftTarget.Get();
+            if (!preferSoftTarget && target != IntPtr.Zero)
+                return target;
+
+            var softTarget = targets.SoftTarget.Get();
+            return softTarget != IntPtr.Zero ? softTarget : target;
         }
 
-        private bool MatchesEnmity()
+        private bool MatchesEnmity(UpdateHatePacket packet)
         {
             var data = ReadExact(_uiState + 8, Hate.Size);
 
             // 国服当前收包函数只写成员与人数，不更新 0x104 的目标 ID；选中目标已在发送前核对。
-            if (BitConverter.ToInt32(data, 0x100) != _enmityPacket.MemberCount)
+            if (BitConverter.ToInt32(data, 0x100) != packet.MemberCount)
                 return false;
 
-            for (var i = 0; i < _enmityPacket.MemberCount; i++)
+            for (var i = 0; i < packet.MemberCount; i++)
             {
-                var entry = _enmityPacket.GetMember(i);
+                var entry = packet.GetMember(i);
 
                 if (BitConverter.ToUInt32(data, i * 8) != entry.EntityId ||
                     BitConverter.ToInt32(data, i * 8 + 4) != entry.Enmity)
@@ -503,12 +512,11 @@ namespace Simulant.Core.Party
             _original = default;
             _shown = default;
             _shownActors = null;
-            _enmityTarget = null;
+            _targetEnmity.Clear();
             _combatPlayer = null;
             _restoreCombat = false;
-            _enmityPacket = default;
-            _enmityDirty = false;
             _targetSystem = IntPtr.Zero;
+            _displayedEnmityTarget = IntPtr.Zero;
         }
 
         private void EnsureContext()

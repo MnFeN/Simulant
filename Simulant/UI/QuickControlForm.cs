@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -8,24 +9,36 @@ namespace Simulant.UI
     /// <summary>模拟副本内的快捷控制；单击执行，拖动移动，边缘缩放。</summary>
     internal sealed partial class QuickControlForm : FormEx
     {
-        private const int StartButton = 0;
-        private const int RetryButton = 1;
-        private const int StopButton = 2;
-        private const int SessionButtonCount = 3;
-        private const int SprintButton = SessionButtonCount;
-        private const int KnockbackButton = 4;
-        private const int InvulnerabilityButton = 5;
-        private static readonly Color[] SessionAccents =
+        private enum ButtonId
         {
-            WorkbenchTheme.Mint,
-            WorkbenchTheme.Yellow,
-            WorkbenchTheme.Red
+            Start,
+            Retry,
+            Stop,
+            Sprint,
+            Knockback,
+            Invulnerability,
+            Provoke,
+            Shirk
+        }
+
+        private static readonly ButtonId[] SessionRow = { ButtonId.Start, ButtonId.Retry, ButtonId.Stop };
+        private static readonly ButtonId[][] DefaultRows =
+        {
+            SessionRow,
+            new[] { ButtonId.Sprint, ButtonId.Knockback }
+        };
+        private static readonly ButtonId[][] TankRows =
+        {
+            SessionRow,
+            new[] { ButtonId.Sprint, ButtonId.Knockback, ButtonId.Invulnerability },
+            new[] { ButtonId.Provoke, ButtonId.Shirk }
         };
 
-        private readonly Action[] _actions;
-        private readonly bool[] _enabled;
-        private int _hover = -1;
-        private int _pressed = -1;
+        private readonly Dictionary<ButtonId, (Action Execute, Color Accent)> _sessionButtons;
+        private readonly Action<uint> _useSkill;
+        private readonly HashSet<ButtonId> _enabled = new HashSet<ButtonId>();
+        private ButtonId? _hover;
+        private ButtonId? _pressed;
         private Point _mouseOrigin;
         private Rectangle _originalBounds;
         private AnchorStyles _resizeEdges;
@@ -34,12 +47,16 @@ namespace Simulant.UI
         internal event Action<Point> LocationCommitted;
         internal Func<bool> IsGameForeground { get; set; }
 
-        internal QuickControlForm(Action start, Action retry, Action stop, Action<string> command, Action<string> logWarning,
+        internal QuickControlForm(Action start, Action retry, Action stop, Action<uint> useSkill, Action<string> logWarning,
             Func<uint, Core.SimActionCooldown> cooldown)
         {
-            _actions = new[] { start, retry, stop, () => command("ac 冲刺"),
-                () => command(_surecast ? "ac 沉稳咏唱" : "ac 亲疏自行"), () => command("ac 无敌") };
-            _enabled = new bool[_actions.Length];
+            _sessionButtons = new Dictionary<ButtonId, (Action Execute, Color Accent)>
+            {
+                [ButtonId.Start] = (start, WorkbenchTheme.Mint),
+                [ButtonId.Retry] = (retry, WorkbenchTheme.Yellow),
+                [ButtonId.Stop] = (stop, WorkbenchTheme.Red)
+            };
+            _useSkill = useSkill;
             _logWarning = logWarning;
             _cooldown = cooldown;
             _animationTimer = new Timer { Interval = 33 };
@@ -81,27 +98,43 @@ namespace Simulant.UI
             }
         }
 
-        internal void UpdateState(bool canStart, bool canRetry, bool canStop, bool? surecast, uint invulnerability = 0)
+        internal void UpdateState(bool canStart, bool canRetry, bool canStop, bool? surecast, uint invulnerability,
+            bool provokeAvailable, bool shirkAvailable)
         {
-            var stateChanged = _enabled[StartButton] != canStart || _enabled[RetryButton] != canRetry ||
-                _enabled[StopButton] != canStop || _invulnerability != invulnerability ||
-                _enabled[SprintButton] != surecast.HasValue || (surecast.HasValue && _surecast != surecast.Value);
-            _enabled[StartButton] = canStart;
-            _enabled[RetryButton] = canRetry;
-            _enabled[StopButton] = canStop;
-            var skillCountChanged = (_invulnerability == 0) != (invulnerability == 0);
-            _invulnerability = invulnerability;
-            if (skillCountChanged)
-                Height = CompactHeight(Width, Height);
-            _enabled[SprintButton] = _enabled[KnockbackButton] = surecast.HasValue;
-            _enabled[InvulnerabilityButton] = surecast.HasValue && invulnerability != 0;
+            var canUseTankSkills = surecast.HasValue && invulnerability != 0;
+            SetEnabled(ButtonId.Start, canStart);
+            SetEnabled(ButtonId.Retry, canRetry);
+            SetEnabled(ButtonId.Stop, canStop);
+            SetEnabled(ButtonId.Sprint, surecast.HasValue);
+            SetEnabled(ButtonId.Knockback, surecast.HasValue);
+            SetEnabled(ButtonId.Invulnerability, canUseTankSkills);
+            SetEnabled(ButtonId.Provoke, canUseTankSkills && provokeAvailable);
+            SetEnabled(ButtonId.Shirk, canUseTankSkills && shirkAvailable);
             if (surecast.HasValue)
                 _surecast = surecast.Value;
-            if (stateChanged)
-                Invalidate();
+
+            var previousRows = ButtonRows.Length;
+            var previousHeight = Height;
+            _invulnerability = invulnerability;
+            var rowCount = ButtonRows.Length;
+            if (previousRows != rowCount)
+            {
+                UpdateScreenLimits();
+                Height = CompactHeight(Width, previousHeight * rowCount / previousRows);
+                RestoreLocation(Location);
+            }
+            Invalidate();
             if (WindowState != FormWindowState.Normal)
                 WindowState = FormWindowState.Normal;
             UpdateVisibility();
+        }
+
+        private void SetEnabled(ButtonId button, bool enabled)
+        {
+            if (enabled)
+                _enabled.Add(button);
+            else
+                _enabled.Remove(button);
         }
 
         private void UpdateVisibility()
@@ -115,71 +148,81 @@ namespace Simulant.UI
 
         private float Inset => Math.Min(ClientSize.Width / 2f, ClientSize.Height / 2f) * 0.12f;
 
-        private int ButtonCount => _invulnerability == 0 ? InvulnerabilityButton : InvulnerabilityButton + 1;
-        private int SkillButtonCount => ButtonCount - SessionButtonCount;
+        private ButtonId[][] ButtonRows => _invulnerability == 0 ? DefaultRows : TankRows;
 
         private int CompactHeight(int width, int requestedHeight)
         {
-            // 两行各自以一格的宽度为高度上限，技能图标贴合下排，保留边距。
-            var layoutHeight = width / (float)SessionButtonCount + width / (float)SkillButtonCount;
+            // 换仇两个按钮占满第三行，图标与上一行的坦克技能等高。
+            var rows = ButtonRows;
+            var layoutHeight = width / (float)SessionRow.Length + (rows.Length - 1) * width / (float)rows[1].Length;
             return Math.Max(MinimumSize.Height, Math.Min(requestedHeight, (int)layoutHeight));
         }
 
-        private RectangleF ButtonBounds(int index)
+        private IEnumerable<(ButtonId Button, RectangleF Bounds)> LayoutButtons()
         {
-            var sessionButton = index < SessionButtonCount;
-            var width = ClientSize.Width / (float)(sessionButton ? SessionButtonCount : SkillButtonCount);
-            var topHeight = ClientSize.Height * SkillButtonCount / (float)ButtonCount;
-            var top = sessionButton ? 0 : topHeight;
-            var height = sessionButton ? topHeight : ClientSize.Height - topHeight;
-            var column = sessionButton ? index : index - SessionButtonCount;
-            return new RectangleF(column * width + Inset, top + Inset, width - Inset * 2, height - Inset * 2);
+            var rows = ButtonRows;
+            var skillRows = rows.Length - 1;
+            var skillColumns = rows[1].Length;
+            var sessionHeight = ClientSize.Height * skillColumns / (float)(skillColumns + skillRows * SessionRow.Length);
+            var skillHeight = (ClientSize.Height - sessionHeight) / skillRows;
+            var inset = Inset;
+            var top = 0f;
+            foreach (var row in rows)
+            {
+                var width = ClientSize.Width / (float)row.Length;
+                var height = row == SessionRow ? sessionHeight : skillHeight;
+                for (var column = 0; column < row.Length; column++)
+                {
+                    var bounds = new RectangleF(column * width + inset, top + inset, width - inset * 2, height - inset * 2);
+                    yield return (row[column], bounds);
+                }
+                top += height;
+            }
         }
 
-        private int ButtonAt(Point point)
+        private ButtonId? ButtonAt(Point point)
         {
-            for (var i = 0; i < ButtonCount; i++)
-                if (ButtonBounds(i).Contains(point))
-                    return i;
-            return -1;
+            foreach (var (button, bounds) in LayoutButtons())
+                if (bounds.Contains(point))
+                    return button;
+            return null;
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            for (var i = 0; i < ButtonCount; i++)
+            foreach (var (button, bounds) in LayoutButtons())
             {
-                var bounds = ButtonBounds(i);
-                var active = CanClick(i);
-                var hover = active && _hover == i && !_dragging;
+                var active = CanClick(button);
+                var hover = active && _hover == button && !_dragging;
                 var background = hover ? WorkbenchTheme.QuickControl.ButtonHover : WorkbenchTheme.QuickControl.Button;
-                if (hover && Capture && _pressed == i)
+                if (hover && Capture && _pressed == button)
                     background = WorkbenchTheme.QuickControl.ButtonPressed;
                 using (var shape = WorkbenchTheme.RoundedRect(bounds, Inset))
                 using (var fill = new SolidBrush(background))
                     e.Graphics.FillPath(fill, shape);
 
-                if (i >= SessionButtonCount)
+                if (!_sessionButtons.TryGetValue(button, out var session))
                 {
-                    PaintSkill(e.Graphics, i, bounds);
+                    PaintSkill(e.Graphics, button, bounds);
                     continue;
                 }
 
                 var size = Math.Min(bounds.Width, bounds.Height) * 0.44f;
                 var x = bounds.Left + bounds.Width / 2;
                 var y = bounds.Top + bounds.Height / 2;
-                var accent = SessionAccents[i];
+                var accent = session.Accent;
                 using (var icon = new SolidBrush(active ? accent : WorkbenchTheme.QuickControl.DisabledAction(accent)))
                 {
-                    if (i == StartButton)
+                    if (button == ButtonId.Start)
                         e.Graphics.FillPolygon(icon, new[]
                         {
                             new PointF(x - size * 0.38f, y - size * 0.6f),
                             new PointF(x - size * 0.38f, y + size * 0.6f),
                             new PointF(x + size * 0.66f, y)
                         });
-                    else if (i == RetryButton)
+                    else if (button == ButtonId.Retry)
                         PaintRetryIcon(e.Graphics, icon, x, y, size);
                     else
                         using (var square = WorkbenchTheme.RoundedRect(new RectangleF(x - size / 2, y - size / 2, size, size), size * 0.12f))
@@ -297,14 +340,17 @@ namespace Simulant.UI
             if (e.Button != MouseButtons.Left || !Capture)
                 return;
             // 松开前保存点击结果；拖动越过阈值后，即使移回原处也不执行按钮。
-            var action = !_dragging && _resizeEdges == AnchorStyles.None && _pressed == ButtonAt(e.Location) ? _pressed : -1;
+            var button = !_dragging && _resizeEdges == AnchorStyles.None && _pressed == ButtonAt(e.Location) ? _pressed : null;
             Capture = false;
             RestoreLocation(Location);
             if (Location != _originalBounds.Location)
                 LocationCommitted?.Invoke(Location);
-            if (action >= 0 && CanClick(action))
+            if (button is ButtonId clicked && CanClick(clicked))
             {
-                _actions[action]();
+                if (_sessionButtons.TryGetValue(clicked, out var session))
+                    session.Execute();
+                else
+                    _useSkill(SkillAction(clicked));
                 Invalidate();
             }
         }
@@ -323,7 +369,7 @@ namespace Simulant.UI
             base.OnMouseCaptureChanged(e);
             if (!Capture)
             {
-                _pressed = -1;
+                _pressed = null;
                 _dragging = false;
                 Invalidate();
             }
@@ -332,7 +378,7 @@ namespace Simulant.UI
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
-            _hover = -1;
+            _hover = null;
             Invalidate();
         }
 
@@ -351,8 +397,9 @@ namespace Simulant.UI
             {
                 var screen = Screen.FromRectangle(Bounds);
                 var minWidth = screen.Bounds.Width / 24;
-                MaximumSize = new Size(screen.Bounds.Width / 10, screen.Bounds.Height / 10);
-                MinimumSize = new Size(minWidth, Math.Min(screen.Bounds.Height / 20, minWidth * 2 / SessionButtonCount));
+                var rowCount = ButtonRows.Length;
+                MaximumSize = new Size(screen.Bounds.Width / 10, screen.Bounds.Height * rowCount / 20);
+                MinimumSize = new Size(minWidth, Math.Min(screen.Bounds.Height * rowCount / 40, minWidth * rowCount / SessionRow.Length));
                 Height = CompactHeight(Width, Height);
             }
             finally

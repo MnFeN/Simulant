@@ -355,7 +355,11 @@ namespace Simulant.UI
             var canStart = btnStart.Enabled;
             var canRetry = btnRetry.Enabled;
             var canStop = btnEnd.Enabled;
-            Action<QuickControlForm> update = form => form.UpdateState(canStart, canRetry, canStop, surecast, invulnerability);
+            var isRunning = _session?.IsRunning == true;
+            var provokeAvailable = isRunning && _host.PlayerActions.CanUseEnmityAction((uint)SimLocalAction.Provoke);
+            var shirkAvailable = isRunning && _host.PlayerActions.CanUseEnmityAction((uint)SimLocalAction.Shirk);
+            Action<QuickControlForm> update = form => form.UpdateState(canStart, canRetry, canStop, surecast, invulnerability,
+                provokeAvailable, shirkAvailable);
             if (_quickControls?.TryPost(update) == true)
                 return;
 
@@ -363,9 +367,12 @@ namespace Simulant.UI
             var location = host.Configuration.QuickControlsLocation;
             _quickControls = FormEx.ShowOnSta(() =>
             {
-                var form = new QuickControlForm(() => PostQuickControlAction(StartCurrentSession),
-                    () => PostQuickControlAction(RetryCurrentSession), () => PostQuickControlAction(StopCurrentSession),
-                    command => PostQuickControlAction(() => host.Commands.Dispatch(command)), host.LogWarning, host.PlayerActions.Cooldown)
+                var form = new QuickControlForm(
+                    () => PostQuickControlAction(StartCurrentSession),
+                    () => PostQuickControlAction(RetryCurrentSession),
+                    () => PostQuickControlAction(StopCurrentSession),
+                    action => PostQuickControlAction(() => host.PlayerActions.RequestAction(action)),
+                    host.LogWarning, host.PlayerActions.Cooldown)
                 {
                     IsGameForeground = () => host.IsGameForeground
                 };

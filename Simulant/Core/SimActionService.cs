@@ -2,6 +2,7 @@ using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Simulant.Core
 {
@@ -12,25 +13,34 @@ namespace Simulant.Core
         private readonly object _gate = new object();
         private SimScheduler _scheduler;
         private SimEntityManager _entities;
+        private SimEntityManager _encounterEntities;
         private SimHotbarInput _input;
         private SimActionRecasts _recasts;
         private bool _polling;
+        private Func<uint, bool> _enmityAction;
         private readonly ConcurrentDictionary<uint, SimActionCooldown> _cooldowns = new ConcurrentDictionary<uint, SimActionCooldown>();
 
         internal SimActionService(PluginHost host) => _host = host;
 
+        internal bool CanUseEnmityAction(uint action) => SimEntityManager.IsEnmityAction(action) &&
+            (Volatile.Read(ref _enmityAction) != null || Volatile.Read(ref _encounterEntities)?.CanUseEnmityAction(action) == true);
+
+        internal void SetEnmityActionHandler(Func<uint, bool> handler)
+            => Volatile.Write(ref _enmityAction, handler);
+
         private bool Enabled => _host.FirewallEnabled && _host.PluginReady && !_host.Disposed && !_host.IsSwitchingTerritory;
 
         // 亲疏自行与沉稳咏唱共用一个冷却组。
-        private static uint CooldownKey(uint action) => action == 7559 ? 7548u : action;
+        private static uint CooldownKey(uint action) => action == (uint)SimLocalAction.Surecast ? (uint)SimLocalAction.ArmsLength : action;
         internal SimActionCooldown Cooldown(uint action) => _cooldowns.TryGetValue(CooldownKey(action), out var value) ? value : default;
 
-        internal void BeginSimulation()
+        internal void BeginSimulation(SimEntityManager encounterEntities = null)
         {
             lock (_gate)
             {
                 if (!Enabled)
                     return;
+                Volatile.Write(ref _encounterEntities, encounterEntities);
                 EnsureScheduler();
                 _scheduler.ScheduleAfter(0, () =>
                 {
@@ -67,6 +77,11 @@ namespace Simulant.Core
                     }
                 }, "缓存模拟技能快捷键并重置冷却");
             }
+        }
+
+        internal void EndSimulation(SimEntityManager encounterEntities)
+        {
+            Interlocked.CompareExchange(ref _encounterEntities, null, encounterEntities);
         }
 
         private void EnsureScheduler()
@@ -111,21 +126,25 @@ namespace Simulant.Core
             switch (parts[1].Trim().Trim('"'))
             {
                 case "沉稳咏唱":
-                    return 7559;
+                    return (uint)SimLocalAction.Surecast;
                 case "亲疏自行":
-                    return 7548;
+                    return (uint)SimLocalAction.ArmsLength;
                 case "冲刺":
-                    return 3;
+                    return (uint)SimLocalAction.Sprint;
+                case "挑衅":
+                    return (uint)SimLocalAction.Provoke;
+                case "退避":
+                    return (uint)SimLocalAction.Shirk;
                 case "无敌":
                     return SimEntityManager.InvulnerabilityAction(job);
                 case "神圣领域":
-                    return 30;
+                    return (uint)SimLocalAction.HallowedGround;
                 case "死斗":
-                    return 43;
+                    return (uint)SimLocalAction.Holmgang;
                 case "行尸走肉":
-                    return 3638;
+                    return (uint)SimLocalAction.LivingDead;
                 case "超火流星":
-                    return 16152;
+                    return (uint)SimLocalAction.Superbolide;
                 default:
                     return 0;
             }
@@ -134,6 +153,11 @@ namespace Simulant.Core
         internal void Receive(string command)
         {
             var action = ParseAction(command, _host.EntityProvider.GetMyself()?.Job ?? Game.FFCS.Client.Game.Character.Job.ADV);
+            RequestAction(action);
+        }
+
+        internal void RequestAction(uint action)
+        {
             if (action == 0)
                 return;
 
@@ -158,7 +182,17 @@ namespace Simulant.Core
                     return;
                 if (_recasts == null)
                     _recasts = new SimActionRecasts(player);
-                if (!_entities.UseLocalAction(_entities.Attach(player), action))
+                if (!_recasts.Supports(action))
+                    return;
+                if (SimEntityManager.IsEnmityAction(action))
+                {
+                    var handler = Volatile.Read(ref _enmityAction);
+                    var accepted = handler != null ? handler(action) :
+                        Volatile.Read(ref _encounterEntities)?.TryUseEnmityAction(player, action) == true;
+                    if (!accepted)
+                        return;
+                }
+                else if (!_entities.UseLocalAction(_entities.Attach(player), action))
                     return;
                 _cooldowns[CooldownKey(action)] = new SimActionCooldown(_recasts.Duration(action));
                 _recasts.Start(action);
@@ -191,8 +225,10 @@ namespace Simulant.Core
                 {
                     _scheduler = null;
                     _entities = null;
+                    Volatile.Write(ref _encounterEntities, null);
                     _input = null;
                     _recasts = null;
+                    SetEnmityActionHandler(null);
                     _polling = false;
                     _cooldowns.Clear();
                 }

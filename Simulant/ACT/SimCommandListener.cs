@@ -67,7 +67,7 @@ namespace Simulant.ACT
             }
         }
 
-        /// <summary>默语与界面共用命令入口；停止监听后不再接收操作。</summary>
+        /// <summary>分发从默语读取的模拟命令；停止监听后丢弃待处理命令。</summary>
         internal void Dispatch(string command)
         {
             var handlers = Received;

@@ -1,4 +1,5 @@
 using Simulant.Game.Data;
+using Simulant.Simulation.Runtime;
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -16,13 +17,29 @@ namespace Simulant.UI
         private Bitmap[] _skillIcons;
         private bool _surecast;
         private uint _invulnerability;
-        private static readonly uint[] SkillActions = Simulation.Runtime.SimEntityManager.LocalActions;
+        private static readonly uint[] SkillActions = SimEntityManager.LocalActions;
 
-        private uint SkillAction(int index) => index == SprintButton ? 3u :
-            index == InvulnerabilityButton ? _invulnerability : _surecast ? 7559u : 7548u;
+        private uint SkillAction(ButtonId button)
+        {
+            switch (button)
+            {
+                case ButtonId.Sprint:
+                    return (uint)SimLocalAction.Sprint;
+                case ButtonId.Knockback:
+                    return (uint)(_surecast ? SimLocalAction.Surecast : SimLocalAction.ArmsLength);
+                case ButtonId.Invulnerability:
+                    return _invulnerability;
+                case ButtonId.Provoke:
+                    return (uint)SimLocalAction.Provoke;
+                case ButtonId.Shirk:
+                    return (uint)SimLocalAction.Shirk;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(button));
+            }
+        }
 
-        private bool CanClick(int index) => _enabled[index] && (index < SessionButtonCount ||
-            (_skillIcons != null && _cooldown(SkillAction(index)).Remaining <= 0));
+        private bool CanClick(ButtonId button) => _enabled.Contains(button) && (_sessionButtons.ContainsKey(button) ||
+            (_skillIcons != null && _cooldown(SkillAction(button)).Remaining <= 0));
 
         protected override async void OnShown(EventArgs e)
         {
@@ -63,14 +80,15 @@ namespace Simulant.UI
             }
         }
 
-        private void PaintSkill(Graphics graphics, int index, RectangleF bounds)
+        private void PaintSkill(Graphics graphics, ButtonId button, RectangleF bounds)
         {
             if (_skillIcons == null)
                 return;
             var size = Math.Min(bounds.Width, bounds.Height);
             var square = new RectangleF(bounds.Left + (bounds.Width - size) / 2,
                 bounds.Top + (bounds.Height - size) / 2, size, size);
-            var icon = _skillIcons[Array.IndexOf(SkillActions, SkillAction(index))];
+            var action = SkillAction(button);
+            var icon = _skillIcons[Array.IndexOf(SkillActions, action)];
             var state = graphics.Save();
             using (var outline = WorkbenchTheme.RoundedRect(square, Inset))
             {
@@ -79,9 +97,9 @@ namespace Simulant.UI
                     graphics.SetClip(outline, CombineMode.Intersect);
                     graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
                     graphics.DrawImage(icon, square);
-                    var cooldown = _cooldown(SkillAction(index));
+                    var cooldown = _cooldown(action);
                     var remaining = cooldown.Remaining;
-                    if (!_enabled[index])
+                    if (!_enabled.Contains(button))
                     {
                         using (var shade = new SolidBrush(WorkbenchTheme.QuickControl.DisabledSkillShade))
                             graphics.FillRectangle(shade, square);

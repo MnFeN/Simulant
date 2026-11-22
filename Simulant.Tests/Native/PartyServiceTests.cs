@@ -51,6 +51,7 @@ namespace Simulant.Tests.Native
                 Check("原先已在战斗中的自己恢复后仍在战斗", VerifyExistingCombat);
                 Check("退战失败可重试，掉线或角色更换后放弃旧状态", VerifyCombatRestoreFailure);
                 Check("切换目标后仅按需补发仇恨并正确处理软目标", VerifyEnmityRefresh);
+                Check("分别保存两名 Boss 的仇恨并随选中目标切换", VerifyIndependentEnmityTargets);
                 Check("仇恨收包期间切换目标不会误报失败", VerifyTargetChangeDuringEnmity);
                 Check("敌对列表通过一个入口发布、更新和清理独立目标", VerifyEnemyList);
                 Check("敌对字母自动循环分配，时间结晶十个目标能显示两只龙头", VerifyEnemyListLetters);
@@ -704,6 +705,34 @@ namespace Simulant.Tests.Native
                 scene.SelectTarget(scene.Plugin.Entities[Scene.EnemyId]);
                 scene.Invoke("RefreshEnmity", scene.Owner);
                 Assert(scene.Plugin.HatePackets.Count == count, "恢复完成后任何迟到刷新都不能重新发送仇恨。");
+            }
+        }
+
+        private static void VerifyIndependentEnmityTargets()
+        {
+            using (var scene = new Scene())
+            {
+                var secondaryId = Scene.EnemyId + 1;
+                var secondaryAddress = scene.Outsider.Address;
+                scene.Plugin.Entities.Remove(scene.Outsider.Id);
+                scene.Plugin.Entities[secondaryId] = secondaryAddress;
+                scene.Memory.Put(secondaryAddress + 0x78, secondaryId);
+                scene.Memory.Put(secondaryAddress + 0x90, ObjectKind.BattleNpc);
+                scene.Observations[8] = new EntityObservation(secondaryAddress, secondaryId, ObjectKind.BattleNpc);
+                scene.Show();
+                scene.Invoke("SetEnmity", scene.Owner, Scene.EnemyId, scene.Actors, new[] { 100, 90, 30 });
+                scene.Invoke("SetEnmity", scene.Owner, secondaryId, scene.Actors, new[] { 90, 100, 30 });
+                Assert(scene.Plugin.HateTargets.SequenceEqual(new[] { Scene.EnemyId }), "第二张表不能覆盖当前目标的显示。");
+
+                scene.SelectTarget(secondaryAddress);
+                scene.Invoke("RefreshEnmity", scene.Owner);
+                Assert(scene.Plugin.HateTargets.Last() == secondaryId &&
+                    scene.Plugin.HatePackets.Last().GetMember(0).EntityId == scene.Actors[1].Id, "切到第二名 Boss 应显示 ST 一仇。");
+
+                scene.SelectTarget(scene.Plugin.Entities[Scene.EnemyId]);
+                scene.Invoke("RefreshEnmity", scene.Owner);
+                Assert(scene.Plugin.HateTargets.Last() == Scene.EnemyId &&
+                    scene.Plugin.HatePackets.Last().GetMember(0).EntityId == scene.Actors[0].Id, "切回第一名 Boss 应恢复 MT 一仇。");
             }
         }
 

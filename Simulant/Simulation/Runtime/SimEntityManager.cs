@@ -34,6 +34,8 @@ namespace Simulant.Simulation.Runtime
         private SimScheduledAction _partyEnmityPoll;
         private SimScheduledAction _enemyListPoll;
         private readonly List<EnemyListEntry> _enemyEntries = new List<EnemyListEntry>();
+        private readonly Dictionary<SimActor, Dictionary<SimActor, float>> _partyEnmity = new Dictionary<SimActor, Dictionary<SimActor, float>>();
+        private static readonly int[] DefaultPartyEnmity = { 100, 50, 10, 10, 15, 15, 15, 15 };
         internal SimEnemyList EnemyList { get; set; }
 
         private sealed class EnemyListEntry
@@ -166,6 +168,24 @@ namespace Simulant.Simulation.Runtime
         }
 
         internal void SetPartyEnmity(SimActor target, params int[] enmity)
+            => SetPartyEnmity(target, true, enmity);
+
+        internal void SetSecondaryBossEnmity(SimActor target)
+        {
+            lock (_gate)
+            {
+                if (Party.Count < 2)
+                    throw new InvalidOperationException("设置第二名 Boss 的仇恨前需要准备模拟小队。");
+
+                var percentages = DefaultPartyEnmity.Take(Party.Count).ToArray();
+                // 双 Boss 的第二张表由 ST 担任一仇。
+                percentages[0] = DefaultPartyEnmity[1];
+                percentages[1] = DefaultPartyEnmity[0];
+                SetPartyEnmity(target, false, percentages);
+            }
+        }
+
+        internal void SetPartyEnmity(SimActor target, bool alsoSetCombatTarget, params int[] enmity)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
@@ -179,23 +199,41 @@ namespace Simulant.Simulation.Runtime
                 if (!target.IsActive || (!partyShown && !solo))
                     throw new InvalidOperationException("请先准备模拟小队或单人练习者，并指定有效目标。");
 
-                if (partyShown)
-                    _partyService.SetEnmity(this, target.Id, Party, enmity);
-                else if (enmity?.Length != 1 || enmity[0] < 0 || enmity[0] > 100)
-                    throw new ArgumentException("单人仇恨值必须在 0-100 之间。", nameof(enmity));
-                var entry = _enemyEntries.Find(item => item.Actor == target);
-                if (entry != null)
-                {
-                    var self = Party.FindIndex(actor => actor.Entity.Identity.Slot == 0);
-                    if (self >= 0)
-                        entry.Enmity = (byte)enmity[self];
-                }
-                SetCombatTarget(target);
-                _behaviors.SetBossEnmity(target, Party, enmity);
-                if (partyShown)
-                    SchedulePartyEnmity();
+                if (enmity?.Length != Party.Count || enmity.Any(value => value < 0 || value > 100))
+                    throw new ArgumentException("仇恨值需与小队一一对应，范围为 0-100。", nameof(enmity));
+
+                RegisterPartyEnmity(target, enmity);
+                if (alsoSetCombatTarget)
+                    SetCombatTarget(target);
             }
         }
+
+        private void RegisterPartyEnmity(SimActor target, int[] percentages)
+        {
+            var scores = Party.Select((actor, index) => new { Actor = actor, Score = (float)percentages[index] })
+                .ToDictionary(entry => entry.Actor, entry => entry.Score);
+            PublishPartyEnmity(target, scores, percentages);
+        }
+
+        private void PublishPartyEnmity(SimActor target, Dictionary<SimActor, float> scores, int[] percentages)
+        {
+            var partyShown = _partyService?.IsOwnedBy(this) == true;
+            if (partyShown)
+                _partyService.SetEnmity(this, target.Id, Party, percentages);
+
+            var entry = _enemyEntries.Find(item => item.Actor == target);
+            var self = Party.FindIndex(actor => actor.Entity.Identity.Slot == 0);
+            if (entry != null && self >= 0)
+                entry.Enmity = (byte)percentages[self];
+            _partyEnmity[target] = scores;
+            _behaviors.SetBossEnmity(target, OrderedPartyEnmity(scores).ToArray());
+            if (partyShown)
+                SchedulePartyEnmity();
+        }
+
+        private IEnumerable<SimActor> OrderedPartyEnmity(Dictionary<SimActor, float> scores)
+            => Party.Where(actor => actor.IsActive && scores.TryGetValue(actor, out var value) && value > 0)
+                .OrderByDescending(actor => scores[actor]);
 
         /// <summary>设置假玩家的共同战斗目标；只允许本会话拥有的网络战斗 NPC，空值表示离开战斗。</summary>
         public void SetCombatTarget(SimActor target)
@@ -209,6 +247,8 @@ namespace Simulant.Simulation.Runtime
                     target.Entity.Identity.Slot < 2 || target.Entity.Identity.Slot >= 200 || (target.Entity.Identity.Slot & 1) != 0))
                     throw new ArgumentException("战斗目标必须是本会话拥有的有效网络战斗 NPC。", nameof(target));
 
+                if (target != null && Party.Count > 1 && _partyService?.IsOwnedBy(this) == true && !_partyEnmity.ContainsKey(target))
+                    RegisterPartyEnmity(target, DefaultPartyEnmity.Take(Party.Count).ToArray());
                 _behaviors.SetTarget(target);
             }
         }
@@ -422,6 +462,9 @@ namespace Simulant.Simulation.Runtime
                 {
                     _actors.Remove(actor.Entity.Identity);
                     _enemyEntries.RemoveAll(entry => entry.Actor == actor);
+                    _partyEnmity.Remove(actor);
+                    foreach (var scores in _partyEnmity.Values)
+                        scores.Remove(actor);
                     if (Party.Remove(actor) && _partyService?.IsOwnedBy(this) == true)
                         CombatLog?.Party(Party);
                 }
@@ -537,6 +580,7 @@ namespace Simulant.Simulation.Runtime
                     _actors.Clear();
                     Party.Clear();
                     _enemyEntries.Clear();
+                    _partyEnmity.Clear();
                 }
 
                 // 先停止所有参与者的行为，再回收本会话生成的实体。借用玩家只解除关联。

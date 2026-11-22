@@ -85,7 +85,7 @@ namespace Simulant.Simulation.Runtime
                     _entityManager.PlayerBehavior = _host.Configuration.SimulatedParty.Copy();
                     _entityManager.SelfJudgementAdvance = _host.Configuration.SimLatency;
                     _logic.Prepare();
-                    _host.PlayerActions.BeginSimulation();
+                    _host.PlayerActions.BeginSimulation(_entityManager);
                     var waymarks = _preset.Waymarks;
 
                     if (waymarks != null)
@@ -165,6 +165,7 @@ namespace Simulant.Simulation.Runtime
 
         private void StopCore()
         {
+            _host.PlayerActions.EndSimulation(_entityManager);
             // Dispose 先取消并等待当前节点退出，再允许释放节点引用的原生实体。
             _scheduler?.Dispose();
             Cleanup();

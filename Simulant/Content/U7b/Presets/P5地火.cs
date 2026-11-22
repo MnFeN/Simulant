@@ -158,7 +158,13 @@ namespace Simulant.Content.U7b.Presets
 
         private void StartMechanic(SimActor boss, Character me, List<int> leftOrder, List<int> rightOrder)
         {
-            EntityManager.SetCombatTarget(boss);
+            if (Party.Count == 0)
+            {
+                Party.Add(EntityManager.Attach(me));
+                EntityManager.SetPartyEnmity(boss, 100);
+            }
+            else
+                EntityManager.SetCombatTarget(boss);
 
             if (EnableAuxiliaryLines)
             {

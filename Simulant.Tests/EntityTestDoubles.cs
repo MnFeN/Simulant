@@ -421,8 +421,10 @@ namespace Simulant.Core.Party
         internal int EnmitySetCount;
         internal int EnmityRefreshCount;
         internal Action OnRefreshEnmity;
+        internal static IntPtr SelectedTarget, SoftSelectedTarget;
         internal uint EnmityTarget;
         internal IReadOnlyList<int> EnmityValues;
+        internal readonly Dictionary<uint, IReadOnlyList<int>> EnmityByTarget = new Dictionary<uint, IReadOnlyList<int>>();
         internal IReadOnlyList<Simulant.Simulation.Runtime.SimActor> Members;
 
         internal bool IsOwnedBy(object owner) => ReferenceEquals(_owner, owner) && _owner != null;
@@ -460,7 +462,16 @@ namespace Simulant.Core.Party
 
             EnmityTarget = targetId;
             EnmityValues = values;
+            EnmityByTarget[targetId] = values.ToArray();
             EnmitySetCount++;
+        }
+
+        internal static IntPtr GetSelectedTarget(bool preferSoftTarget = false)
+        {
+            if (preferSoftTarget && SoftSelectedTarget != IntPtr.Zero)
+                return SoftSelectedTarget;
+
+            return SelectedTarget != IntPtr.Zero ? SelectedTarget : SoftSelectedTarget;
         }
 
         internal void RefreshEnmity(object owner)

@@ -68,7 +68,7 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        internal void SetBossEnmity(SimActor boss, IReadOnlyList<SimActor> party, IReadOnlyList<int> enmity)
+        internal void SetBossEnmity(SimActor boss, SimActor[] enmityOrder)
         {
             lock (_gate)
             {
@@ -76,8 +76,7 @@ namespace Simulant.Simulation.Runtime
                     return;
 
                 var state = GetBossState(boss);
-                state.EnmityOrder = party.Zip(enmity, (actor, value) => (Actor: actor, Value: value))
-                    .Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).Select(entry => entry.Actor).ToArray();
+                state.EnmityOrder = enmityOrder;
 
                 if (state.Mode != EnmityFollowMode.Disabled)
                     QueueTick(immediate: true);
