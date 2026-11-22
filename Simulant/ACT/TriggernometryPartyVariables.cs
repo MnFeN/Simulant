@@ -41,11 +41,12 @@ namespace Simulant.ACT
                 var jobRole = GetProperty(jobType, "Role");
                 var jobRows = jobs.Select(job => getJob.Invoke(null, new object[] { (int)job })).ToArray();
                 var jobNames = jobRows.Select(row => (string)jobName.GetValue(row)).ToArray();
+                var hasRoleSlots = ids.Length == 4 || ids.Length == Role8.Length;
                 var rolesPerGroup = ids.Length / 4;
                 var expectedRoles = Enumerable.Repeat("Tank", rolesPerGroup)
                     .Concat(Enumerable.Repeat("Healer", rolesPerGroup))
                     .Concat(Enumerable.Repeat("DPS", rolesPerGroup * 2));
-                var isStandard = (ids.Length == 4 || ids.Length == 8) &&
+                var isStandard = hasRoleSlots &&
                     jobRows.Select(row => jobRole.GetValue(row).ToString()).SequenceEqual(expectedRoles);
 
                 var hexIds = ids.Select(id => id.ToString("X", CultureInfo.InvariantCulture)).ToArray();
@@ -57,6 +58,8 @@ namespace Simulant.ACT
                 var dictType = assembly.GetType(VariableNamespace + "VariableDictionary", throwOnError: true);
                 var newDict = GetCtor(dictType);
                 var setValue = GetMethod(dictType, "SetValue", typeof(string), typeof(string), typeof(string));
+
+                object MakeFlag(bool value) => newScalar.Invoke(new object[] { value ? "1" : "0" });
 
                 object MakeList(string[] values)
                 {
@@ -73,11 +76,16 @@ namespace Simulant.ACT
                     return result;
                 }
 
+                var isTankOrHealer = myIndex <= 2 * rolesPerGroup;
+                var isTankOrMelee = myIndex <= rolesPerGroup || (myIndex > 2 * rolesPerGroup && myIndex <= 3 * rolesPerGroup);
                 // 先完整构造 Triggernometry 的变量对象，再按 PartyListPanel 使用的锁发布。
                 var scalars = new Dictionary<string, object>
                 {
                     ["myIdx"] = newScalar.Invoke(new object[] { myIndex.ToString(CultureInfo.InvariantCulture) }),
-                    ["partyIsStandard"] = newScalar.Invoke(new object[] { isStandard ? "1" : "0" })
+                    ["myIdx_isG1"] = ids.Length == Role8.Length ? MakeFlag(myIndex % 2 == 1) : null,
+                    ["myIdx_isTH"] = hasRoleSlots ? MakeFlag(isTankOrHealer) : null,
+                    ["myIdx_isTM"] = hasRoleSlots ? MakeFlag(isTankOrMelee) : null,
+                    ["partyIsStandard"] = MakeFlag(isStandard)
                 };
                 var lists = new Dictionary<string, object>
                 {
