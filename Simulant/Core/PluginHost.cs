@@ -524,9 +524,11 @@ namespace Simulant.Core
             lock (_initLock)
             {
                 var snapshot = configuration.Copy();
-                // 全局设置窗口可能打开较久，保留期间自动保存的预设、悬浮窗和摄影棚设置。
+                // 全局设置窗口打开期间，区域选择、预设、悬浮窗和摄影棚可能各自保存。
                 snapshot.Presets = Configuration.Copy().Presets;
                 snapshot.QuickControlsLocation = Configuration.QuickControlsLocation;
+                snapshot.SelectedTerritoryId = Configuration.SelectedTerritoryId;
+                snapshot.SelectedPhaseKey = Configuration.SelectedPhaseKey;
                 snapshot.Studio = Configuration.Studio;
                 snapshot.Save(ConfigurationPath);
 
@@ -567,6 +569,28 @@ namespace Simulant.Core
             catch (Exception error)
             {
                 LogWarning("保存快捷控制悬浮窗位置失败：" + error.Message);
+            }
+        }
+
+        internal void SaveTerritorySelection(int territoryId, string phaseKey)
+        {
+            try
+            {
+                lock (_initLock)
+                {
+                    if (Disposed || (Configuration.SelectedTerritoryId == territoryId && Configuration.SelectedPhaseKey == phaseKey))
+                        return;
+
+                    var snapshot = Configuration.Copy();
+                    snapshot.SelectedTerritoryId = territoryId;
+                    snapshot.SelectedPhaseKey = phaseKey;
+                    snapshot.Save(ConfigurationPath);
+                    Configuration = snapshot;
+                }
+            }
+            catch (Exception error)
+            {
+                LogWarning("保存区域与阶段选择失败：" + error.Message);
             }
         }
 

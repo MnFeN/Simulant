@@ -111,20 +111,28 @@ namespace Simulant.UI
         private int _selectedTerritoryId;
         private bool _updatingTerritoryIdInput;
         private bool _updatingPhaseSelection;
+        private bool _restoredTerritorySelection;
 
         private void btnSelectTerritory_Click(object sender, EventArgs e)
         {
-            int territoryId;
-
             using (var form = new TerritoryForm())
             {
-                if (form.ShowDialog(this) != DialogResult.OK)
-                    return;
-
-                territoryId = form.TerritoryIdResult;
+                if (form.ShowDialog(this) == DialogResult.OK)
+                    numTerritoryId.Value = form.TerritoryIdResult;
             }
+        }
 
-            // 同步数值框的地图 ID
+        private void RestoreTerritorySelection()
+        {
+            if (_restoredTerritorySelection)
+                return;
+
+            _restoredTerritorySelection = true;
+            var saved = _host.Configuration;
+            var territoryId = saved.SelectedTerritoryId;
+            if (territoryId <= 0 || territoryId > numTerritoryId.Maximum)
+                return;
+
             _updatingTerritoryIdInput = true;
 
             try
@@ -136,7 +144,7 @@ namespace Simulant.UI
                 _updatingTerritoryIdInput = false;
             }
 
-            UpdateTerritoryData(territoryId);
+            UpdateTerritoryData(territoryId, saved.SelectedPhaseKey);
         }
 
         private void numTerritoryId_ValueChanged(object sender, EventArgs e)
@@ -144,11 +152,17 @@ namespace Simulant.UI
             if (_updatingTerritoryIdInput)
                 return;
 
-            var territoryId = (int)numTerritoryId.Value;
-            UpdateTerritoryData(territoryId);
+            UpdateTerritoryData((int)numTerritoryId.Value);
+            SaveTerritorySelection();
         }
 
-        private void UpdateTerritoryData(int territoryId)
+        private void SaveTerritorySelection()
+            => _host.SaveTerritorySelection(_selectedTerritoryId, GetPhaseSelectionKey(cbxPhase.SelectedItem));
+
+        private static string GetPhaseSelectionKey(object item)
+            => item is SimPresetBase preset ? preset.GetType().FullName : (item as PhaseData)?.Name;
+
+        private void UpdateTerritoryData(int territoryId, string phaseKey = null)
         {
             _selectedTerritoryId = territoryId;
 
@@ -197,7 +211,12 @@ namespace Simulant.UI
                 if (cbxPhase.Items.Count == 0 && territory.HasValue)
                     cbxPhase.Items.Add(PhaseData.TerritoryDefaults);
 
-                cbxPhase.SelectedIndex = cbxPhase.Items.Count > 0 ? 0 : -1;
+                var savedPhase = phaseKey == null ? null
+                    : cbxPhase.Items.Cast<object>().FirstOrDefault(item => GetPhaseSelectionKey(item) == phaseKey);
+                if (savedPhase != null)
+                    cbxPhase.SelectedItem = savedPhase;
+                else
+                    cbxPhase.SelectedIndex = cbxPhase.Items.Count > 0 ? 0 : -1;
             }
             finally
             {
@@ -254,6 +273,7 @@ namespace Simulant.UI
                 return;
 
             UpdateSelectedPresetControl();
+            SaveTerritorySelection();
 
             if (!_host.PluginReady ||
                 !TryGetSelectedPhase(out var phaseData) ||

@@ -19,6 +19,9 @@ namespace Simulant
         public bool QuickControlsEnabled { get; set; } = true;
         public Point? QuickControlsLocation { get; set; }
         public bool ShouldSerializeQuickControlsLocation() => QuickControlsLocation.HasValue;
+        public int SelectedTerritoryId { get; set; }
+        public bool ShouldSerializeSelectedTerritoryId() => SelectedTerritoryId > 0;
+        public string SelectedPhaseKey { get; set; }
         public double SimLatency { get; set; } = 0.35;
         public bool GenerateActLogs { get; set; }
         public bool DeveloperMode { get; set; }
@@ -47,6 +50,8 @@ namespace Simulant
                 AutoInstallUpdates = AutoInstallUpdates,
                 QuickControlsEnabled = QuickControlsEnabled,
                 QuickControlsLocation = QuickControlsLocation,
+                SelectedTerritoryId = SelectedTerritoryId,
+                SelectedPhaseKey = SelectedPhaseKey,
                 SimLatency = SimLatency,
                 GenerateActLogs = GenerateActLogs,
                 DeveloperMode = DeveloperMode,

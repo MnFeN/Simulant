@@ -39,7 +39,6 @@ namespace Simulant.UI
             toolTip.SetToolTip(lblSpawnPoint, "候选来自游戏当前所在的地图，第一项为推荐出生点。");
             logView.Bind(_host); // would RefreshLogView
             presetControl.Bind(_host);
-            UpdateTerritoryData(0);
             UpdateControlStates();
             Disposed += (_, __) => CloseToolWindows();
         }
@@ -282,6 +281,9 @@ namespace Simulant.UI
             }
 
             var gameDataReady = GameDataAvailable;
+            if (gameDataReady)
+                RestoreTerritorySelection();
+
             var pluginReady = _host.PluginReady && !_host.IsInitializing;
             var firewallEnabled = _host.FirewallEnabled;
             var firewallReady = pluginReady && firewallEnabled;

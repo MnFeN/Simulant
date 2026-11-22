@@ -60,6 +60,28 @@ namespace Simulant.Tests
             });
         }
 
+        public static void TerritorySelectionPersistsAndOldConfigurationsStartUnselected()
+        {
+            WithPath(path =>
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, "<Simulant />");
+                var configuration = Configuration.Load(path);
+                Assert(configuration.SelectedTerritoryId == 0 && configuration.SelectedPhaseKey == null,
+                    "旧配置缺少区域选择时应保持未选择。");
+
+                var draft = configuration.Copy();
+                draft.SelectedTerritoryId = 1238;
+                draft.SelectedPhaseKey = "时间结晶";
+                draft.Copy().Save(path);
+                var restored = Configuration.Load(path);
+                Assert(restored.SelectedTerritoryId == 1238 && restored.SelectedPhaseKey == "时间结晶",
+                    "区域 ID 和阶段标识应一起保存并恢复。");
+                Assert(configuration.SelectedTerritoryId == 0 && configuration.SelectedPhaseKey == null,
+                    "保存选择时应使用配置副本。");
+            });
+        }
+
         public static void GamePathDefaultsToEmptyAndPersistsWithoutAliasingTheDraft()
         {
             WithPath(path =>
