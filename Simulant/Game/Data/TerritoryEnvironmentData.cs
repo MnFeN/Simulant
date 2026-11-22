@@ -64,7 +64,10 @@ namespace Simulant.Game.Data
                 return default;
 
             var layout = new TerritoryLayoutData(game, territory.Bg.ExtractText());
-            var weather = ReadWeatherIds(layout.File, territory).FirstOrDefault();
+            var weatherIds = ReadWeatherIds(layout.File, territory);
+            var weather = weatherIds.FirstOrDefault(id => id > 2); // 天气 2 有时存在但光照看起来不对
+            if (weather == 0)
+                weather = weatherIds.DefaultIfEmpty().Max();
             var instance = territory.ContentFinderCondition.ValueNullable?.Content.GetValueOrDefault<InstanceContent>();
             var bgm = instance?.BGM.RowId ?? 0;
             if (bgm == 0)

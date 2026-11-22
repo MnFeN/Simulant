@@ -131,8 +131,7 @@ namespace Simulant.Core.Zone
                     SetSpawn(token);
                 }
 
-                if (!useDefaults || weather != 0)
-                    _host.EnvironmentService.SetWeather(weather);
+                _host.EnvironmentService.SetWeather(weather);
                 CheckCurrent(token);
                 _host.EnvironmentService.SetBgm(bgm);
             }
