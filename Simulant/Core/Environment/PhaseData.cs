@@ -27,6 +27,7 @@ namespace Simulant.Core.Environment
         }
 
         public static PhaseData Empty => new PhaseData("无数据", 0, 0, Enumerable.Empty<ushort?>());
+        internal static PhaseData TerritoryDefaults { get; } = new PhaseData("自动读取", 0, 0, Enumerable.Empty<ushort?>());
 
         public override string ToString()
             => $"[阶段] {Name}";
@@ -62,9 +63,6 @@ namespace Simulant.Core.Environment
                     .Select(x => (PhaseData)x.Field.GetValue(null))
                 );
             }
-
-            if (result.Count == 0)
-                result.Add(Empty);
 
             return result;
         }

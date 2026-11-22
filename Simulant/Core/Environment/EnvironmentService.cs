@@ -124,6 +124,26 @@ namespace Simulant.Core.Environment
             return PlayMapEffect(current.Director, (uint)slot, mask);
         }
 
+        internal static bool TryReadDefaultMapEffects(ContentDirector director, int requiredCount, out ushort?[] flags)
+        {
+            flags = Array.Empty<ushort?>();
+            var list = director.IsNull() ? default : director.MapEffects;
+            if (list.IsNull())
+                return requiredCount == 0;
+
+            var count = Math.Min((int)list.ItemCount.Get(), ContentDirector.MapEffectList.Capacity);
+            if (count < requiredCount)
+                return false;
+
+            var defaults = new ushort?[count];
+            for (var slot = 0; slot < count; slot++)
+                if (list.GetItem(slot).LayoutId.Get() != 0)
+                    defaults[slot] = 4;
+
+            flags = defaults;
+            return true;
+        }
+
         /// <summary>播放指定场地效果槽位的动画，并返回是否成功。</summary>
         public bool PlayMapEffect(uint slot, ushort timelineIndex, bool logFailure = true)
         {

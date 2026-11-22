@@ -155,14 +155,16 @@ namespace Simulant.UI
             var territoryName = "无";
             var instanceName = "无";
 
-            if (territoryId > 0 && GameDataService.Instance.GetSheet<TerritoryType>().TryGetRow((uint)_selectedTerritoryId, out var territory))
+            var territory = territoryId > 0 ? GameDataService.Instance.GetSheet<TerritoryType>().GetRowOrDefault((uint)territoryId) : null;
+            if (territory.HasValue)
             {
                 territoryName = territoryId == GreenScreenStage.TerritoryId ? GreenScreenStage.Name
-                    : territory.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
+                    : territory.Value.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
 
-                if (!string.IsNullOrWhiteSpace(territory.ContentFinderCondition.ValueNullable?.Name.ExtractText()))
+                var contentName = territory.Value.ContentFinderCondition.ValueNullable?.Name.ExtractText();
+                if (!string.IsNullOrWhiteSpace(contentName))
                 {
-                    instanceName = territory.ContentFinderCondition.Value.Name.ExtractText();
+                    instanceName = contentName;
                 }
             }
 
@@ -192,6 +194,9 @@ namespace Simulant.UI
                     .ThenBy(preset => preset.Name)
                     .ToArray();
                 cbxPhase.Items.AddRange(sims);
+                if (cbxPhase.Items.Count == 0 && territory.HasValue)
+                    cbxPhase.Items.Add(PhaseData.TerritoryDefaults);
+
                 cbxPhase.SelectedIndex = cbxPhase.Items.Count > 0 ? 0 : -1;
             }
             finally

@@ -25,12 +25,10 @@ namespace Simulant.Game.Data
             var territory = game.GetSheet<TerritoryType>().GetRowOrDefault(territoryId);
             var name = territory?.PlaceName.ValueNullable?.Name.ExtractText();
             var layout = new TerritoryLayoutData(game, territory?.Bg.ExtractText());
-            var weatherIds = ReadWeatherIds(layout.File, layout.File.SceneBody);
-            if (weatherIds.Length == 0 && territory?.WeatherRate.ValueNullable is WeatherRate rate)
-                weatherIds = rate.Weather.Select(row => row.RowId).Where(IsWeatherId).Select(id => (byte)id).Distinct().OrderBy(id => id).ToArray();
+            var weatherIds = ReadWeatherIds(layout.File, territory);
 
             var weatherSheet = game.GetSheet<Weather>();
-            var weathers = weatherIds.Select(id =>
+            var weathers = weatherIds.OrderBy(id => id).Select(id =>
             {
                 var row = weatherSheet.GetRowOrDefault(id);
                 return new WeatherChoice(id, row?.Name.ExtractText(), row?.Icon ?? 0);
@@ -60,18 +58,49 @@ namespace Simulant.Game.Data
             return new TerritoryEnvironmentData(string.IsNullOrWhiteSpace(name) ? $"区域 {territoryId}" : name, weathers, resources);
         }
 
-        // LVB 的 SCN1 设置引用一张 32 项的 UInt16 天气表，筛选规则与 Hyperborea 一致。
-        private static byte[] ReadWeatherIds(LayoutFile file, int scene)
+        internal static (byte Weather, ushort Bgm, int RequiredMapEffectCount) ReadDefaults(GameDataService game, uint territoryId)
         {
-            if (scene < 0)
-                return Array.Empty<byte>();
+            if (!game.GetSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
+                return default;
 
+            var layout = new TerritoryLayoutData(game, territory.Bg.ExtractText());
+            var weather = ReadWeatherIds(layout.File, territory).FirstOrDefault();
+            var instance = territory.ContentFinderCondition.ValueNullable?.Content.GetValueOrDefault<InstanceContent>();
+            var bgm = instance?.BGM.RowId ?? 0;
+            if (bgm == 0)
+            {
+                var music = territory.BGM;
+                bgm = music.Is<BGM>() ? music.RowId
+                    : music.GetValueOrDefault<BGMSituation>()?.DaytimeID.RowId ?? 0;
+            }
+
+            var groups = instance?.ContentDirectorManagedSG;
+            var requiredCount = 0;
+            if (groups.HasValue && groups.Value.RowId != 0 && groups.Value.TryGetValue(out var managedGroups))
+            {
+                foreach (var group in managedGroups)
+                    if (group.LayoutId != 0)
+                        requiredCount = Math.Max(requiredCount, group.SubrowId + 1);
+            }
+
+            return (weather, (ushort)bgm, requiredCount);
+        }
+
+        // LVB 的 SCN1 设置引用一张 32 项的 UInt16 天气表，筛选规则参考 Hyperborea
+        private static byte[] ReadWeatherIds(LayoutFile file, TerritoryType? territory)
+        {
+            var scene = file.SceneBody;
             var settings = file.Follow(scene, scene + 0x08);
             var table = file.Follow(settings, settings + 0x40);
-            return file.ContainsArray(table, 32, 2)
+            var weatherIds = file.ContainsArray(table, 32, 2)
                 ? Enumerable.Range(0, 32).Select(i => (uint)file.UInt16(table + i * 2)).Where(IsWeatherId)
-                    .Select(id => (byte)id).Distinct().OrderBy(id => id).ToArray()
+                    .Select(id => (byte)id).Distinct().ToArray()
                 : Array.Empty<byte>();
+
+            if (weatherIds.Length == 0 && territory?.WeatherRate.ValueNullable is WeatherRate rate)
+                return rate.Weather.Select(row => row.RowId).Where(IsWeatherId).Select(id => (byte)id).Distinct().ToArray();
+
+            return weatherIds;
         }
 
         private static bool IsWeatherId(uint id) => id > 0 && id < byte.MaxValue;

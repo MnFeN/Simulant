@@ -1,5 +1,6 @@
 using Simulant.Core.Environment;
 using Simulant.Game;
+using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game.Event;
 using System;
 using System.Diagnostics;
@@ -56,8 +57,13 @@ namespace Simulant.Core.Zone
                 placeBeforeReady = greenScreen == null && (phaseSpawn.HasValue || recommended?.Circle != null);
             }
 
+            var useDefaults = phaseData == PhaseData.TerritoryDefaults && greenScreen == null;
+            var defaults = useDefaults ? TerritoryEnvironmentData.ReadDefaults(GameDataService.Instance, territoryId) : default;
+            var weather = useDefaults ? defaults.Weather : phaseData.Weather;
+            var bgm = useDefaults ? defaults.Bgm : phaseData.BGM;
+            var mapEffectFlags = phaseData.MapEffectFlags;
             var clock = Stopwatch.StartNew();
-            _host.LogSim($"进入阶段 {phaseData.Name}：天气 {phaseData.Weather}，BGM {phaseData.BGM}，坐标 {spawn?.ToString(null, System.Globalization.CultureInfo.InvariantCulture) ?? "null"}");
+            _host.LogSim($"进入阶段 {phaseData.Name}：天气 {weather}，BGM {bgm}，坐标 {spawn?.ToString(null, System.Globalization.CultureInfo.InvariantCulture) ?? "null"}");
 
             void CheckCurrent(CancellationToken token)
             {
@@ -75,9 +81,9 @@ namespace Simulant.Core.Zone
                 PlacePlayer(spawn.Value, () => CheckCurrent(token));
             }
 
-            var needsDirector = false;
+            var needsDirector = useDefaults && ContentDirectorId != 0;
 
-            foreach (var flag in phaseData.MapEffectFlags)
+            foreach (var flag in mapEffectFlags)
                 needsDirector |= flag.HasValue;
 
             string lastState = null;
@@ -87,12 +93,19 @@ namespace Simulant.Core.Zone
                 CheckCurrent(token);
                 var ready = IsMapReady(territoryId, out var state);
 
-                if (needsDirector)
+                if (ready && (needsDirector || useDefaults))
                 {
                     var framework = EventFramework.Instance;
-                    var directorReady = !framework.IsNull() && !framework.ContentDirector.IsNull();
-                    ready &= directorReady;
+                    var director = framework.IsNull() ? default : framework.ContentDirector;
+                    var directorReady = !director.IsNull();
+                    ready = !needsDirector || directorReady;
                     state += $"；场地效果控制器已创建={directorReady}";
+                    if (ready && useDefaults)
+                    {
+                        ready = EnvironmentService.TryReadDefaultMapEffects(director, defaults.RequiredMapEffectCount, out var flags);
+                        mapEffectFlags = flags;
+                        state += $"；场地效果槽位已就绪={ready}";
+                    }
                 }
 
                 if (state != lastState)
@@ -118,9 +131,10 @@ namespace Simulant.Core.Zone
                     SetSpawn(token);
                 }
 
-                _host.EnvironmentService.SetWeather(phaseData.Weather);
+                if (!useDefaults || weather != 0)
+                    _host.EnvironmentService.SetWeather(weather);
                 CheckCurrent(token);
-                _host.EnvironmentService.SetBgm(phaseData.BGM);
+                _host.EnvironmentService.SetBgm(bgm);
             }
 
             return _phaseApplication.ApplyAsync(token =>
@@ -130,7 +144,7 @@ namespace Simulant.Core.Zone
             }, Apply, Ready, async token =>
             {
                 // 地图就绪后，副本的部分场地组仍可能在加载。
-                await _phaseApplication.ApplyMapEffectsAsync(phaseData.MapEffectFlags, (slot, mask) =>
+                await _phaseApplication.ApplyMapEffectsAsync(mapEffectFlags, (slot, mask) =>
                 {
                     CheckCurrent(token);
                     return _host.EnvironmentService.PlayMapEffect(slot, mask, logFailure: false);
