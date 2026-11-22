@@ -1,21 +1,10 @@
-﻿#pragma warning disable IDE1006
-using Simulant.ACT;
+#pragma warning disable IDE1006
 using Simulant.Core;
 using Simulant.Core.Entity;
-using Simulant.Core.Environment;
-using Simulant.Core.Zone;
 using Simulant.Game;
-using Simulant.Game.Data;
-using Lumina.Excel.Sheets;
-using Simulant.Game.FFCS.Client.Game;
-using Simulant.Simulation;
 using Simulant.Utils;
 using System;
-using System.Buffers.Text;
 using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -45,7 +34,9 @@ namespace Simulant.UI
         {
             _host = host;
             ConfigureMainMenu();
-            new ToolTip(components).SetToolTip(btnInitPlugin, "插件会自动连接游戏。需要重试时，请先关闭防火墙并完成清理。");
+            var toolTip = new ToolTip(components);
+            toolTip.SetToolTip(btnInitPlugin, "插件会自动连接游戏。需要重试时，请先关闭防火墙并完成清理。");
+            toolTip.SetToolTip(lblSpawnPoint, "候选来自游戏当前所在的地图，第一项为推荐出生点。");
             logView.Bind(_host); // would RefreshLogView
             presetControl.Bind(_host);
             UpdateTerritoryData(0);
@@ -321,6 +312,7 @@ namespace Simulant.UI
             // 防火墙开启：允许加载区域、退出模拟
             btnSimEnter.Enabled = firewallReady && !_switchingTerritory;
             btnSimExit.Enabled = firewallReady && !_switchingTerritory;
+            UpdateSpawnPointPicker(firewallReady && gameDataReady, !_switchingTerritory);
             presetControl.UpdateQuickControls();
         }
 
@@ -420,203 +412,6 @@ namespace Simulant.UI
         }
 
         #endregion Firewall
-        #region Territory
-        private bool _switchingTerritory;
-        internal bool IsSwitchingTerritory => _switchingTerritory;
-
-        private int _selectedTerritoryId;
-        private bool _updatingTerritoryIdInput;
-        private bool _updatingPhaseSelection;
-
-        private void btnSelectTerritory_Click(object sender, EventArgs e)
-        {
-            int territoryId;
-
-            using (var form = new TerritoryForm())
-            {
-                if (form.ShowDialog(this) != DialogResult.OK)
-                    return;
-
-                territoryId = form.TerritoryIdResult;
-            }
-
-            // 同步数值框的地图 ID
-            _updatingTerritoryIdInput = true;
-
-            try
-            {
-                numTerritoryId.Value = territoryId;
-            }
-            finally
-            {
-                _updatingTerritoryIdInput = false;
-            }
-
-            UpdateTerritoryData(territoryId);
-        }
-
-        private void numTerritoryId_ValueChanged(object sender, EventArgs e)
-        {
-            if (_updatingTerritoryIdInput)
-                return;
-
-            var territoryId = (int)numTerritoryId.Value;
-            UpdateTerritoryData(territoryId);
-        }
-
-        private void UpdateTerritoryData(int territoryId)
-        {
-            _selectedTerritoryId = territoryId;
-
-            var territoryName = "无";
-            var instanceName = "无";
-
-            if (territoryId > 0 && GameDataService.Instance.GetSheet<TerritoryType>().TryGetRow((uint)_selectedTerritoryId, out var territory))
-            {
-                territoryName = territoryId == GreenScreenStage.TerritoryId ? GreenScreenStage.Name
-                    : territory.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
-
-                if (!string.IsNullOrWhiteSpace(territory.ContentFinderCondition.ValueNullable?.Name.ExtractText()))
-                {
-                    instanceName = territory.ContentFinderCondition.Value.Name.ExtractText();
-                }
-            }
-
-            lblZoneName.Text = territoryName == "无" ? "未选择区域" : territoryName;
-            lblTerritory.Text = instanceName == "无" ? string.Empty : instanceName;
-
-            presetControl.ClearPreset();
-
-            _updatingPhaseSelection = true;
-
-            try
-            {
-                cbxPhase.Items.Clear();
-
-                var phases = PhaseData.GetPhases(_selectedTerritoryId);
-                cbxPhase.Items.AddRange(phases.Cast<object>().ToArray());
-
-                var sims = Assembly.GetExecutingAssembly().GetTypes() // 应该放在别的地方
-                .Where(type =>
-                        typeof(SimPresetBase).IsAssignableFrom(type)
-                        && !type.IsAbstract
-                        && type.GetConstructor(Type.EmptyTypes) != null)
-                    .Select(type => (SimPresetBase)Activator.CreateInstance(type))
-                    .Where(preset => preset.TerritoryId == _selectedTerritoryId)
-                    .OrderBy(preset => preset.GetType().GetCustomAttribute<PhaseSelectionOrderAttribute>()?.SortIndex
-                        ?? double.PositiveInfinity)
-                    .ThenBy(preset => preset.Name)
-                    .ToArray();
-                cbxPhase.Items.AddRange(sims);
-                cbxPhase.SelectedIndex = cbxPhase.Items.Count > 0 ? 0 : -1;
-            }
-            finally
-            {
-                _updatingPhaseSelection = false;
-            }
-
-            UpdateSelectedPresetControl();
-        }
-
-        private void UpdateSelectedPresetControl()
-        {
-            if (cbxPhase.SelectedItem is SimPresetBase preset)
-            {
-                presetControl.LoadPreset(preset);
-            }
-            else
-            {
-                presetControl.ClearPreset();
-            }
-        }
-
-        private bool TryGetSelectedPhase(out PhaseData phaseData)
-        {
-            if (cbxPhase.SelectedItem is PhaseData p)
-            {
-                phaseData = p;
-                return true;
-            }
-
-            if (cbxPhase.SelectedItem is SimPresetBase s)
-            {
-                phaseData = s.Phase;
-                return true;
-            }
-
-            phaseData = PhaseData.Empty;
-            return false;
-        }
-
-        private bool IsCurrentTerritorySelected()
-        {
-            if (_selectedTerritoryId <= 0)
-                return false;
-
-            if (!_host.PluginReady)
-                return false;
-
-            return GameMain.Instance.CurrentTerritoryTypeId == _selectedTerritoryId;
-        }
-
-        private async void cbxPhase_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (_updatingPhaseSelection || _switchingTerritory)
-                return;
-
-            UpdateSelectedPresetControl();
-
-            if (!_host.PluginReady ||
-                !TryGetSelectedPhase(out var phaseData) ||
-                !IsCurrentTerritorySelected())
-                return;
-
-            await _host.ZoneService.EnterPhase(phaseData);
-        }
-
-        private async void btnSimEnter_Click(object sender, EventArgs e)
-        {
-            if (_switchingTerritory)
-            {
-                _host.LogWarning("正在切换区域，跳过重复操作。");
-                return;
-            }
-
-            _switchingTerritory = true;
-            UpdateControlStates();
-
-            try
-            {
-                if (_selectedTerritoryId <= 0)
-                {
-                    _host.LogError("未选择有效的区域。");
-                    return;
-                }
-
-                if (!TryGetSelectedPhase(out var phaseData))
-                {
-                    _host.LogError("未选择有效的阶段或模拟预设。");
-                    return;
-                }
-
-                StopCurrentSession();
-
-                if (!_host.ZoneService.TryEnterTerritory(_selectedTerritoryId))
-                    return;
-
-                if (await _host.ZoneService.EnterPhase(phaseData) && !IsDisposed && !Disposing && !_host.Disposed
-                    && _host.ZoneService.ActiveGreenScreen != null)
-                {
-                    OpenGreenScreen();
-                }
-            }
-            finally
-            {
-                _switchingTerritory = false;
-                UpdateControlStates();
-            }
-        }
-
         private bool GameDataAvailable => _host.GameDataReady && !_host.GameDataLoading;
 
         private void OpenActionList()
@@ -679,15 +474,6 @@ namespace Simulant.UI
             }
         }
 
-        private void btnSimExit_Click(object sender, EventArgs e)
-        {
-            _host.ZoneService.CancelPendingPhase();
-            StopCurrentSession();
-            _host.StopDebugEntities();
-            _host.ZoneService.ExitToInitialTerritory();
-        }
-
-        #endregion Territory
         internal void RefreshLogView()
             => logView.RefreshLogView();
 

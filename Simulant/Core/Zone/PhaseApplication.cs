@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,14 +29,41 @@ namespace Simulant.Core.Zone
         }
 
         internal Task<bool> ApplyAsync(Action<CancellationToken> prepare,
-            Action<CancellationToken> apply, Func<CancellationToken, bool> isReady)
+            Action<CancellationToken> apply, Func<CancellationToken, bool> isReady, Func<CancellationToken, Task> complete = null)
             => ApplyAsync(async token =>
         {
             prepare(token);
             await WaitUntilAsync(isReady, token, "地图就绪");
             token.ThrowIfCancellationRequested();
             apply(token);
+            if (complete != null)
+                await complete(token);
         });
+
+        internal async Task ApplyMapEffectsAsync(IReadOnlyList<ushort?> flags, Func<uint, ushort, bool> play, CancellationToken token)
+        {
+            var pending = new List<(uint Slot, ushort Mask)>();
+            for (var slot = 0; slot < flags.Count; slot++)
+                if (flags[slot] is ushort mask)
+                    pending.Add(((uint)slot, mask));
+
+            try
+            {
+                await WaitUntilAsync(current =>
+                {
+                    pending.RemoveAll(effect =>
+                    {
+                        current.ThrowIfCancellationRequested();
+                        return play(effect.Slot, effect.Mask);
+                    });
+                    return pending.Count == 0;
+                }, token, "场地动画就绪");
+            }
+            catch (TimeoutException error)
+            {
+                throw new TimeoutException($"{error.Message}尚未播放的槽位：{string.Join("、", pending.ConvertAll(effect => effect.Slot))}。", error);
+            }
+        }
 
         internal async Task WaitUntilAsync(Func<CancellationToken, bool> isReady,
             CancellationToken token, string stage)

@@ -12,7 +12,7 @@ namespace Simulant.Core.Environment
         public readonly string Name;
         public readonly byte Weather;
         public readonly ushort BGM;
-        /// <summary>默认使用当前地图的出生圈中心；只有需要特殊位置的阶段才覆盖。</summary>
+        /// <summary>Overrides the current territory's recommended spawn point for this phase.</summary>
         public virtual Vector3? Spawn => null;
 
         /// <summary>下标为地图效果槽位；值为 null 时跳过该槽位。</summary>

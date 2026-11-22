@@ -2,10 +2,10 @@ using Lumina;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using Simulant.Game.Data;
-using Simulant.Core.Entity;
 using System;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using ActionRow = Lumina.Excel.Sheets.Action;
@@ -97,16 +97,29 @@ namespace Simulant.Tests.Native
 
         private static void VerifyEntranceBarriers(GameDataService data)
         {
-            var load = typeof(GameDataService).Assembly.GetType("Simulant.Core.Zone.EntranceBarrier")
-                .GetMethod("Load", BindingFlags.Static | BindingFlags.NonPublic);
+            var spawnData = typeof(GameDataService).Assembly.GetType("Simulant.Core.Zone.TerritorySpawnData");
+            var scan = spawnData.GetMethod("Scan", BindingFlags.Static | BindingFlags.NonPublic);
+            var ids = spawnData.GetProperty("BarrierLayoutIds", BindingFlags.Instance | BindingFlags.NonPublic);
+            var points = spawnData.GetProperty("Points", BindingFlags.Instance | BindingFlags.NonPublic);
+            var pointType = points.PropertyType.GetElementType();
+            var position = pointType.GetProperty("Position", BindingFlags.Instance | BindingFlags.NonPublic);
+            var circle = pointType.GetProperty("Circle", BindingFlags.Instance | BindingFlags.NonPublic);
+            var circleId = circle.PropertyType.GetProperty("LayoutId", BindingFlags.Instance | BindingFlags.NonPublic);
+            var territories = data.GetSheet<TerritoryType>();
+            (uint[] LayoutIds, Vector3? SpawnPosition, uint?[] CircleIds) LoadBarriers(uint territory)
+            {
+                var result = scan.Invoke(null, new object[] { data, territories.GetRow(territory) });
+                var candidates = ((Array)points.GetValue(result)).Cast<object>().ToArray();
+                return ((uint[])ids.GetValue(result), candidates.Length == 0 ? null : (Vector3?)position.GetValue(candidates[0]),
+                    candidates.Select(point => circle.GetValue(point) is object entrance ? (uint?)circleId.GetValue(entrance) : null).ToArray());
+            }
+
             // 回放的入口生成包，坐标按模拟器的 XY 地面、Z 高度表示。
             var samples = new[]
             {
                 new
                 {
                     Territory = 1238u,
-                    BaseId = 2007457u,
-                    Layout = 0xA58C08u,
                     Wall = 0xA58C07u,
                     X = 100f,
                     Y = 115f,
@@ -115,8 +128,6 @@ namespace Simulant.Tests.Native
                 new
                 {
                     Territory = 887u,
-                    BaseId = 2000182u,
-                    Layout = 0x7C1907u,
                     Wall = 0x7C190Bu,
                     X = 100f,
                     Y = 115f,
@@ -125,8 +136,6 @@ namespace Simulant.Tests.Native
                 new
                 {
                     Territory = 1363u,
-                    BaseId = 2000182u,
-                    Layout = 0xBC174Eu,
                     Wall = 0xBC174Cu,
                     X = 100.4117f,
                     Y = 115.7509f,
@@ -135,8 +144,6 @@ namespace Simulant.Tests.Native
                 new
                 {
                     Territory = 777u,
-                    BaseId = 2007457u,
-                    Layout = 0x700D77u,
                     Wall = 0x700D76u,
                     X = 100f,
                     Y = 116f,
@@ -145,8 +152,6 @@ namespace Simulant.Tests.Native
                 new
                 {
                     Territory = 968u,
-                    BaseId = 2007457u,
-                    Layout = 0x875BE2u,
                     Wall = 0x875BE0u,
                     X = 100f,
                     Y = 118f,
@@ -155,8 +160,6 @@ namespace Simulant.Tests.Native
                 new
                 {
                     Territory = 1036u,
-                    BaseId = 2000182u,
-                    Layout = 0x3E82C3u,
                     Wall = 0x3E82C2u,
                     X = 361.8817f,
                     Y = -225.1813f,
@@ -165,8 +168,6 @@ namespace Simulant.Tests.Native
                 new
                 {
                     Territory = 1045u,
-                    BaseId = 2000182u,
-                    Layout = 0x3FBFCFu,
                     Wall = 0x3FBFD2u,
                     X = -16f,
                     Y = 0f,
@@ -175,8 +176,6 @@ namespace Simulant.Tests.Native
                 new
                 {
                     Territory = 1069u,
-                    BaseId = 2000182u,
-                    Layout = 0x8E2A70u,
                     Wall = 0x8E29C2u,
                     X = 5f,
                     Y = 246f,
@@ -186,29 +185,67 @@ namespace Simulant.Tests.Native
 
             foreach (var sample in samples)
             {
-                var specs = (EventObjectSpawnSpec[])load.Invoke(null, new object[]
-                {
-                    data, data.GetSheet<TerritoryType>().GetRow(sample.Territory)
-                });
-                Check(specs.Length == 1, $"区域 {sample.Territory} 只能选中出生圈，不能选中同 ID 的其他机关。");
-                var spec = specs[0];
-                Check(spec.BaseId == sample.BaseId && spec.LayoutId == sample.Layout && spec.GimmickId == sample.Wall &&
-                    Math.Abs(spec.Pos.X - sample.X) < 0.001f && Math.Abs(spec.Pos.Y - sample.Y) < 0.001f && Math.Abs(spec.Pos.Z - sample.Z) < 0.001f &&
-                    spec.Heading == 0 && spec.TargetableFlags == 5 && spec.EventState == 0,
-                    $"区域 {sample.Territory} 的出生圈参数必须与回放一致。");
+                var (layoutIds, spawnPosition, circleIds) = LoadBarriers(sample.Territory);
+                Check(layoutIds.Length == 1 && layoutIds[0] == sample.Wall,
+                    $"区域 {sample.Territory} 应选中回放中 EObj 绑定的出生圈。");
+                Check(spawnPosition.HasValue &&
+                    Vector3.Distance(spawnPosition.Value, new Vector3(sample.X, sample.Y, sample.Z)) < 0.001f,
+                    $"区域 {sample.Territory} 的出生点必须与回放一致。");
+                Check(circleIds[0] == sample.Wall, $"区域 {sample.Territory} 的推荐出生点应保留圈的 LayoutId。");
             }
 
-            foreach (var territory in new uint[]
+            var diadem = LoadBarriers(656);
+            Check(diadem.LayoutIds.Length == 9 && diadem.LayoutIds.Contains(6600219u),
+                "云冠群岛应识别九个入场圈，包括北侧的 _fly 版入场圈。");
+            Check(diadem.CircleIds.OfType<uint>().OrderBy(id => id).SequenceEqual(diadem.LayoutIds.OrderBy(id => id)),
+                "云冠群岛九个入场圈都应出现在候选出生点中。");
+            Check(diadem.SpawnPosition.HasValue &&
+                Vector3.Distance(diadem.SpawnPosition.Value, new Vector3(-766.9147f, 513.2558f, 359.8997f)) < 0.001f,
+                "云冠群岛应使用首个 EObj 的场景坐标作为回退出生点。");
+            var quest = LoadBarriers(496);
+            Check(quest.LayoutIds.Length == 0 && quest.SpawnPosition == new Vector3(224.01f, -137.108f, 300.739f),
+                "任务战斗应使用本区域的 Level 落点，并排除共享场景里属于其他副本的圈。");
+            Check(LoadBarriers(223).CircleIds.OfType<uint>().SequenceEqual(new[] { 4253304u }) &&
+                LoadBarriers(298).CircleIds.OfType<uint>().SequenceEqual(new[] { 4258415u }) && !quest.CircleIds.Any(id => id.HasValue),
+                "共用库尔札斯中央高地地图的区域应各自列出所属入场圈。");
+
+            var guildhest = LoadBarriers(214);
+            Check(guildhest.LayoutIds.SequenceEqual(new[] { 4133115u }) &&
+                guildhest.SpawnPosition == new Vector3(-165.3214f, -213.3883f, 44.63107f),
+                "行会令应匹配其事件图层的出生点和圈。");
+            var field = LoadBarriers(134);
+            Check(field.LayoutIds.Length == 0 && field.SpawnPosition == new Vector3(224f, -261f, 113.1f),
+                "野外应落在主传送水晶附近的玩家出生范围。");
+            Check(LoadBarriers(399).SpawnPosition == new Vector3(-488.7798f, 734.6368f, 137.5155f),
+                "没有传送水晶的野外地图应使用 Warp 指定的玩家出生范围。");
+
+            var jeuno = LoadBarriers(1248);
+            Check(jeuno.LayoutIds.Length == 1 && jeuno.LayoutIds[0] == 10918242,
+                "朱诺：第一巡行应识别 b0286 入场圈。");
+            var onsal = LoadBarriers(888);
+            Check(onsal.LayoutIds.Length == 3 && onsal.LayoutIds.Contains(8131163u),
+                "昂萨哈凯尔应识别 EObj 跨文件绑定的三个入场圈。");
+            foreach (var territory in new[] { 936u, 937u })
             {
-                755,
-                1122
+                var delubrum = LoadBarriers(territory);
+                Check(delubrum.LayoutIds.Length == 1 && delubrum.LayoutIds[0] == 8548023,
+                    $"区域 {territory} 应识别女王古殿入场圈。");
             }
+            var crescent = LoadBarriers(1346);
+            Check(crescent.LayoutIds.Length == 0 && crescent.SpawnPosition == new Vector3(888.4536f, 882.024f, 258.5f),
+                "新月岛北部应落在入口区域，并保留活动圈。");
+            Check(LoadBarriers(1252).SpawnPosition == new Vector3(850.9487f, -704.1298f, 73.05965f),
+                "新月岛南部应优先使用 PublicContent 指定的出生范围。");
 
-            )
-                Check(((EventObjectSpawnSpec[])load.Invoke(null, new object[]
-                {
-                data, data.GetSheet<TerritoryType>().GetRow(territory)
-                })).Length == 1,
+            var palace = LoadBarriers(561);
+            Check(palace.LayoutIds.Length == 42 && palace.LayoutIds.Contains(6264186u) && !palace.SpawnPosition.HasValue,
+                "死者宫殿应识别房间模板里的 b0945 圈，并由实际楼层决定出生点。");
+            var pilgrim = LoadBarriers(1289);
+            Check(pilgrim.LayoutIds.Contains(11781484u) && pilgrim.LayoutIds.Contains(11936290u) && pilgrim.SpawnPosition.HasValue,
+                "朝圣交错路应同时识别房间模板和 EObj 绑定的圈，并从 EObj 获取回退出生点。");
+
+            foreach (var territory in new[] { 755u, 1122u })
+                Check(LoadBarriers(territory).LayoutIds.Length == 1,
                     $"现有预设区域 {territory} 的场地资源也应能识别出生圈。");
         }
 

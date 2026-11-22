@@ -125,24 +125,25 @@ namespace Simulant.Core.Environment
         }
 
         /// <summary>播放指定场地效果槽位的动画，并返回是否成功。</summary>
-        public bool PlayMapEffect(uint slot, ushort timelineIndex)
+        public bool PlayMapEffect(uint slot, ushort timelineIndex, bool logFailure = true)
         {
             var contentDirector = EventFramework.Instance.ContentDirector;
 
             if (contentDirector.IsNull())
             {
-                _host.LogWarning($"当前地图中不存在 ContentDirector，无法播放场地动画（槽位 {slot}，动画 {timelineIndex}）。");
+                if (logFailure)
+                    _host.LogWarning($"当前地图中不存在 ContentDirector，无法播放场地动画（槽位 {slot}，动画 {timelineIndex}）。");
                 return false;
             }
 
-            return PlayMapEffect(contentDirector, slot, timelineIndex);
+            return PlayMapEffect(contentDirector, slot, timelineIndex, logFailure);
         }
 
-        private bool PlayMapEffect(ContentDirector director, uint slot, ushort timelineIndex)
+        private bool PlayMapEffect(ContentDirector director, uint slot, ushort timelineIndex, bool logFailure = true)
         {
             bool success = director.PlayMapEffectTimeline(slot, timelineIndex);
 
-            if (!success)
+            if (!success && logFailure)
             {
                 _host.LogWarning($"播放场地动画失败（槽位 {slot}，动画 {timelineIndex}）。");
             }

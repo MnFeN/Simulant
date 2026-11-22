@@ -3,7 +3,6 @@ using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Simulant.Game.Data
 {
@@ -25,8 +24,8 @@ namespace Simulant.Game.Data
         {
             var territory = game.GetSheet<TerritoryType>().GetRowOrDefault(territoryId);
             var name = territory?.PlaceName.ValueNullable?.Name.ExtractText();
-            var scene = ReadScene(game, territory?.Bg.ExtractText());
-            var weatherIds = ReadWeatherIds(scene.File, scene.Body);
+            var layout = new TerritoryLayoutData(game, territory?.Bg.ExtractText());
+            var weatherIds = ReadWeatherIds(layout.File, layout.File.SceneBody);
             if (weatherIds.Length == 0 && territory?.WeatherRate.ValueNullable is WeatherRate rate)
                 weatherIds = rate.Weather.Select(row => row.RowId).Where(IsWeatherId).Select(id => (byte)id).Distinct().OrderBy(id => id).ToArray();
 
@@ -40,7 +39,7 @@ namespace Simulant.Game.Data
             var resources = new Dictionary<int, MapEffectResource>();
             if (slots.Length > 0)
             {
-                var paths = ReadSharedGroups(game, scene.File, scene.Body, new HashSet<uint>(slots.Select(slot => slot.LayoutId)));
+                var paths = layout.ReadSharedGroups(slots.Select(slot => slot.LayoutId));
                 var timelines = new Dictionary<string, MapEffectTimeline[]>(StringComparer.OrdinalIgnoreCase);
                 foreach (var slot in slots)
                 {
@@ -61,12 +60,6 @@ namespace Simulant.Game.Data
             return new TerritoryEnvironmentData(string.IsNullOrWhiteSpace(name) ? $"区域 {territoryId}" : name, weathers, resources);
         }
 
-        private static (LayoutFile File, int Body) ReadScene(GameDataService game, string background)
-        {
-            var file = new LayoutFile(string.IsNullOrEmpty(background) ? null : game.GetFile<FileResource>($"bg/{background}.lvb")?.Data);
-            return (file, file.SceneBody);
-        }
-
         // LVB 的 SCN1 设置引用一张 32 项的 UInt16 天气表，筛选规则与 Hyperborea 一致。
         private static byte[] ReadWeatherIds(LayoutFile file, int scene)
         {
@@ -82,65 +75,6 @@ namespace Simulant.Game.Data
         }
 
         private static bool IsWeatherId(uint id) => id > 0 && id < byte.MaxValue;
-
-        // 运行时槽位给出 LayoutId。沿 LVB 引用的 LGB 查找同编号的 SharedGroup 实例即可定位 SGB 路径。
-        private static Dictionary<uint, string> ReadSharedGroups(GameDataService game, LayoutFile sceneFile, int scene, HashSet<uint> wanted)
-        {
-            var matches = new Dictionary<uint, string>();
-            if (scene < 0)
-                return matches;
-
-            var references = sceneFile.Follow(scene, scene + 0x14);
-            var referenceCount = sceneFile.Int32(scene + 0x18);
-            if (!sceneFile.ContainsArray(references, referenceCount, 4))
-                return matches;
-
-            for (var i = 0; i < referenceCount && wanted.Count > 0; i++)
-            {
-                var path = sceneFile.StringAt(sceneFile.Follow(references, references + i * 4));
-                if (!path.EndsWith(".lgb", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var layerFile = new LayoutFile(game.GetFile<FileResource>(path)?.Data);
-                if (!layerFile.HasTag(12, "LGP1"))
-                    continue;
-
-                const int group = 20;
-                var layers = layerFile.Follow(group, group + 8);
-                var layerCount = layerFile.Int32(group + 12);
-                if (!layerFile.ContainsArray(layers, layerCount, 4))
-                    continue;
-
-                for (var layerIndex = 0; layerIndex < layerCount && wanted.Count > 0; layerIndex++)
-                {
-                    var layer = layerFile.Follow(layers, layers + layerIndex * 4);
-                    var entries = layerFile.Follow(layer, layer + 8);
-                    var count = layerFile.Int32(layer + 12);
-                    if (!layerFile.ContainsArray(entries, count, 4))
-                        continue;
-
-                    for (var j = 0; j < count; j++)
-                    {
-                        var entry = layerFile.Follow(entries, entries + j * 4);
-                        if (entry < 0 || layerFile.Int32(entry) != (int)Lumina.Data.Parsing.Layer.LayerEntryType.SharedGroup)
-                            continue;
-
-                        var id = unchecked((uint)layerFile.Int32(entry + 4));
-                        if (!wanted.Contains(id))
-                            continue;
-
-                        var sgb = layerFile.StringAt(layerFile.Follow(entry, entry + 48));
-                        if (sgb.EndsWith(".sgb", StringComparison.OrdinalIgnoreCase))
-                        {
-                            matches.Add(id, sgb);
-                            wanted.Remove(id);
-                        }
-                    }
-                }
-            }
-
-            return matches;
-        }
 
         // SGB 的 SCN1 配置保存 16 个状态位对应的时间轴编号，每条时间轴记录都有相对名称偏移。
         private static MapEffectTimeline[] ReadTimelines(LayoutFile file, int scene)
@@ -181,40 +115,6 @@ namespace Simulant.Game.Data
             return results.ToArray();
         }
 
-        private sealed class LayoutFile
-        {
-            private readonly byte[] _data;
-
-            internal LayoutFile(byte[] data) => _data = data ?? Array.Empty<byte>();
-
-            internal int SceneBody => HasTag(12, "SCN1") ? 20 : HasTag(32, "SCN1") ? 40 : -1;
-
-            internal bool ContainsArray(int offset, int count, int size)
-                => offset >= 0 && offset <= _data.Length && count >= 0 && count <= (_data.Length - offset) / size;
-
-            internal int Int32(int offset) => ContainsArray(offset, 1, 4) ? BitConverter.ToInt32(_data, offset) : 0;
-            internal ushort UInt16(int offset) => BitConverter.ToUInt16(_data, offset);
-            internal byte ByteAt(int offset) => _data[offset];
-
-            internal int Follow(int basis, int field)
-            {
-                var delta = Int32(field);
-                var target = (long)basis + delta;
-                return basis >= 0 && delta > 0 && target < _data.Length ? (int)target : -1;
-            }
-
-            internal bool HasTag(int offset, string tag)
-                => ContainsArray(offset, tag.Length, 1) && Encoding.ASCII.GetString(_data, offset, tag.Length) == tag;
-
-            internal string StringAt(int offset)
-            {
-                if (!ContainsArray(offset, 1, 1))
-                    return string.Empty;
-
-                var length = Array.IndexOf(_data, (byte)0, offset) - offset;
-                return length > 0 ? Encoding.UTF8.GetString(_data, offset, length) : string.Empty;
-            }
-        }
     }
 
     internal readonly struct WeatherChoice

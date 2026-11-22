@@ -1,64 +1,65 @@
-using Lumina.Data.Files;
 using Lumina.Data.Parsing.Layer;
 using Lumina.Excel.Sheets;
-using Simulant.Core.Entity;
 using Simulant.Game.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 
 namespace Simulant.Core.Zone
 {
-    /// <summary>按场地资源绑定识别出生圈，不把同一 EObj 表行的其他机关当作入口。</summary>
     internal static class EntranceBarrier
     {
-        // 已使用沙斯塔夏、假火神、各绝本、异闻下水道核对，均使用下述路径
-        private const string BarrierPath = "bgcommon/world/lvd/shared/for_vfx/sgvf_w_lvd_b0095.sgb";
-
-        internal static EventObjectSpawnSpec[] Load(GameDataService data, TerritoryType territory)
+        private const string BarrierDirectory = "bgcommon/world/lvd/shared/for_vfx/";
+        private const string DeepDungeonBarrierPath = BarrierDirectory + "sgvf_w_lvd_b0945.sgb";
+        private static readonly HashSet<string> BarrierPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            var bg = territory.Bg.ExtractText();
-            var separator = bg.LastIndexOf('/');
+            BarrierDirectory + "sgvf_w_lvd_b0095.sgb", // 多数副本入口圈
+            BarrierDirectory + "sgvf_w_lvd_b0095_fly.sgb", // 个别地图使用的，如 656 云冠群岛的特殊版本
+            BarrierDirectory + "sgvf_w_lvd_b0286.sgb" // 团本
+        };
 
-            if (separator < 0)
-                return Array.Empty<EventObjectSpawnSpec>();
-
-            var file = data.GetFile<LgbFile>("bg/" + bg.Substring(0, separator + 1) + "planmap.lgb");
-
-            if (file == null)
-                return Array.Empty<EventObjectSpawnSpec>();
-
-            using (file.Reader)
-                return Find(file.Layers.SelectMany(layer => layer.InstanceObjects));
-        }
-
-        internal static EventObjectSpawnSpec[] Find(IEnumerable<LayerCommon.InstanceObject> instances)
+        internal static (uint[] LayoutIds, (uint LayoutId, LayerCommon.Layer Layer, LayerCommon.InstanceObject Object)[] Circles)
+            Scan(TerritoryLayoutData layout, TerritoryType territory, uint layerSetKey, LayerCommon.Layer[] layers)
         {
-            var objects = instances.ToArray();
-            var walls = new HashSet<uint>(objects.Where(instance =>
-                instance.Object is LayerCommon.SharedGroupInstanceObject group &&
-                string.Equals(group.AssetPath, BarrierPath, StringComparison.OrdinalIgnoreCase))
-                .Select(instance => instance.InstanceId));
-            var result = new List<EventObjectSpawnSpec>();
-
-            foreach (var instance in objects)
+            var use = (TerritoryIntendedUseEnum)territory.TerritoryIntendedUse.RowId;
+            var content = territory.ContentFinderCondition.ValueNullable?.Content;
+            var publicContent = content?.GetValueOrDefault<PublicContent>();
+            var groups = new HashSet<uint>();
+            if (use == TerritoryIntendedUseEnum.DeepDungeon)
             {
-                if (!(instance.Object is LayerCommon.EventInstanceObject obj) || !walls.Contains(obj.BoundInstanceId))
-                    continue;
-
-                var position = instance.Transform.Translation;
-                result.Add(new EventObjectSpawnSpec
-                {
-                    BaseId = obj.ParentData.BaseId,
-                    LayoutId = instance.InstanceId,
-                    GimmickId = obj.BoundInstanceId,
-                    Pos = new Vector3(position.X, position.Z, position.Y),
-                    Heading = instance.Transform.Rotation.Y
-                });
+                // 这些圈属于房间模板，楼层生成后才有实际坐标。
+                groups.UnionWith(layers.SelectMany(layer => layer.InstanceObjects)
+                    .Where(item => item.Object is LayerCommon.SharedGroupInstanceObject group &&
+                        string.Equals(group.AssetPath, DeepDungeonBarrierPath, StringComparison.OrdinalIgnoreCase))
+                    .Select(item => item.InstanceId));
             }
 
-            return result.ToArray();
+            var isRaid = use == TerritoryIntendedUseEnum.LargeScaleRaid || use == TerritoryIntendedUseEnum.LargeScaleSavageRaid;
+            var isDuty = content?.Is<InstanceContent>() == true || content?.Is<PartyContent>() == true || isRaid;
+            var isScenario = layerSetKey != 0 && use != TerritoryIntendedUseEnum.OpenWorld && !publicContent.HasValue;
+            var eventObjects = layers.Where(layer => isDuty ||
+                    (isScenario && layer.LayerSetReferencedList.ReferencedType == LayerSetReferencedType.Include))
+                .SelectMany(layer => layer.InstanceObjects.Where(item =>
+                    item.Object is LayerCommon.EventInstanceObject obj && obj.BoundInstanceId != 0)
+                    .Select(item => (LayoutId: ((LayerCommon.EventInstanceObject)item.Object).BoundInstanceId, Layer: layer, Object: item)))
+                .ToArray();
+
+            var circles = new List<(uint LayoutId, LayerCommon.Layer Layer, LayerCommon.InstanceObject Object)>();
+            if (eventObjects.Length != 0)
+            {
+                var paths = layout.ReadSharedGroups(eventObjects.Select(entry => entry.LayoutId));
+                var circleIds = new HashSet<uint>();
+                foreach (var entry in eventObjects)
+                {
+                    if (paths.TryGetValue(entry.LayoutId, out var resource) && BarrierPaths.Contains(resource) && circleIds.Add(entry.LayoutId))
+                    {
+                        groups.Add(entry.LayoutId);
+                        circles.Add(entry);
+                    }
+                }
+            }
+
+            return (groups.ToArray(), circles.ToArray());
         }
     }
 }

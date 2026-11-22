@@ -53,6 +53,10 @@ namespace Simulant.UI
             this.btnSimEnter = new ButtonEx();
             this.btnSimExit = new ButtonEx();
             this.btnEnvironment = new ButtonEx();
+            this.spawnPicker = new TableLayoutPanel();
+            this.lblSpawnPoint = new LabelEx();
+            this.cbxSpawnPoint = new ComboBoxEx();
+            this.btnMoveToSpawnPoint = new ButtonEx();
             this.presetControl = new PresetControl();
             this.logView = new LogView();
             this.frame.SuspendLayout();
@@ -74,6 +78,7 @@ namespace Simulant.UI
             this.mapDetails.SuspendLayout();
             this.mapText.SuspendLayout();
             this.mapActions.SuspendLayout();
+            this.spawnPicker.SuspendLayout();
             this.SuspendLayout();
             //
             // frame
@@ -208,7 +213,7 @@ namespace Simulant.UI
             this.workspace.Orientation = Orientation.Horizontal;
             this.workspace.Size = new Size(1148, 656);
             this.workspace.SplitterWidth = 8;
-            this.workspace.SplitterDistance = 286;
+            this.workspace.SplitterDistance = 316;
             this.workspace.Panel1MinSize = 174;
             this.workspace.Panel2MinSize = 150;
             this.workspace.Name = "workspace";
@@ -220,7 +225,7 @@ namespace Simulant.UI
             this.splitMainV.Dock = DockStyle.Fill;
             this.splitMainV.Margin = Padding.Empty;
             this.splitMainV.TabStop = false;
-            this.splitMainV.Size = new Size(1148, 280);
+            this.splitMainV.Size = new Size(1148, 316);
             this.splitMainV.SplitterWidth = 8;
             this.splitMainV.SplitterDistance = 286;
             this.splitMainV.Panel1MinSize = 280;
@@ -235,14 +240,14 @@ namespace Simulant.UI
             this.sidebarCard.Dock = DockStyle.Fill;
             this.sidebarCard.Margin = Padding.Empty;
             this.sidebarCard.Padding = new Padding(16);
-            this.sidebarCard.MinimumSize = new Size(0, 285);
+            this.sidebarCard.MinimumSize = new Size(0, 312);
             this.sidebarCard.Name = "sidebarCard";
             this.sidebarCard.Controls.Add(this.sidebar);
             //
             // sidebar
             //
             this.sidebar.ColumnCount = 1;
-            this.sidebar.RowCount = 9;
+            this.sidebar.RowCount = 10;
             this.sidebar.Dock = DockStyle.Fill;
             this.sidebar.Margin = Padding.Empty;
             this.sidebar.Name = "sidebar";
@@ -255,6 +260,7 @@ namespace Simulant.UI
             this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 33F));
             this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 9F));
             this.sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 37F));
+            this.sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             this.sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             this.sidebar.Controls.Add(this.lblRegionTitle, 0, 0);
             this.sidebar.Controls.Add(this.mapDetails, 0, 1);
@@ -262,6 +268,7 @@ namespace Simulant.UI
             this.sidebar.Controls.Add(this.lblPhase, 0, 4);
             this.sidebar.Controls.Add(this.cbxPhase, 0, 5);
             this.sidebar.Controls.Add(this.mapActions, 0, 7);
+            this.sidebar.Controls.Add(this.spawnPicker, 0, 8);
             //
             // lblRegionTitle
             //
@@ -436,6 +443,53 @@ namespace Simulant.UI
             this.btnEnvironment.Name = "btnEnvironment";
             this.btnEnvironment.Click += new EventHandler(this.btnEnvironment_Click);
             //
+            // spawnPicker
+            //
+            this.spawnPicker.Name = "spawnPicker";
+            this.spawnPicker.ColumnCount = 3;
+            this.spawnPicker.RowCount = 1;
+            this.spawnPicker.AutoSize = true;
+            this.spawnPicker.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            this.spawnPicker.Dock = DockStyle.Fill;
+            this.spawnPicker.Margin = new Padding(0, 8, 0, 0);
+            this.spawnPicker.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 46F));
+            this.spawnPicker.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.spawnPicker.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
+            this.spawnPicker.RowStyles.Add(new RowStyle(SizeType.Absolute, 33F));
+            this.spawnPicker.Controls.Add(this.lblSpawnPoint, 0, 0);
+            this.spawnPicker.Controls.Add(this.cbxSpawnPoint, 1, 0);
+            this.spawnPicker.Controls.Add(this.btnMoveToSpawnPoint, 2, 0);
+            this.spawnPicker.Visible = false;
+            //
+            // lblSpawnPoint
+            //
+            this.lblSpawnPoint.Name = "lblSpawnPoint";
+            this.lblSpawnPoint.Text = "出生点";
+            this.lblSpawnPoint.Dock = DockStyle.Fill;
+            this.lblSpawnPoint.Margin = Padding.Empty;
+            this.lblSpawnPoint.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblSpawnPoint.Tone = LabelTone.Muted;
+            //
+            // cbxSpawnPoint
+            //
+            this.cbxSpawnPoint.Name = "cbxSpawnPoint";
+            this.cbxSpawnPoint.AccessibleName = "当前地图的出生点";
+            this.cbxSpawnPoint.Dock = DockStyle.Fill;
+            this.cbxSpawnPoint.Margin = Padding.Empty;
+            this.cbxSpawnPoint.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cbxSpawnPoint.DropDownHeight = 300;
+            this.cbxSpawnPoint.IntegralHeight = false;
+            this.cbxSpawnPoint.FormattingEnabled = true;
+            //
+            // btnMoveToSpawnPoint
+            //
+            this.btnMoveToSpawnPoint.Name = "btnMoveToSpawnPoint";
+            this.btnMoveToSpawnPoint.Text = "前往";
+            this.btnMoveToSpawnPoint.Dock = DockStyle.Fill;
+            this.btnMoveToSpawnPoint.Margin = new Padding(5, 0, 0, 0);
+            this.btnMoveToSpawnPoint.TabIndex = 1;
+            this.btnMoveToSpawnPoint.Click += new EventHandler(this.btnMoveToSpawnPoint_Click);
+            //
             // presetControl
             //
             this.presetControl.Dock = DockStyle.Fill;
@@ -454,6 +508,7 @@ namespace Simulant.UI
             this.Controls.Add(this.frame);
             this.Size = new Size(1180, 760);
             this.Name = "SimulantUI";
+            this.spawnPicker.ResumeLayout(false);
             this.mapActions.ResumeLayout(false);
             this.mapText.ResumeLayout(false);
             this.mapDetails.ResumeLayout(false);
@@ -509,6 +564,10 @@ namespace Simulant.UI
         private ButtonEx btnSimEnter;
         private ButtonEx btnSimExit;
         private ButtonEx btnEnvironment;
+        private TableLayoutPanel spawnPicker;
+        private LabelEx lblSpawnPoint;
+        private ComboBoxEx cbxSpawnPoint;
+        private ButtonEx btnMoveToSpawnPoint;
         internal PresetControl presetControl;
         private LogView logView;
     }

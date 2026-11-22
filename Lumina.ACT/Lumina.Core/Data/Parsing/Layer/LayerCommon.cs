@@ -1510,7 +1510,7 @@ namespace Lumina.Data.Parsing.Layer
                     ret.InstanceObjects[i] = InstanceObject.Read(br);
                 }
 
-                br.BaseStream.Position = start + ret.LayerSetReferencedList.LayerSets;
+                br.BaseStream.Position = start + ret._LayerSetReferencedList + ret.LayerSetReferencedList.LayerSets;
 
                 for (var i = 0; i < ret.LayerSetReferencedList.LayerSetCount; i++)
                     ret.LayerSetReferences[i] = LayerSetReferenced.Read(br);

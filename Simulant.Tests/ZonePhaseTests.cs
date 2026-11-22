@@ -78,6 +78,29 @@ namespace Simulant.Tests
                 "已就绪的地图切换阶段应立即生效，只提交一次。");
         }
 
+        public static void PhaseMapEffectsRetryOnlyUnreadySlots()
+        {
+            var delay = new ControlledDelay();
+            var application = new PhaseApplication(delay.Wait);
+            var writes = 0;
+            var attempts = new int[4];
+            var flags = new ushort?[] { 0, null, 4, 1 };
+            var pending = application.ApplyAsync(_ => { }, _ => writes++, _ => true,
+                token => application.ApplyMapEffectsAsync(flags, (slot, mask) =>
+                {
+                    Assert(flags[(int)slot] == mask, "应原样播放阶段指定的掩码，并跳过未配置的槽位。");
+                    attempts[(int)slot]++;
+                    return slot != 2 || attempts[2] == 2;
+                }, token));
+
+            Assert(!pending.IsCompleted && writes == 1 && attempts[0] == 1 && attempts[2] == 1 && attempts[3] == 1,
+                "首轮应提交环境和每个已配置的槽位，等待尚未加载的场地组。");
+            delay.Complete(0);
+            Assert(pending.GetAwaiter().GetResult() && writes == 1 && attempts[0] == 1 && attempts[1] == 0 &&
+                attempts[2] == 2 && attempts[3] == 1 && delay.Count == 1,
+                "场地组就绪后只应重试失败的槽位，无需重复提交其他环境设置。");
+        }
+
         public static void CancellationDuringReadyCheckPreventsApplication()
         {
             var application = new PhaseApplication();

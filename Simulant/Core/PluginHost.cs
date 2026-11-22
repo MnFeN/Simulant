@@ -187,7 +187,8 @@ namespace Simulant.Core
         private int _debugStoppingThreadId;
         private SimScheduler _stoppingDebugScheduler;
         private (int Id, DateTime Started)? _entityProcess;
-        private uint? _entityZoneId;
+        private uint _entityZoneId;
+        internal uint CurrentTerritoryId => Volatile.Read(ref _entityZoneId);
         private int _worldGeneration;
         internal int WorldGeneration => Volatile.Read(ref _worldGeneration);
 
@@ -380,7 +381,7 @@ namespace Simulant.Core
             VfxManager.InvalidateWorld();
             Interlocked.Increment(ref _worldGeneration);
             // 本地切图已经在这里清理；稍后到达的相同区域通知不应停止新会话。
-            _entityZoneId = nextZoneId ?? XivPluginInterop.plugin?.DataRepository.GetCurrentTerritoryID();
+            Volatile.Write(ref _entityZoneId, nextZoneId ?? XivPluginInterop.plugin?.DataRepository.GetCurrentTerritoryID() ?? 0);
         }
 
         internal void CompleteEntityWorldChange()
@@ -997,7 +998,7 @@ namespace Simulant.Core
                 Interlocked.Increment(ref _worldGeneration);
                 Studio?.StopTracking();
                 VfxManager.InvalidateProcess();
-                _entityZoneId = _subscribedXivPlugin?.DataRepository?.GetCurrentTerritoryID();
+                Volatile.Write(ref _entityZoneId, _subscribedXivPlugin?.DataRepository?.GetCurrentTerritoryID() ?? 0);
                 ZoneService?.InvalidateWorld();
                 PartyService?.InvalidateWorld();
                 EntitySpawner?.ResetWorld();
@@ -1055,10 +1056,10 @@ namespace Simulant.Core
         {
             lock (_initLock)
             {
-                if (_disposeCompleted || _entityZoneId == zoneId)
+                if (_disposeCompleted || CurrentTerritoryId == zoneId)
                     return;
 
-                _entityZoneId = zoneId;
+                Volatile.Write(ref _entityZoneId, zoneId);
                 Interlocked.Increment(ref _worldGeneration);
                 Studio?.StopTracking();
                 VfxManager.InvalidateWorld();

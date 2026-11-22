@@ -190,10 +190,7 @@ namespace Simulant.Core.Entity
             });
         }
 
-        public EventObject SpawnEObj(EventObjectSpawnSpec spec) => SpawnEObj(spec, false);
-
-        /// <summary>自动分配时从尾部寻找空槽，不覆盖已有实体，也避开机制常用的低位槽。</summary>
-        internal EventObject SpawnEObj(EventObjectSpawnSpec spec, bool autoIndex)
+        public EventObject SpawnEObj(EventObjectSpawnSpec spec)
         {
             if (spec == null)
                 throw new ArgumentNullException(nameof(spec));
@@ -207,20 +204,6 @@ namespace Simulant.Core.Entity
 
                 // 构包校验失败时保留原槽位及其回收责任。
                 var packet = spec.ToPacket(0);
-
-                if (autoIndex)
-                {
-                    var objects = GameObjectManager.Instance().Objects.IndexSorted;
-                    var index = 39;
-
-                    while (index >= 0 && !objects[EventObjectSlotStart + index].IsNull())
-                        index--;
-
-                    if (index < 0)
-                        throw new InvalidOperationException("EventObject 的 40 个槽位均已占用，无法生成场地实体。");
-
-                    packet.ObjectIndex = (byte)index;
-                }
 
                 packet.EntityId = NextAvailableId(CharacterManager.Instance(),
                     GameObjectManager.Instance().Objects.IndexSorted, false);
