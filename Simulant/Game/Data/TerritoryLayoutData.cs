@@ -12,34 +12,45 @@ namespace Simulant.Game.Data
     {
         private static readonly string[] PlacementFiles = { "planmap.lgb", "planevent.lgb", "planlive.lgb" };
         private readonly GameDataService _game;
-        private readonly string _background;
 
         internal TerritoryLayoutData(GameDataService game, string background)
         {
             _game = game;
-            _background = background ?? string.Empty;
-            File = new LayoutFile(_background.Length == 0 ? null : game.GetFile<FileResource>($"bg/{_background}.lvb")?.Data);
+            background = background ?? string.Empty;
+            var separator = background.LastIndexOf('/');
+            LevelDirectory = separator < 0 ? string.Empty : "bg/" + background.Substring(0, separator + 1);
+            File = new LayoutFile(background.Length == 0 ? null : game.GetFile<FileResource>($"bg/{background}.lvb")?.Data);
         }
 
         internal LayoutFile File { get; }
 
-        internal LayerCommon.Layer[] ReadPlacementLayers(uint layerSetKey)
-        {
-            var separator = _background.LastIndexOf('/');
-            if (separator < 0)
-                return Array.Empty<LayerCommon.Layer>();
+        internal string LevelDirectory { get; }
 
-            var path = "bg/" + _background.Substring(0, separator + 1);
-            var layers = new List<LayerCommon.Layer>();
-            foreach (var name in PlacementFiles)
+        internal LayerCommon.Layer[] ReadPlacementLayers(uint layerSetKey)
+            => ReadLayers(PlacementFiles.Select(name => LevelDirectory + name), layerSetKey).ToArray();
+
+        internal IEnumerable<LayerCommon.Layer> ReadBackgroundLayers(uint layerSetKey)
+        {
+            var placementPaths = PlacementFiles.Select(name => LevelDirectory + name);
+            var paths = ReadReferencedLayers().Except(placementPaths, StringComparer.OrdinalIgnoreCase)
+                .DefaultIfEmpty(LevelDirectory + "bg.lgb");
+            return ReadLayers(paths, layerSetKey);
+        }
+
+        private IEnumerable<LayerCommon.Layer> ReadLayers(IEnumerable<string> paths, uint layerSetKey)
+        {
+            if (LevelDirectory.Length == 0)
+                yield break;
+
+            foreach (var path in paths)
             {
-                var file = _game.GetFile<LgbFile>(path + name);
+                var file = _game.GetFile<LgbFile>(path);
                 if (file == null)
                     continue;
                 using (file.Reader)
-                    layers.AddRange(file.Layers.Where(layer => layer.FestivalID == 0 && UsesLayer(layer, layerSetKey)));
+                    foreach (var layer in file.Layers.Where(layer => layer.FestivalID == 0 && UsesLayer(layer, layerSetKey)))
+                        yield return layer;
             }
-            return layers.ToArray();
         }
 
         private static bool UsesLayer(LayerCommon.Layer layer, uint key)
@@ -80,27 +91,35 @@ namespace Simulant.Game.Data
             return territoryKey;
         }
 
-        // 沿 LVB 引用的 LGB 按 LayoutId 查找 SharedGroup 的 SGB 路径。
-        internal Dictionary<uint, string> ReadSharedGroups(IEnumerable<uint> layoutIds)
+        private IEnumerable<string> ReadReferencedLayers()
         {
             var sceneFile = File;
             var scene = sceneFile.SceneBody;
-            var matches = new Dictionary<uint, string>();
             if (scene < 0)
-                return matches;
+                yield break;
 
             var references = sceneFile.Follow(scene, scene + 0x14);
             var referenceCount = sceneFile.Int32(scene + 0x18);
             if (!sceneFile.ContainsArray(references, referenceCount, 4))
-                return matches;
+                yield break;
 
-            var wanted = new HashSet<uint>(layoutIds);
-            for (var i = 0; i < referenceCount && wanted.Count > 0; i++)
+            for (var i = 0; i < referenceCount; i++)
             {
                 var path = sceneFile.StringAt(sceneFile.Follow(references, references + i * 4));
-                if (!path.EndsWith(".lgb", StringComparison.OrdinalIgnoreCase))
-                    continue;
+                if (path.EndsWith(".lgb", StringComparison.OrdinalIgnoreCase))
+                    yield return path;
+            }
+        }
 
+        // 沿 LVB 引用的 LGB 按 LayoutId 查找 SharedGroup 的 SGB 路径。
+        internal Dictionary<uint, string> ReadSharedGroups(IEnumerable<uint> layoutIds)
+        {
+            var matches = new Dictionary<uint, string>();
+            var wanted = new HashSet<uint>(layoutIds);
+            foreach (var path in ReadReferencedLayers())
+            {
+                if (wanted.Count == 0)
+                    break;
                 var layerFile = new LayoutFile(_game.GetFile<FileResource>(path)?.Data);
                 if (!layerFile.HasTag(12, "LGP1"))
                     continue;

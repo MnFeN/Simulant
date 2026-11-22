@@ -103,14 +103,21 @@ namespace Simulant.Tests.Native
             var points = spawnData.GetProperty("Points", BindingFlags.Instance | BindingFlags.NonPublic);
             var pointType = points.PropertyType.GetElementType();
             var position = pointType.GetProperty("Position", BindingFlags.Instance | BindingFlags.NonPublic);
+            var source = pointType.GetProperty("Source", BindingFlags.Instance | BindingFlags.NonPublic);
             var circle = pointType.GetProperty("Circle", BindingFlags.Instance | BindingFlags.NonPublic);
             var circleId = circle.PropertyType.GetProperty("LayoutId", BindingFlags.Instance | BindingFlags.NonPublic);
             var territories = data.GetSheet<TerritoryType>();
-            (uint[] LayoutIds, Vector3? SpawnPosition, uint?[] CircleIds) LoadBarriers(uint territory)
+            object[] ReadPoints(uint territory, out uint[] layoutIds)
             {
                 var result = scan.Invoke(null, new object[] { data, territories.GetRow(territory) });
-                var candidates = ((Array)points.GetValue(result)).Cast<object>().ToArray();
-                return ((uint[])ids.GetValue(result), candidates.Length == 0 ? null : (Vector3?)position.GetValue(candidates[0]),
+                layoutIds = (uint[])ids.GetValue(result);
+                return ((Array)points.GetValue(result)).Cast<object>().ToArray();
+            }
+
+            (uint[] LayoutIds, Vector3? SpawnPosition, uint?[] CircleIds) LoadBarriers(uint territory)
+            {
+                var candidates = ReadPoints(territory, out var layoutIds);
+                return (layoutIds, candidates.Length == 0 ? null : (Vector3?)position.GetValue(candidates[0]),
                     candidates.Select(point => circle.GetValue(point) is object entrance ? (uint?)circleId.GetValue(entrance) : null).ToArray());
             }
 
@@ -259,6 +266,24 @@ namespace Simulant.Tests.Native
             foreach (var territory in new[] { 755u, 1122u })
                 Check(LoadBarriers(territory).LayoutIds.Length == 1,
                     $"现有预设区域 {territory} 的场地资源也应能识别出生圈。");
+
+            Vector3[] ReadCenters(uint territory)
+            {
+                var candidates = ReadPoints(territory, out _);
+                Check(candidates.Length > 0 && candidates.All(point =>
+                    source.GetValue(point).ToString() == "MapCenter" && circle.GetValue(point) == null),
+                    $"区域 {territory} 的兜底点应来自场地中心且不绑定入场圈。");
+                return candidates.Select(point => (Vector3)position.GetValue(point)).ToArray();
+            }
+
+            Check(ReadCenters(611)[0].Length() < 8f, "儿科病房应在室内地面找到中心候选。");
+            Check(ReadCenters(506)[0].Length() < 8f, "独立的陆行鸟广场应使用场地中央。");
+            Check(ReadCenters(1068).Length > 1, "云廊应为独立平台提供不同候选。");
+            Check(ReadCenters(389).All(point => point.X >= 300f && point.X <= 560f &&
+                point.Y >= 180f && point.Y <= 760f), "陆行鸟赛道的候选应在活动物件限定的范围内。");
+            Check(ReadPoints(183, out _).Length == 0, "共享大地图缺少活动范围时应保留空列表。");
+            Check(ReadPoints(1098, out _).All(point => source.GetValue(point).ToString() != "MapCenter"),
+                "已有玩家出生范围时不生成估算中心。");
         }
 
         private static void Check(bool condition, string message)

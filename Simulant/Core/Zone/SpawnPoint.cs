@@ -15,7 +15,8 @@ namespace Simulant.Core.Zone
         PlayerRange,
         GreenScreen,
         DeepDungeonBoss,
-        DeepDungeonBossRange
+        DeepDungeonBossRange,
+        MapCenter
     }
 
     internal sealed class SpawnPoint
@@ -65,6 +66,9 @@ namespace Simulant.Core.Zone
                     break;
                 case SpawnPointSource.DeepDungeonBossRange:
                     source = "首领区域";
+                    break;
+                case SpawnPointSource.MapCenter:
+                    source = "模型估算";
                     break;
                 default:
                     source = "出生范围";

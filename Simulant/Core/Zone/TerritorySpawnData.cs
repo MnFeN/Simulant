@@ -131,6 +131,10 @@ namespace Simulant.Core.Zone
             foreach (var pop in popRanges)
                 Add(Position(pop), SpawnPointSource.PlayerRange);
 
+            if (points.Count == 0)
+                foreach (var center in MapCenterSpawn.Find(data, territory, layout, layerSetKey, layers))
+                    Add(center, SpawnPointSource.MapCenter);
+
             return new TerritorySpawnData(barrierIds, points.ToArray());
         }
 
