@@ -47,7 +47,7 @@ namespace Simulant.Content.U7b.Presets
             return new MechanicGroup(towers)
             {
                 Name = $"第 {index + 1} 轮双人塔",
-                ResolveAfter = TowerHit[index] - TowerShow[index]
+                ResolveAfter = TowerHit(index) - TowerShow(index)
             };
         }
 

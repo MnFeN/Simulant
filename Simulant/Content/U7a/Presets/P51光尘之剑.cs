@@ -149,7 +149,8 @@ namespace Simulant.Content.U7a.Presets
             private const double SplitFormationAt = 29.50;
             private const double SplitAfterFlareAt = 31.505;
             private const double SplitHit = 32.975;
-            private static readonly double[] FirstHits = { 17.04, 21.045, 25.08 };
+            private const int LineGroups = 3;
+            private static double FirstHitAt(int group) => 17.035 + 4.020 * group;
             private static readonly uint[] FirstActions = { 0x9D73, 0x9CB6 };
             private static readonly uint[] StepActions = { 0x9D74, 0x9D75 };
             private static readonly uint[] StackActions = { 0x9D78, 0x9D77 };
@@ -167,7 +168,7 @@ namespace Simulant.Content.U7a.Presets
             private readonly SimPosition _approachArea;
             private readonly double[] _simpleHeadings;
             private readonly (Vector2 Position, Vector2 Normal, float Heading)[] _lines;
-            private readonly EventObject[] _lineObjects = new EventObject[6];
+            private readonly EventObject[] _lineObjects = new EventObject[2 * LineGroups];
             private readonly Vector2[] _stackPositions = new Vector2[2];
             private readonly SimPosition[] _stackAreas = new SimPosition[2];
             private readonly SimPosition?[] _stackApproach = new SimPosition?[2];
@@ -273,7 +274,7 @@ namespace Simulant.Content.U7a.Presets
             private void AddLine(SimTimeline timeline, int index)
             {
                 var line = _lines[index];
-                var firstHit = FirstHits[index / 2];
+                var firstHit = FirstHitAt(index / 2);
                 timeline.At(firstHit - GlowLead, () => _fight.EntityManager.PlayEObjAnimation(_lineObjects[index], 0x20, 0x10), "地火线发光");
                 timeline.At(firstHit - 6.94, () =>
                 {
@@ -328,17 +329,22 @@ namespace Simulant.Content.U7a.Presets
 
             private void AddPartyMovement(SimTimeline timeline)
             {
-                var glow = FirstHits[0] - GlowLead;
+                var firstHit = FirstHitAt(0);
+                var glow = firstHit - GlowLead;
                 timeline.At(FineLinesAt, () => _fight.MoveAll(_ => _approachArea, _offset + glow, _offset + glow), "细线出现后靠近地火一侧");
-                AddMove(glow, 0, SafePocket(0, 11), FirstHits[0], true, "首组发光后确定地火安全区");
+                AddMove(glow, 0, SafePocket(0, 11), firstHit, true, "首组发光后确定地火安全区");
 
-                for (var group = 0; group < FirstHits.Length; group++)
+                for (var group = 0; group < LineGroups; group++)
                 {
                     var nextLeg = group + 1;
-                    AddMove(FirstHits[group] + 2.14, nextLeg, SafePocket(group, 9), FirstHits[group] + 3.82, true, $"第 {nextLeg} 次穿地火");
-                    if (nextLeg < FirstHits.Length)
-                        AddMove(FirstHits[nextLeg] + 0.24, nextLeg, SafePocket(nextLeg, 11), FirstHits[nextLeg] + 1.78,
+                    var hit = FirstHitAt(group);
+                    AddMove(hit + 2.14, nextLeg, SafePocket(group, 9), hit + 3.82, true, $"第 {nextLeg} 次穿地火");
+                    if (nextLeg < LineGroups)
+                    {
+                        var nextHit = FirstHitAt(nextLeg);
+                        AddMove(nextHit + 0.24, nextLeg, SafePocket(nextLeg, 11), nextHit + 1.78,
                             false, "多次穿线的队员转入下一对地火安全区");
+                    }
                 }
 
                 timeline.At(SplitFormationAt, () =>

@@ -37,8 +37,10 @@ namespace Simulant.Content.U7a.Presets
     {
         private static readonly int[] BalancedPriority = { 0, 1, 4, 5, 2, 3, 6, 7 };
         private static readonly Lazy<List<int[]>[,,]> BalancedAssignments = new Lazy<List<int[]>[,,]>(CreateBalancedAssignments);
-        internal static readonly double[] LightAnimationTimes = { 14.823, 16.806, 18.822, 20.838, 22.823 };
-        internal static readonly double[] ExplosionTimes = { 26.037, 28.006, 30.009, 32.027, 34.027, 36.062 };
+        internal const int LightAnimationCount = 5;
+        internal const int ExplosionCount = 6;
+        internal static double LightAnimationAt(int step) => 14.816 + 2.003 * step;
+        internal static double ExplosionAt(int volley) => 26.013 + 2.006 * volley;
         internal readonly int[] Orders;
         internal readonly int[] StackGroups = new int[8];
         internal readonly int[] SpreadGroups = new int[8];

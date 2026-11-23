@@ -117,12 +117,8 @@ namespace Simulant.Content.U7a.Presets
                     0x26
                 };
 
-                timeline.At(new[]
-                {
-                    18.886,
-                    20.822,
-                    22.888
-                }[wave], () =>
+                // 第三次预告与水分摊结算同时发生。
+                timeline.At(22.888 - (2 - wave) * 2.023, () =>
                 {
                     foreach (var slot in slots)
                         Map(slot, 0x80);

@@ -37,18 +37,9 @@ namespace Simulant.Content.U7a.Presets
     internal sealed class FallOfFaithLogic : U7aEarlyExerciseLogic
     {
         private const ushort Fetters = 2304;
-        private static readonly double[] TetherAt = { -0.130, 3.057, 5.519, 8.053 };
-        private static readonly double[] CastAt = { 0, 3.114, 5.576, 8.103 };
-        private static readonly double[] CastHit = { 8.946, 12.083, 14.628, 17.124 };
-        private static readonly double[] LockAt = { 9.580, 12.700, 15.176, 17.718 };
-        private static readonly double[] ChargeAt = { 11.624, 14.752, 17.240, 19.774 };
-        private static readonly double[] HitAt = { 13.013, 16.128, 18.595, 21.130 };
-        private static readonly double[] ConesAt = { 13.365, 16.397, 18.940, 21.468 };
-        private static readonly double[] RestoreAt = { 13.139, 16.245, 18.726, 21.238 };
-        private static readonly double[] AppearAt = { 2.020, 4.481, 6.986 };
-        private static readonly double[] MoveCloneAt = { 1.892, 4.357, 6.940 };
-        private static readonly double[] ModelAt = { 10.071, 13.194, 15.714, 18.283 };
-        private static readonly double[] FadeAt = { 17.872, 20.307, 22.845 };
+        private const float FettersDuration = 3.956f;
+        private const double FirstCloneEntrance = 1.9;
+        private const double CloneInterval = 2.51;
 
         private readonly SimActor[] _clones = new SimActor[3];
         private readonly Vector2[] _lockedPositions = new Vector2[4];
@@ -97,46 +88,16 @@ namespace Simulant.Content.U7a.Presets
             BeforeOpening(-3.7, () => SetTankTarget(Oracle), "绝命战士仇恨");
             foreach (var time in new[] { -3.615, -0.573 })
                 BeforeOpening(time, AutoAttack, "绝命战士普攻");
-            BeforeOpening(TetherAt[0], () => Link(0, Oracle), "罪壤断第一道连线");
+            BeforeOpening(-0.130, () => Link(0, Oracle), "罪壤断第一道连线");
         }
 
         private void AutoAttack() => Oracle.ExecuteActionEffect(0x9CB4, Party[0], null, null, 1, 0.1f);
 
         protected override SimTimeline BuildExercise()
         {
-            var timeline = new SimTimeline();
-
-            for (var i = 0; i < 4; i++)
-            {
-                var wave = i;
-                var actor = wave == 0 ? Oracle : _clones[wave - 1];
-                var action = _fire[wave] ? 0x9CC9u : 0x9CCCu;
-                if (wave != 0)
-                {
-                    var point = Center + Direction(Math.PI + (2 - wave) * Math.PI / 4) * 20;
-                    timeline.At(MoveCloneAt[wave - 1], () => actor.ActorSetPos(new Vector3(point, 0), Heading(Center - point)), "分身移至入场位置");
-                    timeline.At(AppearAt[wave - 1], () =>
-                    {
-                        Play(actor, 7747);
-                        EntityManager.SetEnemyListVisibility(actor, true);
-                    }, "绝命战士分身现身");
-                    timeline.At(FadeAt[wave - 1], () => Play(actor, 7737), "绝命战士分身退场");
-                    timeline.At(FadeAt[wave - 1] + 1.1, () => EntityManager.SetEnemyListVisibility(actor, false), "分身退出敌对列表");
-                    timeline.At(FadeAt[wave - 1] + 1.5, () => EntityManager.Delete(actor), "回收分身");
-                    timeline.At(TetherAt[wave], () => Link(wave, actor), "罪壤断连线");
-                }
-                timeline.At(CastAt[wave], () => CastFrom(actor, action, 8.7f), "罪壤断读条");
-                timeline.At(CastHit[wave], () => actor.ExecuteActionEffect(action, actor, null, null, 1, 0.6f), "罪壤断读条结算");
-                timeline.At(LockAt[wave], () => Lock(wave, actor), "解除连线并施加浮空拘束");
-                timeline.At(ModelAt[wave], () => actor.ActorControl(ActorControlCategory.SetModelState, 28), "分身蓄力姿态");
-                timeline.At(ChargeAt[wave], () => actor.ExecuteActionEffect(_fire[wave] ? 0x9CCAu : 0x9CCDu,
-                    Party[_targets[wave]], _chargeHeadings[wave], null, 1, 3.1f), "雷火冲锋");
-                timeline.At(HitAt[wave], () => ResolveHit(wave), "火线分摊或雷线点名结算");
-                if (!_fire[wave])
-                    timeline.At(ConesAt[wave], () => ResolveLightningCones(wave), "雷线三道扇形结算");
-                timeline.At(RestoreAt[wave], () => actor.ActorControl(ActorControlCategory.SetModelState, 0), "分身恢复姿态");
-                timeline.At(LockAt[wave] + 3.956, () => ClearStatus(_targets[wave], Fetters), "解除浮空拘束");
-            }
+            var timeline = new SimTimeline().At(0, BuildFallOfFaith(Oracle, 0));
+            for (var i = 0; i < _clones.Length; i++)
+                timeline.At(FirstCloneEntrance + CloneInterval * i, BuildCloneFallOfFaith(_clones[i], i + 1));
 
             timeline.At(2.1, () => PositionSide(0, 7.9, 13.4), "奇数线的第一组站位");
             timeline.At(4.6, () => PositionSide(1, 10.6, 16.5), "偶数线的第一组站位");
@@ -144,6 +105,54 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(16.69, () => PositionSide(3, 17.45, 21.6), "偶数线换位");
             timeline.At(22.670, AutoAttack, "绝命战士普攻");
             timeline.At(24.45, Complete, "罪壤断结束");
+            return timeline;
+        }
+
+        private SimTimeline BuildCloneFallOfFaith(SimActor clone, int wave)
+        {
+            const double appearAt = 0.1;
+            const double tetherAt = appearAt + 1.035;
+            var point = Center + Direction(Math.PI + (2 - wave) * Math.PI / 4) * 20;
+            return new SimTimeline()
+                .At(0, () => clone.ActorSetPos(new Vector3(point, 0), Heading(Center - point)), "分身移至入场位置")
+                .At(appearAt, () =>
+                {
+                    Play(clone, 7747);
+                    EntityManager.SetEnemyListVisibility(clone, true);
+                }, "绝命战士分身现身")
+                .At(tetherAt, () => Link(wave, clone), "罪壤断连线")
+                .At(tetherAt + 0.055, BuildFallOfFaith(clone, wave));
+        }
+
+        private SimTimeline BuildFallOfFaith(SimActor caster, int wave)
+        {
+            const double castDuration = 8.7;
+            const double castEffectAt = castDuration + 0.3;
+            const double lockAt = castEffectAt + 0.58;
+            const double chargeAt = lockAt + 2.055;
+            const double hitDelay = 1.37;
+            const double hitAt = chargeAt + hitDelay;
+            var fire = _fire[wave];
+            var castAction = fire ? 0x9CC9u : 0x9CCCu;
+            var chargeAction = fire ? 0x9CCAu : 0x9CCDu;
+            var timeline = new SimTimeline()
+                .At(0, () => CastFrom(caster, castAction, (float)castDuration), "罪壤断读条")
+                .At(castEffectAt, () => caster.ExecuteActionEffect(castAction, caster, null, null, 1, 0.6f), "罪壤断读条结算")
+                .At(lockAt, () => Lock(wave, caster), "解除连线并施加浮空拘束")
+                .After(0.52, () => caster.ActorControl(ActorControlCategory.SetModelState, 28), "施法者蓄力姿态")
+                .At(chargeAt, () => caster.ExecuteActionEffect(chargeAction, Party[_targets[wave]], _chargeHeadings[wave], null, 1, 3.1f),
+                    "雷火冲锋")
+                .After(hitDelay, () => ResolveHit(wave), "火线分摊或雷线点名结算")
+                .After(0.12, () => caster.ActorControl(ActorControlCategory.SetModelState, 0), "施法者恢复姿态");
+
+            if (!fire)
+                timeline.At(hitAt + 0.33, () => ResolveLightningCones(wave), "雷线三道扇形结算");
+            if (wave != 0)
+            {
+                timeline.At(hitAt + 1.72, () => Play(caster, 7737), "绝命战士分身退场")
+                    .After(1.1, () => EntityManager.SetEnemyListVisibility(caster, false), "分身退出敌对列表")
+                    .After(0.4, () => EntityManager.Delete(caster), "回收分身");
+            }
             return timeline;
         }
 
@@ -187,8 +196,8 @@ namespace Simulant.Content.U7a.Presets
             if (wave == 0)
                 Helper(0, _lockedPositions[wave]).ExecuteActionEffect(0x9CEC, player, 0, null, 1, 1.1f);
             // 原生效果中另有拘束分支；Status 2304 本身没有 LockMovement 位。
-            EntityManager.SetStatus(player, Fetters, 3.956f, 0xC8, actor, lockMovement: true);
-            player.SuspendBehavior(3.956);
+            EntityManager.SetStatus(player, Fetters, FettersDuration, 0xC8, actor, lockMovement: true);
+            player.SuspendBehavior(FettersDuration);
         }
 
         private void ResolveHit(int wave)

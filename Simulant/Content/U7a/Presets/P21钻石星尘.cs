@@ -40,11 +40,11 @@ namespace Simulant.Content.U7a.Presets
         private const double GazeAt = 38.040;
         private const double FirstSword = 44.529;
         private const double SecondSword = 46.654;
-        private static readonly int[][] Groups = { new[] { 0, 2, 4, 6 }, new[] { 1, 3, 5, 7 } };
-        private static readonly double[] StackHits = { 29.653, 31.210, 32.774, 34.332 };
-        private static readonly double[] PuddleSpawns = { 30.538, 32.140, 33.749, 35.362 };
-        private static readonly double[] PuddleFades = { 41.269, 42.800, 44.412, 45.953 };
-        private static readonly double[] PuddleRemovals = { 44.579, 46.181, 47.783, 48.982 };
+        private const int StackRounds = 4;
+        private static double StackHitAt(int wave) => 29.652 + 1.560 * wave;
+        private static double PuddleSpawnAt(int wave) => 30.535 + 1.608 * wave;
+        private static double PuddleFadeAt(int wave) => 41.259 + 1.566 * wave;
+        private static double PuddleRemovalAt(int wave) => wave == StackRounds - 1 ? 48.982 : 44.579 + 1.602 * wave;
         private static readonly ActionArea FlowerCross = ActionArea.Cross(40, 5);
         private static readonly ActionArea FlowerCircle = ActionArea.Circle(5);
         private readonly Vector2[] _flowers = new Vector2[4];
@@ -104,9 +104,12 @@ namespace Simulant.Content.U7a.Presets
             }, "巫女的镜像显现");
             timeline.At(9.111, () => Map(0, 8, 4), "镜中显影场效结束");
             timeline.At(10.079, () => Oracle.ExecuteActionEffect(0x9D05, Oracle, null, Party, 8, 2.6f), "钻石星尘全屏伤害");
-            AddIcicles(timeline, 0, 2, 12.717, 21.708);
-            AddIcicles(timeline, 2, 4, 16.713, 25.705);
-            AddIcicles(timeline, 6, 2, 20.786, 29.699);
+            for (var wave = 0; wave < 3; wave++)
+            {
+                var first = wave == 2 ? 6 : 2 * wave;
+                var count = wave == 1 ? 4 : 2;
+                AddIcicles(timeline, first, count, 12.704 + 4.0345 * wave, 21.709 + 3.9955 * wave);
+            }
             var kick = _plan.Axe ? 0x9D0Au : 0x9D0Bu;
             timeline.At(12.979, () =>
             {
@@ -157,17 +160,17 @@ namespace Simulant.Content.U7a.Presets
                 "罪神圣读条结算");
             timeline.At(30.761, () => Oracle.ActorSetPos(new Vector3(GazePoint, 0), Heading(Center - GazePoint)), "本体移至场边");
             timeline.At(30.847, () => Play(Oracle, 7747), "本体在场边重新出现");
-            for (var i = 0; i < StackHits.Length; i++)
+            for (var i = 0; i < StackRounds; i++)
             {
                 var wave = i;
-                timeline.At(StackHits[wave], () =>
+                timeline.At(StackHitAt(wave), () =>
                 {
                     ResolveStack(wave);
-                    if (wave < StackHits.Length - 1)
+                    if (wave < StackRounds - 1)
                         MoveToStack(wave + 1);
                     else
                         MoveAll(slot => Spot(Center + _plan.IceOffset(slot, _plan.StartsBehind(slot % 2)), 0.13f),
-                            PuddleSpawns[wave], 37.76, urgent: true);
+                            PuddleSpawnAt(wave), 37.76, urgent: true);
                 }, "双四人罪神圣及冰圈");
             }
             timeline.At(32.916, SwapArmor, "冰光形态交换及副本台词");
@@ -257,19 +260,20 @@ namespace Simulant.Content.U7a.Presets
 
         private void MoveToStack(int wave)
             => MoveAll(slot => Spot(Center + _plan.StackOffset(slot % 2, wave), 0.12f),
-                wave == 0 ? StackHits[0] - 0.12 : PuddleSpawns[wave - 1], StackHits[wave] + 0.02, urgent: true);
+                wave == 0 ? StackHitAt(0) - 0.12 : PuddleSpawnAt(wave - 1), StackHitAt(wave) + 0.02, urgent: true);
 
         private void ResolveStack(int wave)
         {
             var snapshot = PartySnapshot.Capture(Party);
-            Run(Groups.Select((group, i) =>
+            Run(Enumerable.Range(0, 2).Select(i =>
             {
+                var group = Enumerable.Range(0, 4).Select(index => i + 2 * index).ToArray();
                 var position = snapshot.Get(2 + i).Position;
                 var mechanic = HitArea("罪神圣四人分摊", ActionArea.Circle(6), position, 0, result =>
                 {
                     GroundEffect(ConeHelper + i, 0x9D11, position, result.HitActors, 1.6f);
                     Vulnerability(result, Helpers[ConeHelper + i], 0.956f);
-                    AddIcePuddle(2 * wave + i, position, 6, PuddleSpawns[wave], PuddleFades[wave], PuddleRemovals[wave]);
+                    AddIcePuddle(2 * wave + i, position, 6, PuddleSpawnAt(wave), PuddleFadeAt(wave), PuddleRemovalAt(wave));
                 }, group);
                 mechanic.LockedSnapshot = snapshot;
                 return (SimMechanic)mechanic;

@@ -179,7 +179,7 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 0; i < 8; i++)
                     Icon(i, 139);
             }, "暗炎喷发八人分散读条");
-            timeline.AtEach(Enumerable.Range(0, P32启示Plan.ExplosionTimes.Length), wave => P32启示Plan.ExplosionTimes[wave],
+            timeline.AtEach(Enumerable.Range(0, P32启示Plan.ExplosionCount), P32启示Plan.ExplosionAt,
                 wave => Run(_plan.Explosions(wave).Select(point => Avoid("启示地火", 40297, point,
                     severity: MechanicFailureSeverity.Warning))), wave => $"第 {wave + 1} 轮启示地火");
             timeline.At(27.64, () => Oracle.ExecuteActionEffect(40273, Oracle), "暗炎喷发读条结束演出");
@@ -288,10 +288,10 @@ namespace Simulant.Content.U7a.Presets
                     TargetableFlags = 5
                 }));
             }
-            for (var step = 0; step < P32启示Plan.LightAnimationTimes.Length; step++)
+            for (var step = 0; step < P32启示Plan.LightAnimationCount; step++)
             {
                 var beat = step;
-                Scheduler.Schedule(Origin + P32启示Plan.LightAnimationTimes[step], () =>
+                Scheduler.Schedule(Origin + P32启示Plan.LightAnimationAt(step), () =>
                 {
                     if (beat <= 1)
                     {

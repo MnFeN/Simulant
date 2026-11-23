@@ -7,12 +7,9 @@ namespace Simulant.Content.U7a.Presets
     internal sealed class P21钻石星尘Plan
     {
         private static readonly int[] Cardinal = { 0, 6, 2, 4, 2, 4, 0, 6 };
-        private static readonly int[][] TrailAngles =
+        private static readonly (int Start, int Step)[] TrailAngles =
         {
-            new[] { 160, 128, 96, 64, -20, -52, -84, -116 },
-            new[] { 135, 110, 85, 60, -45, -70, -95, -120 },
-            new[] { 90, 70, 50, 30, -90, -110, -130, -150 },
-            new[] { 45, 70, 95, 120, -135, -110, -85, -60 }
+            (160, -32), (135, -25), (90, -20), (45, 25)
         };
 
         internal bool Axe { get; }
@@ -67,7 +64,8 @@ namespace Simulant.Content.U7a.Presets
         {
             var route = TrailIndex(group);
             var radius = TrailCase == 0 ? 16f : TrailCase == 3 || TrailCase == 2 && route == 1 ? 18.75f : 18f;
-            return AtDegrees(Reflection * 45 + TrailAngles[TrailCase][route * 4 + wave], radius);
+            var angles = TrailAngles[TrailCase];
+            return AtDegrees(Reflection * 45 + angles.Start + angles.Step * wave - 180 * route, radius);
         }
 
         internal bool StartsBehind(int group) => Vector2.Dot(StackOffset(group, 3), At(Reflection, 1)) > 0;

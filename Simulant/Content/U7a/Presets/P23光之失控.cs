@@ -42,10 +42,11 @@ namespace Simulant.Content.U7a.Presets
         // 实战包没有距离字段；沿灰九路径留足间距，近身错误按此距离判定。
         private const float ChainBreakDistance = 12;
         private static readonly int[] Partners = { 6, 5, 4, 7, 2, 1, 0, 3 };
-        private static readonly double[] HammerTimes = { 12.859, 14.453, 15.970, 17.529, 19.086 };
-        private static readonly double[] PuddleSpawns = { 13.755, 15.402, 16.956, 18.555, 19.783 };
-        private static readonly double[] PuddleFades = { 23.527, 25.124, 26.593, 28.154, 29.738 };
-        private static readonly double[] PuddleRemovals = { 26.546, 28.154, 29.738, 31.347, 32.943 };
+        private const int HammerRounds = 5;
+        private static double HammerAt(int wave) => 12.873 + 1.553 * wave;
+        private static double PuddleSpawnAt(int wave) => wave == HammerRounds - 1 ? 19.783 : 13.774 + 1.595 * wave;
+        private static double PuddleFadeAt(int wave) => 23.537 + 1.545 * wave;
+        private static double PuddleRemovalAt(int wave) => 26.548 + 1.599 * wave;
         private static readonly ActionArea TowerArea = ActionArea.Circle(4);
         private readonly SimActor[] _orbs = new SimActor[6];
         private readonly int[] _stacks = new int[8];
@@ -90,10 +91,10 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(5.825, AssignLight, "连线、光之锤、光之重负与初始层数");
             timeline.At(8.045, OpenOuterTowers, "外圈六塔出现");
             timeline.At(8.124, () => Play(Oracle, 4581), "冰巫女隐去");
-            for (var i = 0; i < HammerTimes.Length; i++)
+            for (var i = 0; i < HammerRounds; i++)
             {
                 var wave = i;
-                timeline.At(HammerTimes[wave], () => ResolveHammer(wave), "光锤点名及冰圈落点");
+                timeline.At(HammerAt(wave), () => ResolveHammer(wave), "光锤点名及冰圈落点");
             }
             timeline.At(CurseAt, ActivateCurse, "连线转为无尽光之束缚");
             timeline.At(16.064, () =>
@@ -120,11 +121,11 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(24.327, () => ResolveOrbs(_plan.FirstOrbParity), "第一批光球爆炸");
             timeline.At(24.51, () => MoveAll(slot => Spot(AbsoluteOrbPoint(slot, true), 0.24f), 26.8, 27.35, urgent: true), "移动至第一批光球的安全区");
             timeline.At(LinksEnd, CancelChains, "诅咒连线消失");
-            timeline.At(26.546, () => DeleteOrbs(_plan.FirstOrbParity), "回收第一批光球");
+            timeline.At(PuddleRemovalAt(0), () => DeleteOrbs(_plan.FirstOrbParity), "回收第一批光球");
             timeline.At(26.898, () => Play(Oracle, 7747), "冰巫女重新出现");
             timeline.At(27.341, () => ResolveOrbs(1 - _plan.FirstOrbParity), "第二批光球爆炸");
             timeline.At(27.38, MoveToCenterTower, "按实际层数进中央塔或在外待命");
-            timeline.At(29.738, () => DeleteOrbs(1 - _plan.FirstOrbParity), "回收第二批光球");
+            timeline.At(PuddleRemovalAt(2), () => DeleteOrbs(1 - _plan.FirstOrbParity), "回收第二批光球");
             timeline.At(30.824, () => Map(21, 8, 4), "关闭中央塔");
             timeline.At(CenterTowerHit, ResolveCenterTower, "中央四人塔结算");
             AddBanish(timeline, _spread, castAt: 29.116, effectAt: 34.093, circlesAt: 34.154,
@@ -163,7 +164,7 @@ namespace Simulant.Content.U7a.Presets
             for (var side = 0; side < 2; side++)
             {
                 Icon(_plan.Baits[side], 375);
-                Move(_plan.Baits[side], Spot(Center + _plan.HammerOffset(side, 0), 0.13f), 12.2, HammerTimes[0]);
+                Move(_plan.Baits[side], Spot(Center + _plan.HammerOffset(side, 0), 0.13f), 12.2, HammerAt(0));
             }
             WatchChains();
         }
@@ -210,7 +211,7 @@ namespace Simulant.Content.U7a.Presets
                     var helper = Helper(side + 6, position);
                     helper.ExecuteActionEffect(0x9D1A, Party[slot], 0, result.HitActors, 8, 1.6f);
                     Vulnerability(result, helper, 0.956f);
-                    AddIcePuddle(wave * 2 + side, position, 6, PuddleSpawns[wave], PuddleFades[wave], PuddleRemovals[wave]);
+                    AddIcePuddle(wave * 2 + side, position, 6, PuddleSpawnAt(wave), PuddleFadeAt(wave), PuddleRemovalAt(wave));
                 }, new[] { slot });
                 mechanic.LockedSnapshot = snapshot;
                 return (SimMechanic)mechanic;
@@ -218,8 +219,8 @@ namespace Simulant.Content.U7a.Presets
             for (var side = 0; side < 2; side++)
             {
                 var position = wave == 4 ? AbsoluteOrbPoint(_plan.Baits[side], false) : Center + _plan.HammerOffset(side, wave + 1);
-                var next = wave == 4 ? 21.883 : HammerTimes[wave + 1];
-                Move(_plan.Baits[side], Spot(position, 0.14f), PuddleSpawns[wave], next, urgent: true);
+                var next = wave == HammerRounds - 1 ? 21.883 : HammerAt(wave + 1);
+                Move(_plan.Baits[side], Spot(position, 0.14f), PuddleSpawnAt(wave), next, urgent: true);
             }
         }
 

@@ -96,15 +96,15 @@ namespace Simulant.Content.U7a.Presets
                         _hourglasses[i].ExecuteActionEffect(P31时间压缩绝Plan.HourglassWave(i) == 0 ? 40294u : 40295u, _hourglasses[i]);
             }, "沙漏加减速演出");
 
-            var fires = new[] { 21.85, 31.87, 41.87 };
+            double FireAt(int round) => 21.853 + 10.010 * round;
             var casts = new[] { 22.95, 32.94, 43.90 };
             var hits = new[] { 26.94, 36.94, 47.90 };
             for (var round = 0; round < 3; round++)
             {
                 var wave = round;
-                timeline.At(fires[round], () => ResolveFire(wave), $"第 {round + 1} 次火与分摊");
-                timeline.At(fires[round] + 0.2, () => MoveAll(i => _plan.Between(i, wave), hits[wave] - 0.65, hits[wave] + 0.15), "引导激光或记录回返");
-                timeline.At(new[] { 20.78, 25.84, 30.79 }[round], () => HourglassMaps(0x80, wave), "沙漏就绪场地效果");
+                timeline.At(FireAt(round), () => ResolveFire(wave), $"第 {round + 1} 次火与分摊");
+                timeline.At(FireAt(round) + 0.2, () => MoveAll(i => _plan.Between(i, wave), hits[wave] - 0.65, hits[wave] + 0.15), "引导激光或记录回返");
+                timeline.At(20.798 + 5.005 * round, () => HourglassMaps(0x80, wave), "沙漏就绪场地效果");
                 timeline.At(casts[round] - 0.13, () =>
                 {
                     for (var direction = 0; direction < 8; direction++)
@@ -131,7 +131,7 @@ namespace Simulant.Content.U7a.Presets
                 timeline.At(hits[round], () => LockLasers(wave), "锁定最近玩家并引导激光");
                 // 第一段之后固定等两秒，再让下一轮分散者穿出；不检测激光是否已经离开。
                 if (round < 2)
-                    timeline.At(hits[round] + 2.05, () => MoveAll(i => _plan.FirePosition(i, wave + 1), fires[wave + 1] - 0.45, fires[wave + 1] + 0.1, true), "等待激光转过后再出去分散");
+                    timeline.At(hits[round] + 2.05, () => MoveAll(i => _plan.FirePosition(i, wave + 1), FireAt(wave + 1) - 0.45, FireAt(wave + 1) + 0.1, true), "等待激光转过后再出去分散");
             }
 
             timeline.At(26.77, () => RecordReturn(true), "第一组记录回返位置");

@@ -459,7 +459,7 @@ namespace Simulant.Tests
                                     Check(angle >= Deg(30) - 0.00001 && angle <= Deg(45) + 0.00001,
                                         "T 应在分摊后边出去边从三十度修正至四十五度，不能提前贴到出口方向。");
                                 }
-                                var progress = Math.Min(distance, (P32启示Plan.ExplosionTimes[5] - 34.55 - 0.15) * 7.8);
+                                var progress = Math.Min(distance, (P32启示Plan.ExplosionAt(5) - 34.55 - 0.15) * 7.8);
                                 var position = from + Vector2.Normalize(destination - from) * (float)progress;
                                 Check(plan.Explosions(5).All(center => Vector2.Distance(position, center) > 9),
                                     "死刑引导路线不得穿过最后一次地火的判定。");
@@ -668,7 +668,7 @@ namespace Simulant.Tests
                                     var gate = plan.ReturnGate(i).Sample(random);
                                     for (var volley = 2; volley < 6; volley++)
                                     {
-                                        var time = P32启示Plan.ExplosionTimes[volley];
+                                        var time = P32启示Plan.ExplosionAt(volley);
                                         // 保留一次网络移动包的同步余量，使用正常跑速验证每段路线。
                                         var firstLeg = time < 30.45;
                                         var start = firstLeg ? from : gate;

@@ -42,7 +42,7 @@ namespace Simulant.Tests
                     Assert(baitArrival == RowMin(CleaveLock, pair), "集合只指定首次锁面向时间，不指定最早到达或提前出发时间。");
 
                     for (var slot = 0; slot < 8; slot++)
-                        Assert(Departure(round.Positions[slot], round.BaitPosition, baitArrival) >= SpellHit[index] + 0.15,
+                        Assert(Departure(round.Positions[slot], round.BaitPosition, baitArrival) >= SpellHit(index) + 0.15,
                             "集合出发不得抢在钢铁扇形判定之前。");
 
                     previous = Enumerable.Repeat(round.BaitPosition, 8).ToArray();

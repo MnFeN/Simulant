@@ -80,11 +80,13 @@ namespace Simulant.Content.U7a.Presets
     {
         protected sealed class PolarizingStrikesRound
         {
-            private static readonly double[] BossCasts = { 0, 8.665, 13.340, 17.954 };
-            private static readonly double[] BossHits = { 6.506, 11.160, 15.829, 20.430 };
-            private static readonly double[] BeamCasts = { 6.568, 11.281, 15.878, 20.535 };
-            private static readonly double[] BeamHits = { 7.078, 11.745, 16.374, 21.057 };
-            private static readonly double[] Aftershocks = { 9.234, 13.824, 18.526, 23.102 };
+            private const int RoundCount = 4;
+            private const double RoundInterval = 4.645;
+            private static double BossCastAt(int round) => round == 0 ? 0 : 8.675 + RoundInterval * (round - 1);
+            private static double BossHitAt(int round) => 6.514 + RoundInterval * round;
+            private static double BeamCastAt(int round) => 6.598 + RoundInterval * round;
+            private static double BeamHitAt(int round) => 7.096 + RoundInterval * round;
+            private static double AftershockAt(int round) => 9.204 + RoundInterval * round;
             private static readonly uint[] BeamActions = { 0x9D7D, 0x9D7E };
             private static readonly uint[] AftershockActions = { 0x9CB7, 0x9CB8 };
             private static readonly ushort[] ResistanceDown = { 4164, 3323 };
@@ -133,10 +135,10 @@ namespace Simulant.Content.U7a.Presets
                     }
                     else
                         _plan = new P53星灵之剑Plan(Center, _facing, _order);
-                    MoveAll(slot => _plan.Stack(0, slot), BeamCasts[0] - 0.35, BeamHits[0]);
+                    MoveAll(slot => _plan.Stack(0, slot), BeamCastAt(0) - 0.35, BeamHitAt(0));
                 }, "就位并放置挡枪标点");
 
-                for (var round = 0; round < BeamHits.Length; round++)
+                for (var round = 0; round < RoundCount; round++)
                     AddRound(timeline, round);
 
                 if (_occurrence == 1)
@@ -153,25 +155,26 @@ namespace Simulant.Content.U7a.Presets
             private void AddRound(SimTimeline timeline, int round)
             {
                 var action = round == 0 ? 0x9D7Cu : 0x9D2Au;
-                timeline.At(BossCasts[round], () => _fight.CastBoss(action, round == 0 ? 6.2f : 2.2f), $"第 {round + 1} 轮星灵之剑读条");
-                timeline.At(BossHits[round], () =>
+                timeline.At(BossCastAt(round), () => _fight.CastBoss(action, round == 0 ? 6.2f : 2.2f), $"第 {round + 1} 轮星灵之剑读条");
+                timeline.At(BossHitAt(round), () =>
                 {
                     _fight.BossEffect(action, 2.1f);
                     var snapshot = PartySnapshot.Capture(_fight.Party);
                     for (var side = 0; side < BeamActions.Length; side++)
                         _fight.Helper(HelperIndex(round, side), Center, SelectBeam(snapshot, side));
                 }, $"第 {round + 1} 轮星灵之剑结算");
-                timeline.At(BeamCasts[round], () => CastBeams(round), $"第 {round + 1} 轮光暗分摊锁定及读条");
-                timeline.At(BeamHits[round], () =>
+                timeline.At(BeamCastAt(round), () => CastBeams(round), $"第 {round + 1} 轮光暗分摊锁定及读条");
+                var aftershock = AftershockAt(round);
+                timeline.At(BeamHitAt(round), () =>
                 {
                     ResolveBeams(round);
-                    MoveAll(_plan.Dodge, Aftershocks[round] - 0.25, Aftershocks[round], true);
+                    MoveAll(_plan.Dodge, aftershock - 0.25, aftershock, true);
                 }, $"第 {round + 1} 轮光暗分摊结算");
-                timeline.At(Aftershocks[round], () =>
+                timeline.At(aftershock, () =>
                 {
                     ResolveAftershocks(round);
-                    if (round + 1 < BeamHits.Length)
-                        MoveAll(slot => _plan.Stack(round + 1, slot), BeamCasts[round + 1] - 0.28, BeamHits[round + 1], true);
+                    if (round + 1 < RoundCount)
+                        MoveAll(slot => _plan.Stack(round + 1, slot), BeamCastAt(round + 1) - 0.28, BeamHitAt(round + 1), true);
                 }, $"第 {round + 1} 轮光暗无目标余波");
             }
 

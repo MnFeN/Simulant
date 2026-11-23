@@ -288,7 +288,7 @@ namespace Simulant.Tests
                     for (var slot = 0; slot < 8; slot++)
                     {
                         AssertTravel(round.SafePositions[slot], round.NorthHeading, gathering[slot], gatheringNorth,
-                            GatheringArrival(pair) - SpellHit[index] - 0.15, $"第 {index + 1} 轮集合，队员 {slot}");
+                            GatheringArrival(pair) - SpellHit(index) - 0.15, $"第 {index + 1} 轮集合，队员 {slot}");
 
                         if (index == 7 && round.FutureEnd)
                             AssertTravel(gathering[slot], gatheringNorth, round.GatheringPosition(slot < 2 || slot == 4 || slot == 5, true), Math.PI,

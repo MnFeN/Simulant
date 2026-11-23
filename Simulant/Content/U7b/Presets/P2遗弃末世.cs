@@ -237,21 +237,7 @@ namespace Simulant.Content.U7b.Presets
             List<Exception> errors = null;
 
             // 使用阶段基础动画复位；包的 00020001/00080004 对应高 16 位的动画 2/8。
-            foreach (var index in new uint[]
-            {
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                0x11,
-                0x12
-            }
-
-            )
+            foreach (var index in new uint[] { 1, 2, 3, 4, 5, 6, 7, 8, 0x11, 0x12 })
             {
                 try
                 {

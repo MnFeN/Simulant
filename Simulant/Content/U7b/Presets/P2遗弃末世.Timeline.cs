@@ -70,15 +70,15 @@ namespace Simulant.Content.U7b.Presets
         private void AddTowerRound(SimTimeline timeline, int index)
         {
             var round = _plan.Rounds[index];
-            timeline.At(TowerShow[index], Mechanic(CreateTowers(index)));
+            timeline.At(TowerShow(index), Mechanic(CreateTowers(index)));
 
             // 奇数轮（第一轮除外）必须等前后刀全部锁面向；偶数轮则等待上一轮点名伤害结束。
             var earliest = TowerMovementAvailable(index);
             var arrival = TowerArrival(index);
             timeline.At(earliest, () => PlanPartyMovement(round.SafePositions,
-                arrival, SpellHit[index] + 0.1, round.NorthHeading),
+                arrival, SpellHit(index) + 0.1, round.NorthHeading),
                 $"安排第 {index + 1} 轮队员站位");
-            timeline.At(SpellHit[index], () => ResolveSpells(index), $"第 {index + 1} 轮钢铁、扇形与分摊判定");
+            timeline.At(SpellHit(index), () => ResolveSpells(index), $"第 {index + 1} 轮钢铁、扇形与分摊判定");
         }
 
         private void AddEndAttacks(SimTimeline timeline, int pair)
@@ -87,7 +87,7 @@ namespace Simulant.Content.U7b.Presets
             // 集合按下一轮塔的相对北布置；最后一轮集合与穿背使用场地正北。
             var northHeading = pair < 3 ? _plan.Rounds[pair * 2 + 2].NorthHeading : Math.PI;
 
-            timeline.At(EndCast[pair], () =>
+            timeline.At(EndCast(pair), () =>
             {
                 // 上轮跳跃已改变实际落点；新一轮通过收包恢复中心与朝北面向。
                 _casters[0].ActorMove(new Vector3(ForsakenPlan.Center, _casters[0].Pos3D.Z), (float)Math.PI);
@@ -107,27 +107,27 @@ namespace Simulant.Content.U7b.Presets
 
             timeline.At(RowMin(JumpHit, pair), SelectJumpTargets, $"第 {pair + 1} 次选取最近四人");
 
-            timeline.AtEach(Enumerable.Range(0, 4).GroupBy(source => JumpHit[pair, source]), moment => moment.Key,
+            timeline.AtEach(Enumerable.Range(0, 4).GroupBy(source => JumpHit(pair, source)), moment => moment.Key,
                 moment => ResolveJumps(round, moment), _ => $"第 {pair + 1} 次近点圆判定");
 
-            timeline.AtEach(Enumerable.Range(0, 4).GroupBy(source => CleaveHit[pair, source]), moment => moment.Key,
+            timeline.AtEach(Enumerable.Range(0, 4).GroupBy(source => CleaveHit(pair, source)), moment => moment.Key,
                 moment => ResolveCleaves(round, moment), _ => $"第 {pair + 1} 次消灭之脚判定");
 
             for (var caster = 0; caster < 4; caster++)
             {
                 var source = caster;
-                timeline.At(CleaveLock[pair, caster], () => LockCleave(round, source), $"第 {pair + 1} 次消灭之脚锁朝向 {caster + 1}");
+                timeline.At(CleaveLock(pair, caster), () => LockCleave(round, source), $"第 {pair + 1} 次消灭之脚锁朝向 {caster + 1}");
 
                 if (caster != 0)
                 {
-                    timeline.At(CleaveHit[pair, caster] + 3, () => _casters[source].ActorControl(ActorControlCategory.PlayActionTimeline, 0x1E39),
+                    timeline.At(CleaveHit(pair, caster) + 3, () => _casters[source].ActorControl(ActorControlCategory.PlayActionTimeline, 0x1E39),
                         $"第 {pair + 1} 次复制体 {caster} 退场动画");
-                    timeline.At(CleaveHit[pair, caster] + 4.5, () => _casters[source].Entity.DisableDraw(),
+                    timeline.At(CleaveHit(pair, caster) + 4.5, () => _casters[source].Entity.DisableDraw(),
                         $"第 {pair + 1} 次隐藏复制体 {caster}");
                 }
             }
 
-            timeline.At(SpellHit[pair * 2 + 1] + 0.15, () =>
+            timeline.At(SpellHit(pair * 2 + 1) + 0.15, () =>
                 PlanPartyMovement(Party.Select(actor => round.GatheringPosition(SimJobActions.For(actor.Job)?.Melee == true)).ToArray(),
                     GatheringArrival(pair), RowMax(CleaveLock, pair), northHeading),
                 $"安排第 {pair + 1} 次前后刀集合");
