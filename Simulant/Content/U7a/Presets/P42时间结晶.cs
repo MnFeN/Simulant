@@ -148,15 +148,8 @@ namespace Simulant.Content.U7a.Presets
                 Party[slot].Heading = (float)Math.PI;
             }
 
-            var pending = 6 + _sand.Length + _helpers.Length;
-
-            void Ready()
-            {
-                if (--pending != 0)
-                    return;
-
-                Scheduler.ScheduleAfter(3, BeginEncounter, "开始时间结晶双读条");
-            }
+            var actorReady = WhenAllActorsReady(6 + _sand.Length + _helpers.Length, () =>
+                Scheduler.ScheduleAfter(3, BeginEncounter, "开始时间结晶双读条"));
 
             void Spawn(uint id, uint name, Vector2 pos, Action<SimActor> accept, bool hidden = false, uint layout = 0, float heading = (float)Math.PI,
                 ushort? modelCharaId = null)
@@ -177,7 +170,7 @@ namespace Simulant.Content.U7a.Presets
                     if (hidden)
                         actor.Entity.DisableDraw();
 
-                    Ready();
+                    actorReady();
                 });
 
             // Boss 就绪时登记回放开场仇恨，依次为 MT、ST、H1、H2、D1 至 D4。
@@ -193,7 +186,7 @@ namespace Simulant.Content.U7a.Presets
                 EntityManager.SetPartyEnmity(actor, alsoSetCombatTarget: false, 63, 100, 5, 5, 10, 10, 10, 10);
             }, layout: 0xA55C02);
 
-            PrepareCrystal(Ready);
+            PrepareCrystal(actorReady);
 
             Spawn(17834, 9324, Center + new Vector2(0, 5), actor =>
             {
@@ -207,7 +200,7 @@ namespace Simulant.Content.U7a.Presets
                 Spawn(17837, 9823, _plan.Hourglass(i), actor => _sand[index] = actor, true, 0xA55C04);
             }
 
-            SpawnHelpers(_helpers, new Vector3(Center, 0), Ready);
+            SpawnHelpers(_helpers, new Vector3(Center, 0), actorReady);
         }
 
         private void PrepareCrystal(Action ready)

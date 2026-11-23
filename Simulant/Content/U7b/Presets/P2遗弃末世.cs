@@ -147,15 +147,11 @@ namespace Simulant.Content.U7b.Presets
                 Party[i].Heading = Heading(Party[i].Pos, ForsakenPlan.Center);
             }
 
-            var remaining = _casters.Length + _helpers.Length;
-            Action ready = () =>
+            var actorReady = WhenAllActorsReady(_casters.Length + _helpers.Length, () =>
             {
-                if (--remaining != 0)
-                    return;
-
                 EntityManager.SetPartyEnmity(_casters[0], 100, 90, 30, 30, 50, 50, 50, 50);
                 Scheduler.ScheduleAfter(3, StartMechanic, "演出实体就绪后开始遗弃末世");
-            };
+            });
 
             for (var i = 0; i < _casters.Length; i++)
             {
@@ -179,11 +175,11 @@ namespace Simulant.Content.U7b.Presets
                     if (index != 0)
                         actor.Entity.DisableDraw();
 
-                    ready();
+                    actorReady();
                 });
             }
 
-            SpawnHelpers(_helpers, new Vector3(100, 100, 0), ready);
+            SpawnHelpers(_helpers, new Vector3(100, 100, 0), actorReady);
         }
 
         private void ApplyMarker(int slot, ForsakenMarker marker)

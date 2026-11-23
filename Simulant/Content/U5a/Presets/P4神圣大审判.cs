@@ -108,7 +108,8 @@ namespace Simulant.Content.U5a.Presets
                 ['中'] = new List<SimActor>(),
                 ['右'] = new List<SimActor>(),
             };
-            var remaining = 25;
+            // 全部就绪后才开始计时；同组预兆与爆炸复用同一批实体。
+            var actorReady = WhenAllActorsReady(25, () => BeginJudgment(boss, groups));
 
             for (var row = 0; row < 5; row++)
             {
@@ -119,10 +120,7 @@ namespace Simulant.Content.U5a.Presets
                     Dummy(new Vector3(84 + 8 * column, 84 + 8 * row, 0), 0, actor =>
                     {
                         groups[group].Add(actor);
-
-                        // 全部就绪后才开始计时；同组预兆与爆炸复用同一批实体。
-                        if (--remaining == 0)
-                            BeginJudgment(boss, groups);
+                        actorReady();
                     });
                 }
             }

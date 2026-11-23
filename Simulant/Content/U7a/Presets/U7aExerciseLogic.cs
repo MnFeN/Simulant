@@ -100,12 +100,8 @@ namespace Simulant.Content.U7a.Presets
                 Party[slot].Heading = (float)Math.PI;
             }
 
-            var remaining = Helpers.Length + (IsP4 ? 6 : 1);
-            void Ready()
-            {
-                if (--remaining == 0)
-                    PrepareAdditionalActors(() => Scheduler.ScheduleAfter(2, BeginExercise, "场景就绪后开始机制"));
-            }
+            var actorReady = WhenAllActorsReady(Helpers.Length + (IsP4 ? 6 : 1), () =>
+                PrepareAdditionalActors(() => Scheduler.ScheduleAfter(2, BeginExercise, "场景就绪后开始机制")));
 
             void Spawn(uint id, uint name, Vector2 position, Action<SimActor> accept, ushort? model = null, uint layout = 0,
                 uint? maxHp = null)
@@ -126,7 +122,7 @@ namespace Simulant.Content.U7a.Presets
                 EntityManager.SpawnNetworkBNpc(spec, actor =>
                 {
                     accept(actor);
-                    Ready();
+                    actorReady();
                 });
             }
 
@@ -147,11 +143,11 @@ namespace Simulant.Content.U7a.Presets
                 {
                     if (actor.Entity.Native.BaseId.Get() == 17841)
                         Crystal = actor;
-                    Ready();
+                    actorReady();
                 }, health: 201481);
             }
 
-            SpawnHelpers(Helpers, new Vector3(Center, 0), Ready, HelperNameId);
+            SpawnHelpers(Helpers, new Vector3(Center, 0), actorReady, HelperNameId);
         }
 
         private void BeginExercise()

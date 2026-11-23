@@ -319,7 +319,6 @@ namespace Simulant.Simulation
             var members = new SimActor[jobs.Count];
             members[myPartyIdx - 1] = EntityManager.Attach(myself);
             EntityManager.SetTemporaryName(members[myPartyIdx - 1], partyNames[myPartyIdx - 1]);
-            var remaining = jobs.Count - 1;
             _preparingParty = true;
 
             void CompleteParty()
@@ -333,12 +332,13 @@ namespace Simulant.Simulation
                 onReady();
             }
 
-            if (remaining == 0)
+            if (members.Length == 1)
             {
                 CompleteParty();
                 return;
             }
 
+            var actorReady = WhenAllActorsReady(members.Length - 1, CompleteParty);
             var specs = new NetworkPlayerSpawnSpec[jobs.Count];
             for (var i = 0; i < jobs.Count; i++)
                 if (jobs[i].HasValue)
@@ -358,13 +358,19 @@ namespace Simulant.Simulation
             }, (slot, player) =>
             {
                 members[slot] = player;
-
-                if (--remaining == 0)
-                    CompleteParty();
+                actorReady();
             });
         }
 
         #endregion Party / Roles
+        /// <summary>每个实体完成准备后调用一次返回的回调，最后一个就绪时执行后续步骤。</summary>
+        protected static Action WhenAllActorsReady(int remaining, Action onAllReady)
+            => () =>
+            {
+                if (--remaining == 0)
+                    onAllReady();
+            };
+
         protected void Dummy(Vector3 pos, float heading, Action<SimActor> onReady)
             => Dummy(pos, heading, onReady, 0);
 

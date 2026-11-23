@@ -192,7 +192,8 @@ namespace Simulant.Content.U7a.Presets
 
         private void SpawnHourglasses()
         {
-            var remaining = _hourglasses.Length;
+            var actorReady = WhenAllActorsReady(_hourglasses.Length, () =>
+                Scheduler.Schedule(Math.Max(Origin + 13.98, Scheduler.ElapsedSeconds), TetherHourglasses, "沙漏加减速连线"));
             for (var i = 0; i < _hourglasses.Length; i++)
             {
                 var slot = i;
@@ -211,8 +212,7 @@ namespace Simulant.Content.U7a.Presets
                 }, actor =>
                 {
                     _hourglasses[slot] = actor;
-                    if (--remaining == 0)
-                        Scheduler.Schedule(Math.Max(Origin + 13.98, Scheduler.ElapsedSeconds), TetherHourglasses, "沙漏加减速连线");
+                    actorReady();
                 });
             }
         }

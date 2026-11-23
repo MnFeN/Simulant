@@ -94,13 +94,8 @@ namespace Simulant.Content.U6b.Presets
                 Party[slot].Heading = Heading(CosmoArrowPlan.Center - Party[slot].Pos);
             }
 
-            var pending = 1 + _helpers.Length;
-
-            void Ready()
-            {
-                if (--pending == 0)
-                    Scheduler.ScheduleAfter(3, StartMechanic, "实体就绪后开始宇宙天箭");
-            }
+            var actorReady = WhenAllActorsReady(1 + _helpers.Length, () =>
+                Scheduler.ScheduleAfter(3, StartMechanic, "实体就绪后开始宇宙天箭"));
 
             EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
@@ -112,10 +107,10 @@ namespace Simulant.Content.U6b.Presets
             }, actor =>
             {
                 _boss = actor;
-                Ready();
+                actorReady();
             });
 
-            SpawnHelpers(_helpers, new Vector3(100, 100, 0), Ready);
+            SpawnHelpers(_helpers, new Vector3(100, 100, 0), actorReady);
         }
 
         private void StartMechanic()

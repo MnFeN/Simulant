@@ -75,7 +75,7 @@ namespace Simulant.Content.U7a.Presets
         protected override void PrepareAdditionalActors(Action ready)
         {
             var directions = new[] { _blue, _redNear, _redFar };
-            var left = directions.Length;
+            var actorReady = WhenAllActorsReady(directions.Length, ready);
             for (var i = 0; i < directions.Length; i++)
             {
                 var index = i;
@@ -83,8 +83,7 @@ namespace Simulant.Content.U7a.Presets
                 SpawnMechanicActor(17825, 9317, 476, 0xA5743C, position, Heading(Center - position), actor =>
                 {
                     _mirrors[index] = actor;
-                    if (--left == 0)
-                        ready();
+                    actorReady();
                 });
             }
         }

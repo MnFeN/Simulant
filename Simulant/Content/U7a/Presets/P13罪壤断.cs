@@ -80,15 +80,14 @@ namespace Simulant.Content.U7a.Presets
 
         protected override void PrepareAdditionalActors(Action ready)
         {
-            var left = _clones.Length;
+            var actorReady = WhenAllActorsReady(_clones.Length, ready);
             for (var i = 0; i < _clones.Length; i++)
             {
                 var index = i;
                 SpawnMechanicActor(17820, 9708, 3021, 0xA55BF5, Center + new Vector2(0, -30), 0, actor =>
                 {
                     _clones[index] = actor;
-                    if (--left == 0)
-                        ready();
+                    actorReady();
                 });
             }
         }
