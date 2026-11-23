@@ -30,6 +30,20 @@ namespace Simulant.Content.U7b.Presets
         public override string Description { get; } =
             "7.x 版本中，如果本次 FF14 游戏运行阶段未真正进入过绝妖星副本，Boss 模型与读条名称会因加密而无法正常显示。";
 
+        private static readonly (ExaFlareOrder Order, (int First, int Second)[] Rounds)[] Patterns =
+        {
+            (ExaFlareOrder.Line14_25_36, new[] { (1, 4), (2, 5), (3, 6) }),
+            (ExaFlareOrder.Line14_36_25, new[] { (1, 4), (3, 6), (2, 5) }),
+            (ExaFlareOrder.Line25_14_36, new[] { (2, 5), (1, 4), (3, 6) }),
+            (ExaFlareOrder.Line25_36_14, new[] { (2, 5), (3, 6), (1, 4) }),
+            (ExaFlareOrder.Line36_14_25, new[] { (3, 6), (1, 4), (2, 5) }),
+            (ExaFlareOrder.Line36_25_14, new[] { (3, 6), (2, 5), (1, 4) }),
+        };
+
+        internal static (int First, int Second)[] RoundsFor(ExaFlareOrder order)
+            => Patterns.FirstOrDefault(pattern => pattern.Order == order).Rounds
+                ?? throw new ArgumentException("Invalid ExaFlareOrder: " + order);
+
         public override List<SimOptionBase> Options { get; } = new List<SimOptionBase>
         {
             new ComboBoxOption<ExaFlareOrder>(
@@ -37,30 +51,30 @@ namespace Simulant.Content.U7b.Presets
                 "左上方三轮地火出现顺序（视角面向左上）",
                 ExaFlareOrder.Random,
                 new Map<ExaFlareOrder>
-            {
-                [ExaFlareOrder.Random] = "随机",
+                {
+                    [ExaFlareOrder.Random] = "随机",
                     [ExaFlareOrder.Line14_25_36] = "1/4列 - 2/5列 - 3/6列",
                     [ExaFlareOrder.Line14_36_25] = "1/4列 - 3/6列 - 2/5列",
                     [ExaFlareOrder.Line25_14_36] = "2/5列 - 1/4列 - 3/6列",
                     [ExaFlareOrder.Line25_36_14] = "2/5列 - 3/6列 - 1/4列",
                     [ExaFlareOrder.Line36_14_25] = "3/6列 - 1/4列 - 2/5列",
                     [ExaFlareOrder.Line36_25_14] = "3/6列 - 2/5列 - 1/4列",
-            }),
+                }),
 
             new ComboBoxOption<ExaFlareOrder>(
                 nameof(P5地火Logic.RightExaFlareOrder),
                 "右上方三轮地火出现顺序（视角面向右上）",
                 ExaFlareOrder.Random,
                 new Map<ExaFlareOrder>
-            {
-                [ExaFlareOrder.Random] = "随机",
+                {
+                    [ExaFlareOrder.Random] = "随机",
                     [ExaFlareOrder.Line14_25_36] = "1/4列 - 2/5列 - 3/6列",
                     [ExaFlareOrder.Line14_36_25] = "1/4列 - 3/6列 - 2/5列",
                     [ExaFlareOrder.Line25_14_36] = "2/5列 - 1/4列 - 3/6列",
                     [ExaFlareOrder.Line25_36_14] = "2/5列 - 3/6列 - 1/4列",
                     [ExaFlareOrder.Line36_14_25] = "3/6列 - 1/4列 - 2/5列",
                     [ExaFlareOrder.Line36_25_14] = "3/6列 - 2/5列 - 1/4列",
-            }),
+                }),
 
             new CheckBoxOption(
                 nameof(P5地火Logic.EnableAuxiliaryLines),
@@ -124,10 +138,10 @@ namespace Simulant.Content.U7b.Presets
             _isPerfect = true;
             _remainingJudgements = 12 * 6;
             _feedbackDue = false;
-            var leftOrder = ResolveExaFlareOrder(LeftExaFlareOrder);
+            var leftRounds = P5地火.RoundsFor(LeftExaFlareOrder);
             _exaArea = ActionArea.FromAction(0xBB3D);
             _spreadArea = ActionArea.FromAction(0xBB3F);
-            var rightOrder = ResolveExaFlareOrder(RightExaFlareOrder);
+            var rightRounds = P5地火.RoundsFor(RightExaFlareOrder);
 
             var me = _host.EntityProvider.GetMyself();
 
@@ -149,14 +163,15 @@ namespace Simulant.Content.U7b.Presets
                                GeneratePartyMembers(myIdx, () =>
                                {
                                    SpreadPartyMembers(me, 3f);
-                                   StartMechanic(boss, me, leftOrder, rightOrder);
+                                   StartMechanic(boss, me, leftRounds, rightRounds);
                                });
                            else
-                               StartMechanic(boss, me, leftOrder, rightOrder);
+                               StartMechanic(boss, me, leftRounds, rightRounds);
                        }), "生成地火本体与模拟小队");
         }
 
-        private void StartMechanic(SimActor boss, Character me, List<int> leftOrder, List<int> rightOrder)
+        private void StartMechanic(SimActor boss, Character me,
+            (int First, int Second)[] leftRounds, (int First, int Second)[] rightRounds)
         {
             if (Party.Count == 0)
             {
@@ -175,16 +190,17 @@ namespace Simulant.Content.U7b.Presets
             mechanic.At(0, () => boss.Cast(0xBB3B), "混沌末世读条");
 
             // 左右各三组，每组两条，左右交替间隔 2.5 秒。
-            for (int group = 0; group < 3; group++)
+            for (int group = 0; group < leftRounds.Length; group++)
             {
                 var leftTime = ExaFlareGroupDelay * group * 2;
                 var rightTime = leftTime + ExaFlareGroupDelay;
 
-                for (int line = group * 2; line < group * 2 + 2; line++)
-                {
-                    mechanic.At(leftTime, SingleExaFlare(leftOrder[line], true));
-                    mechanic.At(rightTime, SingleExaFlare(rightOrder[line], false));
-                }
+                var left = leftRounds[group];
+                var right = rightRounds[group];
+                mechanic.At(leftTime, SingleExaFlare(left.First, true));
+                mechanic.At(rightTime, SingleExaFlare(right.First, false));
+                mechanic.At(leftTime, SingleExaFlare(left.Second, true));
+                mechanic.At(rightTime, SingleExaFlare(right.Second, false));
             }
 
             mechanic.At(16.2, () =>
@@ -224,75 +240,6 @@ namespace Simulant.Content.U7b.Presets
             }, "回收模拟实体");
 
             Scheduler.ScheduleAfter(3, () => Play(mechanic), "本体与小队就绪后开始地火");
-        }
-
-        private List<int> ResolveExaFlareOrder(ExaFlareOrder order)
-        {
-            switch (order)
-            {
-                case ExaFlareOrder.Line14_25_36:
-                    return new List<int>
-                    {
-                        1,
-                        4,
-                        2,
-                        5,
-                        3,
-                        6
-                    };
-                case ExaFlareOrder.Line14_36_25:
-                    return new List<int>
-                    {
-                        1,
-                        4,
-                        3,
-                        6,
-                        2,
-                        5
-                    };
-                case ExaFlareOrder.Line25_14_36:
-                    return new List<int>
-                    {
-                        2,
-                        5,
-                        1,
-                        4,
-                        3,
-                        6
-                    };
-                case ExaFlareOrder.Line25_36_14:
-                    return new List<int>
-                    {
-                        2,
-                        5,
-                        3,
-                        6,
-                        1,
-                        4
-                    };
-                case ExaFlareOrder.Line36_14_25:
-                    return new List<int>
-                    {
-                        3,
-                        6,
-                        1,
-                        4,
-                        2,
-                        5
-                    };
-                case ExaFlareOrder.Line36_25_14:
-                    return new List<int>
-                    {
-                        3,
-                        6,
-                        2,
-                        5,
-                        1,
-                        4
-                    };
-                default:
-                    throw new ArgumentException("Invalid ExaFlareOrder: " + order);
-            }
         }
 
         /// <param name="lineIdx"> 面向地火源头方向，从左至右记为 1-6。</param>
