@@ -39,12 +39,14 @@ namespace Simulant.Simulation.Geometry
                     return Circle(range + casterHitboxRadius);
                 case 10:
                     return Donut(ResolveInnerRadius(actionId, action, innerRadius), range);
+                case 11:
+                    return Cross(range, action.XAxisModifier);
                 case 12:
                     return Rectangle(range, action.XAxisModifier);
                 case 13:
                     return Cone(range, ResolveConeAngle(actionId, action, coneAngleDegrees));
                 default:
-                    throw new NotSupportedException($"技能 {actionId} 的 CastType={action.CastType} 尚无已确认的范围定义，请显式使用 Circle、Cone、Rectangle、Donut，或补充该类型的规则。");
+                    throw new NotSupportedException($"技能 {actionId} 的 CastType={action.CastType} 尚无已确认的范围定义，请显式指定范围，或补充该类型的规则。");
             }
         }
 

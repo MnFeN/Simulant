@@ -4,6 +4,7 @@ using Simulant.Game.FFCS.Client.Game.Event;
 using Simulant.Game.FFCS.Client.Game.InstanceContent;
 using Simulant.Game.FFCS.Client.Graphics.Environment;
 using Simulant.Game.FFCS.Client.LayoutEngine;
+using Simulant.Game.FFCS.Client.System.Framework;
 using System;
 
 namespace Simulant.Core.Environment
@@ -171,34 +172,17 @@ namespace Simulant.Core.Environment
             return success;
         }
 
-        public void SetBgm(ushort songId) // 参考 perchbirdd/OrchestrionPlugin
+        public void SetBgm(ushort songId)
         {
-            // bgm.Scenes 相当于连续布局的 BGMScene[12]，播放 bgm 的优先级高到低排列
-            // 这里只写最高优先级的 scene 0
-            const int sceneId = 0;
-
-            var bgm = BGMSystem.Instance();
-
-            if (bgm.IsNull())
-                throw new Exception("BGMSystem 为空指针");
-
-            var scenes = bgm.Scenes;
-
-            if (scenes.IsNull())
-                throw new Exception("BGM scenes 数组为空指针");
-
-            var scene = scenes[sceneId];
-
-            // songId == 0 且 scene == 0 时，恢复原有 BGM
+            const uint eventScene = 0;
             if (songId == 0)
-                scene.SceneFlags.Set((BGMSystem.SceneFlags)4);
-
-            scene.BgmId.Set(songId);
-            scene.PlayingBgmId.Set(songId);
-            scene.PreviousBgmId.Set(songId);
-            scene.Timer.Set(0f);
-            scene.TimerEnabled.Set(0);
+                BGMSystem.Instance().ResetBGM(eventScene);
+            else
+                BGMSystem.SetBGM(songId, eventScene);
         }
+
+        internal void FadeScreen(bool toBlack, uint frames)
+            => Framework.Instance.UIModule.FadeMiddle(toBlack, frames);
     }
 
     internal readonly struct LiveEnvironment

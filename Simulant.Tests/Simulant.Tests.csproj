@@ -166,6 +166,9 @@
     <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.Actions.cs">
       <Link>Runtime\SimEntityManager.Actions.cs</Link>
     </Compile>
+    <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.LimitBreak.cs">
+      <Link>Runtime\SimEntityManager.LimitBreak.cs</Link>
+    </Compile>
     <Compile Include="..\Simulant\Simulation\Runtime\SimEntityManager.MovementLocks.cs">
       <Link>Runtime\SimEntityManager.MovementLocks.cs</Link>
     </Compile>

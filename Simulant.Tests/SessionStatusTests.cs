@@ -373,12 +373,13 @@ namespace Simulant.Tests
                 scene.Manager.SetStatus(scene.Player, 9001, 20, 0, scene.Source);
                 Assert(scene.Player.MovementLocked && condition.SufferingStatusAffliction.Get(),
                     "禁止移动状态必须同时限制本机输入与模拟移动。");
-                Assert(scene._scheduler.PendingCount == 1, "多个状态只共用一个到期检查节点。");
+                Assert(scene._scheduler.PendingCount == 3, "两个状态分别排队到期，共用一个移动限制检查节点。");
                 scene.Manager.RemoveStatus(scene.Player, 9000);
                 Assert(condition.SufferingStatusAffliction.Get(), "移除一个状态不能解除另一个仍生效的限制。");
                 scene.Manager.RemoveStatus(scene.Player, 9001);
                 Assert(!scene.Player.MovementLocked && !condition.SufferingStatusAffliction.Get(),
                     "最后一个禁止移动状态移除后必须立即恢复移动。");
+                Assert(scene._scheduler.PendingCount == 0, "主动移除后应取消到期节点和移动限制检查。");
             }
 
             condition.SetMovementLocked(true);
@@ -393,7 +394,7 @@ namespace Simulant.Tests
             condition.SetMovementLocked(false);
         }
 
-        public static void MovementLockRefreshExpiresWithoutWaitingForStatusRemoval()
+        public static void RefreshedStatusClearsItsSlotAndMovementLockAtExpiry()
         {
             Simulant.Game.Data.GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>()[9000] =
                 new Lumina.Excel.Sheets.Status
@@ -408,13 +409,37 @@ namespace Simulant.Tests
                 scene.Manager.SetStatus(scene.Player, 9000, 0.12f, 0, scene.Source);
                 scene._scheduler.Schedule(0.06, () => scene.Manager.SetStatus(scene.Player, 9000, 0.4f, 0, scene.Source));
                 var heldAfterRefresh = false;
-                scene._scheduler.Schedule(0.25, () => heldAfterRefresh = scene.Player.MovementLocked);
+                scene._scheduler.Schedule(0.25, () =>
+                {
+                    heldAfterRefresh = scene.Player.MovementLocked && scene.Statuses.GetStatus(0).StatusId.Get() == 9000;
+                });
                 scene._scheduler.Schedule(0.65, done.Set);
                 scene._scheduler.Start();
                 Assert(done.Wait(2500), "状态刷新及到期检查超时。");
                 scene._scheduler.Dispose();
-                Assert(heldAfterRefresh && !scene.Player.MovementLocked && !Conditions.Instance().SufferingStatusAffliction.Get(),
-                    "刷新应延长限制，达到新期限后即便状态槽未清空也必须解除。");
+                Assert(heldAfterRefresh && !scene.Player.MovementLocked && !Conditions.Instance().SufferingStatusAffliction.Get() &&
+                    scene.Statuses.GetStatus(0).StatusId.Get() == 0, "刷新应延长限制，达到新期限后应清空状态槽并解除移动限制。");
+            }
+        }
+
+        public static void PermanentStatusCancelsExpiryAndCanBeRemoved()
+        {
+            using (var scene = new Scene())
+            using (var done = new System.Threading.ManualResetEventSlim())
+            {
+                scene.Manager.SetStatus(scene.Player, 200, 0.12f, 0, scene.Source);
+                scene.Manager.SetStatus(scene.Player, 200, 0, 3, scene.Source);
+                Assert(scene._scheduler.PendingCount == 0, "常驻状态不应排队到期。");
+                scene._scheduler.Schedule(0.25, done.Set);
+                scene._scheduler.Start();
+                Assert(done.Wait(2500), "常驻状态检查超时。");
+                scene._scheduler.Dispose();
+
+                var status = scene.Statuses.GetStatus(0);
+                Assert(status.StatusId.Get() == 200 && status.RemainingTime.Get() == 0 && status.Param.Get() == 3,
+                    "刷新为常驻后应保留原生状态，旧到期节点不能移除它。");
+                scene.Manager.RemoveStatus(scene.Player, 200);
+                Assert(status.StatusId.Get() == 0, "常驻状态仍可主动移除。");
             }
         }
 

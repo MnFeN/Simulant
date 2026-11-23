@@ -33,6 +33,9 @@ namespace Simulant.Core.Entity
 
         /// <summary>显式指定演出面向，避免转向包尚在插值时，把上一刻的面向再次写入技能包；不代替 ActorMove。</summary>
         public void ExecuteActionEffect(uint actionId, Character target, float? heading)
+            => ExecuteActionEffect(actionId, target, heading, 0);
+
+        internal void ExecuteActionEffect(uint actionId, Character target, float? heading, float animationLock)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
@@ -51,7 +54,7 @@ namespace Simulant.Core.Entity
                 targetNative.Position, new GameObjectId
                 {
                     ObjectId = target.Id
-                });
+                }, animationLock);
         }
 
         private static int _globalSequence;

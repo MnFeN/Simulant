@@ -122,7 +122,11 @@ namespace Simulant.Simulation
             foreach (var prop in simOptionProps)
             {
                 if (!dict.TryGetValue(prop.Name, out var option))
+                {
+                    if (prop.GetCustomAttribute<SimOptionAttribute>().Optional)
+                        continue;
                     throw new InvalidOperationException($"配置选项 {GetType().Name} 的标记属性 {prop.Name} 在界面中未找到对应选项。");
+                }
 
                 option.ApplyTo(this, Random);
 
@@ -362,11 +366,15 @@ namespace Simulant.Simulation
 
         #endregion Party / Roles
         protected void Dummy(Vector3 pos, float heading, Action<SimActor> onReady)
+            => Dummy(pos, heading, onReady, 0);
+
+        protected void Dummy(Vector3 pos, float heading, Action<SimActor> onReady, uint nameId)
         {
             // 不可见模型仍承载技能特效；就绪时只关闭选中能力，不关闭游戏绘制。
             EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
             {
                 BNpcBaseId = 9020,
+                BNpcNameId = nameId,
                 Level = 100,
                 Pos = pos,
                 Heading = heading,
@@ -417,5 +425,6 @@ namespace Simulant.Simulation
     [AttributeUsage(AttributeTargets.Property)]
     public sealed class SimOptionAttribute : Attribute
     {
+        public bool Optional { get; set; }
     }
 }

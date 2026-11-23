@@ -130,6 +130,50 @@ namespace Simulant.Tests
             }
         }
 
+        public static void ExtraCastTimeExtendsTheDisplayWithoutDelayingTheEffect()
+        {
+            using (var scene = new CastTestScene())
+            {
+                scene.AddAction(1, 0.5f, extraCastTime100ms: 7);
+                var automatic = scene.Actor(0);
+                var manual = scene.Actor(1);
+                var castLogTimes = new List<string>();
+                manual.CombatLog = new SimCombatLog(() => true, (id, payload, _) =>
+                {
+                    if (id == 20)
+                        castLogTimes.Add(payload.Split('|')[6]);
+                }, null);
+
+                automatic.Cast(1, target: automatic);
+                manual.Cast(1, target: manual, castTime: 0.25f, executeOnFinish: false);
+                Assert(Math.Abs(automatic.Entity.CastDuration - 0.2f) < 0.001f &&
+                    Math.Abs(automatic.Entity.DisplayCastDuration - 0.9f) < 0.001f,
+                    "查表咏唱时长和追加显示时长应分别写入原生读条。");
+                Assert(manual.Entity.CastDuration == 0.25f &&
+                    Math.Abs(manual.Entity.DisplayCastDuration - 0.95f) < 0.001f &&
+                    castLogTimes.SequenceEqual(new[] { "0.250" }),
+                    "显式指定的咏唱时长只覆盖基础时长，ACT 保留实战包的时长。");
+
+                scene.Scheduler.Schedule(0.35, () => manual.ExecuteActionEffect(1, manual));
+                scene.Scheduler.Schedule(0.65, () =>
+                {
+                    Assert(automatic.Entity.ActionEffects.SequenceEqual(new[] { 1u }) &&
+                        manual.Entity.ActionEffects.SequenceEqual(new[] { 1u }) &&
+                        automatic.Entity.CastingActionId == 1 && manual.Entity.CastingActionId == 1 &&
+                        scene.Casts.Remaining(automatic) == 0 && scene.Casts.Remaining(manual) == 0,
+                        "演出应按原时间执行一次，两条追加显示应在基础咏唱结束后继续。");
+                    manual.StopCasting();
+                    Assert(manual.Entity.CastingActionId == 0 && !scene.Casts.HasPendingAction(manual),
+                        "主动停止应立即清除仍在显示的追加读条。");
+                });
+
+                scene.RunPast(1.02);
+                Assert(automatic.Entity.CastingActionId == 0 && !scene.Casts.HasPendingAction(automatic) &&
+                    automatic.Entity.ActionEffects.Count == 1 && manual.Entity.ActionEffects.Count == 1,
+                    "追加显示应自然结束，不应再次播放结算。");
+            }
+        }
+
         public static void CompletedCastCanMoveButStopCancelsPendingEffect()
         {
             using (var scene = new CastTestScene())
@@ -689,12 +733,13 @@ namespace Simulant.Tests
             }
 
             internal SimActor Actor(ushort slot) => new SimActor(World.CreateCharacter(slot), Casts, Movement);
-            internal void AddAction(int id, float castTime, bool omen = false)
+            internal void AddAction(int id, float castTime, bool omen = false, byte extraCastTime100ms = 0)
             {
                 GameDataService.Instance.GetSheet<ActionRow>()[id] = new ActionRow
                 {
                     RowId = (uint)id,
                     Cast100ms = checked((ushort)(castTime * 10)),
+                    ExtraCastTime100ms = extraCastTime100ms,
                     AnimationEnd = (short)(100 + id),
                     CastType = 2,
                     EffectRange = 5,

@@ -13,7 +13,8 @@ namespace Simulant.Simulation.Geometry
             Circle,
             Cone,
             Rectangle,
-            Donut
+            Donut,
+            Cross
         }
 
         // 只容纳浮点坐标旋转产生的舍入误差，不作为玩家碰撞半径。
@@ -58,6 +59,14 @@ namespace Simulant.Simulation.Geometry
             return new ActionArea(AreaKind.Rectangle, length, width / 2);
         }
 
+        /// <summary>以原点为交点的十字，由各向两侧伸出 length 的两个矩形组成。</summary>
+        public static ActionArea Cross(float length, float width)
+        {
+            RequirePositive(length, nameof(length), "十字单臂长度");
+            RequirePositive(width, nameof(width), "十字完整宽度");
+            return new ActionArea(AreaKind.Cross, length, width / 2);
+        }
+
         /// <summary>以原点为圆心的圆环；内外圆周均属于范围。</summary>
         public static ActionArea Donut(float inner, float outer)
         {
@@ -94,7 +103,7 @@ namespace Simulant.Simulation.Geometry
             var distanceSquared = dx * dx + dy * dy;
             var outer = _extent + BoundaryTolerance;
 
-            if (_kind != AreaKind.Rectangle && distanceSquared > outer * outer)
+            if (_kind != AreaKind.Rectangle && _kind != AreaKind.Cross && distanceSquared > outer * outer)
                 return false;
 
             if (_kind == AreaKind.Circle)
@@ -114,6 +123,10 @@ namespace Simulant.Simulation.Geometry
                 return forward >= Math.Sqrt(distanceSquared) * _halfAngleCosine - BoundaryTolerance;
 
             var right = dx * cos - dy * sin;
+            if (_kind == AreaKind.Cross)
+                return Math.Abs(forward) <= outer && Math.Abs(right) <= _secondary + BoundaryTolerance
+                    || Math.Abs(right) <= outer && Math.Abs(forward) <= _secondary + BoundaryTolerance;
+
             return forward >= -BoundaryTolerance && forward <= outer
                 && Math.Abs(right) <= _secondary + BoundaryTolerance;
         }
@@ -137,6 +150,13 @@ namespace Simulant.Simulation.Geometry
             var forward = dx * Math.Sin(heading) + dy * Math.Cos(heading);
             var right = dx * Math.Cos(heading) - dy * Math.Sin(heading);
 
+            if (_kind == AreaKind.Cross)
+            {
+                var x = Math.Abs(forward);
+                var y = Math.Abs(right);
+                return TouchesCrossArm(x, y, reach) || TouchesCrossArm(y, x, reach);
+            }
+
             if (_kind == AreaKind.Rectangle)
             {
                 var beyondEnd = Math.Max(-forward, Math.Max(0, forward - _extent));
@@ -154,6 +174,13 @@ namespace Simulant.Simulation.Geometry
             var awayForward = forward - along * edgeForward;
             var awayRight = Math.Abs(right) - along * edgeRight;
             return awayForward * awayForward + awayRight * awayRight <= reach * reach;
+        }
+
+        private bool TouchesCrossArm(double forward, double side, double reach)
+        {
+            var beyondEnd = Math.Max(0, forward - _extent);
+            var beyondSide = Math.Max(0, side - _secondary);
+            return beyondEnd * beyondEnd + beyondSide * beyondSide <= reach * reach;
         }
 
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);

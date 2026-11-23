@@ -25,16 +25,17 @@ namespace Simulant.Core
             foreach (var action in Simulation.Runtime.SimEntityManager.LocalActions)
                 icons[data.GetSheet<Lumina.Excel.Sheets.Action>().GetRow(action).Icon] = action;
             var general = data.GetSheet<Lumina.Excel.Sheets.GeneralAction>();
+            var limitBreakIcon = general.TryGetRow(HotbarBinding.LimitBreakGeneralAction, out var row) ? (uint)row.Icon : 0;
             _bindings = HotbarBinding.Read(_input.ReadHotbarKeybinds(), ui.HotbarModule.ReadStandardHotbars(),
-                ReadCurrentHotbarPage(ui.AtkModule), id => general.TryGetRow(id, out var row) ? row.Action.RowId : 0, icons);
-            Poll(_ => { });
+                ReadCurrentHotbarPage(ui.AtkModule), id => general.TryGetRow(id, out var action) ? action.Action.RowId : 0, icons, limitBreakIcon);
+            Poll((_, __) => { });
         }
 
         private static byte ReadCurrentHotbarPage(AtkModule atk)
             => atk.GetAddonByName("_ActionBar", 1).As<AddonActionBar>()
                 .ThrowIfNull("游戏主快捷栏尚未就绪。").CurrentPage.Get();
 
-        internal void Poll(Action<uint> execute)
+        internal void Poll(Action<uint, bool> execute)
         {
             var focused = WindowFocus.IsProcessForeground(_processId);
             // 游戏过滤后的键盘状态在输入聊天时为空；重新切回游戏也不补发按住的键。
@@ -42,7 +43,7 @@ namespace Simulant.Core
             foreach (var binding in _bindings)
             {
                 if (binding.Pressed(keyboard, focused && _focused))
-                    execute(binding.Action);
+                    execute(binding.Action, binding.IsLimitBreak);
             }
             _focused = focused;
         }

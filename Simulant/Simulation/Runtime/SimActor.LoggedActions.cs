@@ -1,6 +1,7 @@
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.Network;
 using Simulant.Game.FFCS.Client.Network;
+using Simulant.Game.FFCS.Client.UI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -15,9 +16,13 @@ namespace Simulant.Simulation.Runtime
         /// <summary>播放原生技能。hitTargets 是机制判定的结算目标，packetTargetCapacity 是实战结算包的目标容量。</summary>
         public void ExecuteActionEffect(uint actionId, SimActor target, float? heading = null,
             IEnumerable<SimActor> hitTargets = null, int? packetTargetCapacity = null)
+            => ExecuteActionEffect(actionId, target, heading, hitTargets, packetTargetCapacity, 0);
+
+        internal void ExecuteActionEffect(uint actionId, SimActor target, float? heading,
+            IEnumerable<SimActor> hitTargets, int? packetTargetCapacity, float animationLock)
         {
-            Entity.ExecuteActionEffect(actionId, target?.Entity, heading);
-            CombatLog?.Ability(Entity, actionId, target?.Entity, null, heading, 0, hitTargets, packetTargetCapacity);
+            Entity.ExecuteActionEffect(actionId, target?.Entity, heading, animationLock);
+            CombatLog?.Ability(Entity, actionId, target?.Entity, null, heading, animationLock, hitTargets, packetTargetCapacity);
         }
 
         /// <summary>播放指定落点的技能。如果机制已判定命中名单，传入 hitTargets 以生成逐目标日志。</summary>
@@ -50,6 +55,19 @@ namespace Simulant.Simulation.Runtime
         /// <summary>取消指定槽位的连线。编号为零时取消该槽上的任意连线。</summary>
         public void CancelTether(uint slot = 0, uint tetherId = 0)
             => ActorControl(ActorControlCategory.TetherCancel, slot, tetherId);
+
+        /// <summary>显示新月岛同款的获取宝物弹窗，物品名称和图标由客户端查表。</summary>
+        public void ShowTreasureItem(uint itemId, uint quantity)
+            => ActorControl(ActorControlCategory.ShowTreasureItem, 2, itemId, quantity);
+
+        /// <summary>显示物品获得的系统日志和飘字，并播放获取音效。</summary>
+        public void ShowItemGain(uint itemId, uint quantity)
+        {
+            const uint itemGainSound = 18;
+            ActorControl(ActorControlCategory.ShowItemGain, itemId, quantity);
+            if (itemId != 0 && quantity != 0)
+                UIGlobals.PlaySoundEffect(itemGainSound);
+        }
 
         /// <summary>调用普通 ActorControl，按类别生成解析插件或 OverlayPlugin 对应的日志。</summary>
         public IntPtr ActorControl(ActorControlCategory category, uint a1 = 0, uint a2 = 0, uint a3 = 0, uint a4 = 0)

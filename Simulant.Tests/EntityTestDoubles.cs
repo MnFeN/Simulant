@@ -170,7 +170,7 @@ namespace Simulant.Core.Entity
             ActionEffects.Add(actionId);
         }
 
-        public void ExecuteActionEffect(uint actionId, Character target, float? heading)
+        public void ExecuteActionEffect(uint actionId, Character target, float? heading, float animationLock = 0)
             => ExecuteActionEffect(actionId, target);
 
         public void ExecuteActionEffectAt(uint actionId, Vector3 position, float heading, float animationLock = 0)
@@ -251,8 +251,9 @@ namespace Simulant.Core.Entity
         }
 
         internal float CastDuration;
+        internal float DisplayCastDuration;
 
-        public void SetCastInfo(uint actionId, float castTime)
+        public void SetCastInfo(uint actionId, float castTime, byte actionType = 1, float extraCastTime = 0)
         {
             if (!IsAlive)
                 throw new InvalidOperationException("读条控制器写入了已失效的实体。");
@@ -260,6 +261,7 @@ namespace Simulant.Core.Entity
             CastingActionId = actionId;
             CastStarts.Add(actionId);
             CastDuration = castTime;
+            DisplayCastDuration = castTime + extraCastTime;
         }
 
         public bool FinalizeCast(uint expectedActionId)
@@ -640,6 +642,16 @@ namespace Simulant.Game.FFCS.Client.Network
         internal static IntPtr HandleActorControl(uint actor, Simulant.Game.ActorControlCategory category,
             uint a1, uint a2, uint a3, uint a4, uint a5, uint a6, uint a7, uint a8, uint target, uint unknown)
             => IntPtr.Zero;
+    }
+}
+
+namespace Simulant.Game.FFCS.Client.UI
+{
+    internal static class UIGlobals
+    {
+        internal static void PlaySoundEffect(uint effectId)
+        {
+        }
     }
 }
 

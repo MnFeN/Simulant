@@ -11,7 +11,7 @@ namespace Simulant.Replay
 {
     internal static class ReplayConversion
     {
-        private const uint AuditedBuild = 0x00D975C9;
+        internal const uint AuditedBuild = 0x00D975C9;
         private static readonly Encoding Utf8 = new UTF8Encoding(false);
         private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
 

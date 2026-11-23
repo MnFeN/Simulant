@@ -220,7 +220,7 @@ namespace Simulant.Core.Entity
             }
         }
 
-        public void SetCastInfo(uint actionId, float castTime, byte actionType = 1)
+        public void SetCastInfo(uint actionId, float castTime, byte actionType = 1, float extraCastTime = 0)
         {
             var castInfo = Native.CastInfo;
             castInfo.IsCasting.Set(true);
@@ -228,7 +228,7 @@ namespace Simulant.Core.Entity
             castInfo.ActionId.Set(actionId);
             castInfo.CurrentCastTime.Set(0);
             castInfo.BaseCastTime.Set(castTime);
-            castInfo.TotalCastTime.Set(castTime);
+            castInfo.TotalCastTime.Set(castTime + extraCastTime);
         }
 
         /// <summary>只结束调用者开始的技能，避免旧完成节点打断另一条读条。</summary>
@@ -237,7 +237,9 @@ namespace Simulant.Core.Entity
             var native = Native;
             var castInfo = native.CastInfo;
 
-            if (expectedActionId == 0 || !castInfo.IsCasting || castInfo.ActionId != expectedActionId)
+            // 收到演出包后，原生客户端仍会显示尚未走完的追加读条。
+            if (expectedActionId == 0 || castInfo.ActionId != expectedActionId ||
+                (!castInfo.IsCasting && castInfo.TotalCastTime <= castInfo.CurrentCastTime))
                 return false;
 
             native.ClearCastAnimationAndState(castInfo.ActionType, expectedActionId);

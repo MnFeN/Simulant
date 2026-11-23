@@ -1,6 +1,8 @@
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Party;
+using Simulant.Game;
+using Simulant.Game.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +10,9 @@ using System.Reflection;
 using System.Threading;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
+using ActionRow = Lumina.Excel.Sheets.Action;
+using ClassJob = Lumina.Excel.Sheets.ClassJob;
+using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Tests
 {
@@ -22,19 +27,92 @@ namespace Simulant.Tests
             Slot(bars, 1, 1, 7, 99, 869);
             Slot(bars, 2, 2, 10, 4, 104);
             Slot(bars, 2, 3, 2, 7559, 869); // 物品不能仅凭图标冒充技能。
+            Slot(bars, 2, 4, 10, 3, 103);
+            Slot(bars, 2, 5, 1, 3, 104);
+            Slot(bars, 2, 6, 7, 100, 103);
+            Slot(bars, 2, 7, 2, 3, 103);
             keys[0] = 65;
             keys[(12 + 1) * 11 + 2] = 66;
             keys[(12 + 1) * 11 + 3] = 2;
             keys[(24 + 2) * 11] = 67;
             keys[(24 + 3) * 11] = 68;
+            keys[(24 + 4) * 11] = 69;
+            keys[(24 + 5) * 11] = 70;
+            keys[(24 + 6) * 11] = 71;
+            keys[(24 + 7) * 11] = 72;
             var cache = HotbarBinding.Read(keys, bars, 3, id => id == 4 ? 3u : 0,
-                new Dictionary<uint, uint> { [869] = 7559, [104] = 3 });
-            Check(cache.Count == 3 && cache[0].Action == 7548 && cache[1].Action == 7559 && cache[2].Action == 3,
+                new Dictionary<uint, uint> { [869] = 7559, [104] = 3 }, limitBreakIcon: 103);
+            Check(cache.Count == 6 && cache[0].Action == 7548 && cache[1].Action == 7559 && cache[2].Action == 3,
                 "应识别实际显示的栏位、宏图标和通用冲刺，不匹配物品。");
+            Check(cache[3].IsLimitBreak && !cache[4].IsLimitBreak && cache[4].Action == 3 && cache[5].IsLimitBreak,
+                "通用极限技和相同图标的宏应识别为极限技，技能编号 3 仍是冲刺。");
             Check(cache[1].Key == 66 && cache[1].Modifiers == 2, "第二套绑定应保留 Ctrl 修饰键。");
             Array.Clear(keys, 0, keys.Length);
             Array.Clear(bars, 0, bars.Length);
             Check(cache[0].Key == 65 && cache[1].Action == 7559, "缓存建立后不受栏位与键位变化影响。");
+        }
+
+        public static void LimitBreakHotkeyUsesTheGaugeLevelAtEachPress()
+        {
+            var host = new PluginHost { FirewallEnabled = true };
+            var player = host.EntitySpawner.World.CreateCharacter(0);
+            player.Job = Job.DRK;
+            host.EntityProvider.Player = player;
+            var service = host.PlayerActions;
+            var data = GameDataService.Instance;
+            var jobs = data.GetSheet<ClassJob>();
+            var actions = data.GetSheet<ActionRow>();
+            var skills = new[] { 197u, 198u, 4241u };
+            jobs[(int)Job.DRK] = new ClassJob { Role = 1, LimitBreak1 = 197, LimitBreak2 = 198, LimitBreak3 = 4241 };
+            foreach (var skill in skills)
+                actions[(int)skill] = new ActionRow { RowId = skill };
+
+            var connection = GameInterop.Connection;
+            GameInterop.Connection = new GameConnection();
+            using (var scheduler = new SimScheduler())
+            {
+                var manager = new SimEntityManager(host.EntitySpawner) { Scheduler = scheduler };
+                try
+                {
+                    var actor = manager.Attach(player);
+                    manager.Party.Add(actor);
+                    scheduler.Start();
+                    manager.ShowLimitBreakGauge(actor, 3, 0);
+                    service.BeginSimulation(manager);
+                    Flush(service);
+
+                    var binding = new HotbarBinding(65, 0, 0, isLimitBreak: true);
+                    Press(binding);
+                    Check(player.ActionEffects.Count == 0, "量表不足一格时，极限技热键不能释放技能。");
+
+                    for (var level = 0; level < skills.Length; level++)
+                    {
+                        manager.GainLimitBreak((uint)((level + 1) * 10_000));
+                        Press(binding);
+                        Check(SpinWait.SpinUntil(() => !manager.LimitBreakButton.Ready && player.ActionEffects.Count > level, 4000),
+                            "极限技热键应消费当前量表并播放本职业技能。");
+                    }
+                    Check(player.ActionEffects.SequenceEqual(skills), "同一个热键应依次释放当前可用的一级、二级、三级极限技。");
+                }
+                finally
+                {
+                    service.Reset();
+                    scheduler.Dispose();
+                    manager.Clear();
+                    Volatile.Write(ref SimHotbarInput.Pending, null);
+                    GameInterop.Connection = connection;
+                    jobs.Remove((int)Job.DRK);
+                    foreach (var skill in skills)
+                        actions.Remove((int)skill);
+                }
+            }
+
+            void Press(HotbarBinding binding)
+            {
+                Volatile.Write(ref SimHotbarInput.Pending, binding);
+                Check(SpinWait.SpinUntil(() => Volatile.Read(ref SimHotbarInput.Pending) == null, 4000), "模拟热键未被轮询。");
+                Flush(service);
+            }
         }
 
         public static void KeysOnlyFireOnPressAndRequireExactModifiers()
@@ -379,9 +457,13 @@ namespace Simulant.Core
     internal sealed class SimHotbarInput
     {
         internal static int Captures;
+        internal static HotbarBinding Pending;
         internal SimHotbarInput() => Interlocked.Increment(ref Captures);
-        internal void Poll(Action<uint> execute)
+        internal void Poll(Action<uint, bool> execute)
         {
+            var binding = Interlocked.Exchange(ref Pending, null);
+            if (binding != null)
+                execute(binding.Action, binding.IsLimitBreak);
         }
     }
 

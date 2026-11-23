@@ -122,6 +122,8 @@ eventObject.ActorControl(ActorControlCategory.SetSharedGroupTimelineState, timel
 
 `Cast` 未指定 `castTime` 时，以技能表时长减 0.3 秒作为实际咏唱，最低为零；显式时长直接使用，不再扣除。读条结束后默认间隔 0.3 秒播放结算，瞬发默认无间隔，`effectDelay` 可覆盖。
 
+技能表的 `ExtraCastTime100ms` 以 0.1 秒为单位追加到界面读条。ACT 咏唱日志、预兆时长和结算时点沿用基础时长。
+
 若机制判定节点已经负责技能演出，传 `executeOnFinish: false`，避免自动完成再次播放。自动战斗允许读条完成后移动，但下一招等待上一招结算；`StopCasting` 会取消尚待播放的结算。
 
 ```csharp

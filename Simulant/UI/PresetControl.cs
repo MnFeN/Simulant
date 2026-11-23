@@ -385,7 +385,7 @@ namespace Simulant.UI
                     () => PostQuickControlAction(RetryCurrentSession),
                     () => PostQuickControlAction(StopCurrentSession),
                     action => PostQuickControlAction(() => host.PlayerActions.RequestAction(action)),
-                    host.LogWarning, host.PlayerActions.Cooldown)
+                    host.LogWarning, host.PlayerActions.Cooldown, () => host.PlayerActions.LimitBreakButton)
                 {
                     IsGameForeground = () => host.IsGameForeground
                 };

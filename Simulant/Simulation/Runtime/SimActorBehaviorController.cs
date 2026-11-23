@@ -97,6 +97,15 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
+        internal bool InCombat
+        {
+            get
+            {
+                lock (_gate)
+                    return _target?.IsActive == true;
+            }
+        }
+
         internal void SetTarget(SimActor target)
         {
             lock (_gate)
@@ -191,7 +200,7 @@ namespace Simulant.Simulation.Runtime
                 foreach (var boss in _bossStates)
                     UpdateBossFollow(boss.Key, boss.Value, now);
 
-                var inCombat = _target != null && _target.IsActive;
+                var inCombat = InCombat;
                 var targetable = inCombat && _target.Entity.IsTargetable && _target.Entity.HP != 0;
 
                 if (inCombat)

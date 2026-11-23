@@ -84,6 +84,18 @@ CSV 使用带 BOM 的 UTF-8，文本列保留引号；对象 ID 是该记录的�
 
 模拟层查表读条默认减 0.3 秒，结束后再间隔 0.3 秒结算。已经从 ActorCast 取得的实际时长不能重复扣除；有回放证据时分别采用原始读条和结算时刻。完整的机制导入与自动生成时间轴尚未实现。
 
+## 血量回放
+
+使用 `health` 提取一个实体在指定时间段的血量。实体 ID 使用原始包清单中的十六进制 ID，时间段内需为同一次生成。命令支持已核对的 CN7.58 构建。
+
+```powershell
+& ./tools/ReplayInspector/bin/Release/Simulant.ReplayInspector.exe health `
+  'D:\Replay\example.dat' --actor-id 40001234 --start-ms 120000 --end-ms 245000 `
+  --output .local/replay/example-health
+```
+
+`health.tsv` 从区间起点每隔 10 秒取一个样本，并补取区间终点。每行使用该时刻之前最近的同步血量，保留当前值、最大值和源包偏移。预设可用 `SimHealthTrack` 播放这些绝对血量，将采样的最大血量放在实体生成配置中，并用会话时间作为插值原点。
+
 ## 转换为时间轴
 
 使用 `convert` 生成语义 JSON、C# 底稿和全文件调查清单。开始和结束毫秒均包含。省略时间参数时使用整份回放。目前转换支持格式 5、包配置 `CN7.58`、已核对的构建 `0x00D975C9`。原有检查命令支持的版本范围见上文。

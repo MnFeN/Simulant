@@ -18,6 +18,7 @@ namespace Simulant.Simulation.Runtime
             public bool OmenVisible;
             public SimScheduledAction Completion;
             public SimScheduledAction CastCompletion;
+            public SimScheduledAction DisplayCompletion;
             public bool CastFinished;
             public SimScheduledAction PendingOmen;
             public SimActor Target;
@@ -62,6 +63,7 @@ namespace Simulant.Simulation.Runtime
                     return;
 
                 var duration = castTime ?? CastDuration(action.Cast100ms);
+                var extraCastTime = action.ExtraCastTime100ms / 10f;
                 var delayAfterCast = effectDelay ?? (duration > 0 ? 0.3f : 0);
                 SimTimeline.ValidateSeconds(delayAfterCast, nameof(effectDelay));
                 CancelCore(actor);
@@ -83,7 +85,7 @@ namespace Simulant.Simulation.Runtime
 
                 try
                 {
-                    actor.Entity.SetCastInfo(actionId, duration);
+                    actor.Entity.SetCastInfo(actionId, duration, extraCastTime: extraCastTime);
 
                     if (target != null)
                         actor.Entity.SetCastTarget(target.Entity);
@@ -93,6 +95,9 @@ namespace Simulant.Simulation.Runtime
                             () => FinishCast(actor, state), "技能 " + actionId + " 读条完成");
                     state.Completion = _scheduler.ScheduleAfter(duration + (executeOnFinish ? delayAfterCast : 0),
                         () => Complete(actor, state, action, executeOnFinish, packetTargetCapacity), "技能 " + actionId + " 结算演出");
+                    if (extraCastTime > 0)
+                        state.DisplayCompletion = _scheduler.ScheduleAfter(duration + extraCastTime,
+                            () => FinishExtendedDisplay(actor, state), "技能 " + actionId + " 读条显示结束");
 
                     if (action.Omen.RowId > 0 && omenDelay.HasValue)
                     {
@@ -206,15 +211,14 @@ namespace Simulant.Simulation.Runtime
 
                 try
                 {
-                    FinishCastDisplay(actor, state);
+                    FinishCastCore(actor, state);
                 }
                 catch
                 {
                     if (IsCurrent(actor, state))
                     {
                         _casts.Remove(actor);
-                        state.Completion?.Cancel();
-                        state.PendingOmen?.Cancel();
+                        CancelState(actor, state);
                     }
                     throw;
                 }
@@ -228,7 +232,10 @@ namespace Simulant.Simulation.Runtime
                 if (!IsCurrent(actor, state))
                     return;
 
-                _casts.Remove(actor);
+                var keepDisplay = state.DisplayCompletion != null;
+                state.Completion = null;
+                if (!keepDisplay)
+                    _casts.Remove(actor);
                 var execute = false;
 
                 try
@@ -242,10 +249,14 @@ namespace Simulant.Simulation.Runtime
                 }
                 finally
                 {
-                    CancelState(actor, state);
+                    if (keepDisplay)
+                        FinishCastCore(actor, state);
+                    else
+                        CancelState(actor, state);
                 }
 
-                if (!executeOnFinish || !execute || _disposed || !actor.IsActive || _casts.ContainsKey(actor))
+                if (!executeOnFinish || !execute || _disposed || !actor.IsActive ||
+                    (keepDisplay ? !IsCurrent(actor, state) : _casts.ContainsKey(actor)))
                     return;
 
                 // 清理预兆期间也可能有外部原生读条接管动画，必须重新读取当前技能。
@@ -253,6 +264,19 @@ namespace Simulant.Simulation.Runtime
 
                 if (actionAfterCleanup == 0 || actionAfterCleanup == state.ActionId)
                     ExecuteCore(actor, action, state.Target, state.OmenPosition, state.OmenHeading, packetTargetCapacity: packetTargetCapacity);
+            }
+        }
+
+        private void FinishExtendedDisplay(SimActor actor, CastState state)
+        {
+            lock (_gate)
+            {
+                if (!IsCurrent(actor, state))
+                    return;
+
+                if (state.Completion == null)
+                    _casts.Remove(actor);
+                FinishCastCore(actor, state, stopDisplay: true);
             }
         }
 
@@ -303,26 +327,31 @@ namespace Simulant.Simulation.Runtime
         {
             state.Completion?.Cancel();
             state.CastCompletion?.Cancel();
-            state.PendingOmen?.Cancel();
-            FinishCastDisplay(actor, state);
+            FinishCastCore(actor, state, stopDisplay: true);
         }
 
-        private void FinishCastDisplay(SimActor actor, CastState state)
+        private void FinishCastCore(SimActor actor, CastState state, bool stopDisplay = false)
         {
-            if (state.CastFinished)
-                return;
-
+            var removeOmen = !state.CastFinished && state.OmenVisible;
+            var finalizeDisplay = !state.CastFinished && state.DisplayCompletion == null;
             state.CastFinished = true;
             state.PendingOmen?.Cancel();
+            if (stopDisplay && state.DisplayCompletion != null)
+            {
+                state.DisplayCompletion.Cancel();
+                state.DisplayCompletion = null;
+                finalizeDisplay = true;
+            }
+
             try
             {
                 // 不清除借用角色上无关的读条，也不访问已失效的原生实体。
-                if (actor.Entity.IsAlive)
+                if (finalizeDisplay && actor.Entity.IsAlive)
                     actor.Entity.FinalizeCast(state.ActionId);
             }
             finally
             {
-                if (state.OmenVisible)
+                if (removeOmen)
                     _omens.Remove(state.OmenTag);
             }
         }

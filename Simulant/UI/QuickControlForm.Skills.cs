@@ -1,23 +1,27 @@
 using Simulant.Game.Data;
 using Simulant.Simulation.Runtime;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Simulant.Utils.Maths.Angles;
+using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.UI
 {
     internal sealed partial class QuickControlForm
     {
         private readonly Func<uint, Core.SimActionCooldown> _cooldown;
+        private readonly Func<(uint Action, bool Ready)> _limitBreak;
         private readonly Timer _animationTimer;
         private readonly Action<string> _logWarning;
-        private Bitmap[] _skillIcons;
+        private Dictionary<uint, Bitmap> _skillIcons;
         private bool _surecast;
         private uint _invulnerability;
-        private static readonly uint[] SkillActions = SimEntityManager.LocalActions;
+        private const uint DefaultLimitBreakIconAction = 197;
 
         private uint SkillAction(ButtonId button)
         {
@@ -29,6 +33,9 @@ namespace Simulant.UI
                     return (uint)(_surecast ? SimLocalAction.Surecast : SimLocalAction.ArmsLength);
                 case ButtonId.Invulnerability:
                     return _invulnerability;
+                case ButtonId.LimitBreak:
+                    var skill = _limitBreak().Action;
+                    return skill == 0 ? DefaultLimitBreakIconAction : skill;
                 case ButtonId.Provoke:
                     return (uint)SimLocalAction.Provoke;
                 case ButtonId.Shirk:
@@ -38,7 +45,9 @@ namespace Simulant.UI
             }
         }
 
-        private bool CanClick(ButtonId button) => _enabled.Contains(button) && (_sessionButtons.ContainsKey(button) ||
+        private bool IsButtonEnabled(ButtonId button) => button == ButtonId.LimitBreak ? _limitBreak().Ready : _enabled.Contains(button);
+
+        private bool CanClick(ButtonId button) => IsButtonEnabled(button) && (_sessionButtons.ContainsKey(button) ||
             (_skillIcons != null && _cooldown(SkillAction(button)).Remaining <= 0));
 
         protected override async void OnShown(EventArgs e)
@@ -49,24 +58,29 @@ namespace Simulant.UI
                 var data = GameDataService.Instance;
                 var icons = await Task.Run(() =>
                 {
-                    var result = new Bitmap[SkillActions.Length];
+                    var result = new Dictionary<uint, Bitmap>();
                     try
                     {
-                        var actions = SkillActions;
-                        for (var i = 0; i < actions.Length; i++)
-                            result[i] = GameIcon.LoadAction(data, actions[i]);
+                        var jobs = data.GetSheet<Lumina.Excel.Sheets.ClassJob>();
+                        var limitBreaks = Enum.GetValues(typeof(Job)).Cast<Job>()
+                            .SelectMany(job => jobs.TryGetRow((uint)job, out var row) ? SimEntityManager.LimitBreakActions(row) : Array.Empty<uint>());
+                        var actions = SimEntityManager.LocalActions
+                            .Concat(limitBreaks)
+                            .Where(action => action != 0).Distinct();
+                        foreach (var action in actions)
+                            result[action] = GameIcon.LoadAction(data, action);
                         return result;
                     }
                     catch
                     {
-                        foreach (var icon in result)
+                        foreach (var icon in result.Values)
                             icon?.Dispose();
                         throw;
                     }
                 });
                 if (IsDisposed || Disposing)
                 {
-                    foreach (var icon in icons)
+                    foreach (var icon in icons.Values)
                         icon.Dispose();
                     return;
                 }
@@ -88,7 +102,8 @@ namespace Simulant.UI
             var square = new RectangleF(bounds.Left + (bounds.Width - size) / 2,
                 bounds.Top + (bounds.Height - size) / 2, size, size);
             var action = SkillAction(button);
-            var icon = _skillIcons[Array.IndexOf(SkillActions, action)];
+            if (!_skillIcons.TryGetValue(action, out var icon))
+                return;
             var state = graphics.Save();
             using (var outline = WorkbenchTheme.RoundedRect(square, Inset))
             {
@@ -99,7 +114,7 @@ namespace Simulant.UI
                     graphics.DrawImage(icon, square);
                     var cooldown = _cooldown(action);
                     var remaining = cooldown.Remaining;
-                    if (!_enabled.Contains(button))
+                    if (!IsButtonEnabled(button))
                     {
                         using (var shade = new SolidBrush(WorkbenchTheme.QuickControl.DisabledSkillShade))
                             graphics.FillRectangle(shade, square);
@@ -142,7 +157,7 @@ namespace Simulant.UI
                 _animationTimer?.Dispose();
                 if (_skillIcons != null)
                 {
-                    foreach (var icon in _skillIcons)
+                    foreach (var icon in _skillIcons.Values)
                         icon.Dispose();
                     _skillIcons = null;
                 }

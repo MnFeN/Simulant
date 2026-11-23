@@ -73,6 +73,27 @@ namespace Simulant.Tests.Native
             }
         }
 
+        public static void BgmSwitchesAndResetsWithoutLoadingAnotherMap()
+        {
+            var scene = new Scene(false);
+            try
+            {
+                var environment = Get(scene.Host, "EnvironmentService");
+                var setBgm = environment.GetType().GetMethod("SetBgm", Members);
+                var eventsBefore = scene.Events.Count;
+                foreach (ushort song in new ushort[] { 20099, 18, 0 })
+                    setBgm.Invoke(environment, new object[] { song });
+
+                Assert(scene.Events.Skip(eventsBefore).SequenceEqual(new[] { "切换音乐 20099", "切换音乐 18", "恢复音乐" }),
+                    "同图应通过原生音乐入口切换普通曲目、胜利曲目和恢复区域音乐。");
+                _passed++;
+            }
+            finally
+            {
+                scene.Main.DeInitPlugin();
+            }
+        }
+
         private static void VerifySuccess(bool interruptedEntry)
         {
             var scene = new Scene(interruptedEntry);
@@ -323,6 +344,8 @@ namespace Simulant.Tests.Native
                 ClientObjectManager.InstancePtr = new IntPtr(0x80000);
                 ClientObjectManager.DeleteObjectByIndexFuncPtr = UnloadPlugin.DeleteFunction;
                 BGMSystem.InstancePtr = UnloadMemory.BgmPointer;
+                BGMSystem.SetBGMFuncPtr = UnloadPlugin.SetBgmFunction;
+                BGMSystem.ResetBGMFuncPtr = UnloadPlugin.ResetBgmFunction;
 
                 // 绕过连接 ACT、异步读取游戏数据的构造阶段，全部待验证方法仍直接来自正式 DLL。
                 Host = (PluginHost)FormatterServices.GetUninitializedObject(typeof(PluginHost));
@@ -479,7 +502,7 @@ namespace Simulant.Tests.Native
     public sealed class UnloadMemory : ExternalProcessMemory
     {
         public static readonly IntPtr Game = new IntPtr(0x100000), EventPointer = new IntPtr(0x200000),
-            BgmPointer = new IntPtr(0x300000), Scene = new IntPtr(0x320000), Player = new IntPtr(0x40000),
+            BgmPointer = new IntPtr(0x300000), Bgm = new IntPtr(0x310000), Player = new IntPtr(0x40000),
             Receive = new IntPtr(0xA00000), Send = new IntPtr(0xB00000), Cave = new IntPtr(0xC00000),
             LayoutPointer = new IntPtr(0xD00000), Layout = new IntPtr(0xD20000), Interaction = new IntPtr(0xE00000),
             EventObjects = new IntPtr(0xF00000);
@@ -500,8 +523,7 @@ namespace Simulant.Tests.Native
             Put(Layout + 0x18, 5);
             Put(Layout + 0x20, 65000u);
             Put(EventPointer, new IntPtr(0x210000));
-            Put(BgmPointer, new IntPtr(0x310000));
-            Put(new IntPtr(0x3100C0), Scene);
+            Put(BgmPointer, Bgm);
             Put(Player + 0xB0, new Vector3(1, 3, 2));
             Put(Player, new IntPtr(0x60000));
             Put(new IntPtr(0x60000 + 54 * 8), UnloadPlugin.PositionFunction);
@@ -538,9 +560,6 @@ namespace Simulant.Tests.Native
                     return;
             }
 
-            if (address == Scene + 4)
-                Step("恢复音乐");
-
             Put(address, value);
         }
 
@@ -563,7 +582,8 @@ namespace Simulant.Tests.Native
     {
         public static readonly IntPtr LoadFunction = new IntPtr(0x101), TerritoryFunction = new IntPtr(0x102),
             SetupFunction = new IntPtr(0x103), FinalizeFunction = new IntPtr(0x104), DeleteFunction = new IntPtr(0x105),
-            PositionFunction = new IntPtr(0x106), ClearEventObjectsFunction = new IntPtr(0x107);
+            PositionFunction = new IntPtr(0x106), ClearEventObjectsFunction = new IntPtr(0x107),
+            SetBgmFunction = new IntPtr(0x108), ResetBgmFunction = new IntPtr(0x109);
         public UnloadMemory Memory { get; }
 
         private readonly Action _deleted;
@@ -608,6 +628,17 @@ namespace Simulant.Tests.Native
             {
                 Memory.Step("回收实体");
                 _deleted();
+            }
+            else if (function == SetBgmFunction)
+            {
+                PluginUnloadTests.Assert(args.Length == 10 && (uint)args[1] == 0, "切换音乐应由原生事件音乐场景处理。");
+                Memory.Step("切换音乐 " + (ushort)args[0]);
+            }
+            else if (function == ResetBgmFunction)
+            {
+                PluginUnloadTests.Assert(args.Length == 2 && (IntPtr)args[0] == UnloadMemory.Bgm && (uint)args[1] == 0,
+                    "恢复音乐应复位当前事件音乐场景。");
+                Memory.Step("恢复音乐");
             }
             else if (function != PositionFunction)
                 throw new InvalidOperationException("未知卸载原生调用。");

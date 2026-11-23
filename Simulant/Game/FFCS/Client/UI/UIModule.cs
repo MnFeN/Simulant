@@ -15,5 +15,9 @@ namespace Simulant.Game.FFCS.Client.UI
         public AtkModule AtkModule => Ptr.CallVFunc<IntPtr>(7).As<AtkModule>();
         public RaptureHotbarModule HotbarModule => Ptr.CallVFunc<IntPtr>(13).As<RaptureHotbarModule>();
         public UIInputData InputData => Ptr.CallVFunc<IntPtr>(81).As<UIInputData>();
+
+        /// <summary>使用区域切换的 FadeMiddle 层，帧数按 59.94 帧/秒计算。</summary>
+        internal void FadeMiddle(bool toBlack, uint frames)
+            => Ptr.CallVFunc(toBlack ? 149 : 148, 0u, frames, 1u, (byte)0, 0u);
     }
 }

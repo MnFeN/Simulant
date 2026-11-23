@@ -83,7 +83,7 @@ namespace Simulant.Simulation.Runtime
             get
             {
                 lock (_gate)
-                    return _isClearing || _movementLockPlayer != null || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 || _names.Count != 0 ||
+                    return _isClearing || _movementLockPlayer != null || _limitBreakPlayer != null || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 || _names.Count != 0 ||
                         _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true ||
                         _partyService?.IsOwnedBy(this) == true || EnemyList?.HasPendingCleanup == true;
             }
@@ -235,6 +235,14 @@ namespace Simulant.Simulation.Runtime
             => Party.Where(actor => actor.IsActive && scores.TryGetValue(actor, out var value) && value > 0)
                 .OrderByDescending(actor => scores[actor]);
 
+        internal SimActor[] GetPartyEnmityOrder(SimActor target)
+        {
+            lock (_gate)
+                return _partyEnmity.TryGetValue(target, out var scores)
+                    ? OrderedPartyEnmity(scores).Where(actor => actor.Entity.HP != 0).ToArray()
+                    : Array.Empty<SimActor>();
+        }
+
         /// <summary>设置假玩家的共同战斗目标；只允许本会话拥有的网络战斗 NPC，空值表示离开战斗。</summary>
         public void SetCombatTarget(SimActor target)
         {
@@ -250,6 +258,10 @@ namespace Simulant.Simulation.Runtime
                 if (target != null && Party.Count > 1 && _partyService?.IsOwnedBy(this) == true && !_partyEnmity.ContainsKey(target))
                     RegisterPartyEnmity(target, DefaultPartyEnmity.Take(Party.Count).ToArray());
                 _behaviors.SetTarget(target);
+                if (target == null)
+                    StopLimitBreakCharge();
+                else
+                    QueueLimitBreakCharge();
             }
         }
 
@@ -556,6 +568,8 @@ namespace Simulant.Simulation.Runtime
             try
             {
                 TryCleanup(ClearMovementLocks);
+                if (!TryCleanup(ClearLimitBreakGauge))
+                    return;
                 _behaviors?.Dispose();
 
                 foreach (var pending in networkSpawns)

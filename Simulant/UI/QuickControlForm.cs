@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace Simulant.UI
@@ -9,6 +11,12 @@ namespace Simulant.UI
     /// <summary>模拟副本内的快捷控制；单击执行，拖动移动，边缘缩放。</summary>
     internal sealed partial class QuickControlForm : FormEx
     {
+        private static readonly long FocusLossDelayTicks = Stopwatch.Frequency / 4;
+        private static readonly IntPtr TopmostWindow = new IntPtr(-1);
+        private const uint SwpNoSize = 0x0001;
+        private const uint SwpNoMove = 0x0002;
+        private const uint SwpNoActivate = 0x0010;
+
         private enum ButtonId
         {
             Start,
@@ -17,6 +25,7 @@ namespace Simulant.UI
             Sprint,
             Knockback,
             Invulnerability,
+            LimitBreak,
             Provoke,
             Shirk
         }
@@ -25,12 +34,12 @@ namespace Simulant.UI
         private static readonly ButtonId[][] DefaultRows =
         {
             SessionRow,
-            new[] { ButtonId.Sprint, ButtonId.Knockback }
+            new[] { ButtonId.Sprint, ButtonId.Knockback, ButtonId.LimitBreak }
         };
         private static readonly ButtonId[][] TankRows =
         {
             SessionRow,
-            new[] { ButtonId.Sprint, ButtonId.Knockback, ButtonId.Invulnerability },
+            new[] { ButtonId.Sprint, ButtonId.Knockback, ButtonId.Invulnerability, ButtonId.LimitBreak },
             new[] { ButtonId.Provoke, ButtonId.Shirk }
         };
 
@@ -44,11 +53,12 @@ namespace Simulant.UI
         private AnchorStyles _resizeEdges;
         private bool _dragging;
         private bool _updatingLimits;
+        private long? _focusLostAt;
         internal event Action<Point> LocationCommitted;
         internal Func<bool> IsGameForeground { get; set; }
 
         internal QuickControlForm(Action start, Action retry, Action stop, Action<uint> useSkill, Action<string> logWarning,
-            Func<uint, Core.SimActionCooldown> cooldown)
+            Func<uint, Core.SimActionCooldown> cooldown, Func<(uint Action, bool Ready)> limitBreak)
         {
             _sessionButtons = new Dictionary<ButtonId, (Action Execute, Color Accent)>
             {
@@ -59,6 +69,7 @@ namespace Simulant.UI
             _useSkill = useSkill;
             _logWarning = logWarning;
             _cooldown = cooldown;
+            _limitBreak = limitBreak;
             _animationTimer = new Timer { Interval = 33 };
             _animationTimer.Tick += (_, __) =>
             {
@@ -124,8 +135,6 @@ namespace Simulant.UI
                 RestoreLocation(Location);
             }
             Invalidate();
-            if (WindowState != FormWindowState.Normal)
-                WindowState = FormWindowState.Normal;
             UpdateVisibility();
         }
 
@@ -139,11 +148,33 @@ namespace Simulant.UI
 
         private void UpdateVisibility()
         {
-            var foreground = IsGameForeground?.Invoke() ?? true;
-            if (foreground && !Visible)
+            if (IsGameForeground?.Invoke() == false)
+            {
+                if (!Visible)
+                    return;
+
+                // 切换焦点时前台句柄可能短暂为空，延后 250 毫秒再隐藏。
+                var now = Stopwatch.GetTimestamp();
+                var lostAt = _focusLostAt ?? now;
+                _focusLostAt = lostAt;
+                if (now - lostAt >= FocusLossDelayTicks)
+                    Hide();
+                return;
+            }
+
+            if (Visible && WindowState == FormWindowState.Normal && !_focusLostAt.HasValue)
+                return;
+
+            _focusLostAt = null;
+            if (WindowState != FormWindowState.Normal)
+                WindowState = FormWindowState.Normal;
+            if (!Visible)
+            {
+                RestoreLocation(Location);
                 Show();
-            else if (!foreground && Visible)
-                Hide();
+            }
+
+            SetWindowPos(Handle, TopmostWindow, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate);
         }
 
         private float Inset => Math.Min(ClientSize.Width / 2f, ClientSize.Height / 2f) * 0.12f;
@@ -415,5 +446,9 @@ namespace Simulant.UI
                 e.Cancel = true;
             base.OnFormClosing(e);
         }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, uint flags);
     }
 }

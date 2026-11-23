@@ -69,34 +69,51 @@ namespace Simulant.Simulation.Runtime
                 if (target == null)
                     return false;
 
-                var bosses = provoke ? new[] { target } : _partyEnmity.Keys.Where(boss => boss.IsActive && boss.Entity.HP != 0).ToArray();
-                foreach (var boss in bosses)
-                {
-                    var scores = new Dictionary<SimActor, float>(_partyEnmity[boss]);
-                    if (provoke)
-                    {
-                        var first = OrderedPartyEnmity(scores).FirstOrDefault(actor => actor.Entity.HP != 0);
-                        scores[source] = (first == null ? 0 : scores[first]) + 20;
-                    }
-                    else
-                    {
-                        if (!scores.TryGetValue(source, out var before) || before == 0)
-                            continue;
-                        scores.TryGetValue(target, out var received);
-                        var amount = before * 0.25f;
-                        scores[source] = before - amount;
-                        scores[target] = received + amount;
-                    }
-
-                    var leader = OrderedPartyEnmity(scores).First(actor => actor.Entity.HP != 0);
-                    var percentages = Party.Select(actor => actor == leader ? 100 : actor.IsActive && actor.Entity.HP != 0 &&
-                        scores.TryGetValue(actor, out var value) ? Math.Min(99, (int)(100 * value / scores[leader])) : 0).ToArray();
-                    PublishPartyEnmity(boss, scores, percentages);
-                }
-
-                PlayLocalActionEffect(source, actionId, target);
+                UseEnmityAction(source, (SimLocalAction)actionId, target);
                 return true;
             }
+        }
+
+        internal void UsePartyEnmityAction(SimActor source, SimLocalAction action, SimActor target)
+        {
+            lock (_gate)
+            {
+                if (!_acceptingEntities || !source.IsActive || source.Entity.HP == 0 || !target.IsActive || target.Entity.HP == 0)
+                    return;
+
+                UseEnmityAction(source, action, target);
+            }
+        }
+
+        private void UseEnmityAction(SimActor source, SimLocalAction action, SimActor target)
+        {
+            var provoke = action == SimLocalAction.Provoke;
+            var bosses = provoke ? new[] { target } : _partyEnmity.Keys.Where(boss => boss.IsActive && boss.Entity.HP != 0).ToArray();
+            foreach (var boss in bosses)
+            {
+                var scores = new Dictionary<SimActor, float>(_partyEnmity[boss]);
+                if (provoke)
+                {
+                    var first = OrderedPartyEnmity(scores).FirstOrDefault(actor => actor.Entity.HP != 0);
+                    scores[source] = (first == null ? 0 : scores[first]) + 20;
+                }
+                else
+                {
+                    if (!scores.TryGetValue(source, out var before) || before == 0)
+                        continue;
+                    scores.TryGetValue(target, out var received);
+                    var amount = before * 0.25f;
+                    scores[source] = before - amount;
+                    scores[target] = received + amount;
+                }
+
+                var leader = OrderedPartyEnmity(scores).First(actor => actor.Entity.HP != 0);
+                var percentages = Party.Select(actor => actor == leader ? 100 : actor.IsActive && actor.Entity.HP != 0 &&
+                    scores.TryGetValue(actor, out var value) ? Math.Min(99, (int)(100 * value / scores[leader])) : 0).ToArray();
+                PublishPartyEnmity(boss, scores, percentages);
+            }
+
+            PlayLocalActionEffect(source, (uint)action, target);
         }
 
         public static uint InvulnerabilityAction(Job job)
@@ -199,15 +216,6 @@ namespace Simulant.Simulation.Runtime
                 var param = action == SimLocalAction.Sprint ? (ushort)30 : (ushort)0;
                 SetStatus(actor, id, seconds, param, actor);
                 PlayLocalActionEffect(actor, actionId, actor);
-                _scheduler.ScheduleAfter(seconds, () =>
-                {
-                    lock (_gate)
-                    {
-                        var status = _statuses.FirstOrDefault(s => s.Actor.Identity == actor.Entity.Identity && s.StatusId == id);
-                        if (status != null && _scheduler.ElapsedSeconds >= status.ExpiresAt)
-                            RemoveStatus(actor, id);
-                    }
-                }, "模拟技能状态结束");
                 return true;
             }
         }

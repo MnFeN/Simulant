@@ -28,6 +28,9 @@ namespace Simulant.Core
         internal void SetEnmityActionHandler(Func<uint, bool> handler)
             => Volatile.Write(ref _enmityAction, handler);
 
+        internal (uint Action, bool Ready) LimitBreakButton
+            => Volatile.Read(ref _encounterEntities)?.LimitBreakButton ?? default;
+
         private bool Enabled => _host.FirewallEnabled && _host.PluginReady && !_host.Disposed && !_host.IsSwitchingTerritory;
 
         // 亲疏自行与沉稳咏唱共用一个冷却组。
@@ -171,14 +174,16 @@ namespace Simulant.Core
             }
         }
 
-        private void Execute(uint action)
+        private void Execute(uint action, bool isLimitBreak = false)
         {
             try
             {
-                if (!Enabled || Cooldown(action).Remaining > 0)
+                if (!Enabled || !isLimitBreak && Cooldown(action).Remaining > 0)
                     return;
                 var player = _host.EntityProvider.GetMyself();
                 if (player == null || !player.IsAlive)
+                    return;
+                if (Volatile.Read(ref _encounterEntities)?.TryUseLimitBreak(player, isLimitBreak ? 0 : action) == true || isLimitBreak)
                     return;
                 if (_recasts == null)
                     _recasts = new SimActionRecasts(player);

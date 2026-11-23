@@ -1,10 +1,15 @@
 using SimuMagic;
+using Simulant.Core.Entity;
 using Simulant.Core.Environment;
 using Simulant.Game;
+using Simulant.Game.FFCS.Client.Game.Object;
+using Simulant.Game.FFCS.Client.Network;
 using Simulant.Game.FFCS.Client.System.Framework;
 using Simulant.Game.FFCS.Client.UI;
+using Simulant.Simulation.Runtime;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
@@ -28,6 +33,7 @@ namespace Simulant.Tests.Native
                 try
                 {
                     VerifyChat(plugin);
+                    VerifyScreenFadeAndItemGain(plugin);
                     VerifyMarkers(plugin);
                     VerifyVfx(plugin);
                     VerifyHotbar(plugin);
@@ -61,6 +67,47 @@ namespace Simulant.Tests.Native
             chat.GetMethod("SendEcho").Invoke(null, new object[] { message, true });
             Assert(plugin.Message == "/e <se.11>\n" + message, "提示文本与音效应通过一个 UTF-8 指令传入。");
             Assert(plugin.Memory.Bytes.Freed.SequenceEqual(plugin.Memory.Bytes.Allocations), "消息缓冲在调用完成后应立即释放。");
+        }
+
+        private static void VerifyScreenFadeAndItemGain(PresentationPlugin plugin)
+        {
+            const BindingFlags members = BindingFlags.Instance | BindingFlags.NonPublic;
+            var ui = Framework.Instance.UIModule.Ptr;
+            var vtable = plugin.Memory.Read<IntPtr>(ui);
+            plugin.Memory.Write(vtable + 149 * IntPtr.Size, PresentationPlugin.ScreenFadeOut);
+            plugin.Memory.Write(vtable + 148 * IntPtr.Size, PresentationPlugin.ScreenFadeIn);
+            var environmentType = GameType("Core.Environment.EnvironmentService");
+            var environment = FormatterServices.GetUninitializedObject(environmentType);
+            var fade = environmentType.GetMethod("FadeScreen", members);
+            fade.Invoke(environment, new object[] { true, 30u });
+            fade.Invoke(environment, new object[] { false, 30u });
+            fade.Invoke(environment, new object[] { false, 0u });
+            var calls = plugin.PresentationCalls;
+            Assert(calls.Select(call => call.Function).SequenceEqual(new[]
+                {
+                    PresentationPlugin.ScreenFadeOut, PresentationPlugin.ScreenFadeIn, PresentationPlugin.ScreenFadeIn
+                }) &&
+                calls[0].Arguments.SequenceEqual(new object[] { ui, 0u, 30u, 1u, (byte)0, 0u }) &&
+                calls[1].Arguments.SequenceEqual(calls[0].Arguments) &&
+                calls[2].Arguments.SequenceEqual(new object[] { ui, 0u, 0u, 1u, (byte)0, 0u }),
+                "黑屏和恢复都应使用 FadeMiddle，停止时支持立即恢复。");
+
+            var address = new IntPtr(0x34000);
+            const uint playerId = 0x10001234;
+            var registry = new EntityRegistry(_ => new EntityObservation(address, playerId, ObjectKind.Pc), 1);
+            plugin.Memory.Write(address + 0x78, playerId);
+            var player = (SimActor)FormatterServices.GetUninitializedObject(typeof(SimActor));
+            typeof(SimActor).GetField("<Entity>k__BackingField", members).SetValue(player, registry.Get(0));
+            PacketDispatcher.HandleActorControlFuncPtr = PresentationPlugin.Control;
+            SetAddress(GameType("Game.FFCS.Client.UI.UIGlobals"), "PlaySoundEffectFuncPtr", PresentationPlugin.Sound);
+            player.ShowItemGain(44743, 1);
+            Assert(calls.Count == 5 && calls[3].Function == PresentationPlugin.Control &&
+                calls[3].Arguments.Take(4).SequenceEqual(new object[] { playerId, (ushort)ActorControlCategory.ShowItemGain, 44743u, 1u }) &&
+                calls[4].Function == PresentationPlugin.Sound &&
+                calls[4].Arguments.SequenceEqual(new object[] { 18u, IntPtr.Zero, IntPtr.Zero, (byte)0 }),
+                "物品提示应在原有飘字与日志之后播放一次原生获取音效。");
+            player.ShowItemGain(44743, 0);
+            Assert(calls.Count == 6 && calls[5].Function == PresentationPlugin.Control, "零件数提示只保留原有日志请求。");
         }
 
         private static void VerifyMarkers(PresentationPlugin plugin)
@@ -262,13 +309,15 @@ namespace Simulant.Tests.Native
     {
         public static readonly IntPtr GetShell = new IntPtr(0x10), Chat = new IntPtr(0x11), Mark = new IntPtr(0x12),
             Create = new IntPtr(0x13), Run = new IntPtr(0x14), Fade = new IntPtr(0x15), Actor = new IntPtr(0x16),
-            GetAddon = new IntPtr(0x17), BufferProbe = new IntPtr(0x18);
+            GetAddon = new IntPtr(0x17), BufferProbe = new IntPtr(0x18), ScreenFadeOut = new IntPtr(0x19),
+            ScreenFadeIn = new IntPtr(0x1A), Control = new IntPtr(0x1B), Sound = new IntPtr(0x1C);
         public readonly IntPtr Hotbar = new IntPtr(0x92000);
         private int _vfxCount;
         public string State => "Ready";
         public readonly PresentationMemory Memory = new PresentationMemory();
         public readonly ConcurrentQueue<IntPtr> Started = new ConcurrentQueue<IntPtr>();
         public readonly ConcurrentQueue<IntPtr> Faded = new ConcurrentQueue<IntPtr>();
+        public readonly List<(IntPtr Function, object[] Arguments)> PresentationCalls = new List<(IntPtr, object[])>();
         public string Message;
         public object[] MarkerArguments;
         public object[] ActorArguments;
@@ -324,6 +373,8 @@ namespace Simulant.Tests.Native
                 Started.Enqueue((IntPtr)args[0]);
             else if (function == Fade)
                 Faded.Enqueue((IntPtr)args[0]);
+            else if (function == ScreenFadeOut || function == ScreenFadeIn || function == Control || function == Sound)
+                PresentationCalls.Add((function, args));
             else
                 throw new ArgumentException("未预期的原生函数：" + function);
         }

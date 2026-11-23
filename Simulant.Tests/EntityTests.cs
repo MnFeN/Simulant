@@ -150,11 +150,12 @@ namespace Simulant.Tests
 
     internal sealed class EntityTestWorld
     {
-        internal readonly EntityObservation?[] Objects = new EntityObservation?[4];
+        internal readonly EntityObservation?[] Objects;
         internal readonly EntityRegistry Registry;
 
-        internal EntityTestWorld()
+        internal EntityTestWorld(int slots = 4)
         {
+            Objects = new EntityObservation?[slots];
             Registry = new EntityRegistry(slot => Objects[slot], Objects.Length);
         }
 

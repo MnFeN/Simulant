@@ -32,6 +32,7 @@ namespace Lumina.Excel
     {
         public bool TryGetRow(uint id, out T row) => TryGetValue(unchecked((int)id), out row);
         public T? GetRowOrDefault(uint id) => TryGetRow(id, out var row) ? row : (T?)null;
+        public T GetRow(uint id) => this[unchecked((int)id)];
     }
 
     public struct RowRef<T>
@@ -130,6 +131,7 @@ namespace Lumina.Excel.Sheets
     {
         public uint RowId;
         public ushort Cast100ms;
+        public byte ExtraCastTime100ms;
         public TestText Name;
         public sbyte Range;
         public RowRef<ActionTimeline> AnimationEnd;
@@ -137,6 +139,13 @@ namespace Lumina.Excel.Sheets
         public float XAxisModifier;
         public float EffectRange;
         public RowRef<Omen> Omen;
+        public bool CanTargetHostile, TargetArea;
+    }
+
+    public struct ClassJob : IExcelRow<ClassJob>
+    {
+        public byte Role;
+        public RowRef<Action> LimitBreak1, LimitBreak2, LimitBreak3;
     }
 
     public struct Omen : IExcelRow<Omen>

@@ -3054,6 +3054,14 @@ namespace Simulant.Game
         ShowContentBattleTalk = 0x0834,
 
         /// <summary>
+        /// 显示新月岛同款的获取宝物弹窗。<br />
+        /// a1 为显示方式。1 隐藏数量，2–4 读取普通物品数量。<br />
+        /// a2 为 Item 或 EventItem 编号。<br />
+        /// a3 为普通物品数量。
+        /// </summary>
+        ShowTreasureItem = 0x0835,
+
+        /// <summary>
         /// FATE 对象交互资格。<br />
         /// a1：对象 EntityId。<br />
         /// a2：<br />
@@ -3144,6 +3152,13 @@ namespace Simulant.Game
         /// a2：ObjectiveNpc EntityId，E0000000 清目标。
         /// </summary>
         SetFateDeliveryNpc = 0x0938,
+
+        /// <summary>
+        /// 显示物品获得的系统日志和飘字。<br />
+        /// a1 为物品编号。<br />
+        /// a2 为获得数量，单件和多件分别使用 LogMessage 2071 和 2072。
+        /// </summary>
+        ShowItemGain = 0x0939,
 
         /// <summary>
         /// 当前同步 FATE。<br />

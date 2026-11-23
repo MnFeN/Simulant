@@ -44,6 +44,7 @@ namespace Simulant.Simulation.Runtime
                 _partyEnmityPoll = null;
                 _enemyListPoll?.Cancel();
                 _enemyListPoll = null;
+                StopLimitBreakCharge();
                 _networkGeneration++;
                 _networkPoll?.Cancel();
                 _networkPoll = null;

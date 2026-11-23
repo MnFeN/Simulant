@@ -17,6 +17,185 @@ namespace Simulant.Tests
 {
     internal static class ManagerTests
     {
+        public static void LimitBreakChargesEveryThreeSecondsInCombatAndRespectsPauses()
+        {
+            var jobs = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.ClassJob>();
+            jobs[(int)Job.DRK] = new Lumina.Excel.Sheets.ClassJob { Role = 1, LimitBreak1 = 197, LimitBreak2 = 198, LimitBreak3 = 4241 };
+            var previousConnection = GameInterop.Connection;
+            GameInterop.Connection = new GameConnection();
+
+            try
+            {
+                Exception failure = null;
+                using (var scheduler = new SimScheduler((error, name) => failure = error))
+                using (var finished = new ManualResetEventSlim())
+                {
+                    var gauge = 0;
+                    var spawner = new EntitySpawner { NetworkReady = true };
+                    var manager = new SimEntityManager(spawner)
+                    {
+                        Scheduler = scheduler,
+                        CombatLog = new SimCombatLog(() => true, (line, payload, _) =>
+                        {
+                            if (line == 36)
+                                gauge = Convert.ToInt32(payload.Split('|')[0], 16);
+                        }, null)
+                    };
+                    var player = manager.Attach(spawner.World.CreateCharacter(0));
+                    player.Entity.Job = Job.DRK;
+                    manager.Party.Add(player);
+                    manager.ShowLimitBreakGauge(player, 3, 29_500);
+                    // 测试生成器顺序分配槽位，战斗目标使用偶数槽位。
+                    manager.SpawnBNpc(2);
+                    manager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec { BNpcBaseId = 17839 }, boss =>
+                    {
+                        var timeline = new SimTimeline().At(3.1, () =>
+                        {
+                            Assert(gauge == 29_500, "开战前不应自然充能。");
+                            manager.SetCombatTarget(boss);
+                            manager.SetCombatTarget(boss);
+                        }).At(5.9, () =>
+                        {
+                            Assert(gauge == 29_500, "开战未满三秒时不应自然充能。");
+                        }).At(6.2, () =>
+                        {
+                            Assert(gauge == 29_720, "进入战斗后三秒应默认增加 220 点且只增加一次。");
+                            manager.LimitBreakAutoChargeEnabled = false;
+                            manager.GainLimitBreak(200);
+                        }).At(9.2, () =>
+                        {
+                            Assert(gauge == 29_920, "关闭自然充能后仍可通过机制直接加槽。");
+                            manager.LimitBreakAutoChargeEnabled = true;
+                        }).At(12.2, () =>
+                        {
+                            Assert(gauge == 30_000, "恢复充能后下一次应如期加槽并封顶。");
+                            manager.SetCombatTarget(null);
+                            manager.ShowLimitBreakGauge(player, 3, 0);
+                        }).At(15.3, () =>
+                        {
+                            Assert(gauge == 0, "退出战斗后应停止自然充能。");
+                            finished.Set();
+                        });
+                        scheduler.Play(timeline);
+                    });
+                    scheduler.Start();
+                    Assert(finished.Wait(20_000), "自然充能验证未完成：" + failure);
+                    manager.Clear();
+                    Assert(scheduler.PendingCount == 0 && manager.LimitBreakAutoChargeEnabled, "清理应取消自然充能并恢复默认开关。");
+                }
+            }
+            finally
+            {
+                GameInterop.Connection = previousConnection;
+                jobs.Remove((int)Job.DRK);
+            }
+        }
+
+        public static void LimitBreakUsesTheJobSkillAndAppliesTankMitigationInOrder()
+        {
+            var data = GameDataService.Instance;
+            var jobs = data.GetSheet<Lumina.Excel.Sheets.ClassJob>();
+            var actions = data.GetSheet<ActionRow>();
+            jobs[(int)Job.DRK] = new Lumina.Excel.Sheets.ClassJob { Role = 1, LimitBreak1 = 197, LimitBreak2 = 198, LimitBreak3 = 4241 };
+            jobs[(int)Job.WHM] = new Lumina.Excel.Sheets.ClassJob { Role = 4, LimitBreak1 = 206, LimitBreak2 = 207, LimitBreak3 = 208 };
+            actions[4241] = new ActionRow { RowId = 4241 };
+            actions[208] = new ActionRow { RowId = 208, Cast100ms = 20 };
+            var previousConnection = GameInterop.Connection;
+            GameInterop.Connection = new GameConnection();
+
+            try
+            {
+                foreach (var (playerJob, useFakeTank) in new[] { (Job.DRK, false), (Job.WHM, true), (Job.WHM, false) })
+                {
+                    var spawner = new EntitySpawner();
+                    var world = new EntityTestWorld(16);
+                    var lastGauge = "";
+                    var releaseTime = 0.0;
+                    var applications = new List<(string Target, double Delay)>();
+                    var expiries = new List<(string Target, double Delay)>();
+                    var expired = 0;
+                    using (var scheduler = new SimScheduler())
+                    {
+                        var manager = new SimEntityManager(spawner)
+                        {
+                            Scheduler = scheduler,
+                            CombatLog = new SimCombatLog(() => true, (line, payload, time) =>
+                            {
+                                if (line == 36)
+                                {
+                                    if (payload == "0000|3")
+                                        releaseTime = scheduler.ElapsedSeconds;
+                                    Volatile.Write(ref lastGauge, payload);
+                                }
+                                if (line == 26)
+                                    applications.Add((payload.Split('|')[5], scheduler.ElapsedSeconds - releaseTime));
+                                if (line == 30)
+                                {
+                                    expiries.Add((payload.Split('|')[5], scheduler.ElapsedSeconds - releaseTime));
+                                    Interlocked.Increment(ref expired);
+                                }
+                            }, null)
+                        };
+                        var player = manager.Attach(world.CreateCharacter(0));
+                        var partner = manager.Attach(world.CreateCharacter(2));
+                        player.Entity.Job = playerJob;
+                        partner.Entity.Job = playerJob == Job.DRK ? Job.WHM : Job.DRK;
+                        manager.Party.Add(player);
+                        manager.Party.Add(partner);
+                        for (ushort slot = 4; slot < 16; slot += 2)
+                            manager.Party.Add(manager.Attach(world.CreateCharacter(slot)));
+                        player.Entity.HP = 1;
+                        scheduler.Start();
+                        manager.ShowLimitBreakGauge(player, 3, 25_260);
+                        Assert(manager.LimitBreakButton == (playerJob == Job.DRK ? 198u : 207u, true), "两格量表应显示本职业二级极限技。");
+                        manager.GainLimitBreak(30_000, 5);
+                        Assert(manager.LimitBreakButton == (playerJob == Job.DRK ? 4241u : 208u, true), "补满应显示本职业三级极限技。");
+                        Assert(!manager.TryUseLimitBreak(player.Entity, 198), "悬浮窗旧技能编号不能消费已升到三级的量表。");
+                        var source = useFakeTank ? partner : player;
+                        var tank = source.Job == Job.DRK;
+                        var action = tank ? 4241u : 208u;
+                        var accepted = useFakeTank ? manager.UsePartyLimitBreak(source, 3) : manager.TryUseLimitBreak(player.Entity, action);
+                        Assert(accepted, "量表应能由本机和假队员消费。");
+                        Assert(SpinWait.SpinUntil(() => Volatile.Read(ref lastGauge) == "0000|3" && !manager.LimitBreakButton.Ready, 4000),
+                            "释放后应扣除量表并禁用按钮。");
+                        Assert(player.Entity.LastActorControl == (ActorControlCategory.LimitBreakPartyStart, action, useFakeTank ? 1u : 0u, 37u, 0u),
+                            "所有职能都应保留 3.7 秒的极限技量表演出。");
+
+                        if (tank)
+                        {
+                            Assert(SpinWait.SpinUntil(() => manager.TankLimitBreakActive, 4000), "全队取得三级极限技减伤后才能通过判定。");
+                            var order = new[] { source }.Concat(manager.Party.Where(member => member != source));
+                            Assert(applications.Select(application => application.Target).SequenceEqual(order.Select(member => member.Id.ToString("X8"))),
+                                "减伤应先施加给施放者，再逐个施加给其他队员。");
+                            Assert(applications[0].Delay >= 1.25 && applications[7].Delay >= 2.2 && applications[7].Delay - applications[0].Delay >= 0.7,
+                                "全队减伤应延迟开始，并分开生效。");
+                            Assert(manager.Party.All(member => member.Entity.HasStatus(864)), "减伤应应用到全队。");
+                            Assert(SpinWait.SpinUntil(() => Volatile.Read(ref expired) == manager.Party.Count, 10_000),
+                                "所有队员的减伤到期都应记录移除。");
+                            Assert(expiries.Select(expiry => expiry.Target).SequenceEqual(order.Select(member => member.Id.ToString("X8"))) &&
+                                expiries.Zip(applications, (expiry, application) => expiry.Delay - application.Delay).All(duration => duration >= 7.9),
+                                "减伤应在每个队员取得状态约八秒后逐个消除。");
+                            Assert(!manager.Party.Any(member => member.Entity.HasStatus(864)), "到期后应清空全队的实际状态。");
+                        }
+                        else
+                            Assert(applications.Count == 0 && player.Entity.HP == 1, "治疗极限技沿用演出，不修改模拟血量或状态。");
+
+                        scheduler.Dispose();
+                        manager.Clear();
+                        Assert(manager.LimitBreakButton.Action == 0 && Volatile.Read(ref lastGauge) == "0000|0", "退出模拟时应清除极限技量表。");
+                    }
+                }
+            }
+            finally
+            {
+                GameInterop.Connection = previousConnection;
+                jobs.Remove((int)Job.DRK);
+                jobs.Remove((int)Job.WHM);
+                actions.Remove(4241);
+                actions.Remove(208);
+            }
+        }
+
         public static void BossFollowsLiveEnmityWithNetworkMovementAndPausesForCasts()
         {
             Exception failure = null;

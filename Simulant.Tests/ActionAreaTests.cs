@@ -10,6 +10,18 @@ namespace Simulant.Tests
 {
     internal static class ActionAreaTests
     {
+        public static void CrossArmsUseFullWidthsAndExtendInAllFourDirections()
+        {
+            var cross = ActionArea.Cross(40, 5);
+            var center = new Vector2(100, 100);
+            foreach (var delta in new[] { new Vector2(0, -40), new Vector2(0, 40), new Vector2(-40, 0), new Vector2(40, 0) })
+                Assert(cross.Contains(center + delta, center, 0), "十字的四条臂都应覆盖端点。");
+            Assert(!cross.Contains(center + new Vector2(3, -39), center, 0), "距离臂中心线超过半宽，应判为安全。");
+            Assert(cross.IntersectsCircle(center + new Vector2(3, -39), 0.5f, center), "碰撞圆与十字臂边缘相接时应命中。");
+            Assert(!cross.IntersectsCircle(center + new Vector2(3, -39), 0.49f, center), "碰撞圆与十字臂分离时不能命中。");
+            Assert(cross.Contains(center + new Vector2(25, -25), center, (float)Deg(-45)), "对角十字应保留技能朝向。");
+        }
+
         public static void CollisionCirclesTouchEdgesWithoutChangingPlayerPointChecks()
         {
             var origin = new Vector2(100, 100);

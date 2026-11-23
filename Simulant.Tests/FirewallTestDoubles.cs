@@ -137,6 +137,8 @@ namespace Simulant.Game
     public sealed class GameConnection
     {
         public ExternalProcessMemory Memory { get; set; }
+
+        internal void RunInFrame(Action action) => action();
     }
 
     public static class GameInterop

@@ -15,6 +15,7 @@ namespace Simulant.ReplayTool
                 Console.WriteLine("Simulant.ReplayInspector.exe <回放.dat> [--output <新目录>] [--profile CN7.57|CN7.58]");
                 Console.WriteLine("Simulant.ReplayInspector.exe convert <回放.dat> --profile CN7.58 [--start-ms <毫秒>] [--end-ms <毫秒>] [--output <新目录>]");
                 Console.WriteLine("Simulant.ReplayInspector.exe generate <timeline.json> --output <新C#文件>");
+                Console.WriteLine("Simulant.ReplayInspector.exe health <回放.dat> --actor-id <十六进制ID> --start-ms <毫秒> --end-ms <毫秒> [--output <新目录>]");
                 return args.Length == 0 ? 2 : 0;
             }
 
@@ -22,7 +23,8 @@ namespace Simulant.ReplayTool
             {
                 var convert = args[0] == "convert";
                 var generate = args[0] == "generate";
-                var inputIndex = convert || generate ? 1 : 0;
+                var health = args[0] == "health";
+                var inputIndex = convert || generate || health ? 1 : 0;
                 if (args.Length <= inputIndex)
                     throw new ArgumentException("缺少输入文件。");
 
@@ -30,6 +32,7 @@ namespace Simulant.ReplayTool
                 string output = null, profile = null;
                 var startMs = 0u;
                 var endMs = uint.MaxValue;
+                var actorId = 0u;
                 for (var i = inputIndex + 1; i < args.Length; i++)
                 {
                     var option = args[i];
@@ -44,11 +47,16 @@ namespace Simulant.ReplayTool
                         case "--profile" when !generate:
                             profile = args[i];
                             break;
-                        case "--start-ms" when convert:
+                        case "--start-ms" when convert || health:
                             startMs = ParseMilliseconds(args[i], option);
                             break;
-                        case "--end-ms" when convert:
+                        case "--end-ms" when convert || health:
                             endMs = ParseMilliseconds(args[i], option);
+                            break;
+                        case "--actor-id" when health:
+                            var value = args[i].StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? args[i].Substring(2) : args[i];
+                            if (!uint.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out actorId) || actorId == 0)
+                                throw new ArgumentException("--actor-id 需要有效的十六进制实体 ID。");
                             break;
                         default:
                             throw new ArgumentException("无法识别参数：" + option);
@@ -73,6 +81,15 @@ namespace Simulant.ReplayTool
                     ReplayConversion.Convert(input, output, profile, startMs, endMs);
                     Console.WriteLine("导出完成：" + Path.GetFullPath(output));
                     Console.WriteLine("时间轴位于 timeline.json 和 timeline.g.cs，整份回放的调查清单位于 summary.md 和 TSV 文件。");
+                    return 0;
+                }
+
+                if (health)
+                {
+                    if (actorId == 0 || endMs == uint.MaxValue)
+                        throw new ArgumentException("血量提取需要 --actor-id 和 --end-ms。");
+                    ReplayHealthExport.Export(input, output, profile, actorId, startMs, endMs);
+                    Console.WriteLine("血量样本：" + Path.Combine(Path.GetFullPath(output), "health.tsv"));
                     return 0;
                 }
 

@@ -20,8 +20,8 @@ namespace Simulant.Simulation.Runtime
             internal SimActor Participant;
             internal bool LockMovement;
             internal double ExpiresAt;
-            internal SimScheduledAction LogExpiry;
-            internal ushort LoggedParam;
+            internal SimScheduledAction Expiry;
+            internal ushort? LoggedParam;
         }
 
         private readonly List<OwnedStatus> _statuses = new List<OwnedStatus>();
@@ -42,8 +42,11 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        /// <summary>在空状态槽中施加本会话的点名；重复调用只更新自己持有的同种状态。</summary>
+        /// <summary>施加本会话的状态，到期自动移除；传入 0 秒表示常驻。</summary>
         public void SetStatus(SimActor actor, ushort statusId, float seconds, ushort param, SimActor source)
+            => SetStatus(actor, statusId, seconds, param, source, lockMovement: null);
+
+        internal void SetStatus(SimActor actor, ushort statusId, float seconds, ushort param, SimActor source, bool? lockMovement)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -54,8 +57,8 @@ namespace Simulant.Simulation.Runtime
             if (statusId == 0)
                 throw new ArgumentOutOfRangeException(nameof(statusId), "状态编号不能为零。");
 
-            if (float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds <= 0)
-                throw new ArgumentOutOfRangeException(nameof(seconds), "状态持续时间必须为有限正数。");
+            if (float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds < 0)
+                throw new ArgumentOutOfRangeException(nameof(seconds), "状态持续时间必须为非负有限秒数，0 表示常驻。");
 
             lock (_gate)
             {
@@ -114,8 +117,7 @@ namespace Simulant.Simulation.Runtime
                 }
 
                 var found = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>().TryGetRow(statusId, out var row);
-                owned.LockMovement = found && row.LockMovement;
-                owned.ExpiresAt = _scheduler.ElapsedSeconds + seconds;
+                var expiresAt = seconds > 0 ? _scheduler.ElapsedSeconds + seconds : double.PositiveInfinity;
 
                 // 返回值只表示编号或来源有变化；同一状态刷新时间和参数会正常返回 false。
                 var identityChanged = statuses.SetStatus(owned.Slot, statusId, seconds, param,
@@ -135,44 +137,41 @@ namespace Simulant.Simulation.Runtime
                         FormattableString.Invariant($"实际编号 0x{actualId:X4}、参数 {actualParam}、来源 0x{actualSource:X16}、剩余 {actual.RemainingTime.Get():F3} 秒；") +
                         $"原生编号或来源变化标志：{(identityChanged ? "是" : "否")}。");
 
-                RecordStatus(owned, seconds, param);
+                owned.LockMovement = lockMovement ?? (found && row.LockMovement);
+                owned.ExpiresAt = expiresAt;
+                owned.Expiry?.Cancel();
+                owned.Expiry = seconds > 0 ? ScheduleStatusExpiry(owned, expiresAt) : null;
+                owned.LoggedParam = null;
+                if (CombatLog?.Enabled == true)
+                {
+                    CombatLog.Status(true, statusId, seconds, param, source.Entity, actor.Entity);
+                    owned.LoggedParam = param;
+                }
                 RefreshMovementLocks();
             }
         }
 
-        private void RecordStatus(OwnedStatus owned, float seconds, ushort param)
-        {
-            owned.LogExpiry?.Cancel();
-            owned.LogExpiry = null;
-            if (CombatLog?.Enabled != true)
-                return;
-
-            CombatLog.Status(true, owned.StatusId, seconds, param, owned.Source, owned.Actor);
-            owned.LoggedParam = param;
-            var expiresAt = owned.ExpiresAt;
-            owned.LogExpiry = _scheduler.Schedule(expiresAt, () =>
+        private SimScheduledAction ScheduleStatusExpiry(OwnedStatus owned, double expiresAt)
+            => _scheduler.Schedule(expiresAt, () =>
             {
                 lock (_gate)
-                    if (owned.LogExpiry != null && owned.ExpiresAt == expiresAt)
-                        RecordStatusRemoval(owned);
-            }, "记录模拟状态到期");
-        }
+                {
+                    if (owned.Expiry == null || owned.ExpiresAt != expiresAt)
+                        return;
 
-        private void RecordStatusRemoval(OwnedStatus owned)
-        {
-            if (owned.LogExpiry == null)
-                return;
-
-            owned.LogExpiry.Cancel();
-            owned.LogExpiry = null;
-            if (owned.Actor.IsAlive)
-                CombatLog?.Status(false, owned.StatusId, 0, owned.LoggedParam, owned.Source, owned.Actor);
-        }
+                    RemoveOwnedStatus(owned);
+                    RefreshMovementLocks();
+                }
+            }, "移除到期模拟状态");
 
         private void ForgetStatus(OwnedStatus owned)
         {
             _statuses.Remove(owned);
-            RecordStatusRemoval(owned);
+            owned.Expiry?.Cancel();
+            owned.Expiry = null;
+            if (owned.LoggedParam.HasValue && owned.Actor.IsAlive)
+                CombatLog?.Status(false, owned.StatusId, 0, owned.LoggedParam.Value, owned.Source, owned.Actor);
+            owned.LoggedParam = null;
         }
 
         /// <summary>只移除本会话施加的同种状态，不触碰原有或后来替换的状态。</summary>
