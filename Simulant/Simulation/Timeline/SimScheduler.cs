@@ -194,6 +194,13 @@ namespace Simulant.Simulation.Timeline
             }
         }
 
+        /// <summary>按指定原点排入时间轴；早于开场的节点在开场时按添加顺序执行。</summary>
+        internal void PlayAt(SimTimeline timeline, double origin, double notBefore)
+        {
+            foreach (var node in timeline.Snapshot())
+                Schedule(Math.Max(notBefore, origin + node.Seconds), node.Action, node.Name);
+        }
+
         /// <summary>
         /// Permanently stops accepting nodes, clears the queue, and freezes the clock.
         /// A callback already claimed by the worker may finish; use Dispose to wait for it.

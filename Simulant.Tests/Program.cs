@@ -212,6 +212,27 @@ namespace Simulant.Tests
             }
         }
 
+        public static void PlayAtKeepsOpeningOrderAndFutureDeadlines()
+        {
+            var calls = new List<string>();
+            var timeline = new SimTimeline()
+                .At(0.75, () => calls.Add("先添加"))
+                .At(0, () => calls.Add("后添加"))
+                .At(1.03, () => calls.Add("后续机制"));
+
+            using (var finished = new ManualResetEventSlim())
+            using (var scheduler = new SimScheduler())
+            {
+                scheduler.Schedule(0.01, () => calls.Add("开场"));
+                scheduler.PlayAt(timeline, origin: -1, notBefore: 0.01);
+                scheduler.Schedule(0.02, () => calls.Add("开场之后"));
+                scheduler.Schedule(0.04, finished.Set);
+                scheduler.Start();
+                Wait(finished, "快速开场时间轴");
+                SequenceEqual(new[] { "开场", "先添加", "后添加", "开场之后", "后续机制" }, calls);
+            }
+        }
+
         public static void RejectAsyncVoidActions()
         {
             Action asyncAction = async () => await Task.Yield();

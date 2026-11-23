@@ -224,8 +224,7 @@ namespace Simulant.Content.U7a.Presets
             _gaia.FaceNetwork((float)Math.PI);
             Map(0x2E, 2);
             _host.LogSim($"[时间结晶] 你的职能为 {P42时间结晶Plan.Roles[Self]}，点名为 {P42时间结晶Plan.Label(_plan.Debuffs[Self])}。");
-            foreach (var node in BuildMechanicTimeline().Snapshot())
-                Scheduler.Schedule(Math.Max(start, _origin + node.Seconds), node.Action, node.Name);
+            Scheduler.PlayAt(BuildMechanicTimeline(), _origin, notBefore: start);
 
             CheckArena();
         }

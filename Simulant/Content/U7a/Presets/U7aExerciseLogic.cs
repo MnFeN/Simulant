@@ -160,8 +160,7 @@ namespace Simulant.Content.U7a.Presets
             if (!Solo)
                 CheckArena();
             SchedulePrelude();
-            foreach (var node in BuildExercise().Snapshot())
-                Scheduler.Schedule(Math.Max(start, Origin + node.Seconds), node.Action, node.Name);
+            Scheduler.PlayAt(BuildExercise(), Origin, notBefore: start);
         }
 
         protected static Vector2 Direction(double angle) => new Vector2((float)Math.Sin(angle), (float)Math.Cos(angle));
