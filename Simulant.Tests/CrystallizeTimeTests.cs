@@ -27,7 +27,7 @@ namespace Simulant.Tests
                 foreach (var wave in new[] { CrystalWave.LeftUp, CrystalWave.RightDown })
                 foreach (var purple in new[] { CrystalPurple.MainDiagonal, CrystalPurple.AntiDiagonal })
                 {
-                    var plan = new CrystallizeTimePlan(0, CrystalDebuff.RedIce, wave, purple, new Random(1553));
+                    var plan = new P42时间结晶Plan(0, CrystalDebuff.RedIce, wave, purple, new Random(1553));
                     foreach (var kind in new[] { CrystalDebuff.RedIce, CrystalDebuff.RedWind, CrystalDebuff.BlueEarth })
                     foreach (var startAngle in Enumerable.Range(0, 8))
                     foreach (var endAngle in Enumerable.Range(0, 4))
@@ -49,13 +49,13 @@ namespace Simulant.Tests
                         });
                         var route = plan.RewindRoute(slot, start, Enumerable.Range(1, 4).Select(plan.PuddleDefault).ToArray()).First();
                         var target = route.Area.Sample(1, endAngle / 4.0, Math.PI);
-                        scheduler.Schedule(CrystallizeTimePlan.SandHits[2] - 32, () => Assert(
+                        scheduler.Schedule(P42时间结晶Plan.SandHits[2] - 32, () => Assert(
                             Enumerable.Range(0, 6).Where(i => plan.HourglassWave(i) == 2)
                                 .All(i => Vector2.Distance(actor.Pos, plan.Hourglass(i)) > 12.1),
                             "跨中线前的完整等待区必须避开最后一组沙漏，至少留出 0.1 米余量。"));
                         scheduler.Schedule(route.Start - 32, () => actor.MoveForMechanic(
                             SimPosition.Ellipse(target, 0), route.Arrival - 32, 2, urgent: true));
-                        scheduler.Schedule(CrystallizeTimePlan.WaveHits[0][1] - 32, () => Assert(
+                        scheduler.Schedule(P42时间结晶Plan.WaveHits[0][1] - 32, () => Assert(
                             (actor.Pos.X - 100) * -plan.FirstSide > 0.1,
                             FormattableString.Invariant($"跨中线未留足光波余量：{wave} {purple} {kind}，起点 {start}，终点 {target}，实际位置 {actor.Pos}。")));
                     }
@@ -71,18 +71,18 @@ namespace Simulant.Tests
         {
             foreach (var purple in new[] { CrystalPurple.MainDiagonal, CrystalPurple.AntiDiagonal })
             {
-                var plan = new CrystallizeTimePlan(0, CrystalDebuff.BlueEarth, CrystalWave.LeftUp, purple, new Random(1552));
+                var plan = new P42时间结晶Plan(0, CrystalDebuff.BlueEarth, CrystalWave.LeftUp, purple, new Random(1552));
                 foreach (var side in new[] { -1, 1 })
                 {
                     var wind = plan.Wind(side);
                     var ice = plan.Initial(plan.Red(CrystalDebuff.RedIce, side));
-                    Assert(Vector2.Distance(wind.Midpoint(), CrystallizeTimePlan.Polar(19, 30 * side)) < 0.001,
+                    Assert(Vector2.Distance(wind.Midpoint(), P42时间结晶Plan.Polar(19, 30 * side)) < 0.001,
                         "红风就位应沿场中 30 度方向；35 度只用于蓝组相对红风的借风方向。");
                     Assert(Vector2.Distance(wind.Midpoint(), ice.Midpoint()) - wind.DeviationRadius - ice.DeviationRadius > 15.1,
                         "红风与红冰随机区最靠近时，也必须避开 15 米击退范围。");
                 }
 
-                Assert(Vector2.Distance(plan.WindApproach.Midpoint(), CrystallizeTimePlan.Polar(17.5f, -30 * plan.NorthSlowSide)) < 0.001,
+                Assert(Vector2.Distance(plan.WindApproach.Midpoint(), P42时间结晶Plan.Polar(17.5f, -30 * plan.NorthSlowSide)) < 0.001,
                     "蓝组穿入点也应沿场中 30 度方向。");
                 var targetArea = plan.StackFor(plan.Slot(CrystalDebuff.BlueEarth));
                 foreach (var radius in new[] { 0.0, 1.0 })
@@ -108,7 +108,7 @@ namespace Simulant.Tests
                 CrystalPurple.AntiDiagonal
             })
             {
-                var plan = new CrystallizeTimePlan(0, CrystalDebuff.RedIce, CrystalWave.LeftUp, purple, random);
+                var plan = new P42时间结晶Plan(0, CrystalDebuff.RedIce, CrystalWave.LeftUp, purple, random);
                 var side = -plan.NorthSlowSide;
                 var corners = Enumerable.Range(0, 8).Where(slot => plan.Debuffs[slot] != CrystalDebuff.RedIce)
                     .Select(slot => (Area: plan.Initial(slot), Sand: plan.Debuffs[slot] == CrystalDebuff.BlueDark ? 3 : 0))
@@ -120,7 +120,7 @@ namespace Simulant.Tests
                 foreach (var (area, sandIndex) in corners)
                 {
                     var sand = plan.Hourglass(sandIndex);
-                    var center = CrystallizeTimePlan.Center;
+                    var center = P42时间结晶Plan.Center;
                     var radial = Vector2.Normalize(sand - center);
                     var lateral = new Vector2(radial.Y, -radial.X);
                     var opening = Math.Sign(Vector2.Dot(area.Pos - center, lateral));
@@ -184,7 +184,7 @@ namespace Simulant.Tests
                         1
                     })
                     {
-                        var plan = new CrystallizeTimePlan(0, CrystalDebuff.RedIce, CrystalWave.LeftUp, purple, random);
+                        var plan = new P42时间结晶Plan(0, CrystalDebuff.RedIce, CrystalWave.LeftUp, purple, random);
                         var actor = new SimActor(new EntityTestWorld().CreateCharacter(2), casts, movement);
                         actor.Pos = plan.Initial(plan.Red(CrystalDebuff.RedIce, side)).Sample(random);
                         var initial = actor.Pos;
@@ -200,7 +200,7 @@ namespace Simulant.Tests
 
                         scheduler.Schedule(0.7, () => Assert(Vector2.Distance(actor.Pos, initial) > 1,
                             "第一撞结束后应立即撤离，不能等到固定时间才开始移动。"));
-                        scheduler.Schedule(CrystallizeTimePlan.SandHits[1] - origin, () =>
+                        scheduler.Schedule(P42时间结晶Plan.SandHits[1] - origin, () =>
                         {
                             Assert(Enumerable.Range(0, 6).Where(i => plan.HourglassWave(i) == 1)
                                 .All(i => Vector2.Distance(actor.Pos, plan.Hourglass(i)) > 12), "红冰撤离不能吃到第二轮沙漏。");
@@ -221,7 +221,7 @@ namespace Simulant.Tests
                                 $"{purple} 的红冰在 {time} 秒仍被第二次龙头爆炸覆盖：{actor.Pos}。"));
                         scheduler.Schedule(31.324 - origin, () => Assert(plan.RedIceNorth.Contains(actor.Pos),
                             "第一道光波前红冰应进入两座北侧沙漏上方。"));
-                        scheduler.Schedule(CrystallizeTimePlan.SandHits[2] - origin, () =>
+                        scheduler.Schedule(P42时间结晶Plan.SandHits[2] - origin, () =>
                             Assert(Enumerable.Range(0, 6).Where(i => plan.HourglassWave(i) == 2)
                                 .All(i => Vector2.Distance(actor.Pos, plan.Hourglass(i)) > 12), "北侧等候不能吃到最后一组沙漏。"));
                     }
@@ -251,7 +251,7 @@ namespace Simulant.Tests
                     CrystalPurple.MainDiagonal, CrystalPurple.AntiDiagonal
                 })
                 {
-                    var plan = new CrystallizeTimePlan(0, CrystalDebuff.RedWind, CrystalWave.LeftUp, purple, random);
+                    var plan = new P42时间结晶Plan(0, CrystalDebuff.RedWind, CrystalWave.LeftUp, purple, random);
                     var wind = plan.Wind(-plan.NorthSlowSide).Sample(random);
                     var actualWind = wind + new Vector2(2, 0);
                     var samples = 0;
@@ -329,7 +329,7 @@ namespace Simulant.Tests
                     CrystalPurple.MainDiagonal, CrystalPurple.AntiDiagonal
                 })
                 {
-                    var plan = new CrystallizeTimePlan(0, CrystalDebuff.RedIce, CrystalWave.LeftUp, purple, random);
+                    var plan = new P42时间结晶Plan(0, CrystalDebuff.RedIce, CrystalWave.LeftUp, purple, random);
                     var wind = plan.Wind(-plan.NorthSlowSide).Sample(random);
                     var actors = plan.EarthGroup.Select(slot =>
                     {
@@ -350,7 +350,7 @@ namespace Simulant.Tests
                         {
                             var direction = Vector2.Normalize(actor.Pos - wind);
                             var landing = actor.Pos + direction * 30;
-                            Assert(Vector2.Distance(landing, CrystallizeTimePlan.Center) < 20,
+                            Assert(Vector2.Distance(landing, P42时间结晶Plan.Center) < 20,
                                 "借风击退的完整落点不能出界。");
                             SimKnockback.Resolve(scheduler, new[] { actor }, KnockbackEffect.Radial(wind, 30, 0.8f));
                             scheduler.Schedule(0.99, () => Assert(Vector2.Distance(actor.Pos, landing) < 0.025,
@@ -395,7 +395,7 @@ namespace Simulant.Tests
             {
                 foreach (var purple in new[] { CrystalPurple.MainDiagonal, CrystalPurple.AntiDiagonal })
                 {
-                    var plan = new CrystallizeTimePlan(0, CrystalDebuff.BlueEarth, CrystalWave.LeftUp, purple, random);
+                    var plan = new P42时间结晶Plan(0, CrystalDebuff.BlueEarth, CrystalWave.LeftUp, purple, random);
                     foreach (var windAngle in new[] { 0.0, 0.25, 0.5, 0.75 })
                     foreach (var riderAngle in new[] { 0.0, 0.5, 1.0 })
                     foreach (var riderRadius in new[] { 0.0, 1.0 })
@@ -484,8 +484,8 @@ namespace Simulant.Tests
 
                     )
                     {
-                        var plan = new CrystallizeTimePlan(0, CrystalDebuff.RedIce, wave, purple, random, solution: solution);
-                        var pools = Enumerable.Range(1, 4).Select(n => CrystallizeTimePlan.Circle(plan.PuddleDefault(n), 0.3f).Sample(random)).ToArray();
+                        var plan = new P42时间结晶Plan(0, CrystalDebuff.RedIce, wave, purple, random, solution: solution);
+                        var pools = Enumerable.Range(1, 4).Select(n => P42时间结晶Plan.Circle(plan.PuddleDefault(n), 0.3f).Sample(random)).ToArray();
                         var taken = new bool[4];
                         var actors = Enumerable.Range(0, 8).Select(slot =>
                         {
@@ -539,7 +539,7 @@ namespace Simulant.Tests
                         for (var w = 0; w < 2; w++)
                             for (var s = 0; s < 4; s++)
                             {
-                                var t = CrystallizeTimePlan.WaveHits[w][s] - origin;
+                                var t = P42时间结晶Plan.WaveHits[w][s] - origin;
 
                                 if (t < 0)
                                     continue;
@@ -551,18 +551,18 @@ namespace Simulant.Tests
                                 scheduler.Schedule(t, () =>
                                 {
                                     for (var slot = 0; slot < 8; slot++)
-                                        Assert(!ActionArea.Rectangle(10, 40).Contains(actors[slot].Pos, position, heading), $"{wave} {purple} 在 {t + origin:0.000} 秒光波击中 {CrystallizeTimePlan.Roles[slot]}：{actors[slot].Pos}。");
+                                        Assert(!ActionArea.Rectangle(10, 40).Contains(actors[slot].Pos, position, heading), $"{wave} {purple} 在 {t + origin:0.000} 秒光波击中 {P42时间结晶Plan.Roles[slot]}：{actors[slot].Pos}。");
                                 });
                             }
 
-                        scheduler.Schedule(CrystallizeTimePlan.RewindTime - origin, () =>
+                        scheduler.Schedule(P42时间结晶Plan.RewindTime - origin, () =>
                         {
                             Assert(taken.All(t => t), $"{wave} {purple} 未及时吃完白圈。");
 
                             for (var slot = 0; slot < 8; slot++)
                             {
                                 Assert(plan.Rewind(slot).Contains(actors[slot].Pos), $"{wave} {purple} 未在回返记录前完成排队。");
-                                actors[slot].MoveForMechanic(plan.Spread(slot), CrystallizeTimePlan.SpreadArrival - origin, 20, urgent: true);
+                                actors[slot].MoveForMechanic(plan.Spread(slot), P42时间结晶Plan.SpreadArrival - origin, 20, urgent: true);
                             }
                         });
 
@@ -570,7 +570,7 @@ namespace Simulant.Tests
                         {
                             for (var slot = 0; slot < 8; slot++)
                                 Assert(plan.Spread(slot).Contains(actors[slot].Pos),
-                                    $"{solution} {wave} {purple} 的 {CrystallizeTimePlan.Roles[slot]} 未在碎灵前完成分散。");
+                                    $"{solution} {wave} {purple} 的 {P42时间结晶Plan.Roles[slot]} 未在碎灵前完成分散。");
                         });
                     }
 
@@ -624,14 +624,14 @@ namespace Simulant.Tests
                         )
                             for (var self = 0; self < 8; self++)
                             {
-                                var plan = new CrystallizeTimePlan(self, selected, wave, purple, random, priority);
+                                var plan = new P42时间结晶Plan(self, selected, wave, purple, random, priority);
                                 Assert(plan.Debuffs[self] == selected, "自身点名必须服从选项。");
                                 var stackDirection = 135 * plan.NorthSlowSide;
-                                Assert(Vector2.Distance(plan.Stack.Midpoint(), CrystallizeTimePlan.Polar(16, stackDirection)) < 0.001f &&
-                                    plan.Stack.Contains(CrystallizeTimePlan.Polar(13.01f, stackDirection - 6.99)) &&
-                                    plan.Stack.Contains(CrystallizeTimePlan.Polar(18.99f, stackDirection + 6.99)) &&
-                                    !plan.Stack.Contains(CrystallizeTimePlan.Polar(19.01f, stackDirection)) &&
-                                    !plan.Stack.Contains(CrystallizeTimePlan.Polar(16, stackDirection + 7.01)),
+                                Assert(Vector2.Distance(plan.Stack.Midpoint(), P42时间结晶Plan.Polar(16, stackDirection)) < 0.001f &&
+                                    plan.Stack.Contains(P42时间结晶Plan.Polar(13.01f, stackDirection - 6.99)) &&
+                                    plan.Stack.Contains(P42时间结晶Plan.Polar(18.99f, stackDirection + 6.99)) &&
+                                    !plan.Stack.Contains(P42时间结晶Plan.Polar(19.01f, stackDirection)) &&
+                                    !plan.Stack.Contains(P42时间结晶Plan.Polar(16, stackDirection + 7.01)),
                                     "分摊参与者必须使用斜方向 r=16±3、角度 ±7° 的扇环，不能回退到场边点。");
                                 Assert(plan.Debuffs.Count(d => d == CrystalDebuff.RedIce) == 2 && plan.Debuffs.Count(d => d == CrystalDebuff.RedWind) == 2, "红冰与红风应各两人。");
                                 Assert(plan.BlueOrder.Distinct().Count() == 4 && plan.BlueOrder.All(i => !plan.IsRed(i)), "四个蓝色头标应互不重复。");
@@ -743,21 +743,21 @@ namespace Simulant.Tests
 
                                     foreach (var rider in riders)
                                     {
-                                        Assert(Vector2.Distance(plan.WindApproach.Midpoint(), rider) / 7.8 + 0.2 < 24.837 - (CrystallizeTimePlan.SandHits[0] + 2),
+                                        Assert(Vector2.Distance(plan.WindApproach.Midpoint(), rider) / 7.8 + 0.2 < 24.837 - (P42时间结晶Plan.SandHits[0] + 2),
                                             "最晚穿入一秒后开始跟随，仍应来得及到达借风区域。");
                                         Assert(Vector2.Distance(rider, wind) < 3, "蓝冰和红风之间应保持在冰封内圈内。");
                                         Assert(!ActionArea.Donut(3, 12).IntersectsCircle(U7aCrystal.Position, 3.5f, rider),
                                             "蓝冰借风站位不能波及水晶。");
                                         var landing = rider + Vector2.Normalize(rider - wind) * 30;
-                                        Assert(Vector2.Distance(landing, CrystallizeTimePlan.Center) < 19, "随机击退角度不能把假队员送到场外。");
+                                        Assert(Vector2.Distance(landing, P42时间结晶Plan.Center) < 19, "随机击退角度不能把假队员送到场外。");
                                         Assert((Vector2.Distance(landing, plan.Stack.Midpoint()) - plan.Stack.DeviationRadius) / 7.8 + 0.4 < 27.885 - 24.837 - 0.9,
                                             "击退落地后应能在冲刺上限内进入五人分摊区域。");
                                     }
 
                                     Assert(riders.All(p => riders.All(q => Vector2.Distance(p, q) < 3)), "蓝色三人的独立随机不能踩出冰封内圈。");
                                     var rewinds = Enumerable.Range(0, 8).Select(i => plan.Rewind(i).Sample(random)).ToArray();
-                                    var x = CrystallizeTimePlan.FrontFour(rewinds, 0, plan.FirstSide);
-                                    var y = CrystallizeTimePlan.FrontFour(rewinds, 1, plan.SecondSide);
+                                    var x = P42时间结晶Plan.FrontFour(rewinds, 0, plan.FirstSide);
+                                    var y = P42时间结晶Plan.FrontFour(rewinds, 1, plan.SecondSide);
                                     Assert(x[0] < 2 && y[0] < 2 && x[0] != y[0], "两次圣翼都应由不同坦克挡在最前方。");
                                     Assert(!x.Take(4).Intersect(y.Take(4)).Any(), "两次圣翼的前四人必须互补。");
 
@@ -765,21 +765,21 @@ namespace Simulant.Tests
                                     {
                                         var first = pos + plan.WaveDirection(0) * 20;
                                         var second = first + plan.WaveDirection(1) * 20;
-                                        Assert(Vector2.Distance(pos, CrystallizeTimePlan.Center) < 20 && Vector2.Distance(first, CrystallizeTimePlan.Center) < 20 && Vector2.Distance(second, CrystallizeTimePlan.Center) < 20, "回返与连续击退的三个位置都必须在场内。");
+                                        Assert(Vector2.Distance(pos, P42时间结晶Plan.Center) < 20 && Vector2.Distance(first, P42时间结晶Plan.Center) < 20 && Vector2.Distance(second, P42时间结晶Plan.Center) < 20, "回返与连续击退的三个位置都必须在场内。");
                                     }
 
                                     var spreads = Enumerable.Range(0, 8).Select(i => plan.Spread(i).Sample(random)).ToArray();
 
                                     for (var i = 0; i < 8; i++)
                                     {
-                                        Assert(Vector2.Distance(spreads[i], CrystallizeTimePlan.Center) < 20 &&
+                                        Assert(Vector2.Distance(spreads[i], P42时间结晶Plan.Center) < 20 &&
                                             !ActionArea.Circle(5).IntersectsCircle(U7aCrystal.Position, 3.5f, spreads[i]),
                                             "分散不能出界，技能边缘也不能接触水晶碰撞体。");
 
                                         for (var j = i + 1; j < 8; j++)
                                             Assert(Vector2.Distance(spreads[i], spreads[j]) > 5, "碎灵一击随机分散不得重叠。");
 
-                                        Assert(Vector2.Distance(rewinds[i], spreads[i]) / 7.8 + 0.1 < 47.375 - CrystallizeTimePlan.RewindTime,
+                                        Assert(Vector2.Distance(rewinds[i], spreads[i]) / 7.8 + 0.1 < 47.375 - P42时间结晶Plan.RewindTime,
                                             "记录回返后必须有时间通过正常移动或冲刺展开分散。");
                                     }
                                 }
@@ -794,17 +794,17 @@ namespace Simulant.Tests
             var crystal = U7aCrystal.Position;
             positions[0] = crystal + new Vector2(8.5f, 0);
             positions[1] = positions[0] + Vector2.UnitX;
-            Assert(CrystallizeTimePlan.SpiritTakerTarget(positions, 0, area, crystal, 3.5f, random) == 0,
+            Assert(P42时间结晶Plan.SpiritTakerTarget(positions, 0, area, crystal, 3.5f, random) == 0,
                 "即使旁边有人，能够打到水晶时也必须优先点自己。");
 
             positions[0] = new Vector2(100, 110);
             positions[1] = positions[0] + new Vector2(5, 0);
-            Assert(CrystallizeTimePlan.SpiritTakerTarget(positions, 0, area, crystal, 3.5f, random) == 1,
+            Assert(P42时间结晶Plan.SpiritTakerTarget(positions, 0, area, crystal, 3.5f, random) == 1,
                 "自己进入其他人的碎灵范围时，应点那个人而非自己，保留受波及击退。");
 
             positions[1] = new Vector2(110, 110);
             var selected = Enumerable.Range(0, 256)
-                .Select(_ => CrystallizeTimePlan.SpiritTakerTarget(positions, 0, area, crystal, 3.5f, random)).Distinct().ToArray();
+                .Select(_ => P42时间结晶Plan.SpiritTakerTarget(positions, 0, area, crystal, 3.5f, random)).Distinct().ToArray();
             Assert(selected.Length == 8, "自身既不威胁水晶也不重叠时，应保留八人随机点名。");
         }
 
@@ -815,12 +815,12 @@ namespace Simulant.Tests
             var positions = Enumerable.Range(0, 8).Select(i => new Vector2(100 + 10 * i, 110)).ToArray();
             positions[1] = positions[0] + new Vector2(5, 0);
             for (var sample = 0; sample < 32; sample++)
-                Assert(CrystallizeTimePlan.SpiritTakerTarget(positions, 0, area, null, 0, random) == 1,
+                Assert(P42时间结晶Plan.SpiritTakerTarget(positions, 0, area, null, 0, random) == 1,
                     "没有水晶时，自身靠近队友仍应必定点队友，让自身受到波及击退。");
 
             positions[1] = new Vector2(110, 110);
             var selected = Enumerable.Range(0, 256)
-                .Select(_ => CrystallizeTimePlan.SpiritTakerTarget(positions, 0, area, null, 0, random)).Distinct().ToArray();
+                .Select(_ => P42时间结晶Plan.SpiritTakerTarget(positions, 0, area, null, 0, random)).Distinct().ToArray();
             Assert(selected.Length == 8, "没有水晶且自身未与队友重叠时，应保留八人随机点名。");
         }
 
@@ -830,18 +830,18 @@ namespace Simulant.Tests
             foreach (var wave in new[] { CrystalWave.LeftUp, CrystalWave.LeftDown, CrystalWave.RightUp, CrystalWave.RightDown })
                 foreach (var solution in new[] { CrystalSolution.Knockback, CrystalSolution.YAntiKnockback })
                 {
-                    var plan = new CrystallizeTimePlan(0, CrystalDebuff.RedIce, wave, CrystalPurple.MainDiagonal, random, solution: solution);
+                    var plan = new P42时间结晶Plan(0, CrystalDebuff.RedIce, wave, CrystalPurple.MainDiagonal, random, solution: solution);
                     var spread = Enumerable.Range(0, 8).Select(plan.Spread).ToArray();
                     for (var i = 0; i < 8; i++)
                     {
                         var center = spread[i].Midpoint();
                         var tolerance = spread[i].DeviationRadius;
-                        Assert(Vector2.Distance(center, CrystallizeTimePlan.Center) + tolerance < 20,
+                        Assert(Vector2.Distance(center, P42时间结晶Plan.Center) + tolerance < 20,
                             "整个分散容差范围都不能越过电网。");
                         Assert(Vector2.Distance(center, U7aCrystal.Position) - tolerance > 8.5,
                             "整个分散容差范围都必须避开 5 米碎灵伤害与 3.5 米水晶。");
                         Assert(Vector2.Distance(center, plan.Rewind(i).Midpoint()) + tolerance + plan.Rewind(i).DeviationRadius <
-                            (47.375 - CrystallizeTimePlan.RewindTime - 0.1) * 7.8,
+                            (47.375 - P42时间结晶Plan.RewindTime - 0.1) * 7.8,
                             "最远随机分散落点也要在碎灵判定前能够跑到。");
                         for (var j = 0; j < i; j++)
                             Assert(Vector2.Distance(center, spread[j].Midpoint()) - tolerance - spread[j].DeviationRadius > 5,
@@ -856,11 +856,11 @@ namespace Simulant.Tests
                         var positions = Enumerable.Range(0, 8).Select(i => plan.Rewind(i).Sample(random)).ToArray();
                         for (var wing = 0; wing < 2; wing++)
                         {
-                            var order = CrystallizeTimePlan.FrontFour(positions, wing, wing == 0 ? plan.FirstSide : plan.SecondSide);
+                            var order = P42时间结晶Plan.FrontFour(positions, wing, wing == 0 ? plan.FirstSide : plan.SecondSide);
                             Assert(plan.WingTanksCorrect(order, wing), "Y 字随机站位应保证第一次首位、第二次前两位是坦克。");
                         }
 
-                        Assert(positions.All(p => Vector2.Distance(p + plan.WaveDirection(1) * 20, CrystallizeTimePlan.Center) < 20),
+                        Assert(positions.All(p => Vector2.Distance(p + plan.WaveDirection(1) * 20, P42时间结晶Plan.Center) < 20),
                             "Y 字仅承受第二次击退，随机落点也应全部在场内。");
                     }
 

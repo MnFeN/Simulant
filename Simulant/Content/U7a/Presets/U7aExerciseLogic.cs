@@ -21,17 +21,26 @@ namespace Simulant.Content.U7a.Presets
         protected const ushort SpiritTakerKnockbackRow = 173;
         protected static readonly Vector2 Center = new Vector2(100, 100);
         protected static readonly string[] Roles = { "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4" };
-        protected readonly SimActor[] Helpers = new SimActor[11];
+        protected readonly SimActor[] Helpers;
         protected SimActor Oracle;
         protected SimActor Shiva;
         protected SimActor Wyrm;
         protected SimActor Crystal;
         protected double Origin;
         protected double Now => Scheduler.ElapsedSeconds - Origin;
-        protected int Self => (int)PlayerSlot - 1;
+        protected int Self => Solo ? 0 : (int)PlayerSlot - 1;
+        protected virtual bool Solo => false;
         protected virtual bool IsP4 => false;
+        protected virtual uint BossBaseId => IsP4 ? 17835u : 17831u;
+        protected virtual uint BossNameId => 9832;
+        protected virtual uint BossLayoutId => 0;
+        protected virtual ushort? BossModel => null;
+        protected virtual uint? BossMaxHp => null;
+        protected virtual uint HelperNameId => 0;
         protected virtual double OpeningAdvance => 0;
+        protected virtual double OpeningLeadIn => 0;
         private readonly HashSet<uint> _mapChanges = new HashSet<uint>();
+        private int _mapChangesWorld;
         private readonly HashSet<int> _marked = new HashSet<int>();
         private readonly HashSet<MarkerType> _partyMarks = new HashSet<MarkerType>();
         private int _partyMarksWorld;
@@ -39,26 +48,53 @@ namespace Simulant.Content.U7a.Presets
         private bool _complete;
         private bool _crystalBroken;
 
-        [SimOption]
-        public ExerciseRole PlayerSlot { get; set; }
+        [SimOption(Optional = true)]
+        public ExerciseRole PlayerSlot { get; set; } = ExerciseRole.MT;
 
-        protected U7aExerciseLogic(PluginHost host, SimPresetBase preset) : base(host, preset)
+        protected U7aExerciseLogic(PluginHost host, SimPresetBase preset, int helperCount = 11) : base(host, preset)
         {
+            Helpers = new SimActor[helperCount];
         }
 
         protected sealed override void BuildTimeline(SimTimeline timeline)
         {
+            _mapChanges.Clear();
+            _mapChangesWorld = _host.WorldGeneration;
+            _marked.Clear();
+            _failedSelf = false;
+            _complete = false;
+            _crystalBroken = false;
             PreparePlan();
-            timeline.At(0, () => GeneratePartyMembers((int)PlayerSlot, PrepareScene), "准备模拟小队和场景");
+            timeline.At(0, () =>
+            {
+                if (Solo)
+                {
+                    Party.Add(EntityManager.Attach(_host.EntityProvider.GetMyself()));
+                    PrepareScene();
+                }
+                else
+                    GeneratePartyMembers((int)PlayerSlot, PrepareScene);
+            }, "准备模拟小队和场景");
         }
 
-        protected abstract void PreparePlan();
+        protected virtual void PreparePlan()
+        {
+        }
+
         protected abstract SimTimeline BuildExercise();
         protected virtual SimPosition InitialPartyPosition(int slot) => Spot(Center, 5);
+        protected virtual void OnBossSpawned()
+        {
+        }
+
+        protected virtual void PrepareAdditionalActors(Action ready) => ready();
+        protected virtual void SchedulePrelude()
+        {
+        }
 
         private void PrepareScene()
         {
-            for (var slot = 0; slot < 8; slot++)
+            for (var slot = 0; !Solo && slot < Party.Count; slot++)
             {
                 Party[slot].Pos = InitialPartyPosition(slot).Sample(Random);
                 Party[slot].Heading = (float)Math.PI;
@@ -68,26 +104,37 @@ namespace Simulant.Content.U7a.Presets
             void Ready()
             {
                 if (--remaining == 0)
-                    Scheduler.ScheduleAfter(2, BeginExercise, "场景就绪后开始机制");
+                    PrepareAdditionalActors(() => Scheduler.ScheduleAfter(2, BeginExercise, "场景就绪后开始机制"));
             }
 
-            void Spawn(uint id, uint name, Vector2 position, Action<SimActor> accept, ushort? model = null)
-                => EntityManager.SpawnNetworkBNpc(new NetworkNpcSpawnSpec
+            void Spawn(uint id, uint name, Vector2 position, Action<SimActor> accept, ushort? model = null, uint layout = 0,
+                uint? maxHp = null)
+            {
+                var spec = new NetworkNpcSpawnSpec
                 {
                     BNpcBaseId = id,
                     BNpcNameId = name,
                     ModelCharaId = model,
-                    LayoutId = id == 17831 ? 0xA55BFFu : id == 17833 ? 0xA55C01u : id == 17835 ? 0xA55C02u : 0,
+                    LayoutId = id == 17831 ? 0xA55BFFu : id == 17833 ? 0xA55C01u : id == 17835 ? 0xA55C02u : id == 17839 ? 0xA55C06u : layout,
                     Pos = new Vector3(position, 0),
                     Heading = (float)Math.PI,
                     Level = 100
-                }, actor =>
+                };
+                if (maxHp.HasValue)
+                    spec.MaxHealthPoints = maxHp.Value;
+
+                EntityManager.SpawnNetworkBNpc(spec, actor =>
                 {
                     accept(actor);
                     Ready();
                 });
+            }
 
-            Spawn(IsP4 ? 17835u : 17831u, 9832, IsP4 ? Center + new Vector2(0, 5) : Center, actor => Oracle = actor);
+            Spawn(BossBaseId, BossNameId, IsP4 ? Center + new Vector2(0, 5) : Center, actor =>
+            {
+                Oracle = actor;
+                OnBossSpawned();
+            }, BossModel, BossLayoutId, BossMaxHp);
             if (IsP4)
             {
                 Spawn(17833, 12809, Center, actor => Shiva = actor, model: 4376);
@@ -111,18 +158,20 @@ namespace Simulant.Content.U7a.Presets
                 {
                     Helpers[index] = actor;
                     Ready();
-                });
+                }, HelperNameId);
             }
         }
 
         private void BeginExercise()
         {
             var start = Scheduler.ElapsedSeconds;
-            Origin = start - OpeningAdvance;
+            Origin = start + OpeningLeadIn - OpeningAdvance;
             EntityManager.SetCombatTarget(Shiva ?? Oracle);
             if (IsP4)
                 Map(0x2E, 2);
-            CheckArena();
+            if (!Solo)
+                CheckArena();
+            SchedulePrelude();
             foreach (var node in BuildExercise().Snapshot())
                 Scheduler.Schedule(Math.Max(start, Origin + node.Seconds), node.Action, node.Name);
         }
@@ -281,7 +330,7 @@ namespace Simulant.Content.U7a.Presets
             var snapshot = PartySnapshot.Capture(Party);
             var positions = Enumerable.Range(0, 8).Select(i => snapshot.Get(i).Position).ToArray();
             var area = ActionArea.FromAction(40289);
-            var target = CrystallizeTimePlan.SpiritTakerTarget(
+            var target = P42时间结晶Plan.SpiritTakerTarget(
                 positions, Self, area, Crystal?.Pos, Crystal?.Entity.HitboxRadius ?? 0, Random);
             var center = positions[target];
             var mechanic = Spread("碎灵一击分散", target, 40289, false);
@@ -322,7 +371,7 @@ namespace Simulant.Content.U7a.Presets
         {
             if (_complete)
                 return;
-            var outside = Enumerable.Range(0, 8).Where(i => Vector2.DistanceSquared(Party[i].JudgementPosition, Center) > 400).ToArray();
+            var outside = Enumerable.Range(0, Party.Count).Where(i => Vector2.DistanceSquared(Party[i].JudgementPosition, Center) > 400).ToArray();
             foreach (var slot in outside)
                 Report(MechanicError.Boundary("电网", slot));
             if (outside.Length != 0)
@@ -330,10 +379,10 @@ namespace Simulant.Content.U7a.Presets
             Scheduler.ScheduleAfter(0.1, CheckArena, "电网检查");
         }
 
-        protected void Map(uint index, ushort animation)
+        protected void Map(uint index, ushort animation, ushort? lowFlags = null)
         {
             _mapChanges.Add(index);
-            PlayMapEffect(index, animation);
+            PlayMapEffect(index, animation, lowFlags);
         }
 
         protected override void OnStop()
@@ -344,7 +393,7 @@ namespace Simulant.Content.U7a.Presets
             }
             finally
             {
-                if (Oracle?.IsActive == true)
+                if (_mapChangesWorld == _host.WorldGeneration)
                     foreach (var slot in _mapChanges)
                     {
                         var original = slot < _preset.Phase.MapEffectFlags.Count ? _preset.Phase.MapEffectFlags[(int)slot] : null;

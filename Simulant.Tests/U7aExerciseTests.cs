@@ -19,9 +19,9 @@ namespace Simulant.Tests
                     for (var self = 0; self < 8; self++)
                         for (var sample = 0; sample < 20; sample++)
                         {
-                            var plan = new RelativityPlan(self, initial, solution, ExerciseDirection.Random, random);
+                            var plan = new P31时间压缩绝Plan(self, initial, solution, ExerciseDirection.Random, random);
                             if (initial != RelativityDebuff.Random)
-                                Check(RelativityPlan.Kind(plan.Codes[self]) == (int)initial, "指定点名必须落在自身。");
+                                Check(P31时间压缩绝Plan.Kind(plan.Codes[self]) == (int)initial, "指定点名必须落在自身。");
                             Check(plan.Codes.Distinct().Count() == 8 && plan.StackTargets.Distinct().Count() == 3, "点名分工与三轮神圣必须唯一。");
                             for (var wave = 0; wave < 3; wave++)
                             {
@@ -49,7 +49,7 @@ namespace Simulant.Tests
                 for (var north = 0; north < 8; north++)
                     for (var sample = 0; sample < 32; sample++)
                     {
-                        var plan = new RelativityPlan(0, RelativityDebuff.Random, solution, (ExerciseDirection)north, random);
+                        var plan = new P31时间压缩绝Plan(0, RelativityDebuff.Random, solution, (ExerciseDirection)north, random);
                         var baiters = Enumerable.Range(0, 8).Where(slot => plan.LaserWave(slot) == 2).ToArray();
                         foreach (var slot in baiters)
                         {
@@ -58,13 +58,13 @@ namespace Simulant.Tests
                             var center = area.Midpoint();
                             Check(area.DeviationRadius == 0.5f,
                                 "最后一组沙漏内侧等待点使用半米容差。");
-                            Check(Vector2.Distance(center, RelativityPlan.Center + 7 * RelativityPlan.Direction(plan.Angle(slot))) < 0.0001,
+                            Check(Vector2.Distance(center, P31时间压缩绝Plan.Center + 7 * P31时间压缩绝Plan.Direction(plan.Angle(slot))) < 0.0001,
                                 "引导后应退到自身沙漏向场中两米半的位置，不能回到场中。");
                             Check(Vector2.Distance(plan.LaserPoint(slot), center) + area.DeviationRadius < (49.0 - 47.9) * 6,
                                 "最后一组应能在停手前以正常速度走完完整撤离距离。");
                             for (var edge = 0; edge < 16; edge++)
                             {
-                                var point = center + 0.5f * RelativityPlan.Direction(Deg(edge * 22.5));
+                                var point = center + 0.5f * P31时间压缩绝Plan.Direction(Deg(edge * 22.5));
                                 foreach (var caster in baiters)
                                     for (var step = 0; step <= 9; step++)
                                     {
@@ -89,9 +89,9 @@ namespace Simulant.Tests
                 const int samples = 6000;
                 for (var sample = 0; sample < samples; sample++)
                 {
-                    var plan = new RelativityPlan(self, kind, RelativitySolution.CN, ExerciseDirection.N, random);
-                    Check(RelativityPlan.Kind(plan.Codes[self]) == (int)kind, "修正偏差后仍必须满足指定自身点名。");
-                    var partner = Enumerable.Range(start, 4).Single(slot => slot != self && RelativityPlan.Kind(plan.Codes[slot]) == (int)kind);
+                    var plan = new P31时间压缩绝Plan(self, kind, RelativitySolution.CN, ExerciseDirection.N, random);
+                    Check(P31时间压缩绝Plan.Kind(plan.Codes[self]) == (int)kind, "修正偏差后仍必须满足指定自身点名。");
+                    var partner = Enumerable.Range(start, 4).Single(slot => slot != self && P31时间压缩绝Plan.Kind(plan.Codes[slot]) == (int)kind);
                     counts[partner]++;
                 }
                 foreach (var slot in Enumerable.Range(start, 4).Where(slot => slot != self))
@@ -115,9 +115,9 @@ namespace Simulant.Tests
                         var seed = 20261117 + self * 10 + initial;
                         if (self == priority[0] || self == priority[7])
                         {
-                            var original = new ApocalypsePlan(self, (ApocalypseDebuff)initial, solution, ApocalypseReference.GroupSafe,
+                            var original = new P32启示Plan(self, (ApocalypseDebuff)initial, solution, ApocalypseReference.GroupSafe,
                                 ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, new Random(seed), 5, equalGroups: false);
-                            var enabled = new ApocalypsePlan(self, (ApocalypseDebuff)initial, solution, ApocalypseReference.GroupSafe,
+                            var enabled = new P32启示Plan(self, (ApocalypseDebuff)initial, solution, ApocalypseReference.GroupSafe,
                                 ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, new Random(seed), 5);
                             Check(original.Orders.SequenceEqual(enabled.Orders) && original.StackGroups.SequenceEqual(enabled.StackGroups),
                                 "最高、最低优先级不应因开启等概率分组而改变抽样结果。");
@@ -126,7 +126,7 @@ namespace Simulant.Tests
                         for (var group = 0; group < 2; group++)
                         {
                             var random = new AssignmentRandomTests.GroupRandom(seed, group);
-                            var plan = new ApocalypsePlan(self, (ApocalypseDebuff)initial, solution, ApocalypseReference.GroupSafe,
+                            var plan = new P32启示Plan(self, (ApocalypseDebuff)initial, solution, ApocalypseReference.GroupSafe,
                                 ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, random, 5);
                             Check(random.GroupChosen && plan.StackGroups[self] == group && plan.Orders[self] == initial,
                                 "均衡抽样应覆盖自身两组，且保留指定点名。");
@@ -160,7 +160,7 @@ namespace Simulant.Tests
                         for (var direction = 0; direction < 8; direction++)
                             for (var turn = 1; turn <= 2; turn++)
                             {
-                                var plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, solution, reference, half,
+                                var plan = new P32启示Plan(0, ApocalypseDebuff.Random, solution, reference, half,
                                     (ExerciseDirection)direction, (ExerciseTurn)turn, random, 5);
                                 for (var group = 0; group < 2; group++)
                                 {
@@ -176,7 +176,7 @@ namespace Simulant.Tests
                                 var jumpPoints = plan.SampleFirstJump(random);
                                 for (var i = 0; i < 8; i++)
                                 {
-                                    var stackCenter = ApocalypsePlan.Center + new Vector2(plan.StackGroups[i] == 0 ? -8 : 8, 0);
+                                    var stackCenter = P32启示Plan.Center + new Vector2(plan.StackGroups[i] == 0 ? -8 : 8, 0);
                                     var offset = initial[i].Midpoint() - stackCenter;
                                     var towardSpread = Vector2.Normalize(jumps[i].Midpoint() - stackCenter);
                                     Check(Math.Abs(offset.Length() - 1.5f) < 0.0001 && (plan.IsSingleGroup
@@ -186,7 +186,7 @@ namespace Simulant.Tests
                                     Check(Math.Abs(initial[i].DeviationRadius - (plan.IsSingleGroup ? 1 : 0.5)) < 0.0001,
                                         "单分组预站位使用一米容差，双分组保留半米容差。");
                                     Check(jumps[i].Contains(jumpPoints[i]), "协调后的随机分散落点必须仍在各自容差范围内。");
-                                    Check(Vector2.Distance(jumps[i].Midpoint(), ApocalypsePlan.Center) + jumps[i].DeviationRadius < 20,
+                                    Check(Vector2.Distance(jumps[i].Midpoint(), P32启示Plan.Center) + jumps[i].DeviationRadius < 20,
                                         "碎灵分散的完整容差范围不得越过电网。");
                                     for (var other = 0; other < 8; other++)
                                     {
@@ -201,7 +201,7 @@ namespace Simulant.Tests
                                     }
                                     Check(Vector2.Distance(initial[i].Midpoint(), jumps[i].Midpoint()) + initial[i].DeviationRadius + jumps[i].DeviationRadius < (17.52 - 15.61) * 6,
                                         "初始分摊后，应能以正常跑速在碎灵一击锁定前完成分散。");
-                                    Check(Vector2.Distance(points[i], ApocalypsePlan.Center) < 20, "分散不可越过电网。");
+                                    Check(Vector2.Distance(points[i], P32启示Plan.Center) < 20, "分散不可越过电网。");
                                     Check(points.Where((_, j) => i != j).All(point => Vector2.Distance(point, points[i]) > 6), "八人分散容差不可重叠。");
                                     foreach (var volley in new[] { 0, 1 })
                                         Check(plan.Explosions(volley).All(center => Vector2.Distance(points[i], center) > 9), "分散点必须避开前两轮地火。");
@@ -219,7 +219,7 @@ namespace Simulant.Tests
                             foreach (DarklitDebuff initial in Enum.GetValues(typeof(DarklitDebuff)))
                                 for (var sample = 0; sample < 8; sample++)
                                 {
-                                    var plan = new DarklitPlan(self, initial, solution, diagonal, side, SomberDanceBait.MTThenST, WingSide.Random, random);
+                                    var plan = new P41光与暗的龙诗Plan(self, initial, solution, diagonal, side, SomberDanceBait.MTThenST, WingSide.Random, random);
                                     Check(plan.Soakers.Concat(plan.Baiters).Distinct().Count() == 8, "双塔与四扇形必须覆盖八人且不重复。");
                                     Check(plan.Cycle.Count(i => i < 2) == 1 && plan.Cycle.Count(i => i >= 2 && i < 4) == 1, "连线固定一坦、一奶、两输出。");
                                     Check(plan.Cycle.Contains(plan.Waters[0]) && !plan.Cycle.Contains(plan.Waters[1]), "水必须一名连线、一名无线。");
@@ -260,7 +260,7 @@ namespace Simulant.Tests
                 var matchedTankAndHealerSwap = false;
                 for (var sample = 0; sample < 256; sample++)
                 {
-                    var plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
+                    var plan = new P32启示Plan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
                         ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, random, 5);
                     swapCounts.Add(Enumerable.Range(0, 8).Count(i => plan.PositionOwners[i] != i));
                     Check(plan.PositionOwners.Distinct().Count() == 8, "换位后仍需恰好占据八个原职能站位。");
@@ -325,9 +325,9 @@ namespace Simulant.Tests
             foreach (ApocalypseSolution solution in Enum.GetValues(typeof(ApocalypseSolution)))
                 for (var seed = 0; seed < 64; seed++)
                 {
-                    var normal = new ApocalypsePlan(0, ApocalypseDebuff.None, solution, ApocalypseReference.GroupSafe,
+                    var normal = new P32启示Plan(0, ApocalypseDebuff.None, solution, ApocalypseReference.GroupSafe,
                         ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, new Random(seed), 5);
-                    var swapped = new ApocalypsePlan(0, ApocalypseDebuff.None, solution, ApocalypseReference.GroupSafe,
+                    var swapped = new P32启示Plan(0, ApocalypseDebuff.None, solution, ApocalypseReference.GroupSafe,
                         ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, new Random(seed), 5,
                         swapSpreadPositions: true);
                     Check(normal.Orders.SequenceEqual(swapped.Orders) && normal.StackGroups.SequenceEqual(swapped.StackGroups) &&
@@ -357,7 +357,7 @@ namespace Simulant.Tests
             foreach (var swap in new[] { false, true })
                 for (var seed = 0; seed < 128; seed++)
                 {
-                    var plan = new ApocalypsePlan(0, ApocalypseDebuff.None, ApocalypseSolution.SingleBalanced, ApocalypseReference.GroupSafe,
+                    var plan = new P32启示Plan(0, ApocalypseDebuff.None, ApocalypseSolution.SingleBalanced, ApocalypseReference.GroupSafe,
                         ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, new Random(seed), 5,
                         swapSpreadPositions: swap);
                     Check(plan.GroupMarkers.Distinct().Count() == 8 && plan.StackGroups[0] == 0, "双近双远应保留 MT 左组并给八人分配不同头标。");
@@ -372,7 +372,7 @@ namespace Simulant.Tests
                                 Vector2.Distance(plan.InitialStack(slot).Midpoint(), plan.Preposition(group * 4 + index).Midpoint()) < 0.0001,
                                 "标点后预站位应由组内编号代替原职能，不能继续继承换位对象的位置。");
                             var point = new Vector2(index < 2 ? -4.5f : -13, index % 2 == 0 ? -4.5f : 4.5f);
-                            Check(Vector2.Distance(plan.FirstJump(slot).Midpoint(), ApocalypsePlan.Center + (group == 0 ? point : -point)) < 0.0001,
+                            Check(Vector2.Distance(plan.FirstJump(slot).Midpoint(), P32启示Plan.Center + (group == 0 ? point : -point)) < 0.0001,
                                 "碎灵分散应按头标一二号在前、三四号在后，之后的地火分散沿用相同编号。");
                             Check(plan.SpreadIndices[slot] == (index ^ (swap ? 1 : 0)), "双近双远的地火站位必须与头标编号及互换选项一致。");
                             Check((slot < 2 || slot == 4 || slot == 5) == (index < 2), "一二号应为近战，三四号应为远程。");
@@ -382,7 +382,7 @@ namespace Simulant.Tests
             foreach (ApocalypseSolution solution in Enum.GetValues(typeof(ApocalypseSolution)))
                 if (solution != ApocalypseSolution.SingleBalanced)
                 {
-                    var plan = new ApocalypsePlan(0, ApocalypseDebuff.None, solution, ApocalypseReference.GroupSafe,
+                    var plan = new P32启示Plan(0, ApocalypseDebuff.None, solution, ApocalypseReference.GroupSafe,
                         ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, new Random(32), 5);
                     Check(plan.GroupMarkers.All(mark => mark == null), "其他攻略不应额外生成指挥头标。");
                 }
@@ -396,29 +396,29 @@ namespace Simulant.Tests
                     ApocalypseSolution.SingleHTDH, ApocalypseSolution.SingleJP, ApocalypseSolution.SingleBalanced })
                     for (var sample = 0; sample < 128; sample++)
                     {
-                        var plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
+                        var plan = new P32启示Plan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
                             ApocalypseHalf.NorthToSouthwest, ExerciseDirection.N, ExerciseTurn.Clockwise, random, radius);
                         var points = plan.SampleFirstJump(random);
                         for (var slot = 0; slot < 8; slot++)
                         {
                             var owner = plan.PositionOwners[slot];
                             var preposition = plan.Preposition(slot);
-                            var standard = ApocalypsePlan.Center + new Vector2(slot < 4 ? -8 : 8, 0);
+                            var standard = P32启示Plan.Center + new Vector2(slot < 4 ? -8 : 8, 0);
                             Check(Math.Abs(Vector2.Distance(preposition.Midpoint(), standard) - 1.5) < 0.0001 && preposition.DeviationRadius == 1,
                                 "点名前应按原职能左 TH、右 DPS，向斜方向预站一米半并保留一米容差。");
                             Check(Vector2.Distance(plan.InitialStack(slot).Midpoint(), plan.Preposition(owner).Midpoint()) < 0.0001,
                                 "点名后换位者应继承对方预站位；不换位者应留在原预站位。");
                             Check(plan.FirstJump(slot).DeviationRadius == 1, "单分组全员碎灵分散使用一米容差。");
-                            var inherited = plan.FirstJump(slot).Midpoint() - ApocalypsePlan.Center;
+                            var inherited = plan.FirstJump(slot).Midpoint() - P32启示Plan.Center;
                             var sameSideTank = Array.IndexOf(plan.PositionOwners, owner / 4 * 4 + owner % 2);
-                            var tankPoint = plan.FirstJump(sameSideTank).Midpoint() - ApocalypsePlan.Center;
+                            var tankPoint = plan.FirstJump(sameSideTank).Midpoint() - P32启示Plan.Center;
                             Check(Math.Abs(Math.Abs(tankPoint.X) - 4.5f) < 0.0001 && Math.Abs(Math.Abs(tankPoint.Y) - 4.5f) < 0.0001,
                                 "近战应位于面朝 Boss 横向正负四米半、纵向四米半的位置。");
                             if (owner % 4 >= 2)
                                 Check(Math.Abs(inherited.Y - tankPoint.Y) < 0.0001 && Math.Abs(Math.Abs(inherited.X) - 13) < 0.0001,
                                     "远程应在对应近战正后方，纵向固定十三米。");
                             var opposite = Array.IndexOf(plan.PositionOwners, (owner + 4) % 8);
-                            Check((plan.FirstJump(opposite).Midpoint() - ApocalypsePlan.Center + inherited).Length() < 0.0001,
+                            Check((plan.FirstJump(opposite).Midpoint() - P32启示Plan.Center + inherited).Length() < 0.0001,
                                 "另一侧四人的标准分散点必须为一百八十度旋转对称。");
                             Check(plan.FirstJump(slot).Contains(points[slot]) && Enumerable.Range(0, slot)
                                 .All(other => Vector2.Distance(points[slot], points[other]) > radius + 0.1f),
@@ -438,34 +438,34 @@ namespace Simulant.Tests
                         for (var turn = 1; turn <= 2; turn++)
                             for (var sample = 0; sample < 8; sample++)
                             {
-                                var plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
+                                var plan = new P32启示Plan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
                                     ApocalypseHalf.NorthToSouthwest, (ExerciseDirection)direction, (ExerciseTurn)turn, random, 5, tank);
                                 Check(plan.TankSlot == (int)tank, "必须保留选项指定的死刑引导坦克。");
-                                Check(plan.TankDirection == ApocalypsePlan.Mod(plan.TwoDirection + plan.StackGroups[(int)tank] * 4, 8),
+                                Check(plan.TankDirection == P32启示Plan.Mod(plan.TwoDirection + plan.StackGroups[(int)tank] * 4, 8),
                                     "两侧都能引导死刑，坦克应从当前分摊半场就近出去，不能返回之前的分散半场。");
                                 var departure = plan.SecondStack((int)tank);
                                 var from = departure.Sample(random);
                                 var destination = plan.TankPosition;
-                                Check(Math.Abs(Vector2.Distance(destination, ApocalypsePlan.Center) - 18) < 0.0001,
+                                Check(Math.Abs(Vector2.Distance(destination, P32启示Plan.Center) - 18) < 0.0001,
                                     "死刑引导必须使用距场中十八米的贴边点，不能因移动窗口缩短距离。");
                                 var distance = Vector2.Distance(from, destination);
                                 Check(Vector2.Distance(departure.Midpoint(), destination) + departure.DeviationRadius < (36.81 - 34.55 - 0.15) * 7.8,
                                     "从四米内圈分摊后出发，应能在自动冲刺上限内赶到十八米引导点，并留有同步余量。");
-                                var theta = ApocalypsePlan.Angle(plan.ThreeDirection + plan.StackGroups[(int)tank] * 4);
+                                var theta = P32启示Plan.Angle(plan.ThreeDirection + plan.StackGroups[(int)tank] * 4);
                                 for (var step = 0; step <= 4; step++)
                                 {
-                                    var offset = Vector2.Lerp(from, destination, step / 4f) - ApocalypsePlan.Center;
+                                    var offset = Vector2.Lerp(from, destination, step / 4f) - P32启示Plan.Center;
                                     var angle = Math.IEEERemainder(Math.Atan2(offset.X, offset.Y) - theta, 2 * Math.PI) * plan.Turn;
                                     Check(angle >= Deg(30) - 0.00001 && angle <= Deg(45) + 0.00001,
                                         "T 应在分摊后边出去边从三十度修正至四十五度，不能提前贴到出口方向。");
                                 }
-                                var progress = Math.Min(distance, (ApocalypsePlan.ExplosionTimes[5] - 34.55 - 0.15) * 7.8);
+                                var progress = Math.Min(distance, (P32启示Plan.ExplosionTimes[5] - 34.55 - 0.15) * 7.8);
                                 var position = from + Vector2.Normalize(destination - from) * (float)progress;
                                 Check(plan.Explosions(5).All(center => Vector2.Distance(position, center) > 9),
                                     "死刑引导路线不得穿过最后一次地火的判定。");
-                                var landing = destination - 7.5f * ApocalypsePlan.Direction(ApocalypsePlan.Angle(plan.TankDirection));
+                                var landing = destination - 7.5f * P32启示Plan.Direction(P32启示Plan.Angle(plan.TankDirection));
                                 for (var slot = 0; slot < 8; slot++)
-                                    Check(Vector2.Distance(plan.FinalStack(slot, landing).Midpoint(), ApocalypsePlan.Center)
+                                    Check(Vector2.Distance(plan.FinalStack(slot, landing).Midpoint(), P32启示Plan.Center)
                                         + plan.FinalStack(slot, landing).DeviationRadius < 20,
                                         "更换引导半场后，第三次分摊的完整站位范围仍应留在电网内。");
                             }
@@ -479,7 +479,7 @@ namespace Simulant.Tests
                     for (var direction = 0; direction < 8; direction++)
                         for (var turn = 1; turn <= 2; turn++)
                         {
-                            var plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
+                            var plan = new P32启示Plan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
                                 ApocalypseHalf.NorthToSouthwest, (ExerciseDirection)direction, (ExerciseTurn)turn, random, 5, tank);
                             var regions = Enumerable.Range(0, 8).Select(plan.SecondStack).ToArray();
                             var points = regions.Select(region => new[]
@@ -490,8 +490,8 @@ namespace Simulant.Tests
                             for (var slot = 0; slot < 8; slot++)
                                 foreach (var point in points[slot])
                                 {
-                                    var offset = point - ApocalypsePlan.Center;
-                                    var theta = ApocalypsePlan.Angle(plan.ThreeDirection + plan.StackGroups[slot] * 4);
+                                    var offset = point - P32启示Plan.Center;
+                                    var theta = P32启示Plan.Angle(plan.ThreeDirection + plan.StackGroups[slot] * 4);
                                     var angle = Math.IEEERemainder(Math.Atan2(offset.X, offset.Y) - theta, 2 * Math.PI) * plan.Turn;
                                     Check(offset.Length() >= 3.9999f && offset.Length() <= 4.8001f,
                                         "第二次分摊的所有人都应位于半径四至四点八米的扇环内。");
@@ -515,10 +515,10 @@ namespace Simulant.Tests
                 for (var direction = 0; direction < 8; direction++)
                     foreach (var landingRadius in new[] { 5f, 10.5f })
                     {
-                        var plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
+                        var plan = new P32启示Plan(0, ApocalypseDebuff.Random, solution, ApocalypseReference.GroupSafe,
                             ApocalypseHalf.NorthToSouthwest, (ExerciseDirection)direction, ExerciseTurn.Clockwise, random, 5);
-                        var heading = ApocalypsePlan.Angle(plan.TankDirection) + 0.05;
-                        var landing = ApocalypsePlan.Center + landingRadius * ApocalypsePlan.Direction(heading);
+                        var heading = P32启示Plan.Angle(plan.TankDirection) + 0.05;
+                        var landing = P32启示Plan.Center + landingRadius * P32启示Plan.Direction(heading);
                         var regions = Enumerable.Range(0, 8).Select(slot => plan.FinalStack(slot, landing)).ToArray();
                         var points = regions.Select(region => region.Sample(random)).ToArray();
                         for (var slot = 0; slot < 8; slot++)
@@ -532,7 +532,7 @@ namespace Simulant.Tests
                             var sideAngle = ToDegrees(angle) * (plan.StackGroups[slot] == 0 ? -1 : 1);
                             Check(sideAngle >= 16.9999 && sideAngle <= 33.0001,
                                 "两组应分别位于左右后二十五度，近战与远程均保留八度容差。");
-                            Check(Vector2.Distance(regions[slot].Midpoint(), ApocalypsePlan.Center) + regions[slot].DeviationRadius < 20,
+                            Check(Vector2.Distance(regions[slot].Midpoint(), P32启示Plan.Center) + regions[slot].DeviationRadius < 20,
                                 "返回 Boss 身后的整个分摊范围不得越过电网。");
                             for (var other = 0; other < 8; other++)
                             {
@@ -550,7 +550,7 @@ namespace Simulant.Tests
                             }
                         }
                         var gather = plan.AfterFinalStack(landing);
-                        Check(gather.DeviationRadius == 3 && Vector2.Distance(gather.Midpoint(), landing + 7 * ApocalypsePlan.Direction(heading + Math.PI)) < 0.0001,
+                        Check(gather.DeviationRadius == 3 && Vector2.Distance(gather.Midpoint(), landing + 7 * P32启示Plan.Direction(heading + Math.PI)) < 0.0001,
                             "分摊后应集合在 Boss 正后方七米、容差三米的圆内。");
                     }
         }
@@ -562,7 +562,7 @@ namespace Simulant.Tests
             foreach (var wing in new[] { WingSide.Left, WingSide.Right })
                 foreach (DarklitSolution solution in Enum.GetValues(typeof(DarklitSolution)))
                 {
-                    var plan = new DarklitPlan(0, DarklitDebuff.ChainWater, solution, DiagonalSwap.Anti, SideSwap.Left,
+                    var plan = new P41光与暗的龙诗Plan(0, DarklitDebuff.ChainWater, solution, DiagonalSwap.Anti, SideSwap.Left,
                         SomberDanceBait.MTThenST, wing, new Random(40228));
                     Check(plan.WingAction == (wing == WingSide.Left ? 40227u : 40228u), "左右刀应使用各自的技能。");
                     for (var x = -19; x <= 19; x += 2)
@@ -597,7 +597,7 @@ namespace Simulant.Tests
                 foreach (WingSide wing in new[] { WingSide.Left, WingSide.Right })
                     for (var sample = 0; sample < 64; sample++)
                     {
-                        var plan = new DarklitPlan(0, DarklitDebuff.Random, solution, DiagonalSwap.Anti, SideSwap.Left,
+                        var plan = new P41光与暗的龙诗Plan(0, DarklitDebuff.Random, solution, DiagonalSwap.Anti, SideSwap.Left,
                             SomberDanceBait.MTThenST, wing, random);
                         var regions = Enumerable.Range(0, 8).Select(slot => plan.Stack(slot, crystal, safeDistance)).ToArray();
                         var positions = regions.Select(region => region.Sample(random)).ToArray();
@@ -659,7 +659,7 @@ namespace Simulant.Tests
                         foreach (ApocalypseReference reference in Enum.GetValues(typeof(ApocalypseReference)))
                             foreach (ApocalypseHalf half in Enum.GetValues(typeof(ApocalypseHalf)))
                             {
-                                var plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, solution, reference, half,
+                                var plan = new P32启示Plan(0, ApocalypseDebuff.Random, solution, reference, half,
                                     (ExerciseDirection)direction, (ExerciseTurn)rotation, random, 5);
                                 for (var i = 0; i < 8; i++)
                                 {
@@ -668,7 +668,7 @@ namespace Simulant.Tests
                                     var gate = plan.ReturnGate(i).Sample(random);
                                     for (var volley = 2; volley < 6; volley++)
                                     {
-                                        var time = ApocalypsePlan.ExplosionTimes[volley];
+                                        var time = P32启示Plan.ExplosionTimes[volley];
                                         // 保留一次网络移动包的同步余量，使用正常跑速验证每段路线。
                                         var firstLeg = time < 30.45;
                                         var start = firstLeg ? from : gate;

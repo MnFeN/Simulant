@@ -61,7 +61,7 @@ namespace Simulant.Content.U7a
             P5 = new PhaseData("P5", 108, 20099, p5Effects);
 
             var completeEffects = mapEffects.ToList();
-            Complete = new PhaseData("过本", 1, 0, completeEffects);
+            Complete = new PhaseData("过本", 1, 18, completeEffects);
         }
     }
 }
