@@ -1,3 +1,4 @@
+using Simulant.Content.U7a.Abilities;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Simulation.Geometry;
@@ -17,59 +18,33 @@ namespace Simulant.Content.U7a.Presets
         private AreaMechanic Targeted(string name, uint action, int target, int[] expected, int helper,
             ActionArea? area = null, Action<MechanicResult> visual = null)
         {
-            var shape = area ?? ActionArea.FromAction(action);
-            return ProtectCrystal(new AreaMechanic(name, shape, centerSlot: target)
+            var mechanic = new AreaMechanic(name, area ?? ActionArea.FromAction(action), centerSlot: target)
             {
                 RequiredPlayers = expected.Length,
-                Visual = result =>
-                {
-                    if (action == 40271 || action == 40277)
-                        EntityManager.MarkUnderfilledStack(result.Participants.Select(m => m.Actor).ToArray(), expected.Length, _gaia);
-                    if (visual != null)
-                        visual(result);
-                    else
-                        Effect(helper, action, target, result.HitActors);
-                },
-                Failed = result => Report(result.DescribeFailure(name, expected, target)
-                    .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null), result),
                 Check = members => AreaMechanic.CheckPartyAssignment(members, expected)
-            }, target);
+            };
+            return WithTargetEffects(mechanic, action, target, expected, helper, visual);
+        }
+
+        private AreaMechanic WithTargetEffects(AreaMechanic mechanic, uint action, int target, int[] expected, int helper,
+            Action<MechanicResult> visual = null)
+        {
+            mechanic.Visual = result =>
+            {
+                if (action == 黑暗狂水.ActionId || action == 40277)
+                    EntityManager.MarkUnderfilledStack(result.HitActors.ToArray(), expected.Length, _gaia);
+                if (visual != null)
+                    visual(result);
+                else
+                    Effect(helper, action, target, result.HitActors);
+            };
+            mechanic.Failed = result => Report(result.DescribeFailure(mechanic.Name, expected, target)
+                .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null), result);
+            return ProtectCrystal(mechanic, target);
         }
 
         private AreaMechanic ProtectCrystal(AreaMechanic mechanic, int target)
-        {
-            return U7aCrystal.Protect(mechanic, center =>
-            {
-                var crystalPosition = _crystal.Pos;
-                var crystalRadius = _crystal.Entity.HitboxRadius;
-                var hit = !_crystalBroken && mechanic.Area.IntersectsCircle(crystalPosition, crystalRadius, center, mechanic.Heading);
-
-                if (hit)
-                    _host.LogVerbose(FormattableString.Invariant($"[时间结晶] {mechanic.Name} 水晶命中判定：技能中心 ({center.X:0.000}, {center.Y:0.000})，水晶 ({crystalPosition.X:0.000}, {crystalPosition.Y:0.000})，水晶半径 {crystalRadius:0.000} 米，中心距离 {Vector2.Distance(center, crystalPosition):0.000} 米。"));
-
-                return hit;
-            }, BreakCrystal, result => Report(MechanicError.Rule(mechanic.Name, new[]
-            {
-                target
-            }, result.Reason).WithAttribution(target == Self ? new[]
-            {
-                Self
-            } : Array.Empty<int>(), "自身点名范围击中了北侧水晶"), result));
-        }
-
-        private void BreakCrystal()
-        {
-            if (_crystalBroken)
-                return;
-
-            _crystalBroken = true;
-            _crystal.StopCasting();
-            _crystal.Entity.SetNetworkVitals(0);
-            // 回放 4786.223 秒水晶破碎：死亡动画、状态 2，同时 MapEffect 0x2E 切换到 0x10。
-            _crystal.ActorControl(Simulant.Game.ActorControlCategory.DeathAnimation);
-            _crystal.ActorControl(Simulant.Game.ActorControlCategory.SetStatus, 2);
-            Map(0x2E, 0x10);
-        }
+            => _crystal.Protect(mechanic, target, Self, Report);
 
         private int[] Responsible(MechanicResult result, int[] expected, int target)
         {
@@ -109,8 +84,9 @@ namespace Simulant.Content.U7a.Presets
         private void ResolveWater()
         {
             var slot = _plan.Slot(CrystalDebuff.BlueWater);
-            ClearStatus(slot, 2461);
-            EntityManager.RunMechanic(Targeted("黑暗狂水四人分摊", 40271, slot, _plan.WaterGroup, 0));
+            var expected = _plan.WaterGroup;
+            var water = 黑暗狂水.CreateStack(EntityManager, "黑暗狂水四人分摊", slot, expected);
+            EntityManager.RunMechanic(WithTargetEffects(water, 黑暗狂水.ActionId, slot, expected, 0));
         }
 
         private void ResolveEarth()
@@ -371,25 +347,12 @@ namespace Simulant.Content.U7a.Presets
 
         private void ResolveSpiritTaker()
         {
-            var area = ActionArea.FromAction(40289);
-            var snapshot = PartySnapshot.Capture(Party);
-            var target = P42时间结晶Plan.SpiritTakerTarget(Enumerable.Range(0, Party.Count).Select(slot => snapshot.Get(slot).Position).ToArray(), Self,
-                area, _crystal.Pos, _crystal.Entity.HitboxRadius, Random);
-            var center = Party[target].Pos;
-            var mechanic = Targeted("碎灵一击分散", 40289, target, new[]
-            {
-                target
-            }, 0, area, result =>
-            {
-                SimKnockback.Resolve(Scheduler, result.HitActors, KnockbackEffect.Radial(center, 40, 0.8f),
-                    exclude: Party[target]);
-            });
-            // 回放：47.375 秒演出包，48.309 秒伤害结算；波及队友的记录也是约 0.935 秒后结算。
-            // 锁定站位后先播放跳跃，落地才击退并报错，避免失败中断取消尚未执行的击退。
-            mechanic.LockedSnapshot = snapshot;
-            mechanic.ResolveAfter = 0.934;
-            mechanic.Started = _ => _gaia.ExecuteActionEffect(40289, Party[target]);
-            EntityManager.RunMechanic(mechanic);
+            var hit = new 碎灵一击(EntityManager, Self, _crystal, Random);
+            var target = hit.Target;
+            var mechanic = Targeted(碎灵一击.Name, 碎灵一击.ActionId, target.Slot, new[] { target.Slot }, 0,
+                hit.Area, hit.KnockbackFrom(target.Actor.Pos));
+            mechanic.Started = _ => _gaia.ExecuteActionEffect(碎灵一击.ActionId, target.Actor);
+            hit.Resolve(mechanic);
         }
 
         private void BeginWing(int wave)

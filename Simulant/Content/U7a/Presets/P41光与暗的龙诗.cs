@@ -1,3 +1,4 @@
+using Simulant.Content.U7a.Abilities;
 using Simulant.Core;
 using Simulant.Core.Environment;
 using Simulant.Game;
@@ -105,11 +106,7 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(5, () =>
             {
                 foreach (var slot in _plan.Waters)
-                {
-                    Status(slot, 2461, 19.1f);
-                    // 无名状态 2458 的循环特效保留头顶水标记，19.015 秒换为最终分摊标记。
-                    Status(slot, 2458, 14.015f);
-                }
+                    ApplyDelayedDarkWater(slot, 19.1f, 14.015f);
             }, "给予两组延迟水分摊");
             timeline.At(5.79, () =>
             {
@@ -140,10 +137,7 @@ namespace Simulant.Content.U7a.Presets
             timeline.At(19.015, () =>
             {
                 foreach (var slot in _plan.Waters)
-                {
-                    ClearStatus(slot, 2458);
-                    Icon(slot, 0xB8);
-                }
+                    ShowDarkWaterStackMarker(slot);
             }, "黑暗狂水分摊标记");
             timeline.At(19.3, () =>
             {
@@ -151,20 +145,17 @@ namespace Simulant.Content.U7a.Presets
                     omenHeading: (float)Math.PI, castTime: 4.7f, executeOnFinish: false);
             }, "希瓦神圣之翼半场刀");
             timeline.At(19.2, () => Oracle.ExecuteActionEffect(40288, Oracle), "碎灵一击读条结束演出");
-            timeline.At(19.47, () => SpiritTaker(Oracle), "碎灵一击锁定与跳跃");
+            timeline.At(19.47, () => ResolveSpiritTaker(Oracle), "碎灵一击锁定与跳跃");
             timeline.At(20.55, () =>
             {
-                var safeDistance = Crystal.Entity.HitboxRadius + GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().GetRow(40271).EffectRange;
+                var safeDistance = Crystal.HitboxRadius + GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().GetRow(黑暗狂水.ActionId).EffectRange;
                 MoveAll(slot => _plan.Stack(slot, Crystal.Pos, safeDistance), 23.55, 24.3, true);
             }, "穿到安全半场，南北四人分摊");
             timeline.At(22.35, () => Oracle.Cast(40283, castTime: 4.7f, executeOnFinish: false), "真夜舞蹈读条");
             timeline.At(24.12, () =>
             {
                 foreach (var target in _plan.Waters)
-                {
-                    ClearStatus(target, 2461);
-                    Run(Stack(Roles[target] + "的黑暗狂水", target, 4, _plan.Group(_plan.Quadrants[target])));
-                }
+                    Run(DarkWaterStack(Roles[target] + "的黑暗狂水", target, _plan.Group(_plan.Quadrants[target])));
             }, "两组黑暗狂水判定");
             timeline.At(24.2, () =>
             {

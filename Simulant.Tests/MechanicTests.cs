@@ -1,4 +1,5 @@
-using Simulant.Content.U7a.Presets;
+using Simulant.Content.U7a.Abilities;
+using Simulant.Content.U7a.Entities;
 using Simulant.Core.Entity;
 using Simulant.Game.Data;
 using Simulant.Simulation.Geometry;
@@ -150,6 +151,37 @@ namespace Simulant.Tests
             }
         }
 
+        public static void DarkWaterConsumesOnlyTheTargetsStatusAndChecksAllFourSlots()
+        {
+            using (var scene = new Scene())
+            {
+                var actions = GameDataService.Instance.GetSheet<ActionRow>();
+                const int actionId = (int)黑暗狂水.ActionId;
+                var hadAction = actions.TryGetValue(actionId, out var previous);
+                actions[actionId] = new ActionRow { CastType = 2, EffectRange = 6 };
+                try
+                {
+                    scene.Manager.SetStatus(scene.Player, 黑暗狂水.StatusId, 0, 0, scene.Player);
+                    scene.Manager.SetStatus(scene.Other, 黑暗狂水.StatusId, 0, 0, scene.Player);
+                    var expected = new[] { 1, 3, 5, 7 };
+                    var stack = 黑暗狂水.CreateStack(scene.Manager, "黑暗狂水", 1, expected);
+                    var members = expected.Select(slot => new PartyMemberSnapshot(null, Vector2.Zero, slot)).ToArray();
+                    Assert(stack.RequiredPlayers == 4 && stack.Check(members) == null, "黑暗狂水必须由分配的四人进入。");
+                    members[0] = new PartyMemberSnapshot(null, Vector2.Zero, 0);
+                    Assert(stack.Check(members) != null, "分摊人数正确但成员错误时仍应判定失败。");
+                    Assert(!scene.Other.Entity.HasStatus(黑暗狂水.StatusId) && scene.Player.Entity.HasStatus(黑暗狂水.StatusId),
+                        "每次结算只清除当前点名者的黑暗狂水。");
+                }
+                finally
+                {
+                    if (hadAction)
+                        actions[actionId] = previous;
+                    else
+                        actions.Remove(actionId);
+                }
+            }
+        }
+
         public static void ParticipantFailureDoesNotSkipCrystalCheckOrItsVisual()
         {
             using (var scene = new Scene())
@@ -166,14 +198,19 @@ namespace Simulant.Tests
                     Visual = result => events.Add("技能演出"),
                     Failed = result => events.Add("普通失败"),
                 };
-                scene.Manager.RunMechanic(U7aCrystal.Protect(mechanic, center =>
+                var crystalActor = scene.Manager.Attach(scene.Spawner.World.CreateCharacter(1));
+                crystalActor.Pos = new Vector2(6, 0);
+                crystalActor.Entity.HitboxRadius = 1.25f;
+                var crystal = new 未来的碎片(crystalActor, (slot, animation) =>
                 {
-                    events.Add("水晶判定");
-                    return true;
-                }, () => events.Add("水晶击碎"), result =>
+                    Assert(slot == 0x2E && animation == 0x10 && crystalActor.Entity.HP == 0, "水晶破碎时应清空血量并切换场地效果。");
+                    events.Add("水晶击碎");
+                }, message => events.Add("水晶判定"));
+                scene.Manager.RunMechanic(crystal.Protect(mechanic, 0, 0, (error, result) =>
                 {
                     Assert(result.Reason.Contains("实际 2 人") && result.Reason.Contains("点名分工") && result.Reason.Contains("水晶"),
                         "人数、分工和水晶判定的失败原因必须同时保留。");
+                    Assert(error.Offenders.SequenceEqual(new[] { 0 }), "自身点名击中水晶时应标记自身。");
                     events.Add("水晶失败");
                 }));
                 scene.Scheduler.Start();

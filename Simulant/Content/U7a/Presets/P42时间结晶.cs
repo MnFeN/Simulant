@@ -1,3 +1,5 @@
+using Simulant.Content.U7a.Abilities;
+using Simulant.Content.U7a.Entities;
 using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Core;
 using Simulant.Core.Entity;
@@ -111,18 +113,18 @@ namespace Simulant.Content.U7a.Presets
         private int Self => PlayerSlot - 1;
 
         private P42时间结晶Plan _plan;
-        private SimActor _shiva, _gaia, _crystal, _wyrm;
+        private SimActor _shiva, _gaia, _wyrm;
+        private 未来的碎片 _crystal;
         private readonly SimActor[] _sand = new SimActor[6], _heads = new SimActor[2], _helpers = new SimActor[19];
         private readonly EventObject[] _puddles = new EventObject[4];
         private readonly Vector2[] _puddlePositions = new Vector2[4];
-        private readonly Vector3[] _rewind = new Vector3[8];
+        private readonly ReturnPoint[] _returnPoints = new ReturnPoint[8];
         private readonly bool[] _cleansed = new bool[8], _taken = new bool[4];
         private readonly int[] _headHits = new int[2];
         private readonly HashSet<uint> _mapChanges = new HashSet<uint>();
         private readonly HashSet<int> _marked = new HashSet<int>();
         private int[] _firstFront;
         private bool _markersOwned;
-        private bool _crystalBroken;
         private int _mistakes;
         private double _origin;
         private double Now => Scheduler.ElapsedSeconds - _origin;
@@ -186,7 +188,8 @@ namespace Simulant.Content.U7a.Presets
                 EntityManager.SetPartyEnmity(actor, alsoSetCombatTarget: false, 63, 100, 5, 5, 10, 10, 10, 10);
             }, layout: 0xA55C02);
 
-            PrepareCrystal(actorReady);
+            未来的碎片.Spawn(EntityManager, Scheduler,
+                actor => _crystal = new 未来的碎片(actor, Map, message => _host.LogVerbose("[时间结晶] " + message)), actorReady);
 
             Spawn(17834, 9324, Center + new Vector2(0, 5), actor =>
             {
@@ -202,14 +205,6 @@ namespace Simulant.Content.U7a.Presets
 
             SpawnHelpers(_helpers, new Vector3(Center, 0), actorReady);
         }
-
-        private void PrepareCrystal(Action ready)
-            => U7aCrystal.Spawn(EntityManager, Scheduler, actor =>
-            {
-                if (actor.Entity.Native.BaseId.Get() == 17841)
-                    _crystal = actor;
-                ready();
-            });
 
         private void BeginEncounter()
         {

@@ -61,7 +61,9 @@
     <Compile Include="..\Simulant\Content\U7a\Presets\P21钻石星尘.Plan.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\P23光之失控.Plan.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\U7aExerciseOptions.cs" />
-    <Compile Include="..\Simulant\Content\U7a\Presets\U7aCrystal.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Entities\未来的碎片.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Abilities\黑暗狂水.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Abilities\碎灵一击.cs" />
     <Compile Include="CrystallizeTimeTests.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\P42时间结晶.Plan.cs">
       <Link>Content\P42时间结晶.Plan.cs</Link>

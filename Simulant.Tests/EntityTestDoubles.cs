@@ -146,6 +146,13 @@ namespace Simulant.Core.Entity
         public uint MaxHP { get; set; } = 10000;
         public uint MP { get; set; } = 10000;
         public uint MaxMp { get; set; } = 10000;
+        public void SetNetworkVitals(uint hp, ushort? mp = null)
+        {
+            HP = hp;
+            if (mp.HasValue)
+                MP = mp.Value;
+        }
+
         public void ActorSetPos(Vector3 position, float heading)
         {
             Pos3D = position;

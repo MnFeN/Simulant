@@ -1,4 +1,5 @@
-﻿using Simulant.Game.FFCS.Client.Game.UI;
+﻿using Simulant.Content.U7a.Entities;
+using Simulant.Game.FFCS.Client.Game.UI;
 using Simulant.Content.U7a.Presets;
 using Simulant.Simulation.Geometry;
 using System;
@@ -242,7 +243,7 @@ namespace Simulant.Tests
                                     for (var i = 0; i < 8; i++)
                                     {
                                         Check(spread.Where((_, j) => i != j).All(point => Vector2.Distance(point, spread[i]) > 5), "跳跃分散不可重叠。");
-                                        Check(Vector2.Distance(spread[i], U7aCrystal.Position) > 8.5f, "跳跃分散不可击中北侧水晶。");
+                                        Check(Vector2.Distance(spread[i], 未来的碎片.Position) > 8.5f, "跳跃分散不可击中北侧水晶。");
                                     }
                                 }
         }
@@ -576,7 +577,7 @@ namespace Simulant.Tests
                         }
                     for (var slot = 0; slot < 8; slot++)
                     {
-                        var region = plan.Stack(slot, U7aCrystal.Position, 9.5f);
+                        var region = plan.Stack(slot, 未来的碎片.Position, 9.5f);
                         Check(!area.Contains(region.Midpoint(), plan.WingOrigin, (float)Math.PI), "两组分摊的标准站位应避开半场刀。");
                     }
                 }
@@ -589,7 +590,7 @@ namespace Simulant.Tests
             Vector2[] Corners(SimPosition region)
                 => edges.SelectMany(radius => edges.Select(angle => region.Sample(radius, angle, Math.PI))).ToArray();
 
-            var crystal = U7aCrystal.Position;
+            var crystal = 未来的碎片.Position;
             const float crystalRadius = 3.5f;
             var area = ActionArea.Circle(6);
             var safeDistance = 6 + crystalRadius;

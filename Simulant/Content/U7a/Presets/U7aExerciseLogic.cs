@@ -1,3 +1,5 @@
+using Simulant.Content.U7a.Abilities;
+using Simulant.Content.U7a.Entities;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
@@ -25,7 +27,7 @@ namespace Simulant.Content.U7a.Presets
         protected SimActor Oracle;
         protected SimActor Shiva;
         protected SimActor Wyrm;
-        protected SimActor Crystal;
+        protected 未来的碎片 Crystal;
         protected double Origin;
         protected double Now => Scheduler.ElapsedSeconds - Origin;
         protected int Self => Solo ? 0 : (int)PlayerSlot - 1;
@@ -46,7 +48,6 @@ namespace Simulant.Content.U7a.Presets
         private int _partyMarksWorld;
         private bool _failedSelf;
         private bool _complete;
-        private bool _crystalBroken;
 
         [SimOption(Optional = true)]
         public ExerciseRole PlayerSlot { get; set; } = ExerciseRole.MT;
@@ -63,7 +64,6 @@ namespace Simulant.Content.U7a.Presets
             _marked.Clear();
             _failedSelf = false;
             _complete = false;
-            _crystalBroken = false;
             PreparePlan();
             timeline.At(0, () =>
             {
@@ -139,12 +139,8 @@ namespace Simulant.Content.U7a.Presets
                     Wyrm = actor;
                     actor.SetTargetable(false);
                 });
-                U7aCrystal.Spawn(EntityManager, Scheduler, actor =>
-                {
-                    if (actor.Entity.Native.BaseId.Get() == 17841)
-                        Crystal = actor;
-                    actorReady();
-                }, health: 201481);
+                未来的碎片.Spawn(EntityManager, Scheduler,
+                    actor => Crystal = new 未来的碎片(actor, (slot, animation) => Map(slot, animation)), actorReady, health: 201481);
             }
 
             SpawnHelpers(Helpers, new Vector3(Center, 0), actorReady, HelperNameId);
@@ -183,6 +179,19 @@ namespace Simulant.Content.U7a.Presets
             => EntityManager.SetStatus(Party[slot], status, seconds, param, Oracle);
         protected void ClearStatus(int slot, ushort status) => EntityManager.RemoveStatus(Party[slot], status);
         protected void Icon(int slot, uint icon) => Party[slot].ActorControl(ActorControlCategory.TargetIcon, icon, Party[slot].Id);
+
+        protected void ApplyDelayedDarkWater(int slot, float duration, float markerDuration)
+        {
+            Status(slot, 黑暗狂水.StatusId, duration);
+            // 无名状态的循环特效在最终分摊头标出现前显示延迟水。
+            Status(slot, 黑暗狂水.MarkerStatusId, markerDuration);
+        }
+
+        protected void ShowDarkWaterStackMarker(int slot)
+        {
+            ClearStatus(slot, 黑暗狂水.MarkerStatusId);
+            Icon(slot, 184);
+        }
 
         protected void MarkPartyMember(int slot, MarkerType markType)
         {
@@ -261,26 +270,33 @@ namespace Simulant.Content.U7a.Presets
                     .WithAttribution(result.Participants.Select(p => p.Slot)), result)
             };
 
-        protected AreaMechanic Stack(string name, int target, int minimum, IEnumerable<int> expected, uint action = 40271)
-            => ProtectCrystal(new AreaMechanic(name, ActionArea.FromAction(action), centerSlot: target)
-            {
-                MinPlayers = minimum,
-                MaxPlayers = minimum == 4 ? (int?)4 : null,
-                FailureSeverity = MechanicFailureSeverity.Warning,
-                Check = members => minimum == 4 ? AreaMechanic.CheckPartyAssignment(members, expected) : null,
-                Visual = result =>
-                {
-                    TargetEffect(target, action, target, result.HitActors);
-                    if (action == 40271 || action == 40277)
-                        EntityManager.MarkUnderfilledStack(result.Participants.Select(p => p.Actor).ToArray(), minimum, Oracle);
-                },
-                Failed = result => Report(result.DescribeFailure(name, expected, target)
-                    .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null), result)
-            }, target);
+        protected AreaMechanic DarkWaterStack(string name, int target, IEnumerable<int> expected)
+            => WithStackEffects(黑暗狂水.CreateStack(EntityManager, name, target, expected),
+                黑暗狂水.ActionId, target, expected);
 
-        protected AreaMechanic Spread(string name, int target, uint action = 40274, bool protectCrystal = true)
+        protected AreaMechanic Stack(string name, int target, int minimum, IEnumerable<int> expected, uint action)
+            => WithStackEffects(new AreaMechanic(name, ActionArea.FromAction(action), centerSlot: target)
+            {
+                MinPlayers = minimum
+            }, action, target, expected);
+
+        private AreaMechanic WithStackEffects(AreaMechanic stack, uint action, int target, IEnumerable<int> expected)
         {
-            var mechanic = new AreaMechanic(name, ActionArea.FromAction(action), centerSlot: target)
+            stack.FailureSeverity = MechanicFailureSeverity.Warning;
+            stack.Visual = result =>
+            {
+                TargetEffect(target, action, target, result.HitActors);
+                if (action == 黑暗狂水.ActionId || action == 40277)
+                    EntityManager.MarkUnderfilledStack(result.HitActors.ToArray(), stack.RequiredPlayers ?? stack.MinPlayers.Value, Oracle);
+            };
+            stack.Failed = result => Report(result.DescribeFailure(stack.Name, expected, target)
+                .WithAttribution(Responsible(result, expected, target), target == Self ? "可能是自身站歪了" : null), result);
+            return ProtectCrystal(stack, target);
+        }
+
+        protected AreaMechanic Spread(string name, int target, uint action = 40274, bool protectCrystal = true, ActionArea? area = null)
+        {
+            var mechanic = new AreaMechanic(name, area ?? ActionArea.FromAction(action), centerSlot: target)
             {
                 MaxPlayers = 1,
                 Visual = result => TargetEffect(target, action, target, result.HitActors),
@@ -295,14 +311,7 @@ namespace Simulant.Content.U7a.Presets
                 ? new[] { Self } : Array.Empty<int>();
 
         protected AreaMechanic ProtectCrystal(AreaMechanic mechanic, int target)
-        {
-            if (Crystal == null)
-                return mechanic;
-            return U7aCrystal.Protect(mechanic,
-                center => !_crystalBroken && mechanic.Area.IntersectsCircle(Crystal.Pos, Crystal.Entity.HitboxRadius, center, mechanic.Heading),
-                BreakCrystal, result => Report(MechanicError.Rule(mechanic.Name, new[] { target }, result.Reason)
-                    .WithAttribution(target == Self ? new[] { Self } : Array.Empty<int>(), "自身点名范围击中了北侧水晶"), result));
-        }
+            => Crystal?.Protect(mechanic, target, Self, Report) ?? mechanic;
 
         protected static Vector2 JumpLanding(SimActor actor, Vector2 target)
         {
@@ -311,47 +320,25 @@ namespace Simulant.Content.U7a.Presets
                 target + Vector2.Normalize(offset) * Math.Min(actor.Entity.HitboxRadius, offset.Length());
         }
 
-        // 同样的落地演出由 P3、P4 共用；先锁定，再播放跳跃，落地时才结算击退。
-        protected void SpiritTaker(SimActor source)
+        protected void ResolveSpiritTaker(SimActor source)
         {
-            var snapshot = PartySnapshot.Capture(Party);
-            var positions = Enumerable.Range(0, 8).Select(i => snapshot.Get(i).Position).ToArray();
-            var area = ActionArea.FromAction(40289);
-            var target = P42时间结晶Plan.SpiritTakerTarget(
-                positions, Self, area, Crystal?.Pos, Crystal?.Entity.HitboxRadius ?? 0, Random);
-            var center = positions[target];
-            var mechanic = Spread("碎灵一击分散", target, 40289, false);
-            mechanic.LockedSnapshot = snapshot;
-            mechanic.ResolveAfter = 0.934;
-            var landing = JumpLanding(source, center);
-            var heading = Heading(center - source.Pos);
+            var hit = new 碎灵一击(EntityManager, Self, Crystal, Random);
+            var target = hit.Target;
+            var landing = JumpLanding(source, target.Position);
+            var heading = Heading(target.Position - source.Pos);
+            var mechanic = Spread(碎灵一击.Name, target.Slot, 碎灵一击.ActionId, protectCrystal: false, area: hit.Area);
             mechanic.Started = _ =>
             {
                 source.ActorMove(source.Entity.Pos3D, heading, 0);
-                source.ExecuteActionEffect(40289, Party[target], heading);
+                source.ExecuteActionEffect(碎灵一击.ActionId, target.Actor, heading);
                 Scheduler.ScheduleRelativeToNode(0.716, () =>
                 {
                     if (source.IsActive)
                         source.ActorMove(new Vector3(landing, 0), heading, 0);
                 }, "碎灵一击落点同步", finishOnMechanicFailure: true);
             };
-            mechanic.Visual = result =>
-            {
-                SimKnockback.Resolve(Scheduler, result.HitActors, KnockbackEffect.Radial(center, 40, 0.8f),
-                    exclude: Party[target]);
-            };
-            Run(ProtectCrystal(mechanic, target));
-        }
-
-        private void BreakCrystal()
-        {
-            if (_crystalBroken || Crystal == null)
-                return;
-            _crystalBroken = true;
-            Crystal.Entity.SetNetworkVitals(0);
-            Crystal.ActorControl(ActorControlCategory.DeathAnimation);
-            Crystal.ActorControl(ActorControlCategory.SetStatus, 2);
-            Map(0x2E, 0x10);
+            mechanic.Visual = hit.KnockbackFrom(target.Position);
+            hit.Resolve(ProtectCrystal(mechanic, target.Slot));
         }
 
         private void CheckArena()

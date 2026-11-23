@@ -135,9 +135,9 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 0; i < 8; i++)
                     if (_plan.Orders[i] != 0)
                     {
-                        Status(i, 2461, _plan.Orders[i] == 1 ? 10 : _plan.Orders[i] == 2 ? 29 : 38);
-                        // 普通分摊标记出现前，无名状态持续显示延迟水的头顶提示。
-                        Status(i, 2458, _plan.Orders[i] == 1 ? 5 : _plan.Orders[i] == 2 ? 23 : 33);
+                        var round = _plan.Orders[i];
+                        var (waterSeconds, markerSeconds) = round == 1 ? (10, 5) : round == 2 ? (29, 23) : (38, 33);
+                        ApplyDelayedDarkWater(i, waterSeconds, markerSeconds);
                     }
                 if (_plan.IsSingleGroup)
                     for (var slot = 0; slot < 8; slot++)
@@ -148,11 +148,7 @@ namespace Simulant.Content.U7a.Presets
             timeline.AtEach(Enumerable.Range(0, waterMarks.Length), round => waterMarks[round], round =>
             {
                 for (var group = 0; group < 2; group++)
-                {
-                    var target = _plan.Target(round, group);
-                    ClearStatus(target, 2458);
-                    Icon(target, 184);
-                }
+                    ShowDarkWaterStackMarker(_plan.Target(round, group));
             }, _ => "延迟水分摊标记");
             timeline.At(8.05, () => Oracle.Cast(40296, target: Oracle), "启示读条");
             timeline.At(8.42, SpawnLights, "生成启示地火光点");
@@ -166,7 +162,7 @@ namespace Simulant.Content.U7a.Presets
                 MoveAll(slot => positions[slot], 17.32, 18.7, true);
             }, "水分摊后散开躲碎灵一击");
             timeline.At(17.24, () => Oracle.ExecuteActionEffect(40288, Oracle), "碎灵一击读条结束演出");
-            timeline.At(17.52, () => SpiritTaker(Oracle), "碎灵一击锁定与跳跃");
+            timeline.At(17.52, () => ResolveSpiritTaker(Oracle), "碎灵一击锁定与跳跃");
             timeline.At(20.34, () =>
             {
                 Oracle.ExecuteActionEffectAt(40117, new Vector3(Center, 0), (float)Math.PI);
@@ -215,8 +211,7 @@ namespace Simulant.Content.U7a.Presets
             for (var group = 0; group < 2; group++)
             {
                 var target = _plan.Target(round, group);
-                ClearStatus(target, 2461);
-                mechanics.Add(Stack($"第{round + 1}轮{Roles[target]}的黑暗狂水", target, 4, _plan.Group(group)));
+                mechanics.Add(DarkWaterStack($"第{round + 1}轮{Roles[target]}的黑暗狂水", target, _plan.Group(group)));
             }
             var water = new MechanicGroup(mechanics);
             if (round == 2)

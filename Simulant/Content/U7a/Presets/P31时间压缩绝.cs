@@ -1,3 +1,4 @@
+using Simulant.Content.U7a.Abilities;
 using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Environment;
@@ -59,7 +60,7 @@ namespace Simulant.Content.U7a.Presets
         protected override double OpeningAdvance => FastOpening ? 8.7 : 0;
         private P31时间压缩绝Plan _plan;
         private readonly SimActor[] _hourglasses = new SimActor[8];
-        private readonly Vector3[] _returns = new Vector3[8];
+        private readonly ReturnPoint[] _returnPoints = new ReturnPoint[8];
 
         public RelativityLogic(PluginHost host, SimPresetBase preset) : base(host, preset)
         {
@@ -142,7 +143,7 @@ namespace Simulant.Content.U7a.Presets
                 {
                     Status(i, 4163, 4);
                     if (i != Self)
-                        Party[i].FaceNetwork(Heading(new Vector2(_returns[i].X, _returns[i].Y) - Center));
+                        Party[i].FaceNetwork(Heading(_returnPoints[i].GroundPosition - Center));
                 }
             }, "回返眩晕并调整假队友朝向");
             timeline.At(51.73, () =>
@@ -150,7 +151,7 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 0; i < 8; i++)
                 {
                     ClearStatus(i, 2452);
-                    Party[i].Entity.WarpWithAnimation(_returns[i], Party[i].Heading, 8488);
+                    _returnPoints[i].Return(Party[i]);
                 }
             }, "带动画返回记录点");
             timeline.At(52.708, () =>
@@ -183,7 +184,7 @@ namespace Simulant.Content.U7a.Presets
                 var kind = P31时间压缩绝Plan.Kind(_plan.Codes[i]);
                 Status(i, kind == 0 ? (ushort)2462 : (ushort)2455, kind == 0 ? 21.1f : kind * 10 + 1.1f);
                 Status(i, 2464, _plan.EarlyReturn(i) ? 16 : 26);
-                Status(i, _plan.Gaze(i) ? (ushort)2456 : _plan.Water(i) ? (ushort)2461 : (ushort)2460, 43.1f);
+                Status(i, _plan.Gaze(i) ? (ushort)2456 : _plan.Water(i) ? 黑暗狂水.StatusId : (ushort)2460, 43.1f);
             }
             for (var wave = 0; wave < 3; wave++)
                 Status(_plan.StackTargets[wave], 2454, 11.1f + wave * 10);
@@ -311,11 +312,10 @@ namespace Simulant.Content.U7a.Presets
             for (var i = 0; i < 8; i++)
                 if (_plan.EarlyReturn(i) == early)
                 {
-                    _returns[i] = Party[i].JudgementPosition3D;
+                    _returnPoints[i] = new ReturnPoint(Party[i]);
                     ClearStatus(i, 2464);
                     Status(i, 2452, early ? 24 : 14);
-                    var position = _returns[i];
-                    Party[Self].Entity.PlayPositionVfx(1013, position);
+                    _returnPoints[i].ShowTo(Party[Self]);
                 }
         }
 
@@ -340,10 +340,7 @@ namespace Simulant.Content.U7a.Presets
                     mechanics.Add(gaze);
                 }
                 else if (_plan.Water(i))
-                {
-                    ClearStatus(i, 2461);
-                    mechanics.Add(Stack("回返黑暗狂水", i, 4, Enumerable.Range(0, 8).Where(s => _plan.Gaze(s) || _plan.Water(s))));
-                }
+                    mechanics.Add(DarkWaterStack("回返黑暗狂水", i, Enumerable.Range(0, 8).Where(s => _plan.Gaze(s) || _plan.Water(s))));
                 else
                 {
                     ClearStatus(i, 2460);

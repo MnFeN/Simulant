@@ -1,3 +1,4 @@
+using Simulant.Content.U7a.Abilities;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Options;
 using System;
@@ -167,7 +168,7 @@ namespace Simulant.Content.U7a.Presets
         }).ToArray();
 
         internal static ushort Status(CrystalDebuff kind) => kind == CrystalDebuff.RedWind ? (ushort)2463 :
-            kind == CrystalDebuff.BlueWater ? (ushort)2461 : kind == CrystalDebuff.BlueEarth ? (ushort)2454 :
+            kind == CrystalDebuff.BlueWater ? 黑暗狂水.StatusId : kind == CrystalDebuff.BlueEarth ? (ushort)2454 :
             kind == CrystalDebuff.BlueDark ? (ushort)2460 : (ushort)2462;
         internal static string Label(CrystalDebuff kind) => kind == CrystalDebuff.RedWind ? "红风" : kind == CrystalDebuff.RedIce ? "红冰" :
             kind == CrystalDebuff.BlueWater ? "蓝水" : kind == CrystalDebuff.BlueEarth ? "蓝土" : kind == CrystalDebuff.BlueDark ? "蓝暗" : "蓝冰";
@@ -396,17 +397,6 @@ namespace Simulant.Content.U7a.Presets
 
         internal bool WingTanksCorrect(int[] order, int wave)
             => order.Take(IsY && wave == 1 ? 2 : 1).All(slot => slot < 2);
-
-        internal static int SpiritTakerTarget(Vector2[] positions, int self, ActionArea area,
-            Vector2? crystal, float crystalRadius, Random random)
-        {
-            if (crystal.HasValue && area.IntersectsCircle(crystal.Value, crystalRadius, positions[self]))
-                return self;
-
-            var nearby = Enumerable.Range(0, positions.Length)
-                .Where(slot => slot != self && area.Contains(positions[self], positions[slot], 0)).ToArray();
-            return nearby.Length != 0 ? nearby[random.Next(nearby.Length)] : random.Next(positions.Length);
-        }
 
         internal static SimPosition AkhMorn(int slot) => Circle(Center + new Vector2(LeftParty.Contains(slot) ? -5 : 5, 3));
         internal static SimPosition MornAfah => Circle(Center + new Vector2(0, 4));

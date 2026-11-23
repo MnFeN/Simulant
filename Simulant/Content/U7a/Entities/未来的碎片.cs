@@ -7,16 +7,28 @@ using Simulant.Simulation.Timeline;
 using System;
 using System.Numerics;
 
-namespace Simulant.Content.U7a.Presets
+namespace Simulant.Content.U7a.Entities
 {
     /// <summary>两个 P4 练习共用的水晶与浮空幻影场景。</summary>
-    internal static class U7aCrystal
+    internal sealed class 未来的碎片
     {
         internal static readonly Vector2 Position = new Vector2(100, 84);
+        internal SimActor Actor { get; }
+        internal Vector2 Pos => Actor.Pos;
+        internal float HitboxRadius => Actor.Entity.HitboxRadius;
+        private readonly Action<uint, ushort> _map;
+        private readonly Action<string> _logHit;
+        private bool _broken;
+
+        internal 未来的碎片(SimActor actor, Action<uint, ushort> map, Action<string> logHit = null)
+        {
+            Actor = actor;
+            _map = map;
+            _logHit = logHit;
+        }
 
         /// <summary>在原有范围判定中检查水晶，命中时保留原演出并追加击碎和失败处理。</summary>
-        internal static AreaMechanic Protect(AreaMechanic mechanic, Func<Vector2, bool> intersects,
-            Action breakCrystal, Action<MechanicResult> reportFailure)
+        internal AreaMechanic Protect(AreaMechanic mechanic, int target, int self, Action<MechanicError, MechanicResult> report)
         {
             var centerAtResolve = mechanic.CenterAtResolve;
             var check = mechanic.Check;
@@ -26,9 +38,14 @@ namespace Simulant.Content.U7a.Presets
             mechanic.CenterAtResolve = snapshot =>
             {
                 var center = centerAtResolve?.Invoke(snapshot) ?? mechanic.Center;
-                hit = intersects(center);
+                var crystalPosition = Pos;
+                var radius = HitboxRadius;
+                hit = !_broken && mechanic.Area.IntersectsCircle(crystalPosition, radius, center, mechanic.Heading);
                 if (hit)
+                {
                     mechanic.FailureSeverity = MechanicFailureSeverity.Fatal;
+                    _logHit?.Invoke(FormattableString.Invariant($"{mechanic.Name} 水晶命中判定：技能中心 ({center.X:0.000}, {center.Y:0.000})，水晶 ({crystalPosition.X:0.000}, {crystalPosition.Y:0.000})，水晶半径 {radius:0.000} 米，中心距离 {Vector2.Distance(center, crystalPosition):0.000} 米。"));
+                }
                 return center;
             };
             mechanic.Check = members =>
@@ -40,19 +57,33 @@ namespace Simulant.Content.U7a.Presets
             {
                 visual?.Invoke(result);
                 if (hit)
-                    breakCrystal();
+                    Break();
             };
             mechanic.Failed = result =>
             {
                 if (hit)
-                    reportFailure(result);
+                    report(MechanicError.Rule(mechanic.Name, new[] { target }, result.Reason)
+                        .WithAttribution(target == self ? new[] { self } : Array.Empty<int>(), "自身点名范围击中了北侧水晶"), result);
                 else
                     failed?.Invoke(result);
             };
             return mechanic;
         }
 
-        internal static void Spawn(SimEntityManager entities, SimScheduler scheduler, Action<SimActor> ready, uint health = 169245)
+        private void Break()
+        {
+            if (_broken)
+                return;
+            _broken = true;
+            Actor.StopCasting();
+            Actor.Entity.SetNetworkVitals(0);
+            Actor.ActorControl(ActorControlCategory.DeathAnimation);
+            Actor.ActorControl(ActorControlCategory.SetStatus, 2);
+            _map(0x2E, 0x10);
+        }
+
+        internal static void Spawn(SimEntityManager entities, SimScheduler scheduler, Action<SimActor> crystalReady,
+            Action ready, uint health = 169245)
         {
             // 水晶、琳和盖娅是三个独立实体；幻影先播放回放中的动作，再切换冻结姿势。
             var specs = new[]
@@ -97,7 +128,8 @@ namespace Simulant.Content.U7a.Presets
                 {
                     if (spec.BNpcBaseId == 17841)
                     {
-                        ready(actor);
+                        crystalReady(actor);
+                        ready();
                         return;
                     }
 
@@ -107,7 +139,7 @@ namespace Simulant.Content.U7a.Presets
                     scheduler.ScheduleAfter(1.084, () =>
                     {
                         actor.ActorControl(ActorControlCategory.SetModelState, ryne ? 5u : 31u);
-                        ready(actor);
+                        ready();
                     }, "冻结水晶内的幻影");
                 });
             }

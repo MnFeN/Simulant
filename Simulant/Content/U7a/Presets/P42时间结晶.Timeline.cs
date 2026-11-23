@@ -1,3 +1,4 @@
+using Simulant.Content.U7a.Abilities;
 using Simulant.Game;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Runtime;
@@ -35,7 +36,7 @@ namespace Simulant.Content.U7a.Presets
                 for (uint i = 0x22; i <= 0x27; i++)
                     Map(i, 2);
 
-                _crystal.Cast(40174);
+                _crystal.Actor.Cast(40174);
             }, "沙漏与北侧水晶");
 
             timeline.At(13.1, () =>
@@ -399,9 +400,8 @@ namespace Simulant.Content.U7a.Presets
 
             for (var slot = 0; slot < 8; slot++)
             {
-                _rewind[slot] = Party[slot].JudgementPosition3D;
-                // 回放使用 ActorControlSelf 0xB7 播放位置特效，没有生成或删除 EObj。
-                Party[Self].Entity.PlayPositionVfx(1013, _rewind[slot]);
+                _returnPoints[slot] = new ReturnPoint(Party[slot]);
+                _returnPoints[slot].ShowTo(Party[Self]);
                 ClearStatus(slot, 4208);
                 Status(slot, 2452, 7);
             }
@@ -424,9 +424,9 @@ namespace Simulant.Content.U7a.Presets
 
         private void Return()
         {
-            // 回放在眩晕后 1.015 秒发送 0xF1，8488 为 return_warp；客户端在动画中完成位移。
+            // 回放在眩晕后 1.015 秒传送。
             for (var slot = 0; slot < 8; slot++)
-                Party[slot].Entity.WarpWithAnimation(_rewind[slot], Party[slot].Heading, 8488);
+                _returnPoints[slot].Return(Party[slot]);
         }
     }
 }
