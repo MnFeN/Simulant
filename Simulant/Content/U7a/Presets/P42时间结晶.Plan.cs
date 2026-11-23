@@ -49,7 +49,7 @@ namespace Simulant.Content.U7a.Presets
     }
 
     /// <summary>时间结晶的点名、范围与解法坐标。只描述机制约束，实际移动由模拟角色处理。</summary>
-    internal sealed class CrystallizeTimePlan
+    internal sealed class P42时间结晶Plan
     {
         internal static readonly Vector2 Center = new Vector2(100, 100);
         internal static readonly string[] Roles =
@@ -89,7 +89,7 @@ namespace Simulant.Content.U7a.Presets
         internal const double ReturnDebuffEnd = 50.759;
         internal const double SpreadArrival = 47.25;
 
-        internal CrystallizeTimePlan(int self, CrystalDebuff selected, CrystalWave wave, CrystalPurple purple, Random random,
+        internal P42时间结晶Plan(int self, CrystalDebuff selected, CrystalWave wave, CrystalPurple purple, Random random,
             string redPriority = DefaultRedPriority, CrystalSolution solution = CrystalSolution.Knockback)
         {
             Solution = solution;

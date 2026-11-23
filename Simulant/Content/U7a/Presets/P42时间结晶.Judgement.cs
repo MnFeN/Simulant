@@ -135,7 +135,7 @@ namespace Simulant.Content.U7a.Presets
                 if (debuff == CrystalDebuff.BlueWater || debuff == CrystalDebuff.BlueEarth)
                     continue;
 
-                ClearStatus(slot, CrystallizeTimePlan.Status(debuff));
+                ClearStatus(slot, P42时间结晶Plan.Status(debuff));
 
                 if (debuff == CrystalDebuff.BlueDark)
                     mechanics.Add(Targeted("暗炎喷发分散", 40274, slot, new[]
@@ -164,7 +164,7 @@ namespace Simulant.Content.U7a.Presets
                 else
                 {
                     // 该动作没有预兆行；内圈按上游机制定义取 3 米，外圈仍读取技能表。
-                    var mechanic = Avoid(CrystallizeTimePlan.Roles[slot] + " 的黑暗冰封", ActionArea.FromAction(40279, innerRadius: 3), Party[slot].JudgementPosition, target: slot);
+                    var mechanic = Avoid(P42时间结晶Plan.Roles[slot] + " 的黑暗冰封", ActionArea.FromAction(40279, innerRadius: 3), Party[slot].JudgementPosition, target: slot);
                     mechanic.Visual = result => Effect(target, 40279, target, result.HitActors);
                     mechanics.Add(ProtectCrystal(mechanic, slot));
                 }
@@ -224,12 +224,12 @@ namespace Simulant.Content.U7a.Presets
             var side = head == 0 ? -1 : 1;
             var expected = _plan.Red(_headHits[head] == 0 ? CrystalDebuff.RedIce : CrystalDebuff.RedWind, side);
             var area = ActionArea.FromAction(40241);
-            var name = $"{CrystallizeTimePlan.Roles[slot]} 的第 {_headHits[head] + 1} 次龙头接触爆炸";
+            var name = $"{P42时间结晶Plan.Roles[slot]} 的第 {_headHits[head] + 1} 次龙头接触爆炸";
 
             EntityManager.RunMechanic(ProtectCrystal(new AreaMechanic(name, area, center)
             {
                 RequiredPlayers = 1,
-                Check = members => slot != expected ? "该龙头应由 " + CrystallizeTimePlan.Roles[expected] + " 接触。" : null,
+                Check = members => slot != expected ? "该龙头应由 " + P42时间结晶Plan.Roles[expected] + " 接触。" : null,
                 Visual = result =>
                 {
                     var helper = _helpers[16 + head];
@@ -244,10 +244,10 @@ namespace Simulant.Content.U7a.Presets
                     var wrongTarget = slot != expected;
                     // 点名身份相符不等于处理正确；自身撞头波及假队员时，不能反过来归责受击者。
                     var offenders = wrongTarget || slot == Self ? new[] { slot } : extra;
-                    var detail = wrongTarget ? "该次龙头应由 " + CrystallizeTimePlan.Roles[expected] + " 接触" :
-                        CrystallizeTimePlan.Roles[slot] + " 接触了分配给自己的龙头，但本次处理失败";
+                    var detail = wrongTarget ? "该次龙头应由 " + P42时间结晶Plan.Roles[expected] + " 接触" :
+                        P42时间结晶Plan.Roles[slot] + " 接触了分配给自己的龙头，但本次处理失败";
                     if (extra.Length != 0)
-                        detail += "；接触爆炸波及 " + string.Join(" ", extra.Select(i => CrystallizeTimePlan.Roles[i]));
+                        detail += "；接触爆炸波及 " + string.Join(" ", extra.Select(i => P42时间结晶Plan.Roles[i]));
 
                     var selfHint = slot != Self ? "自身未避开龙头爆炸" : wrongTarget ? "自身接触了其他队员应处理的龙头" :
                         "自身可能接触龙头过晚或接触位置不当，导致爆炸波及队友或水晶";
@@ -373,7 +373,7 @@ namespace Simulant.Content.U7a.Presets
         {
             var area = ActionArea.FromAction(40289);
             var snapshot = PartySnapshot.Capture(Party);
-            var target = CrystallizeTimePlan.SpiritTakerTarget(Enumerable.Range(0, Party.Count).Select(slot => snapshot.Get(slot).Position).ToArray(), Self,
+            var target = P42时间结晶Plan.SpiritTakerTarget(Enumerable.Range(0, Party.Count).Select(slot => snapshot.Get(slot).Position).ToArray(), Self,
                 area, _crystal.Pos, _crystal.Entity.HitboxRadius, Random);
             var center = Party[target].Pos;
             var mechanic = Targeted("碎灵一击分散", 40289, target, new[]
@@ -395,7 +395,7 @@ namespace Simulant.Content.U7a.Presets
         private void BeginWing(int wave)
         {
             var positions = Party.Select(actor => actor.JudgementPosition).ToArray();
-            var order = CrystallizeTimePlan.FrontFour(positions, wave, wave == 0 ? _plan.FirstSide : _plan.SecondSide);
+            var order = P42时间结晶Plan.FrontFour(positions, wave, wave == 0 ? _plan.FirstSide : _plan.SecondSide);
             var front = order.Take(4).ToArray();
 
             // 回放：ActionEffect 为 53.241 / 57.697 秒，击退移动从 54.625 / 59.065 秒开始。

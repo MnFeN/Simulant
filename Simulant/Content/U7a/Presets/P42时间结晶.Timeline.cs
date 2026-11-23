@@ -90,15 +90,15 @@ namespace Simulant.Content.U7a.Presets
             {
                 var index = i;
                 var wave = _plan.HourglassWave(i);
-                var start = CrystallizeTimePlan.SandCasts[wave];
-                var delay = (float)(CrystallizeTimePlan.SandHits[wave] - start - 1.2);
+                var start = P42时间结晶Plan.SandCasts[wave];
+                var delay = (float)(P42时间结晶Plan.SandHits[wave] - start - 1.2);
                 timeline.At(start, () => _sand[index].Cast(40299, castTime: 1.2f, effectDelay: delay), "沙漏预兆");
             }
 
             for (var wave = 0; wave < 3; wave++)
             {
                 var index = wave;
-                timeline.At(CrystallizeTimePlan.SandHits[wave], () => ResolveSand(index), $"第 {wave + 1} 组沙漏判定");
+                timeline.At(P42时间结晶Plan.SandHits[wave], () => ResolveSand(index), $"第 {wave + 1} 组沙漏判定");
                 var slots = wave == 0 ? new uint[]
                 {
                     0x22,
@@ -147,7 +147,7 @@ namespace Simulant.Content.U7a.Presets
             })
             {
                 var groupSide = side;
-                var enter = CrystallizeTimePlan.SandHits[0] + Random.NextDouble();
+                var enter = P42时间结晶Plan.SandHits[0] + Random.NextDouble();
                 timeline.At(enter, () =>
                 {
                     Move(_plan.Red(CrystalDebuff.RedWind, groupSide), _plan.Wind(groupSide), enter + 1, urgent: true);
@@ -222,7 +222,7 @@ namespace Simulant.Content.U7a.Presets
                 Helper(18, Center).Execute(40281);
             }, "寂灭");
 
-            timeline.At(CrystallizeTimePlan.RewindTime, SaveRewind, "记录回返位置");
+            timeline.At(P42时间结晶Plan.RewindTime, SaveRewind, "记录回返位置");
 
             timeline.At(44.16, () =>
             {
@@ -230,7 +230,7 @@ namespace Simulant.Content.U7a.Presets
                 _gaia.Cast(40288, castTime: 2.7f, effectDelay: 0.282f);
             }, "碎灵一击读条");
 
-            timeline.At(CrystallizeTimePlan.RewindTime, () => MoveAll(_plan.Spread, CrystallizeTimePlan.SpreadArrival, urgent: true), "回返记录后分散");
+            timeline.At(P42时间结晶Plan.RewindTime, () => MoveAll(_plan.Spread, P42时间结晶Plan.SpreadArrival, urgent: true), "回返记录后分散");
 
             timeline.At(46.609, () =>
             {
@@ -252,12 +252,12 @@ namespace Simulant.Content.U7a.Presets
                         continue;
 
                     var member = slot;
-                    timeline.At(CrystallizeTimePlan.ReturnDebuffEnd - 1 - Random.NextDouble() * 2,
+                    timeline.At(P42时间结晶Plan.ReturnDebuffEnd - 1 - Random.NextDouble() * 2,
                         () => EntityManager.UseKnockbackImmunity(Party[member]), "假队员使用防击退");
                 }
             }
 
-            timeline.At(CrystallizeTimePlan.ReturnDebuffEnd, PrepareReturn, "回返结束与眩晕");
+            timeline.At(P42时间结晶Plan.ReturnDebuffEnd, PrepareReturn, "回返结束与眩晕");
             timeline.At(51.774, Return, "回返传送动画");
             timeline.At(52.758, () => WingCast(0), "第一次圣翼击退预备");
             timeline.At(53.241, () => BeginWing(0), "第一次圣翼演出与判定锁定");
@@ -270,7 +270,7 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 0; i < 8; i++)
                     ClearStatus(i, 4163);
 
-                MoveAll(CrystallizeTimePlan.AkhMorn, 66.9, 71.5);
+                MoveAll(P42时间结晶Plan.AkhMorn, 66.9, 71.5);
             }, "击退落地后左右分组");
 
             timeline.At(61.55, () =>
@@ -311,7 +311,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 _shiva.Cast(40249, target: MT);
                 _gaia.Cast(40304, target: MT);
-                MoveAll(_ => CrystallizeTimePlan.MornAfah, 75.8, 79);
+                MoveAll(_ => P42时间结晶Plan.MornAfah, 75.8, 79);
             }, "无尽顿悟双读条与八人集合");
 
             timeline.At(78.318, () => Effect(0, 40250, 0), "无尽顿悟演出");
@@ -349,9 +349,9 @@ namespace Simulant.Content.U7a.Presets
                 {
                     var w = wave;
                     var s = step;
-                    var hit = CrystallizeTimePlan.WaveHits[w][s];
+                    var hit = P42时间结晶Plan.WaveHits[w][s];
 
-                    var start = CrystallizeTimePlan.WaveCasts[w][s];
+                    var start = P42时间结晶Plan.WaveCasts[w][s];
                     var duration = step == 0 ? 2.7f : 1.7f;
                     var delay = (float)(hit - start - duration);
                     timeline.At(start, () =>

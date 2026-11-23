@@ -18,10 +18,10 @@ using static Simulant.Utils.Maths.Angles;
 namespace Simulant.Content.U7a.Presets
 {
     [PhaseSelectionOrder(4.2)]
-    internal sealed class P4时间结晶 : SimPresetBase
+    internal sealed class P42时间结晶 : SimPresetBase
     {
         public override int TerritoryId => 1238;
-        public override string Name => "P4 二运：时间结晶";
+        public override string Name => "P4-2 时间结晶";
         public override string Author => "阿洛";
         public override DateTime LastUpdated => new DateTime(2026, 11, 15);
         public override PhaseData Phase => U7a.P4;
@@ -43,7 +43,7 @@ namespace Simulant.Content.U7a.Presets
             {
                 [CrystalSolution.Knockback] = "正攻击退", [CrystalSolution.YAntiKnockback] = "Y 字防击退逃课"
             }),
-            new ComboBoxOption<string>(nameof(CrystallizeTimeLogic.RedPriority), "红组优先级", CrystallizeTimePlan.DefaultRedPriority,
+            new ComboBoxOption<string>(nameof(CrystallizeTimeLogic.RedPriority), "红组优先级", P42时间结晶Plan.DefaultRedPriority,
                 new Map<string>
                 {
                     ["12345678"] = "MT-D4", 
@@ -97,7 +97,7 @@ namespace Simulant.Content.U7a.Presets
         internal CrystalDebuff InitialDebuff { get; set; }
 
         [SimOption]
-        internal string RedPriority { get; set; } = CrystallizeTimePlan.DefaultRedPriority;
+        internal string RedPriority { get; set; } = P42时间结晶Plan.DefaultRedPriority;
 
         [SimOption]
         internal CrystalWave Wave { get; set; }
@@ -110,7 +110,7 @@ namespace Simulant.Content.U7a.Presets
 
         private int Self => PlayerSlot - 1;
 
-        private CrystallizeTimePlan _plan;
+        private P42时间结晶Plan _plan;
         private SimActor _shiva, _gaia, _crystal, _wyrm;
         private readonly SimActor[] _sand = new SimActor[6], _heads = new SimActor[2], _helpers = new SimActor[19];
         private readonly EventObject[] _puddles = new EventObject[4];
@@ -126,7 +126,7 @@ namespace Simulant.Content.U7a.Presets
         private int _mistakes;
         private double _origin;
         private double Now => Scheduler.ElapsedSeconds - _origin;
-        private static Vector2 Center => CrystallizeTimePlan.Center;
+        private static Vector2 Center => P42时间结晶Plan.Center;
 
         public CrystallizeTimeLogic(PluginHost host, SimPresetBase preset) : base(host, preset)
         {
@@ -136,7 +136,7 @@ namespace Simulant.Content.U7a.Presets
         {
             // 双读条参考回放里，希瓦和盖娅已用到 V、W，后续沙漏和龙头接着分配。
             EntityManager.StartEnemyListLettersAt('V');
-            _plan = new CrystallizeTimePlan(Self, InitialDebuff, Wave, Purple, Random, RedPriority, Solution);
+            _plan = new P42时间结晶Plan(Self, InitialDebuff, Wave, Purple, Random, RedPriority, Solution);
             timeline.At(0, () => GeneratePartyMembers(PlayerSlot, PrepareActors), "准备时间结晶小队");
         }
 
@@ -144,7 +144,7 @@ namespace Simulant.Content.U7a.Presets
         {
             for (var slot = 0; slot < 8; slot++)
             {
-                Party[slot].Pos = CrystallizeTimePlan.Circle(Center, 5).Sample(Random);
+                Party[slot].Pos = P42时间结晶Plan.Circle(Center, 5).Sample(Random);
                 Party[slot].Heading = (float)Math.PI;
             }
 
@@ -239,7 +239,7 @@ namespace Simulant.Content.U7a.Presets
             _shiva.FaceNetwork(0);
             _gaia.FaceNetwork((float)Math.PI);
             Map(0x2E, 2);
-            _host.LogSim($"[时间结晶] 你的职能为 {CrystallizeTimePlan.Roles[Self]}，点名为 {CrystallizeTimePlan.Label(_plan.Debuffs[Self])}。");
+            _host.LogSim($"[时间结晶] 你的职能为 {P42时间结晶Plan.Roles[Self]}，点名为 {P42时间结晶Plan.Label(_plan.Debuffs[Self])}。");
             foreach (var node in BuildMechanicTimeline().Snapshot())
                 Scheduler.Schedule(Math.Max(start, _origin + node.Seconds), node.Action, node.Name);
 
@@ -298,7 +298,7 @@ namespace Simulant.Content.U7a.Presets
             for (var slot = 0; slot < 8; slot++)
             {
                 var debuff = _plan.Debuffs[slot];
-                Status(slot, CrystallizeTimePlan.Status(debuff), debuff == CrystalDebuff.BlueWater ? 12 : debuff == CrystalDebuff.BlueEarth ? 17 : 14);
+                Status(slot, P42时间结晶Plan.Status(debuff), debuff == CrystalDebuff.BlueWater ? 12 : debuff == CrystalDebuff.BlueEarth ? 17 : 14);
                 Status(slot, DragonCurseStatus(slot), debuff == CrystalDebuff.RedIce ? 17 : 40);
                 Status(slot, 4208, 33);
                 // 头顶计时图标由无名状态独立控制，持续到碎灵一击之后。
@@ -313,7 +313,7 @@ namespace Simulant.Content.U7a.Presets
             for (var i = 0; i < 4; i++)
                 Mark(i + 1, Party[_plan.BlueOrder[i]].Id);
 
-            MoveAll(_plan.Initial, CrystallizeTimePlan.SandHits[0] - 1.2);
+            MoveAll(_plan.Initial, P42时间结晶Plan.SandHits[0] - 1.2);
         }
 
         private void Mark(int number, uint id)
@@ -370,7 +370,7 @@ namespace Simulant.Content.U7a.Presets
                 if (_marked.Add(slot))
                     VfxManager.ShowLockOn(Party[slot].Address, "m0489trg_b0c");
 
-            var message = FormattableString.Invariant($"[时间结晶] {Now:0.000} 秒：") + error.Format(Self, slot => CrystallizeTimePlan.Roles[slot]);
+            var message = FormattableString.Invariant($"[时间结晶] {Now:0.000} 秒：") + error.Format(Self, slot => P42时间结晶Plan.Roles[slot]);
             _host.LogWarning(message);
 
             try

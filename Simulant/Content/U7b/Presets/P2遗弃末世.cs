@@ -204,7 +204,7 @@ namespace Simulant.Content.U7b.Presets
                 return;
 
             var status = (ushort)(0x13DC + (ushort)marker - (ushort)ForsakenMarker.Stack);
-            EntityManager.SetStatus(Party[slot], status, 9999, 0, _casters[0]);
+            EntityManager.SetStatus(Party[slot], status, 0, 0, _casters[0]);
             // 头标本身使用原生收包入口；第二参数是被点名者 ID。
             Party[slot].ActorControl(ActorControlCategory.TargetIcon, (uint)marker, Party[slot].Id);
         }

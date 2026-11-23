@@ -33,7 +33,7 @@ namespace Simulant.Content.U7a.Presets
         None, ShortWater, MediumWater, LongWater
     }
 
-    internal sealed class ApocalypsePlan
+    internal sealed class P32启示Plan
     {
         private static readonly int[] BalancedPriority = { 0, 1, 4, 5, 2, 3, 6, 7 };
         private static readonly Lazy<List<int[]>[,,]> BalancedAssignments = new Lazy<List<int[]>[,,]>(CreateBalancedAssignments);
@@ -56,7 +56,7 @@ namespace Simulant.Content.U7a.Presets
         private readonly float _spiritTakerRadius;
         internal int TwoDirection => Mod(ThreeDirection + Turn, 8);
 
-        internal ApocalypsePlan(int self, ApocalypseDebuff debuff, ApocalypseSolution solution, ApocalypseReference reference, ApocalypseHalf half,
+        internal P32启示Plan(int self, ApocalypseDebuff debuff, ApocalypseSolution solution, ApocalypseReference reference, ApocalypseHalf half,
             ExerciseDirection start, ExerciseTurn turn, Random random, float spiritTakerRadius, BaitTank tank = BaitTank.MT,
             bool swapSpreadPositions = false, bool equalGroups = true)
         {

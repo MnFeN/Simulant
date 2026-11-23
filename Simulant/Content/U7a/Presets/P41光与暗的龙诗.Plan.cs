@@ -47,7 +47,7 @@ namespace Simulant.Content.U7a.Presets
         Butterfly, Square, Hourglass
     }
 
-    internal sealed class DarklitPlan
+    internal sealed class P41光与暗的龙诗Plan
     {
         internal readonly int[] Cycle;
         internal readonly int[] Waters;
@@ -67,7 +67,7 @@ namespace Simulant.Content.U7a.Presets
         // 半场刀读条包中的技能坐标；希瓦本体始终留在场中。
         internal Vector2 WingOrigin => Center + new Vector2(RightSafe ? -20 : 20, 40);
 
-        internal DarklitPlan(int self, DarklitDebuff initial, DarklitSolution solution, DiagonalSwap diagonal,
+        internal P41光与暗的龙诗Plan(int self, DarklitDebuff initial, DarklitSolution solution, DiagonalSwap diagonal,
             SideSwap side, SomberDanceBait tanks, WingSide wing, Random random)
         {
             initial = initial.ResolveRandom(random);

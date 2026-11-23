@@ -19,10 +19,10 @@ using static Simulant.Utils.Maths.Angles;
 namespace Simulant.Content.U7a.Presets
 {
     [PhaseSelectionOrder(3.2)]
-    internal sealed class P3启示 : SimPresetBase
+    internal sealed class P32启示 : SimPresetBase
     {
         public override int TerritoryId => 1238;
-        public override string Name => "P3 二运：启示";
+        public override string Name => "P3-2 启示";
         public override string Author => "阿洛";
         public override DateTime LastUpdated => new DateTime(2026, 11, 16);
         public override PhaseData Phase => U7a.P3;
@@ -89,7 +89,7 @@ namespace Simulant.Content.U7a.Presets
         [SimOption] public bool EqualGroups { get; set; }
         [SimOption] public ExerciseDirection StartDirection { get; set; }
         [SimOption] public ExerciseTurn Rotation { get; set; }
-        private ApocalypsePlan _plan;
+        private P32启示Plan _plan;
         private readonly List<EventObject> _lights = new List<EventObject>();
         private Vector2 _dance;
         private float _danceHeading;
@@ -98,7 +98,7 @@ namespace Simulant.Content.U7a.Presets
         {
         }
 
-        protected override void PreparePlan() => _plan = new ApocalypsePlan(Self, Initial, Solution, HalfReference, Half,
+        protected override void PreparePlan() => _plan = new P32启示Plan(Self, Initial, Solution, HalfReference, Half,
             StartDirection, Rotation, Random, GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().GetRow(40289).EffectRange,
             BaitTank, SwapSpreadPositions, EqualGroups);
 
@@ -179,7 +179,7 @@ namespace Simulant.Content.U7a.Presets
                 for (var i = 0; i < 8; i++)
                     Icon(i, 139);
             }, "暗炎喷发八人分散读条");
-            timeline.AtEach(Enumerable.Range(0, ApocalypsePlan.ExplosionTimes.Length), wave => ApocalypsePlan.ExplosionTimes[wave],
+            timeline.AtEach(Enumerable.Range(0, P32启示Plan.ExplosionTimes.Length), wave => P32启示Plan.ExplosionTimes[wave],
                 wave => Run(_plan.Explosions(wave).Select(point => Avoid("启示地火", 40297, point,
                     severity: MechanicFailureSeverity.Warning))), wave => $"第 {wave + 1} 轮启示地火");
             timeline.At(27.64, () => Oracle.ExecuteActionEffect(40273, Oracle), "暗炎喷发读条结束演出");
@@ -274,7 +274,7 @@ namespace Simulant.Content.U7a.Presets
             for (var i = 0; i < 10; i++)
             {
                 var direction = i < 8 ? i : _plan.StartDirection + (i == 8 ? 0 : 4);
-                var point = i < 8 ? Center + 14 * Direction(ApocalypsePlan.Angle(direction)) : Center;
+                var point = i < 8 ? Center + 14 * Direction(P32启示Plan.Angle(direction)) : Center;
                 _lights.Add(EntityManager.SpawnEObj(new EventObjectSpawnSpec
                 {
                     Index = (byte)(20 + i),
@@ -282,16 +282,16 @@ namespace Simulant.Content.U7a.Presets
                     EventId = 0x800375BF,
                     Pos = new Vector3(point, 0),
                     // 场中光点直接朝起始方向；外围 EObj 按切线朝向播放圆弧动画。
-                    Heading = (float)(ApocalypsePlan.Angle(direction) - (i < 8 ? Deg(_plan.Turn * 90) : 0)),
+                    Heading = (float)(P32启示Plan.Angle(direction) - (i < 8 ? Deg(_plan.Turn * 90) : 0)),
                     SharedTimelineState = 4,
-                    SharedGroupState = (uint)((i < 8 ? 0x42 + ApocalypsePlan.Mod(-i, 8) : i == 8 ? 0x40 : 0x41) << 16) | 3,
+                    SharedGroupState = (uint)((i < 8 ? 0x42 + P32启示Plan.Mod(-i, 8) : i == 8 ? 0x40 : 0x41) << 16) | 3,
                     TargetableFlags = 5
                 }));
             }
-            for (var step = 0; step < ApocalypsePlan.LightAnimationTimes.Length; step++)
+            for (var step = 0; step < P32启示Plan.LightAnimationTimes.Length; step++)
             {
                 var beat = step;
-                Scheduler.Schedule(Origin + ApocalypsePlan.LightAnimationTimes[step], () =>
+                Scheduler.Schedule(Origin + P32启示Plan.LightAnimationTimes[step], () =>
                 {
                     if (beat <= 1)
                     {
@@ -302,7 +302,7 @@ namespace Simulant.Content.U7a.Presets
                     var animation = (ushort)(_plan.Turn > 0 ? beat == 4 ? 0x20 : 0x10 : beat == 4 ? 0x80 : 0x40);
                     for (var trail = Math.Max(0, beat - 2); trail <= beat; trail++)
                     {
-                        var direction = ApocalypsePlan.Mod(_plan.StartDirection - _plan.Turn * trail, 8);
+                        var direction = P32启示Plan.Mod(_plan.StartDirection - _plan.Turn * trail, 8);
                         EntityManager.PlayEObjAnimation(_lights[direction], 4, animation);
                         EntityManager.PlayEObjAnimation(_lights[(direction + 4) % 8], 4, animation);
                     }

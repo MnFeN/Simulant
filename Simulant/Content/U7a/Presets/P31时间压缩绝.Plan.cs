@@ -20,7 +20,7 @@ namespace Simulant.Content.U7a.Presets
         Ice, ShortFire, MediumFire, LongFire
     }
 
-    internal sealed class RelativityPlan
+    internal sealed class P31时间压缩绝Plan
     {
         internal static readonly Vector2 Center = new Vector2(100, 100);
         internal readonly int[] Codes;
@@ -29,7 +29,7 @@ namespace Simulant.Content.U7a.Presets
         internal readonly int[] StackTargets;
         private readonly RelativitySolution _solution;
 
-        internal RelativityPlan(int self, RelativityDebuff debuff, RelativitySolution solution, ExerciseDirection north, Random random)
+        internal P31时间压缩绝Plan(int self, RelativityDebuff debuff, RelativitySolution solution, ExerciseDirection north, Random random)
         {
             _solution = solution;
             var initial = (int)debuff;

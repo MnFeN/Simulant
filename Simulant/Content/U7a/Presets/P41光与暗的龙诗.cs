@@ -16,10 +16,10 @@ using System.Numerics;
 namespace Simulant.Content.U7a.Presets
 {
     [PhaseSelectionOrder(4.1)]
-    internal sealed class P4光暗龙诗 : SimPresetBase
+    internal sealed class P41光与暗的龙诗 : SimPresetBase
     {
         public override int TerritoryId => 1238;
-        public override string Name => "P4 一运：光与暗的龙诗";
+        public override string Name => "P4-1 光与暗的龙诗";
         public override string Author => "阿洛";
         public override DateTime LastUpdated => new DateTime(2026, 11, 16);
         public override PhaseData Phase => U7a.P4;
@@ -73,7 +73,7 @@ namespace Simulant.Content.U7a.Presets
         [SimOption] public bool FastOpening { get; set; }
         protected override bool IsP4 => true;
         protected override double OpeningAdvance => FastOpening ? 3.7 : 0;
-        private DarklitPlan _plan;
+        private P41光与暗的龙诗Plan _plan;
         private int _firstHit = -1;
         private const int TowerPlayers = 2;
         private static readonly ActionArea TowerArea = ActionArea.Circle(4);
@@ -83,7 +83,7 @@ namespace Simulant.Content.U7a.Presets
         {
         }
 
-        protected override void PreparePlan() => _plan = new DarklitPlan(Self, Initial, Solution, HourglassSwap,
+        protected override void PreparePlan() => _plan = new P41光与暗的龙诗Plan(Self, Initial, Solution, HourglassSwap,
             SquareSwap, TankBait, Wing, Random);
 
         protected override SimTimeline BuildExercise()
