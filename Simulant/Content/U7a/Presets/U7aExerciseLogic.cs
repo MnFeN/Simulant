@@ -151,15 +151,7 @@ namespace Simulant.Content.U7a.Presets
                 }, health: 201481);
             }
 
-            for (var i = 0; i < Helpers.Length; i++)
-            {
-                var index = i;
-                Dummy(new Vector3(Center, 0), 0, actor =>
-                {
-                    Helpers[index] = actor;
-                    Ready();
-                }, HelperNameId);
-            }
+            SpawnHelpers(Helpers, new Vector3(Center, 0), Ready, HelperNameId);
         }
 
         private void BeginExercise()

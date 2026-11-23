@@ -115,16 +115,7 @@ namespace Simulant.Content.U6b.Presets
                 Ready();
             });
 
-            for (var i = 0; i < _helpers.Length; i++)
-            {
-                var index = i;
-
-                Dummy(new Vector3(100, 100, 0), 0, actor =>
-                {
-                    _helpers[index] = actor;
-                    Ready();
-                });
-            }
+            SpawnHelpers(_helpers, new Vector3(100, 100, 0), Ready);
         }
 
         private void StartMechanic()

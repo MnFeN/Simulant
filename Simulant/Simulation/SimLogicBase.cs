@@ -383,6 +383,19 @@ namespace Simulant.Simulation
             }, onReady);
         }
 
+        protected void SpawnHelpers(SimActor[] helpers, Vector3 position, Action onHelperReady, uint nameId = 0)
+        {
+            for (var i = 0; i < helpers.Length; i++)
+            {
+                var index = i;
+                Dummy(position, 0, actor =>
+                {
+                    helpers[index] = actor;
+                    onHelperReady();
+                }, nameId);
+            }
+        }
+
         protected void DummyCast(Vector3 pos, float heading, uint abilityId, float despawnSeconds,
             float? omenDelay = 0, Action onCast = null)
         {

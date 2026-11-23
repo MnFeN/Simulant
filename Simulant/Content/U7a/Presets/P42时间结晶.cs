@@ -207,16 +207,7 @@ namespace Simulant.Content.U7a.Presets
                 Spawn(17837, 9823, _plan.Hourglass(i), actor => _sand[index] = actor, true, 0xA55C04);
             }
 
-            for (var i = 0; i < _helpers.Length; i++)
-            {
-                var index = i;
-
-                Dummy(new Vector3(Center, 0), 0, actor =>
-                {
-                    _helpers[index] = actor;
-                    Ready();
-                });
-            }
+            SpawnHelpers(_helpers, new Vector3(Center, 0), Ready);
         }
 
         private void PrepareCrystal(Action ready)

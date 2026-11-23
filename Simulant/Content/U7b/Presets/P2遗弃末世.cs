@@ -183,16 +183,7 @@ namespace Simulant.Content.U7b.Presets
                 });
             }
 
-            for (var i = 0; i < _helpers.Length; i++)
-            {
-                var index = i;
-
-                Dummy(new Vector3(100, 100, 0), 0, actor =>
-                {
-                    _helpers[index] = actor;
-                    ready();
-                });
-            }
+            SpawnHelpers(_helpers, new Vector3(100, 100, 0), ready);
         }
 
         private void ApplyMarker(int slot, ForsakenMarker marker)
