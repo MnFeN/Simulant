@@ -49,16 +49,22 @@
     </Compile>
     <Compile Include="CosmoArrowTests.cs" />
     <Compile Include="U7aExerciseTests.cs" />
+    <Compile Include="U7aP5ExerciseTests.cs" />
+    <Compile Include="U7aEarlyExerciseTests.cs" />
     <Compile Include="..\Simulant\Game\FFCS\Client\Game\UI\MarkerType.cs" />
     <Compile Include="AssignmentRandomTests.cs" />
-    <Compile Include="..\Simulant\Content\U7a\Presets\P3时间压缩.Plan.cs" />
-    <Compile Include="..\Simulant\Content\U7a\Presets\P3启示.Plan.cs" />
-    <Compile Include="..\Simulant\Content\U7a\Presets\P4光暗龙诗.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P31时间压缩绝.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P32启示.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P41光与暗的龙诗.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P52复乐园.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P53星灵之剑.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P21钻石星尘.Plan.cs" />
+    <Compile Include="..\Simulant\Content\U7a\Presets\P23光之失控.Plan.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\U7aExerciseOptions.cs" />
     <Compile Include="..\Simulant\Content\U7a\Presets\U7aCrystal.cs" />
     <Compile Include="CrystallizeTimeTests.cs" />
-    <Compile Include="..\Simulant\Content\U7a\Presets\P4时间结晶.Plan.cs">
-      <Link>Content\P4时间结晶.Plan.cs</Link>
+    <Compile Include="..\Simulant\Content\U7a\Presets\P42时间结晶.Plan.cs">
+      <Link>Content\P42时间结晶.Plan.cs</Link>
     </Compile>
     <Compile Include="..\Simulant\Content\U6b\Presets\宇宙天箭.Plan.cs">
       <Link>Content\宇宙天箭.Plan.cs</Link>

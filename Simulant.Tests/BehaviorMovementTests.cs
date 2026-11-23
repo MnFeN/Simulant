@@ -47,8 +47,8 @@ namespace Simulant.Tests
                                 foreach (var stackAngle in new[] { 17, 33 })
                                 {
                                     var heading = towardCenter + Deg(side * angle);
-                                    var start = boss + radius * ApocalypsePlan.Direction(heading);
-                                    var destination = boss + stackRadius * ApocalypsePlan.Direction(towardCenter + Deg(side * stackAngle));
+                                    var start = boss + radius * P32启示Plan.Direction(heading);
+                                    var destination = boss + stackRadius * P32启示Plan.Direction(towardCenter + Deg(side * stackAngle));
                                     var actor = CreateActor(behavior, movement, casts, job: Job.SCH, position: start);
                                     var index = actors.Count;
                                     startedAt.Add(double.PositiveInfinity);
@@ -76,7 +76,7 @@ namespace Simulant.Tests
                             foreach (var radius in near ? new[] { 11, 13 } : new[] { 13, 15 })
                                 foreach (var angle in new[] { 17, 33 })
                                 {
-                                    var target = boss + radius * ApocalypsePlan.Direction(towardCenter + Deg(sides[i] * angle));
+                                    var target = boss + radius * P32启示Plan.Direction(towardCenter + Deg(sides[i] * angle));
                                     Assert(Vector2.Distance(actors[i].Pos, target) <= 6,
                                         FormattableString.Invariant($"治疗击退后必须参与第三轮分摊：实际 {actors[i].Pos}，终点 {destinations[i]}，与点名者相距 {Vector2.Distance(actors[i].Pos, target):F3} 米。"));
                                 }
@@ -107,10 +107,10 @@ namespace Simulant.Tests
                 foreach (var tank in new[] { BaitTank.MT, BaitTank.ST })
                     foreach (var group in new[] { 0, 1 })
                     {
-                        ApocalypsePlan plan = null;
+                        P32启示Plan plan = null;
                         for (var attempt = 0; attempt < 64; attempt++)
                         {
-                            plan = new ApocalypsePlan(0, ApocalypseDebuff.Random, ApocalypseSolution.DoubleCN,
+                            plan = new P32启示Plan(0, ApocalypseDebuff.Random, ApocalypseSolution.DoubleCN,
                                 ApocalypseReference.GroupSafe, ApocalypseHalf.NorthToSouthwest,
                                 ExerciseDirection.N, ExerciseTurn.Clockwise, random, 5, tank);
                             if (plan.StackGroups[(int)tank] == group)

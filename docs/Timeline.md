@@ -297,6 +297,6 @@ EObj 由生成器通过原生删除包入口回收，失败时保留清理责任
 现有迁移示例见：
 
 - [宇宙天箭](../Simulant/Content/U6b/Presets/宇宙天箭.cs)：构建时组合多条完整子轴。
-- [绝伊甸 P5 地火](../Simulant/Content/U7a/Presets/P5地火.cs)：重复分组节点中播放依赖运行时实体的子轴。
+- [绝伊甸 P5-1 光尘之剑](../Simulant/Content/U7a/Presets/P51光尘之剑.cs) 在重复分组节点中播放依赖运行时实体的子轴。
 - [异三角](../Simulant/Content/S4b/Presets/异三角.cs)：运行时随机分配对象并安排动画与判定。
 - [U7b P5 地火](../Simulant/Content/U7b/Presets/P5地火.cs)：交错子轴、固定间隔判定与收尾节点。
