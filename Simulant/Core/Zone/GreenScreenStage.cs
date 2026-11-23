@@ -1,3 +1,4 @@
+using Lumina.Excel.Sheets;
 using Simulant.Game;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.LayoutEngine;
@@ -17,7 +18,6 @@ namespace Simulant.Core.Zone
         private readonly string _directory;
         private readonly List<ResourceHandle> _resources = new List<ResourceHandle>();
         private readonly List<string> _files = new List<string>();
-        private TerritorySceneInterop _scenePath;
 
         private GreenScreenStage(GameConnection connection, string directory)
         {
@@ -28,31 +28,32 @@ namespace Simulant.Core.Zone
         internal static GreenScreenStage Load()
         {
             var connection = GameInterop.Connection ?? throw new InvalidOperationException("游戏尚未连接。");
+            var game = GameDataService.Instance;
+            if (!game.GetSheet<TerritoryType>().GetRow(TerritoryId).Bg.IsEmpty)
+                throw new InvalidOperationException("区域 1 已有场景路径，无法加载绿幕。");
+
             var id = Guid.NewGuid().ToString("N");
-            var root = $"ffxiv/ss{id.Substring(0, 8)}/";
-            var prefix = "bg/" + root;
-            var assets = GreenScreenScene.Build(GameDataService.Instance, prefix);
+            var assets = GreenScreenScene.Build(game);
             var stage = new GreenScreenStage(connection, Path.Combine(Path.GetTempPath(), "Simulant-GreenScreen-" + id));
             try
             {
                 Directory.CreateDirectory(stage._directory);
                 foreach (var asset in assets)
                 {
-                    var file = Path.Combine(stage._directory, Path.GetFileName(asset.Name));
+                    var file = Path.Combine(stage._directory, Path.GetFileName(asset.Path));
                     stage._files.Add(file);
                     File.WriteAllBytes(file, asset.Data);
                     connection.RunInFrame(() =>
                     {
-                        var resource = UnpackedResourceInterop.Load(connection, prefix + asset.Name, file);
+                        var resource = UnpackedResourceInterop.Load(connection, asset.Path, file);
                         stage._resources.Add(resource);
-                        if (asset.Name == GreenScreenScene.FloorMaterial)
+                        if (asset.Path == GreenScreenScene.FloorMaterial)
                         {
                             stage._floorMaterial = resource.Ptr.As<MaterialResourceHandle>();
                         }
                     });
                 }
 
-                stage._scenePath = TerritorySceneInterop.SetScenePath(connection, TerritoryId, root + "level/stage");
                 return stage;
             }
             catch
@@ -100,34 +101,26 @@ namespace Simulant.Core.Zone
             BeginTransition();
             try
             {
-                _scenePath?.Dispose();
-                _scenePath = null;
+                if (GameInterop.Connection == _connection && GameInterop.IsReady)
+                {
+                    for (var index = _resources.Count - 1; index >= 0; index--)
+                    {
+                        _resources[index].DecRef();
+                        _resources.RemoveAt(index);
+                    }
+                }
             }
             finally
             {
-                try
+                foreach (var file in _files)
                 {
-                    if (GameInterop.Connection == _connection && GameInterop.IsReady)
-                    {
-                        for (var index = _resources.Count - 1; index >= 0; index--)
-                        {
-                            _resources[index].DecRef();
-                            _resources.RemoveAt(index);
-                        }
-                    }
+                    File.Delete(file);
                 }
-                finally
-                {
-                    foreach (var file in _files)
-                    {
-                        File.Delete(file);
-                    }
 
-                    _files.Clear();
-                    if (Directory.Exists(_directory))
-                    {
-                        Directory.Delete(_directory);
-                    }
+                _files.Clear();
+                if (Directory.Exists(_directory))
+                {
+                    Directory.Delete(_directory);
                 }
             }
         }

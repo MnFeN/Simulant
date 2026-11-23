@@ -19,10 +19,15 @@ namespace Simulant.Core.Zone
         private const string ModelTemplate = TemplateRoot + "bgparts/z5fd_a3_stg00.mdl";
         private const string MaterialTemplate = TemplateRoot + "material/z5fd_a3_emv01a.mtrl";
         private const string LayoutTemplate = "bg/ex1/03_abr_a2/fld/a2fb/level/a2fb.lvb";
+        private const string ResourceRoot = "bg/ffxiv/simgreen/";
+        private const string FloorModel = ResourceRoot + "floor.mdl";
+        internal const string FloorMaterial = ResourceRoot + "floor.mtrl";
+        private const string FloorCollision = ResourceRoot + "floor.pcb";
+        private const string Background = ResourceRoot + "level/bg.lgb";
+        // 区域 1 的 Bg 为空，客户端按 bg/%s.lvb 生成布局资源名。
+        private const string SceneLayout = "bg/.lvb";
         private const float HalfSize = 500f;
         private const ulong FloorCollisionMaterial = 0x7004; // Walkable triangles in 448's native floor.
-        private const string FloorModel = "floor.mdl";
-        internal const string FloorMaterial = "floor.mtrl";
         internal const uint FloorInstanceId = 1;
         internal const uint PointLightInstanceId = 2;
         internal const uint WorldLightInstanceId = 3;
@@ -33,7 +38,7 @@ namespace Simulant.Core.Zone
         };
         private static readonly byte[] Indices = { 0, 1, 2, 0, 2, 3 };
 
-        internal static (string Name, byte[] Data)[] Build(GameDataService game, string path)
+        internal static (string Path, byte[] Data)[] Build(GameDataService game)
         {
             var material = ReadTemplate<MtrlFile>(game, MaterialTemplate);
             var model = ReadTemplate<MdlFile>(game, ModelTemplate);
@@ -41,10 +46,10 @@ namespace Simulant.Core.Zone
             return new[]
             {
                 (FloorMaterial, BuildMaterial(material)),
-                (FloorModel, BuildModel(model, path + FloorMaterial)),
-                ("floor.pcb", BuildCollision()),
-                ("level/bg.lgb", BuildBackground(path)),
-                ("level/stage.lvb", BuildLayout(scene.Data, path + "level/bg.lgb"))
+                (FloorModel, BuildModel(model, FloorMaterial)),
+                (FloorCollision, BuildCollision()),
+                (Background, BuildBackground()),
+                (SceneLayout, BuildLayout(scene.Data, Background))
             };
         }
 
@@ -74,7 +79,7 @@ namespace Simulant.Core.Zone
             return bytes;
         }
 
-        private static byte[] BuildBackground(string path)
+        private static byte[] BuildBackground()
         {
             const int group = 20;
             const int layer = 40;
@@ -133,8 +138,8 @@ namespace Simulant.Core.Zone
                 AppendString(writer, group + 4, group, "background");
                 AppendString(writer, layer + 4, layer, "stage");
                 AppendString(writer, entry + 8, entry, "floor");
-                AppendString(writer, entry + 48, entry, path + FloorModel);
-                AppendString(writer, entry + 52, entry, path + "floor.pcb");
+                AppendString(writer, entry + 48, entry, FloorModel);
+                AppendString(writer, entry + 52, entry, FloorCollision);
                 AppendString(writer, point + 8, point, "point_light");
                 AppendString(writer, world + 8, world, "world_light");
                 AppendString(writer, point + 72, point, string.Empty);
