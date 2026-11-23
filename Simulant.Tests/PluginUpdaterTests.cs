@@ -61,17 +61,61 @@ namespace Simulant.Tests
             });
         }
 
-        public static void FallbackCannotInstallAnOlderGithubRelease()
+        public static void FallbackDownloadsFromThe123ChannelForAutomaticAndManualInstallation()
         {
-            var githubCalls = 0;
-
-            WithUpdater(true, (url, token) => url == PluginUpdater.FallbackVersionUrl ? Text("0.3.0.0") :
-                ++githubCalls == 1 ? FailedResponse() : Text(Page("v0.2.0.0")), (updater, warnings, requests, path) =>
+            WithAssembly(new Version(0, 3, 0, 0), bytes =>
             {
-                updater.CheckAsync().GetAwaiter().GetResult();
-                Assert(warnings.Single() == "当前版本 0.1.0.0，检查到新版本 0.3.0.0，但访问 GitHub 下载失败，请在左侧菜单中手动安装更新（数据源：123 网盘）", "安装不可用时应保留已发现的新版本及其来源。");
-                Assert(requests.Count == 3 && File.ReadAllText(path) == "原插件", "不能把旧版当作网盘提示的新版安装。");
+                foreach (var automatic in new[] { true, false })
+                    WithUpdater(automatic, (url, token) => FallbackRelease(url, "0.3.0.0", bytes), (updater, warnings, requests, path) =>
+                    {
+                        var install = automatic ? updater.CheckAsync() : updater.InstallAsync();
+                        install.GetAwaiter().GetResult();
+                        Assert(requests.SequenceEqual(new[]
+                        {
+                            PluginUpdater.ReleasesUrl, PluginUpdater.FallbackVersionUrl, PluginUpdater.FallbackDownloadUrl
+                        }), "网盘确认版本后应直接从网盘下载。");
+                        Assert(File.ReadAllBytes(path).SequenceEqual(bytes), "自动与手动安装都应能使用网盘 DLL。");
+                        Assert(warnings.Single() == "已从 0.1.0.0 版本更新至 0.3.0.0 版本，请重启 ACT（数据源：123 网盘）", "应标明实际安装渠道。");
+                    });
             });
+        }
+
+        public static void ManualInstallUsesTheReleaseFromThePreviousCheck()
+        {
+            var githubAvailable = false;
+            WithAssembly(new Version(0, 3, 0, 0), bytes =>
+                WithUpdater(false, (url, token) =>
+                {
+                    if (githubAvailable && url == PluginUpdater.ReleasesUrl)
+                        return Text(Page("v0.3.0.0"));
+                    return FallbackRelease(url, "0.3.0.0", bytes);
+                }, (updater, warnings, requests, path) =>
+                {
+                    updater.CheckAsync().GetAwaiter().GetResult();
+                    githubAvailable = true;
+                    updater.InstallAsync().GetAwaiter().GetResult();
+                    Assert(requests.SequenceEqual(new[]
+                    {
+                        PluginUpdater.ReleasesUrl, PluginUpdater.FallbackVersionUrl, PluginUpdater.FallbackDownloadUrl
+                    }), "手动安装应沿用此前确认的版本和渠道。");
+                    Assert(File.ReadAllBytes(path).SequenceEqual(bytes), "手动安装应写入已查到渠道的发布文件。");
+
+                    updater.CheckAsync().GetAwaiter().GetResult();
+                    Assert(requests.Count == 4 && warnings.Last().EndsWith("（数据源：123 网盘）"), "待重启提示应保留实际安装渠道。");
+                }));
+        }
+
+        public static void FallbackDllVersionMismatchPreservesOriginal()
+        {
+            WithAssembly(new Version(0, 2, 0, 0), bytes =>
+                WithUpdater(true, (url, token) => FallbackRelease(url, "0.3.0.0", bytes), (updater, warnings, requests, path) =>
+                {
+                    updater.CheckAsync().GetAwaiter().GetResult();
+                    Assert(warnings.Single().Contains("访问 123 网盘 下载失败") &&
+                        warnings.Single().EndsWith("（数据源：123 网盘）"), "网盘附件版本不符应报告网盘下载失败。");
+                    Assert(requests.Count == 3 && requests.Last() == PluginUpdater.FallbackDownloadUrl &&
+                        File.ReadAllText(path) == "原插件", "网盘文件版本不符时应保留原 DLL。");
+                }));
         }
 
         public static void InvalidDllDoesNotOverwriteOriginalOrLeaveTemporaryFiles()
@@ -120,8 +164,8 @@ namespace Simulant.Tests
                     (updater, warnings, requests, path) =>
             {
                 updater.InstallAsync().GetAwaiter().GetResult();
-                Assert(requests.Count == 2 && !requests.Contains(PluginUpdater.FallbackVersionUrl) &&
-                            File.ReadAllBytes(path).SequenceEqual(bytes), "手动安装应直接使用 GitHub，不受自动安装开关影响。");
+                Assert(requests.SequenceEqual(new[] { PluginUpdater.ReleasesUrl, PluginUpdater.ReleasesUrl + "/download/v0.2.0.0/Simulant.dll" }) &&
+                            File.ReadAllBytes(path).SequenceEqual(bytes), "GitHub 检查成功时，手动安装应从 GitHub 下载。");
             }));
         }
 
@@ -183,6 +227,13 @@ namespace Simulant.Tests
             Content = new ByteArrayContent(value)
         });
         private static Task<HttpResponseMessage> FailedResponse() => Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+
+        private static Task<HttpResponseMessage> FallbackRelease(string url, string version, byte[] bytes)
+        {
+            if (url == PluginUpdater.FallbackVersionUrl)
+                return Text(version);
+            return url == PluginUpdater.FallbackDownloadUrl ? Binary(bytes) : FailedResponse();
+        }
 
         private static void WithUpdater(bool autoInstall, Func<string, CancellationToken, Task<HttpResponseMessage>> respond,
             Action<PluginUpdater, List<string>, List<string>, string> test, Action<string> runtime = null)

@@ -9,11 +9,12 @@ using System.Threading.Tasks;
 
 namespace Simulant.Core
 {
-    /// <summary>启动检查和菜单共用的更新入口；检查可回退网盘，安装始终使用 GitHub。</summary>
+    /// <summary>启动检查和菜单共用的更新入口，安装使用查到该版本的渠道。</summary>
     internal sealed class PluginUpdater : IDisposable
     {
         internal const string ReleasesUrl = "https://github.com/MnFeN/Simulant/releases";
         internal const string FallbackVersionUrl = "https://1824544011.cdn.123clouddisk.com/1824544011/Simulant/version.txt";
+        internal const string FallbackDownloadUrl = "https://1824544011.cdn.123clouddisk.com/1824544011/Simulant/Simulant.dll";
         private readonly Func<string> _pluginPath;
         private readonly Version _currentVersion;
         private readonly Func<bool> _autoInstall;
@@ -24,7 +25,22 @@ namespace Simulant.Core
         private readonly object _gate = new object();
         private bool _running;
         private bool _disposed;
-        private Version _installedVersion;
+        private Release _pendingRelease;
+        private Release _installedRelease;
+
+        private sealed class Release
+        {
+            internal Release(Version version, string source, string downloadUrl)
+            {
+                Version = version;
+                Source = source;
+                DownloadUrl = downloadUrl;
+            }
+
+            internal Version Version { get; }
+            internal string Source { get; }
+            internal string DownloadUrl { get; }
+        }
 
         internal PluginUpdater(Func<string> pluginPath, Version currentVersion, Func<bool> autoInstall,
             Action<string> warning, Action<string> runtime, HttpMessageHandler handler = null)
@@ -65,63 +81,46 @@ namespace Simulant.Core
                 _running = true;
             }
 
-            Version available = null;
-            var source = "GitHub";
+            var release = install ? _pendingRelease : null;
+            _pendingRelease = null;
 
-            string Source() => $"（数据源：{source}）";
+            string Source() => $"（数据源：{release?.Source ?? "GitHub、123 网盘"}）";
 
             try
             {
                 // 在调用线程取得 ACT 登记的原始路径；从字节加载的程序集没有 Location。
                 var path = _pluginPath();
-                string tag = null;
-
-                try
-                {
-                    tag = ParseReleaseTag(await GetTextAsync(ReleasesUrl).ConfigureAwait(false));
-                    available = ParseVersion(Uri.UnescapeDataString(tag));
-                }
-                catch (Exception) when (!_stop.IsCancellationRequested && !install)
-                {
-                    source = "123 网盘";
-                    available = ParseVersion(await GetTextAsync(FallbackVersionUrl).ConfigureAwait(false));
-                }
+                if (release == null)
+                    release = await CheckReleaseAsync().ConfigureAwait(false);
 
                 _stop.Token.ThrowIfCancellationRequested();
 
-                if (_installedVersion != null && available <= _installedVersion)
+                if (_installedRelease != null && release.Version <= _installedRelease.Version)
                 {
-                    _warning($"已从 {_currentVersion} 版本更新至 {_installedVersion} 版本，请重启 ACT{Source()}");
+                    release = _installedRelease;
+                    _warning($"已从 {_currentVersion} 版本更新至 {release.Version} 版本，请重启 ACT{Source()}");
                     return;
                 }
 
-                if (available < _currentVersion || (!install && available == _currentVersion))
+                if (release.Version < _currentVersion || (!install && release.Version == _currentVersion))
                 {
                     _runtime($"当前版本 {_currentVersion}，暂无更新。{Source()}");
                     return;
                 }
 
-                if (!install && !_autoInstall())
+                if (!install)
                 {
-                    _warning($"当前版本 {_currentVersion}，检查到新版本 {available}，请在左侧菜单中下载更新{Source()}");
-                    return;
+                    _pendingRelease = release;
+                    if (!_autoInstall())
+                    {
+                        _warning($"当前版本 {_currentVersion}，检查到新版本 {release.Version}，请在左侧菜单中下载更新{Source()}");
+                        return;
+                    }
                 }
 
-                // 网盘仅提供版本号；安装前重新读取真实标签，避免猜测 v 前缀或安装旧版。
-                if (tag == null)
-                {
-                    tag = ParseReleaseTag(await GetTextAsync(ReleasesUrl).ConfigureAwait(false));
-                    var githubVersion = ParseVersion(Uri.UnescapeDataString(tag));
-
-                    if (githubVersion < available)
-                        throw new InvalidDataException("GitHub 尚未提供检查到的新版本。");
-
-                    available = githubVersion;
-                    source = "GitHub";
-                }
-
-                await DownloadAndReplaceAsync(tag, available, path).ConfigureAwait(false);
-                _warning($"已从 {_currentVersion} 版本更新至 {available} 版本，请重启 ACT{Source()}");
+                await DownloadAndReplaceAsync(release, path).ConfigureAwait(false);
+                _pendingRelease = null;
+                _warning($"已从 {_currentVersion} 版本更新至 {release.Version} 版本，请重启 ACT{Source()}");
             }
             catch (OperationCanceledException) when (_stop.IsCancellationRequested)
             {
@@ -131,15 +130,10 @@ namespace Simulant.Core
                 if (_stop.IsCancellationRequested)
                     return;
 
-                if (available != null)
-                    _warning($"当前版本 {_currentVersion}，检查到新版本 {available}，但访问 GitHub 下载失败，请在左侧菜单中手动安装更新{Source()}");
-                else if (install)
-                    _warning($"访问 GitHub 安装更新失败，请稍后重试，或在左侧菜单中打开发布页面。{Source()}");
+                if (release != null)
+                    _warning($"当前版本 {_currentVersion}，检查到新版本 {release.Version}，但访问 {release.Source} 下载失败，请在左侧菜单中手动安装更新{Source()}");
                 else
-                {
-                    source = "GitHub、123 网盘";
                     _warning($"从 GitHub 及 123 网盘尝试获取更新均失败。{Source()}");
-                }
 
                 _runtime("更新失败原因：" + error.Message);
             }
@@ -152,6 +146,20 @@ namespace Simulant.Core
                     if (_disposed)
                         ReleaseResources();
                 }
+            }
+        }
+
+        private async Task<Release> CheckReleaseAsync()
+        {
+            try
+            {
+                var tag = ParseReleaseTag(await GetTextAsync(ReleasesUrl).ConfigureAwait(false));
+                return new Release(ParseVersion(Uri.UnescapeDataString(tag)), "GitHub", ReleasesUrl + "/download/" + tag + "/Simulant.dll");
+            }
+            catch (Exception) when (!_stop.IsCancellationRequested)
+            {
+                var version = ParseVersion(await GetTextAsync(FallbackVersionUrl).ConfigureAwait(false));
+                return new Release(version, "123 网盘", FallbackDownloadUrl);
             }
         }
 
@@ -169,7 +177,7 @@ namespace Simulant.Core
             }
         }
 
-        private async Task DownloadAndReplaceAsync(string tag, Version version, string path)
+        private async Task DownloadAndReplaceAsync(Release release, string path)
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
                 throw new IOException("未找到 ACT 登记的插件文件，无法确定更新位置。");
@@ -181,9 +189,7 @@ namespace Simulant.Core
                 using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token))
                 {
                     timeout.CancelAfter(TimeSpan.FromMinutes(3));
-                    var url = ReleasesUrl + "/download/" + tag + "/Simulant.dll";
-
-                    using (var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false))
+                    using (var response = await _http.GetAsync(release.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false))
                     {
                         response.EnsureSuccessStatusCode();
 
@@ -199,7 +205,7 @@ namespace Simulant.Core
 
                 var assembly = AssemblyName.GetAssemblyName(temporary);
 
-                if (assembly.Name != "Simulant" || assembly.Version != version)
+                if (assembly.Name != "Simulant" || assembly.Version != release.Version)
                     throw new InvalidDataException("下载的 DLL 名称或版本与发布版本不符。");
 
                 lock (_gate)
@@ -207,7 +213,7 @@ namespace Simulant.Core
                     _stop.Token.ThrowIfCancellationRequested();
                     // 同目录完整替换，不创建备份；失败时原文件仍可使用。
                     File.Replace(temporary, path, null);
-                    _installedVersion = version;
+                    _installedRelease = release;
                 }
             }
             finally
