@@ -34,7 +34,7 @@ Work in progress. Collaboration is welcome.
 > It has no i18n support for now, and it relies on several tools that I personally maintain or that are mainly used in the Chinese community.
 - Load this plugin's `dll` into ACT's plugin list to complete the setup. It can be placed fairly far down the list.
 
-<img width="800" alt="image" src="https://github.com/user-attachments/assets/b2fde36d-dde1-47d1-9f7c-857ea61c9b9f" />
+  <img width="800" alt="image" src="https://github.com/user-attachments/assets/957070e3-1255-4859-8cc0-6a21c782e84b" />
 
 - Simulant prepares the configured game files at startup and connects automatically when the FFXIV ACT Plugin selects a game process. Use “Retry Connection” if the connection fails.
 
@@ -51,7 +51,7 @@ Work in progress. Collaboration is welcome.
 
   To filter for the currently implemented demos, check "Show only maps with preset areas" in the map selection window.
 
-<img width="800" alt="image" src="https://github.com/user-attachments/assets/cc9d2ebe-1685-4b51-8d08-a4c237a5d865" />
+  <img width="800" alt="image" src="https://github.com/user-attachments/assets/042e777e-ca15-42cc-8b17-47abe33355c7" />
 
 - Click "Load Area". After the map finishes loading, click "Start Simulation" in the preset panel on the right. You can click "Stop Simulation" during a simulation; it cancels pending timeline nodes, waits for the current action to return, and cleans up simulation entities.
 
