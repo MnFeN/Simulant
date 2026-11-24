@@ -49,7 +49,7 @@ Work in progress.
 
 - 将此插件 dll 加载至 ACT 的插件列表即可完成加载，可置于列表中比较靠后的位置。
 
-<img width="800" alt="image" src="https://github.com/user-attachments/assets/b2fde36d-dde1-47d1-9f7c-857ea61c9b9f" />
+  <img width="800" alt="image" src="https://github.com/user-attachments/assets/957070e3-1255-4859-8cc0-6a21c782e84b" />
 
 - 插件启动后会准备已配置的客户端文件。当 FFXIV 解析插件绑定游戏进程时，仿生石会自动连接。连接失败时可点击“重试连接”。
 
@@ -60,13 +60,13 @@ Work in progress.
 
 - 初始化完成后，进入任意旅馆地图，勾选“启用防火墙”。此功能与卫月插件 [Hyperborea](https://github.com/kawaii/Hyperborea) 类似。
 
-  这会拦截除了心跳包以外的所有收发包，进入本地模式。
+  这会拦截除了心跳包以外的通用收发包，进入本地模式。
 
 - 在左侧选择地图，或输入地图 ID；如果此地图有阶段/模拟的话可以在下拉列表中选择。
 
-  如果要筛选目前已经实现的 demo，可在地图选择窗口界面中勾选 “仅显示含预设区域” 查看。
+  如果要筛选目前已经定义的模拟，可在地图选择窗口界面中勾选 “仅显示含预设区域” 查看。
 
-<img width="800" alt="image" src="https://github.com/user-attachments/assets/cc9d2ebe-1685-4b51-8d08-a4c237a5d865" />
+  <img width="800" alt="image" src="https://github.com/user-attachments/assets/042e777e-ca15-42cc-8b17-47abe33355c7" />
 
 - 点击“加载区域”，等待地图加载结束后在右侧预设界面点击“开始模拟”。可在模拟中途点击“停止模拟”；停止会取消后续时间轴节点，等待当前动作返回后清理模拟实体。
 
@@ -100,3 +100,4 @@ Simulant 的原创代码使用 GPLv3（`GPL-3.0-only`）开源协议。使用者
 再次分发时，需同样遵从 GPLv3 开源协议，提供对应版本的完整源码；如有修改，需注明修改。
 
 第三方内容说明见 [COPYING.md](COPYING.md)，完整条款见 [LICENSE](LICENSE)。
+
