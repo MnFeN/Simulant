@@ -30,17 +30,14 @@ Encounters run entirely on the client, with no need to set up or connect to a pr
 
 ## 状态 · Status
 
-开发中，欢迎合作。  
-Work in progress.
+开发于 2026 年 2 月，仍处于开发阶段，欢迎合作。  
 
 <img width="2222" height="1170" alt="image" src="https://github.com/user-attachments/assets/87dc9104-2b5c-417f-8415-e783bc945b87" />
 
 
 ## 使用说明 · Instruction
 
-项目仍处于早期开发阶段，出现报错、闪退等现象均不属于意外情况。
-
-尚未加装完整的校验流程，请严格遵循下述步骤使用。
+项目仍处于开发阶段，可能出现报错、闪退等现象，请严格遵循下述步骤使用。
 
 > [!TIP]
 > **下载时请在右侧 Release 下载最新的发布版中的 dll，不要在上方下载源码。**
@@ -80,7 +77,9 @@ Work in progress.
 
 ## 致谢 · Acknowledgements
 
-此插件的开发借鉴了大量 Dalamud 仓库，建立在前人在 FFXIV 客户端、游戏数据和模拟工具方面研究的基础之上。感谢以下 Dalamud 及 ACT 项目的作者与贡献者：
+此插件的开发借鉴了大量 Dalamud 仓库，建立在前人在 FFXIV 客户端、游戏数据和模拟工具方面研究的基础之上。
+
+特别感谢以下 Dalamud 及 ACT 项目的作者与贡献者：
 
 - [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs)提供了客户端结构与原生函数定义。
 - [Lumina](https://github.com/NotAdam/Lumina) 和 [EXDSchema](https://github.com/xivdev/EXDSchema) 支撑了游戏资源读取与数据表解析。
@@ -91,7 +90,7 @@ Work in progress.
 - 项目早期的本地实体生成参考了 [Brio](https://github.com/Valentine-Tools/Brio)。
 - [Advanced Combat Tracker](https://advancedcombattracker.com/) 及国服维护者 [萌新科技研究所](https://act.diemoe.net/) 提供了插件宿主的支持。
 - [PostNamazu](https://github.com/Natsukage/PostNamazu) 为通过 ACT 与游戏进程交互提供了重要的早期参考。
-- 游戏回放读取得益于 [OrchestrionPlugin](https://github.com/perchbirdd/OrchestrionPlugin) 和 [ARealmRecorded](https://github.com/UnknownX7/ARealmRecorded) 对回放格式的研究。
+- 回放读取参考了 [Hypostasis](https://github.com/UnknownX7/Hypostasis) 和 [ARealmRecorded 的读取代码](https://github.com/UnknownX7/ARealmRecorded)。
 
 ## 开源许可
 
