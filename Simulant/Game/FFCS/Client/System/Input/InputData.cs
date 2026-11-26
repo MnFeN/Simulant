@@ -11,8 +11,6 @@ namespace Simulant.Game.FFCS.Client.System.Input
 
         public IntPtr Ptr { get; set; }
 
-        public CursorInputData UIFilteredCursorInputs => Ptr.As<CursorInputData>(0x4A0);
-        public CursorInputData CursorInputs => Ptr.As<CursorInputData>(0x4D0);
         internal MemoryField<int> NumKeybinds => Ptr.Field<int>(0x9B4);
         internal IntPtr Keybinds => Ptr.ReadPtr(0x9B8);
 

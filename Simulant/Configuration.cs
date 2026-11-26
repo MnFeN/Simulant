@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Serialization;
 
@@ -18,6 +19,7 @@ namespace Simulant
         public SimActorBehaviorOptions SimulatedParty { get; set; } = new SimActorBehaviorOptions();
         public bool AutoInstallUpdates { get; set; } = true;
         public bool QuickControlsEnabled { get; set; } = true;
+        public Keys GroundTeleportKey { get; set; } = Keys.OemSemicolon;
         public Point? QuickControlsLocation { get; set; }
         public bool ShouldSerializeQuickControlsLocation() => QuickControlsLocation.HasValue;
         public int SelectedTerritoryId { get; set; }
@@ -51,6 +53,7 @@ namespace Simulant
                 SimulatedParty = SimulatedParty.Copy(),
                 AutoInstallUpdates = AutoInstallUpdates,
                 QuickControlsEnabled = QuickControlsEnabled,
+                GroundTeleportKey = GroundTeleportKey,
                 QuickControlsLocation = QuickControlsLocation,
                 SelectedTerritoryId = SelectedTerritoryId,
                 SelectedPhaseKey = SelectedPhaseKey,

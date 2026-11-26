@@ -34,6 +34,7 @@ namespace Simulant.UI
         {
             _host = host;
             ConfigureMainMenu();
+            BindGroundTeleport();
             var toolTip = new ToolTip(components);
             toolTip.SetToolTip(btnInitPlugin, "插件会自动连接游戏。需要重试时，请先关闭防火墙并完成清理。");
             toolTip.SetToolTip(lblSpawnPoint, "候选来自游戏当前所在的地图，第一项为推荐出生点。");

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using Simulant.Game.FFCS.Client.Game.Object;
 
 namespace Simulant.Game.FFCS.Client.Game
@@ -14,6 +15,34 @@ namespace Simulant.Game.FFCS.Client.Game
             => InstancePtr.As<ActionManager>();
 
         public MemoryField<float> AnimationLock => Ptr.Field<float>(0x08);
+
+        internal MemoryField<uint> AreaTargetingActionId => Ptr.Field<uint>(0x90);
+
+        // FFCS 的 ida/data.yml：CalculateAreaTargetingTargetState
+        // 即 Triggernometry UseActionModule 中的 MouseToWorldPtr
+        [SigPattern("4C 8B DC 49 89 5B ?? 49 89 6B ?? 49 89 73 ?? 57 48 81 EC ?? ?? ?? ?? 33 C0")]
+        internal static IntPtr CalculateAreaTargetingTargetStateFuncPtr { get; set; }
+
+        internal Vector3? GetGroundTargetCandidate()
+        {
+            var memory = GameInterop.Connection.Memory;
+            var result = memory.AllocateMemory(0x20);
+            if (result == IntPtr.Zero)
+                throw new InvalidOperationException("无法分配地面选点缓冲区。");
+
+            try
+            {
+                CalculateAreaTargetingTargetStateFuncPtr.Call(Ptr, uint.MaxValue, (uint)ActionType.FieldMarker, result);
+                // +0x00 表示有候选点，+0x01 表示允许放置。瞬移只需要前者和 +0x10 的原生坐标。
+                if (result.Read<byte>() == 0)
+                    return null;
+                return result.Read<Vector3>(0x10);
+            }
+            finally
+            {
+                memory.FreeMemory(result);
+            }
+        }
 
         // 迁移自 FFXIVClientStructs ActionManager；复用客户端处理冷却更新的方法。
         [SigPattern("E8 * * * * 8B D0 48 8B CD 8B F0")]

@@ -83,6 +83,8 @@ namespace Simulant.UI
                     "开启插件时异步检查更新；发现新版本后自动下载安装，重启 ACT 后生效。"),
                 new CheckBoxOption(nameof(Configuration.QuickControlsEnabled), "模拟期间启用快捷控制悬浮窗", _draft.QuickControlsEnabled,
                     "选中模拟预设并进入副本后，显示置顶的模拟控制与冲刺、防击退按钮。单击图标执行操作，按住拖动移动窗口，拖动边缘调整大小；退出副本后自动关闭。"),
+                new ComboBoxOption<Keys>(nameof(Configuration.GroundTeleportKey), "鼠标传送快捷键", _draft.GroundTeleportKey,
+                    CreateGroundTeleportKeys(), "开启防火墙后，按键传送到鼠标指向的地面。"),
                 new DecimalOption(nameof(Configuration.SimLatency), "模拟判定延迟（秒）", _draft.SimLatency, 1, 0, 2,
                     "判定采用自身此前的位置和防击退状态，模拟服务器提前判定；不影响假队员、演出和报错时间。设为 0 关闭，下次模拟生效。\n此延迟与网络延迟不同，建议不低于 0.30 s 以反映真实副本情况。"),
                 new CheckBoxOption(nameof(Configuration.GenerateActLogs), "生成 ACT 日志（实验性）", _draft.GenerateActLogs,
@@ -160,6 +162,33 @@ namespace Simulant.UI
             new CheckBoxOption(nameof(value.DelayArrival), "延迟到达安全位置", value.DelayArrival,
                 "防止模拟实体过早到达正确位置，干扰判断机制"),
         };
+
+        private static Map<Keys> CreateGroundTeleportKeys()
+        {
+            var keys = new Map<Keys>
+            {
+                [Keys.None] = "禁用",
+                [Keys.OemSemicolon] = "分号（;）",
+                [Keys.Oemtilde] = "`",
+                [Keys.OemMinus] = "-",
+                [Keys.Oemplus] = "=",
+                [Keys.OemOpenBrackets] = "[",
+                [Keys.OemCloseBrackets] = "]",
+                [Keys.OemPipe] = "\\",
+                [Keys.OemQuotes] = "'",
+                [Keys.Oemcomma] = ",",
+                [Keys.OemPeriod] = ".",
+                [Keys.OemQuestion] = "/"
+            };
+            var converter = new KeysConverter();
+            foreach (Keys key in Enum.GetValues(typeof(Keys)))
+            {
+                if (key >= Keys.D0 && key <= Keys.D9 || key >= Keys.A && key <= Keys.Z ||
+                    key >= Keys.NumPad0 && key <= Keys.F12)
+                    keys[key] = converter.ConvertToString(key);
+            }
+            return keys;
+        }
 
         private void Save(object sender, EventArgs e)
         {
