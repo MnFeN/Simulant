@@ -77,7 +77,8 @@ namespace Simulant.Core.Zone
             checkCurrent();
             var me = _host.EntityProvider.GetMyself() ?? throw new InvalidOperationException("无法获取玩家实体，不能设置出生点。");
             checkCurrent();
-            me.Pos3D = position;
+            // 这里直接设置 Pos 可能卡在半空中，实测 ActorSetPos 可以防止角色卡住
+            me.ActorSetPos(position, me.Heading);
         }
 
         private Task PrepareSpawns(TerritoryType? territory, int worldVersion)

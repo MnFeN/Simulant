@@ -358,7 +358,8 @@ namespace Simulant.Core.Zone
                 ?? throw new InvalidOperationException("无法获取玩家实体，不能恢复真实位置。");
 
             EnsureWorld(worldVersion);
-            me.Pos3D = initialPosition;
+            // 这里直接设置 Pos 可能卡在半空中，实测 ActorSetPos 可以防止角色卡住
+            me.ActorSetPos(initialPosition, me.Heading);
             EnsureWorld(worldVersion);
             var actual = me.Pos3D;
             if (!(Vector3.Distance(actual, initialPosition) <= 0.1f))
