@@ -117,6 +117,8 @@
     <Compile Include="..\Simulant\UI\Controls\SurfaceEx.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="..\Lumina.ACT\Lumina.Core\Data\Language.cs" />
+    <Compile Include="..\Simulant\Game\Data\GameDataLanguage.cs" />
     <Compile Include="..\Simulant\Game\Data\FfxivInstallation.cs">
       <Link>Game\FfxivInstallation.cs</Link>
     </Compile>

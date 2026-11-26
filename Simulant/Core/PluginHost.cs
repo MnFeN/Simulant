@@ -50,6 +50,7 @@ namespace Simulant.Core
         internal bool GameDataReady { get; private set; }
         internal bool GameDataLoading { get; private set; }
 
+        private readonly GameDataLanguage _gameDataLanguage;
         private GameDataService _gameData;
         private GameImageFile? _gameDataFile;
         private GameImageScan _gameImage;
@@ -410,6 +411,7 @@ namespace Simulant.Core
                 LogError("读取或创建全局配置失败，本次使用默认设置，已有文件保持不变：" + error);
             }
 
+            _gameDataLanguage = Configuration.GameDataLanguage;
             Updater = new PluginUpdater(
                 () => ActGlobals.oFormActMain?.ActPlugins.FirstOrDefault(x => x.pluginObj?.GetType() == typeof(PluginMain))?.pluginFile?.FullName,
                 typeof(PluginMain).Assembly.GetName().Version, () => Configuration.AutoInstallUpdates, LogWarning, LogRuntime);
@@ -482,7 +484,7 @@ namespace Simulant.Core
                 GameDataLoading = true;
                 _ui?.UpdateControlStates();
                 LogRuntime("正在读取游戏客户端数据……");
-                candidate = await Task.Run(() => new GameDataService(file.Path));
+                candidate = await Task.Run(() => new GameDataService(file.Path, _gameDataLanguage, LogWarning));
 
                 lock (_initLock)
                 {
@@ -496,7 +498,7 @@ namespace Simulant.Core
                     GameDataReady = true;
                 }
 
-                LogRuntime("游戏数据加载完成（Lumina.ACT）。");
+                LogRuntime($"Lumina 游戏数据加载完成（{_gameData.Language}）。");
             }
             catch (Exception error)
             {

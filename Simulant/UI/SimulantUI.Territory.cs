@@ -117,6 +117,16 @@ namespace Simulant.UI
         {
             using (var form = new TerritoryForm())
             {
+                try
+                {
+                    form.LoadTerritoryData();
+                }
+                catch (Exception error)
+                {
+                    _host.LogError("读取区域列表失败：" + error.Message);
+                    return;
+                }
+
                 if (form.ShowDialog(this) == DialogResult.OK)
                     numTerritoryId.Value = form.TerritoryIdResult;
             }
@@ -144,7 +154,7 @@ namespace Simulant.UI
                 _updatingTerritoryIdInput = false;
             }
 
-            UpdateTerritoryData(territoryId, saved.SelectedPhaseKey);
+            TryUpdateTerritoryData(territoryId, saved.SelectedPhaseKey);
         }
 
         private void numTerritoryId_ValueChanged(object sender, EventArgs e)
@@ -152,8 +162,8 @@ namespace Simulant.UI
             if (_updatingTerritoryIdInput)
                 return;
 
-            UpdateTerritoryData((int)numTerritoryId.Value);
-            SaveTerritorySelection();
+            if (TryUpdateTerritoryData((int)numTerritoryId.Value))
+                SaveTerritorySelection();
         }
 
         private void SaveTerritorySelection()
@@ -162,24 +172,32 @@ namespace Simulant.UI
         private static string GetPhaseSelectionKey(object item)
             => item is SimPresetBase preset ? preset.GetType().FullName : (item as PhaseData)?.Name;
 
-        private void UpdateTerritoryData(int territoryId, string phaseKey = null)
+        private bool TryUpdateTerritoryData(int territoryId, string phaseKey = null)
         {
             _selectedTerritoryId = territoryId;
-
+            TerritoryType? territory;
             var territoryName = "无";
             var instanceName = "无";
 
-            var territory = territoryId > 0 ? GameDataService.Instance.GetSheet<TerritoryType>().GetRowOrDefault((uint)territoryId) : null;
-            if (territory.HasValue)
+            try
             {
-                territoryName = territoryId == GreenScreenStage.TerritoryId ? GreenScreenStage.Name
-                    : territory.Value.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
-
-                var contentName = territory.Value.ContentFinderCondition.ValueNullable?.Name.ExtractText();
-                if (!string.IsNullOrWhiteSpace(contentName))
+                territory = territoryId > 0 ? GameDataService.Instance.GetSheet<TerritoryType>().GetRowOrDefault((uint)territoryId) : null;
+                if (territory.HasValue)
                 {
-                    instanceName = contentName;
+                    territoryName = territoryId == GreenScreenStage.TerritoryId ? GreenScreenStage.Name
+                        : territory.Value.PlaceName.ValueNullable?.Name.ExtractText() ?? "无";
+                    var contentName = territory.Value.ContentFinderCondition.ValueNullable?.Name.ExtractText();
+                    if (!string.IsNullOrWhiteSpace(contentName))
+                        instanceName = contentName;
                 }
+            }
+            catch (Exception error)
+            {
+                _host.LogError("读取区域数据失败：" + error.Message);
+                _selectedTerritoryId = 0;
+                territory = null;
+                territoryName = "区域数据读取失败";
+                instanceName = "无";
             }
 
             lblZoneName.Text = territoryName == "无" ? "未选择区域" : territoryName;
@@ -224,6 +242,7 @@ namespace Simulant.UI
             }
 
             UpdateSelectedPresetControl();
+            return _selectedTerritoryId == territoryId;
         }
 
         private void UpdateSelectedPresetControl()

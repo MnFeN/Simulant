@@ -79,5 +79,12 @@ namespace Simulant.Simulation.Options
 
         internal override string GetValue() => (_textBox?.Text ?? _default).Trim();
         protected override void SetValue(string value) => _textBox.Text = value;
+
+        internal void FitPathWidth()
+        {
+            if (_textBox.TextLength > 0)
+                _textBox.Width = TextRenderer.MeasureText(_textBox.Text, _textBox.Font, System.Drawing.Size.Empty,
+                    TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix).Width;
+        }
     }
 }

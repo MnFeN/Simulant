@@ -46,10 +46,9 @@ namespace Simulant.UI
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            if (DesignMode || _allTerritories != null)
+            if (DesignMode)
                 return;
 
-            LoadTerritoryData();
             RestoreViewState();
             ApplySearch();
             RestoreSelectedTerritory();
@@ -116,7 +115,7 @@ namespace Simulant.UI
             public bool HasPreset;
         }
 
-        private void LoadTerritoryData()
+        internal void LoadTerritoryData()
         {
             var territoryData = GameDataService.Instance.GetSheet<TerritoryType>();
             var presetTerritoryIds = GetPresetTerritoryIds();

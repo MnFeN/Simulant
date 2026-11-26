@@ -1,4 +1,5 @@
 using Simulant.Core;
+using Simulant.Game.Data;
 using Simulant.Simulation;
 using Simulant.Simulation.Options;
 using Simulant.Simulation.Runtime;
@@ -6,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Simulant.UI
@@ -28,8 +30,6 @@ namespace Simulant.UI
             MinimizeBox = false;
             MaximizeBox = false;
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(600, 370);
-            MinimumSize = new Size(540, 400);
 
             var tabs = new TabControlEx
             {
@@ -67,6 +67,18 @@ namespace Simulant.UI
                 new FilePathOption(nameof(Configuration.FfxivPath), "FFXIV 安装路径", _draft.FfxivPath,
                     "FFXIV 客户端|ffxiv_dx11.exe",
                     "用于在游戏启动前预扫 EXE 和读取游戏资源。连接时以 FFXIV 解析插件绑定的客户端为准。首次成功连接后会自动保存尚未设置的路径。"),
+                new ComboBoxOption<GameDataLanguage>(nameof(Configuration.GameDataLanguage), "游戏数据语言", _draft.GameDataLanguage,
+                    new Map<GameDataLanguage>
+                    {
+                        [GameDataLanguage.Auto] = "自动",
+                        [GameDataLanguage.CHS]  = "简体中文（国服）",
+                        [GameDataLanguage.EN]   = "英语（国际服）",
+                        [GameDataLanguage.CHT]  = "繁体中文（繁中服）",
+                        [GameDataLanguage.KR]   = "韩语（韩服）",
+                        [GameDataLanguage.JP]   = "日语（国际服）",
+                        [GameDataLanguage.DE]   = "德语（国际服）",
+                        [GameDataLanguage.FR]   = "法语（国际服）"
+                    }, "保存后重新加载插件生效。"),
                 new CheckBoxOption(nameof(Configuration.AutoInstallUpdates), "自动安装更新", _draft.AutoInstallUpdates,
                     "开启插件时异步检查更新；发现新版本后自动下载安装，重启 ACT 后生效。"),
                 new CheckBoxOption(nameof(Configuration.QuickControlsEnabled), "模拟期间启用快捷控制悬浮窗", _draft.QuickControlsEnabled,
@@ -115,6 +127,26 @@ namespace Simulant.UI
             Controls.Add(buttons);
             AcceptButton = save;
             CancelButton = cancel;
+
+            Load += (_, __) =>
+            {
+                // 按实际字体测量路径和两个选项页，切换标签时保持窗口大小。
+                foreach (var path in _miscOptions.OfType<FilePathOption>())
+                    path.FitPathWidth();
+                foreach (var combo in miscTable.Controls.OfType<ComboBox>())
+                    combo.Width = combo.Items.Cast<object>().Max(item => TextRenderer.MeasureText(combo.GetItemText(item), combo.Font).Width)
+                        + SystemInformation.VerticalScrollBarWidth + combo.Font.Height;
+                var pages = tabs.TabPages.Cast<TabPage>()
+                    .Select(page => page.Controls[0].GetPreferredSize(Size.Empty) + page.Padding.Size).ToArray();
+                var tabFrame = tabs.Size - tabs.DisplayRectangle.Size;
+                var footer = buttons.GetPreferredSize(Size.Empty);
+                var desired = SizeFromClientSize(new Size(
+                    Math.Max(pages.Max(page => page.Width) + tabFrame.Width, footer.Width),
+                    pages.Max(page => page.Height) + tabFrame.Height + footer.Height));
+                var area = Screen.FromControl(Owner ?? this).WorkingArea;
+                Size = new Size(Math.Min(desired.Width, area.Width), Math.Min(desired.Height, area.Height));
+                CenterToParent();
+            };
         }
 
         private static List<SimOptionBase> CreatePartyOptions(SimActorBehaviorOptions value) => new List<SimOptionBase>

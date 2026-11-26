@@ -55,8 +55,8 @@ namespace Simulant.Tests.Native
 
             using (var data = new GameDataService(path))
             {
-                Console.WriteLine("读取并校验常用表：" + watch.ElapsedMilliseconds + " 毫秒。");
                 var actions = data.GetSheet<ActionRow>();
+                Console.WriteLine("打开客户端并读取技能表：" + watch.ElapsedMilliseconds + " 毫秒。");
                 Check(ReferenceEquals(actions, data.GetSheet<ActionRow>()), "重复查表应复用缓存。");
                 Check(actions.GetRow(3).Name.ExtractText() == "冲刺", "中文技能名称。");
                 Check(!actions.TryGetRow(uint.MaxValue, out _), "不存在的行应返回 false。");

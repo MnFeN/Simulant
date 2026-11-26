@@ -118,6 +118,27 @@ namespace Simulant.Tests
             });
         }
 
+        public static void GameDataLanguageDefaultsToAutoAndPersists()
+        {
+            WithPath(path =>
+            {
+                Assert(Configuration.Load(path).GameDataLanguage == GameDataLanguage.Auto, "新配置应自动选择游戏数据语言。");
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, "<Simulant />");
+                var configuration = Configuration.Load(path);
+                Assert(configuration.GameDataLanguage == GameDataLanguage.Auto, "旧配置缺少游戏数据语言时应使用自动模式。");
+
+                var draft = configuration.Copy();
+                draft.GameDataLanguage = GameDataLanguage.JP;
+                draft.Copy().Save(path);
+                Assert(configuration.GameDataLanguage == GameDataLanguage.Auto &&
+                    Configuration.Load(path).GameDataLanguage == GameDataLanguage.JP, "重新读取配置时应得到保存的语言。");
+
+                configuration.Save(path);
+                Assert(Configuration.Load(path).GameDataLanguage == GameDataLanguage.Auto, "手选语言应能改回自动。");
+            });
+        }
+
         public static void AutomaticUpdatesDefaultToEnabledAndPersist()
         {
             WithPath(path =>

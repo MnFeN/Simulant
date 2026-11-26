@@ -1,4 +1,5 @@
 using Simulant.Core.Environment;
+using Simulant.Game.Data;
 using Simulant.Simulation.Runtime;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,7 @@ namespace Simulant
         public bool GenerateActLogs { get; set; }
         public bool DeveloperMode { get; set; }
         public string FfxivPath { get; set; } = string.Empty;
+        public GameDataLanguage GameDataLanguage { get; set; } = GameDataLanguage.Auto;
 
         public StudioSettings Studio { get; set; } = StudioSettings.Default;
 
@@ -56,6 +58,7 @@ namespace Simulant
                 GenerateActLogs = GenerateActLogs,
                 DeveloperMode = DeveloperMode,
                 FfxivPath = FfxivPath?.Trim() ?? string.Empty,
+                GameDataLanguage = GameDataLanguage,
                 Studio = Studio.WithClampedSize(),
                 Presets = (Presets ?? new List<PresetConfiguration>()).Where(preset => preset.Options.Count != 0)
                     .Select(preset => new PresetConfiguration
