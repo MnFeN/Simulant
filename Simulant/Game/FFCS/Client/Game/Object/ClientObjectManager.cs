@@ -8,6 +8,7 @@ using BattleChara = Simulant.Game.FFCS.Client.Game.Character.Character;
 namespace Simulant.Game.FFCS.Client.Game.Object
 {
     // Client::Game::Object::ClientObjectManager
+    // https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/Game/Object/ClientObjectManager.cs
     public struct ClientObjectManager : IMemoryObject
     {
         public IntPtr Ptr { get; set; }
@@ -86,6 +87,16 @@ namespace Simulant.Game.FFCS.Client.Game.Object
 
         public void DeleteObjectByIndex(ushort idx, byte param = 0)
             => DeleteObjectByIndexFuncPtr.Call(Ptr, idx, param);
+
+        // FFCS 未声明 C# 绑定，ida/data.yml 命名为 DeleteAllObjects。
+        // 国服 2026.11.03.0000.0000、国际服 2026.03.17.0000.0000：
+        // 从 EventFramework.SetTerritoryTypeId 的区域初始化调用方回溯。集中清理函数在 CharacterManager 之后
+        // 传入 ClientObjectManager，遍历本地对象槽位，回收可随切区释放的对象并从 GameObjectManager 移除。
+        [SigPattern("E8 * * * * 48 8D 0D ? ? ? ? E8 ? ? ? ? 48 8D 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 48 85 C0 74 ?")]
+        internal static IntPtr DeleteAllObjectsFuncPtr { get; set; }
+
+        internal void DeleteAllObjects()
+            => DeleteAllObjectsFuncPtr.Call(Ptr);
 
         [SigPattern("E8 * * * * 8B F8 48 8B CB 83 F8 FF")]
         public static IntPtr CalculateNextAvailableIndexFuncPtr { get; set; }

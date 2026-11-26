@@ -8,7 +8,6 @@ namespace Simulant.Game
     /// 坐标采用客户端 X、Y、Z（Y 为高度）；压缩坐标解码为值 × 2000 / 65535 − 1000 米，
     /// 压缩朝向解码为值 × 2π / 65535 − π 弧度。<br />
     /// 类别的本机／远端限制及前置状态仍需满足；参数说明不表示该调用会同步服务端状态。
-    /// 参考与使用约定见 docs/Entities.md 的 ActorControl 分类。
     /// </remarks>
     public enum ActorControlCategory : ushort
     {

@@ -2,6 +2,7 @@ using Simulant.Game;
 using Simulant.Game.Data;
 using Lumina.Excel.Sheets;
 using Simulant.Game.FFCS.Client.Game;
+using Simulant.Game.FFCS.Client.Game.Character;
 using Simulant.Game.FFCS.Client.Game.Event;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Game.FFCS.Client.LayoutEngine;
@@ -394,6 +395,16 @@ namespace Simulant.Core.Zone
                 _spawnData = null;
 
             _host.PrepareEntityWorldChange((uint)territoryId, exitingSimulation);
+            GameInterop.Connection.RunInFrame(() => SwitchTerritoryInFrame(territoryId, territory, worldVersion, storyProgress));
+            EnsureWorld(worldVersion);
+            _host.CompleteEntityWorldChange();
+        }
+
+        private void SwitchTerritoryInFrame(int territoryId, TerritoryType? territory, int worldVersion, int storyProgress)
+        {
+            EnsureWorld(worldVersion);
+            var player = _host.EntityProvider.GetMyself()
+                ?? throw new InvalidOperationException("无法确认本机角色，不能清理旧区域。");
             uint loadedDirectorId;
 
             lock (_stateGate)
@@ -415,10 +426,15 @@ namespace Simulant.Core.Zone
                 }
             }
 
-            // 事件对象即使隐藏了模型，也会在每帧访问旧地图的场景组。须在布局卸载前回收。
-            _host.LogVerbose("回收旧区域的事件对象");
+            // 同一帧内按原生入口回收旧区域对象，再卸载布局。客户端的整区清理会同时销毁本机角色。
+            _host.LogVerbose("回收旧区域对象");
             EnsureWorld(worldVersion);
+            ClearOtherCharacters(player.Address);
+            ClientObjectManager.Instance.ThrowIfNull().DeleteAllObjects();
             EventObjectManager.Instance.ThrowIfNull().Clear();
+            StandObjectManager.Instance().ThrowIfNull().Clear();
+            ReactionEventObjectManager.Instance().ThrowIfNull().DeleteAllObjects();
+
             EnsureWorld(worldVersion);
             DisableCurrentObjects(worldVersion);
 
@@ -444,8 +460,21 @@ namespace Simulant.Core.Zone
             _host.LogVerbose($"SetTerritoryTypeId: {territoryId}");
             EnsureWorld(worldVersion);
             EventFramework.Instance.ThrowIfNull().SetTerritoryTypeId((ushort)territoryId);
-            EnsureWorld(worldVersion);
-            _host.CompleteEntityWorldChange();
+        }
+
+        private static void ClearOtherCharacters(IntPtr player)
+        {
+            var manager = CharacterManager.Instance().ThrowIfNull();
+            var characters = manager.BattleCharas.Get();
+            if (player == IntPtr.Zero || Array.IndexOf(characters, player) < 0)
+                throw new InvalidOperationException("原生角色表中未找到本机角色，不能清理旧区域。");
+
+            for (var index = 0; index < characters.Length; index++)
+            {
+                var character = characters[index];
+                if (character != IntPtr.Zero && character != player)
+                    manager.DeleteCharacterAtIndex(index);
+            }
         }
 
         // 需要扫描全部实体（含本地实体），似乎有实体模型的时候游戏有概率会炸

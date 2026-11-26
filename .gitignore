@@ -367,3 +367,4 @@ FodyWeavers.xsd
 
 # 本地调查、临时脚本与个人 skill
 /.local/
+/AGENTS.md
