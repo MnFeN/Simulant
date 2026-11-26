@@ -10,6 +10,8 @@ using System.Reflection;
 using System.Threading;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
+using Simulant.Game.FFCS.Client.System.Input;
+using static Simulant.Game.FFCS.Client.UI.Misc.RaptureHotbarModule;
 using ActionRow = Lumina.Excel.Sheets.Action;
 using ClassJob = Lumina.Excel.Sheets.ClassJob;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
@@ -20,33 +22,36 @@ namespace Simulant.Tests
     {
         public static void CacheResolvesSkillsGeneralActionsAndMacroIcons()
         {
-            var keys = new byte[120 * 11];
-            var bars = new byte[10 * 16 * 0xE8];
+            var keys = new Keybind[StandardHotbarCount * 12];
+            var bars = new HotbarSlot[StandardHotbarCount * SlotsPerHotbar];
             // 当前第一栏显示第 4 页；同时验证其他栏的第二套绑定。
-            Slot(bars, 3, 0, 1, 7548, 0);
-            Slot(bars, 1, 1, 7, 99, 869);
-            Slot(bars, 2, 2, 10, 4, 104);
-            Slot(bars, 2, 3, 2, 7559, 869); // 物品不能仅凭图标冒充技能。
-            Slot(bars, 2, 4, 10, 3, 103);
-            Slot(bars, 2, 5, 1, 3, 104);
-            Slot(bars, 2, 6, 7, 100, 103);
-            Slot(bars, 2, 7, 2, 3, 103);
-            keys[0] = 65;
-            keys[(12 + 1) * 11 + 2] = 66;
-            keys[(12 + 1) * 11 + 3] = 2;
-            keys[(24 + 2) * 11] = 67;
-            keys[(24 + 3) * 11] = 68;
-            keys[(24 + 4) * 11] = 69;
-            keys[(24 + 5) * 11] = 70;
-            keys[(24 + 6) * 11] = 71;
-            keys[(24 + 7) * 11] = 72;
+            Slot(bars, 3, 0, HotbarSlotType.Action, 7548, 0);
+            Slot(bars, 1, 1, HotbarSlotType.Macro, 99, 869);
+            Slot(bars, 2, 2, HotbarSlotType.GeneralAction, 4, 104);
+            Slot(bars, 2, 3, HotbarSlotType.Item, 7559, 869); // 物品不能仅凭图标冒充技能。
+            Slot(bars, 2, 4, HotbarSlotType.GeneralAction, 3, 103);
+            Slot(bars, 2, 5, HotbarSlotType.Action, 3, 104);
+            Slot(bars, 2, 6, HotbarSlotType.Macro, 100, 103);
+            Slot(bars, 2, 7, HotbarSlotType.Item, 3, 103);
+            keys[0].Primary.Key = 65;
+            keys[12 + 1].Secondary = new KeySetting
+            {
+                Key = 66,
+                KeyModifier = KeyModifierFlag.Ctrl,
+            };
+            keys[24 + 2].Primary.Key = 67;
+            keys[24 + 3].Primary.Key = 68;
+            keys[24 + 4].Primary.Key = 69;
+            keys[24 + 5].Primary.Key = 70;
+            keys[24 + 6].Primary.Key = 71;
+            keys[24 + 7].Primary.Key = 72;
             var cache = HotbarBinding.Read(keys, bars, 3, id => id == 4 ? 3u : 0,
                 new Dictionary<uint, uint> { [869] = 7559, [104] = 3 }, limitBreakIcon: 103);
             Check(cache.Count == 6 && cache[0].Action == 7548 && cache[1].Action == 7559 && cache[2].Action == 3,
                 "应识别实际显示的栏位、宏图标和通用冲刺，不匹配物品。");
             Check(cache[3].IsLimitBreak && !cache[4].IsLimitBreak && cache[4].Action == 3 && cache[5].IsLimitBreak,
                 "通用极限技和相同图标的宏应识别为极限技，技能编号 3 仍是冲刺。");
-            Check(cache[1].Key == 66 && cache[1].Modifiers == 2, "第二套绑定应保留 Ctrl 修饰键。");
+            Check(cache[1].Key == 66 && cache[1].Modifiers == KeyModifierFlag.Ctrl, "第二套绑定应保留 Ctrl 修饰键。");
             Array.Clear(keys, 0, keys.Length);
             Array.Clear(bars, 0, bars.Length);
             Check(cache[0].Key == 65 && cache[1].Action == 7559, "缓存建立后不受栏位与键位变化影响。");
@@ -81,7 +86,7 @@ namespace Simulant.Tests
                     service.BeginSimulation(manager);
                     Flush(service);
 
-                    var binding = new HotbarBinding(65, 0, 0, isLimitBreak: true);
+                    var binding = new HotbarBinding(65, KeyModifierFlag.None, 0, isLimitBreak: true);
                     Press(binding);
                     Check(player.ActionEffects.Count == 0, "量表不足一格时，极限技热键不能释放技能。");
 
@@ -117,22 +122,16 @@ namespace Simulant.Tests
 
         public static void KeysOnlyFireOnPressAndRequireExactModifiers()
         {
-            var key = new HotbarBinding(65, 2, 7559);
-            var keyboard = new byte[0x496];
-            keyboard[4 + 65 * 4] = 3;
-            Check(!key.Pressed(keyboard, true), "裸键不能触发 Ctrl 组合。");
-            keyboard[0x495] = 2;
-            Check(!key.Pressed(keyboard, true), "按住裸键后再按修饰键不能补触发。");
-            keyboard[4 + 65 * 4] = 0;
-            key.Pressed(keyboard, true);
-            keyboard[4 + 65 * 4] = 3;
-            Check(key.Pressed(keyboard, true) && !key.Pressed(keyboard, true), "每次按下只触发一次。");
-            keyboard[4 + 65 * 4] = 9;
-            Check(!key.Pressed(keyboard, true), "游戏长按重复不能再次施放。");
-            keyboard[4 + 65 * 4] = 0;
-            key.Pressed(keyboard, false);
-            keyboard[4 + 65 * 4] = 3;
-            Check(!key.Pressed(keyboard, false) && !key.Pressed(keyboard, true), "失焦期间按住的键不应在恢复焦点时补发。");
+            const KeyModifierFlag ctrl = KeyModifierFlag.Ctrl;
+            const KeyStateFlags firstPress = KeyStateFlags.Down | KeyStateFlags.Pressed;
+            var key = new HotbarBinding(65, ctrl, 7559);
+            Check(!key.Pressed(firstPress, KeyModifierFlag.None, true), "裸键不能触发 Ctrl 组合。");
+            Check(!key.Pressed(firstPress, ctrl, true), "按住裸键后再按修饰键不能补触发。");
+            key.Pressed(KeyStateFlags.None, ctrl, true);
+            Check(key.Pressed(firstPress, ctrl, true) && !key.Pressed(firstPress, ctrl, true), "每次按下只触发一次。");
+            Check(!key.Pressed(KeyStateFlags.Down | KeyStateFlags.Held, ctrl, true), "游戏长按重复不能再次施放。");
+            key.Pressed(KeyStateFlags.None, ctrl, false);
+            Check(!key.Pressed(firstPress, ctrl, false) && !key.Pressed(firstPress, ctrl, true), "失焦期间按住的键不应在恢复焦点时补发。");
         }
 
         public static void LocalActionsShareNormalCooldownAndResetAtEachStart()
@@ -435,12 +434,14 @@ namespace Simulant.Tests
             }
         }
 
-        private static void Slot(byte[] bars, int bar, int slot, byte type, uint id, uint icon)
+        private static void Slot(HotbarSlot[] bars, int bar, int slot, HotbarSlotType type, uint id, uint icon)
         {
-            var offset = (bar * 16 + slot) * 0xE8;
-            Array.Copy(BitConverter.GetBytes(id), 0, bars, offset + 0xB8, 4);
-            bars[offset + 0xC7] = type;
-            Array.Copy(BitConverter.GetBytes(icon), 0, bars, offset + 0xD0, 4);
+            bars[bar * SlotsPerHotbar + slot] = new HotbarSlot
+            {
+                CommandId = id,
+                CommandType = type,
+                IconId = icon,
+            };
         }
 
         private static void Check(bool condition, string message)

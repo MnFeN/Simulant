@@ -140,6 +140,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="..\Simulant\Core\HotbarBinding.cs" />
+    <Compile Include="..\Simulant\Game\FFCS\Client\System\Input\KeyboardData.cs" />
+    <Compile Include="..\Simulant\Game\FFCS\Client\System\Input\Keybind.cs" />
+    <Compile Include="..\Simulant\Game\FFCS\Client\UI\Misc\RaptureHotbarModule.HotbarSlot.cs" />
     <Compile Include="..\Simulant\Core\SimActionCooldown.cs" />
     <Compile Include="..\Simulant\Core\SimActionService.cs">
       <Link>Core\SimActionService.cs</Link>

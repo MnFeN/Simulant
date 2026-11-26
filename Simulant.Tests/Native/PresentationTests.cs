@@ -6,6 +6,7 @@ using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Game.FFCS.Client.Network;
 using Simulant.Game.FFCS.Client.System.Framework;
 using Simulant.Game.FFCS.Client.UI;
+using Simulant.Game.FFCS.Component.GUI;
 using Simulant.Simulation.Runtime;
 using System;
 using System.Collections.Concurrent;
@@ -174,10 +175,10 @@ namespace Simulant.Tests.Native
 
         private static void VerifyHotbar(PresentationPlugin plugin)
         {
-            var previousFunction = AtkModule.GetAddonByNameFuncPtr;
+            var previousFunction = AtkUnitManager.GetAddonByNameFuncPtr;
             try
             {
-                AtkModule.GetAddonByNameFuncPtr = PresentationPlugin.GetAddon;
+                AtkUnitManager.GetAddonByNameFuncPtr = PresentationPlugin.GetAddon;
                 var atk = new AtkModule { Ptr = new IntPtr(0x90000) };
                 var unitManager = new IntPtr(0x91000);
                 plugin.Memory.Write(atk.Ptr + 0x2C0, unitManager);
@@ -190,7 +191,7 @@ namespace Simulant.Tests.Native
             }
             finally
             {
-                AtkModule.GetAddonByNameFuncPtr = previousFunction;
+                AtkUnitManager.GetAddonByNameFuncPtr = previousFunction;
             }
         }
 
