@@ -347,32 +347,10 @@ namespace Simulant.UI
                 return;
             }
 
-            bool? surecast = null;
-            uint invulnerability = 0;
-            if (!_host.IsSwitchingTerritory)
-            {
-                try
-                {
-                    var player = _host.EntityProvider.GetMyself();
-                    if (player != null && player.IsAlive && player.HP != 0)
-                    {
-                        surecast = SimJobActions.For(player.Job)?.Caster == true;
-                        invulnerability = SimEntityManager.InvulnerabilityAction(player.Job);
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    // 换图或掉线时身份可能已失效，保留窗口但禁用技能。
-                }
-            }
             var canStart = btnStart.Enabled;
             var canRetry = btnRetry.Enabled;
             var canStop = btnEnd.Enabled;
-            var isRunning = _session?.IsRunning == true;
-            var provokeAvailable = isRunning && _host.PlayerActions.CanUseEnmityAction((uint)SimLocalAction.Provoke);
-            var shirkAvailable = isRunning && _host.PlayerActions.CanUseEnmityAction((uint)SimLocalAction.Shirk);
-            Action<QuickControlForm> update = form => form.UpdateState(canStart, canRetry, canStop, surecast, invulnerability,
-                provokeAvailable, shirkAvailable);
+            Action<QuickControlForm> update = form => form.UpdateState(canStart, canRetry, canStop);
             if (_quickControls?.TryPost(update) == true)
                 return;
 
@@ -383,9 +361,7 @@ namespace Simulant.UI
                 var form = new QuickControlForm(
                     () => PostQuickControlAction(StartCurrentSession),
                     () => PostQuickControlAction(RetryCurrentSession),
-                    () => PostQuickControlAction(StopCurrentSession),
-                    action => PostQuickControlAction(() => host.PlayerActions.RequestAction(action)),
-                    host.LogWarning, host.PlayerActions.Cooldown, () => host.PlayerActions.LimitBreakButton)
+                    () => PostQuickControlAction(StopCurrentSession))
                 {
                     IsGameForeground = () => host.IsGameForeground
                 };

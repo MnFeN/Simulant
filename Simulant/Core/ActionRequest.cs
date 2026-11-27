@@ -1,6 +1,7 @@
 using Simulant.Game.FFCS.Client.Game;
 using System;
 using System.Numerics;
+using CastTimeProc = Simulant.Game.FFCS.Client.Game.ActionManager.CastTimeProc;
 
 namespace Simulant.Core
 {
@@ -33,8 +34,11 @@ namespace Simulant.Core
         /// <summary>客户端分配的 16 位技能请求序号。主动取消请求未携带序号，此时为 0。</summary>
         internal ushort SourceSequence { get; }
 
-        /// <summary>请求正文偏移 +4 的原始标志字节，具体位含义尚未完整确认。</summary>
-        private byte Flags { get; }
+        /// <summary>客户端计算本次咏唱时间时采用的修正类型。请求正文偏移 +4。</summary>
+        internal CastTimeProc CastProc { get; }
+
+        /// <summary>请求记录的修正类型会直接把咏唱时间归零。</summary>
+        internal bool HasInstantCastProc => CastProc == CastTimeProc.Requiescat || CastProc == CastTimeProc.DivineMight;
 
         /// <summary>构包时施法者的当前朝向，单位为弧度。</summary>
         internal float Rotation { get; }
@@ -59,7 +63,7 @@ namespace Simulant.Core
         }
 
         internal ActionRequest(ActionRequestKind kind, ushort opcode, uint descriptorLength, uint actionId,
-            ActionType actionType, ushort sourceSequence, byte flags, float rotation, float facing,
+            ActionType actionType, ushort sourceSequence, byte castProc, float rotation, float facing,
             ulong? targetId, Vector3? groundPosition, uint? extraParam)
         {
             Kind = kind;
@@ -68,7 +72,7 @@ namespace Simulant.Core
             ActionId = actionId;
             ActionType = actionType;
             SourceSequence = sourceSequence;
-            Flags = flags;
+            CastProc = (CastTimeProc)castProc;
             Rotation = rotation;
             Facing = facing;
             TargetId = targetId;
@@ -96,7 +100,7 @@ namespace Simulant.Core
             }
 
             var message = $"[{label}] 0x{Opcode:X4} 长度=0x{DescriptorLength:X} 技能={ActionId} (0x{ActionId:X}) 类型={(uint)ActionType} 序号={SourceSequence}" +
-                FormattableString.Invariant($" 标志=0x{Flags:X2} 施法者朝向={Rotation:F3} 动作朝向={Facing:F3}（弧度）");
+                FormattableString.Invariant($" 咏唱修正=0x{(byte)CastProc:X2} 施法者朝向={Rotation:F3} 动作朝向={Facing:F3}（弧度）");
             if (TargetId is ulong targetId)
                 message += $" 目标=0x{targetId:X16}";
             if (GroundPosition is Vector3 position)

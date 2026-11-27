@@ -9,7 +9,7 @@ using System.Windows.Forms;
 namespace Simulant.UI
 {
     /// <summary>模拟副本内的快捷控制；单击执行，拖动移动，边缘缩放。</summary>
-    internal sealed partial class QuickControlForm : FormEx
+    internal sealed class QuickControlForm : FormEx
     {
         private static readonly long FocusLossDelayTicks = Stopwatch.Frequency / 4;
         private static readonly IntPtr TopmostWindow = new IntPtr(-1);
@@ -21,30 +21,12 @@ namespace Simulant.UI
         {
             Start,
             Retry,
-            Stop,
-            Sprint,
-            Knockback,
-            Invulnerability,
-            LimitBreak,
-            Provoke,
-            Shirk
+            Stop
         }
 
         private static readonly ButtonId[] SessionRow = { ButtonId.Start, ButtonId.Retry, ButtonId.Stop };
-        private static readonly ButtonId[][] DefaultRows =
-        {
-            SessionRow,
-            new[] { ButtonId.Sprint, ButtonId.Knockback, ButtonId.LimitBreak }
-        };
-        private static readonly ButtonId[][] TankRows =
-        {
-            SessionRow,
-            new[] { ButtonId.Sprint, ButtonId.Knockback, ButtonId.Invulnerability, ButtonId.LimitBreak },
-            new[] { ButtonId.Provoke, ButtonId.Shirk }
-        };
-
+        private readonly Timer _visibilityTimer;
         private readonly Dictionary<ButtonId, (Action Execute, Color Accent)> _sessionButtons;
-        private readonly Action<uint> _useSkill;
         private readonly HashSet<ButtonId> _enabled = new HashSet<ButtonId>();
         private ButtonId? _hover;
         private ButtonId? _pressed;
@@ -57,8 +39,7 @@ namespace Simulant.UI
         internal event Action<Point> LocationCommitted;
         internal Func<bool> IsGameForeground { get; set; }
 
-        internal QuickControlForm(Action start, Action retry, Action stop, Action<uint> useSkill, Action<string> logWarning,
-            Func<uint, Core.SimActionCooldown> cooldown, Func<(uint Action, bool Ready)> limitBreak)
+        internal QuickControlForm(Action start, Action retry, Action stop)
         {
             _sessionButtons = new Dictionary<ButtonId, (Action Execute, Color Accent)>
             {
@@ -66,17 +47,8 @@ namespace Simulant.UI
                 [ButtonId.Retry] = (retry, WorkbenchTheme.Yellow),
                 [ButtonId.Stop] = (stop, WorkbenchTheme.Red)
             };
-            _useSkill = useSkill;
-            _logWarning = logWarning;
-            _cooldown = cooldown;
-            _limitBreak = limitBreak;
-            _animationTimer = new Timer { Interval = 33 };
-            _animationTimer.Tick += (_, __) =>
-            {
-                UpdateVisibility();
-                if (Visible)
-                    Invalidate();
-            };
+            _visibilityTimer = new Timer { Interval = 33 };
+            _visibilityTimer.Tick += (_, __) => UpdateVisibility();
             AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
@@ -93,8 +65,8 @@ namespace Simulant.UI
             UpdateScreenLimits();
             var width = screen.Bounds.Width / 16;
             Size = new Size(width, CompactHeight(width, screen.Bounds.Height / 12));
-            // 隐藏后仍检测前台窗口，复用冷却动画计时器，不销毁窗口或重新加载图标。
-            _animationTimer.Start();
+            // 隐藏期间继续检测游戏窗口的焦点。
+            _visibilityTimer.Start();
         }
 
         // 不设 ACT 为所属窗口，防止 ACT 最小化时连带隐藏；操作也不夺走游戏焦点。
@@ -109,31 +81,11 @@ namespace Simulant.UI
             }
         }
 
-        internal void UpdateState(bool canStart, bool canRetry, bool canStop, bool? surecast, uint invulnerability,
-            bool provokeAvailable, bool shirkAvailable)
+        internal void UpdateState(bool canStart, bool canRetry, bool canStop)
         {
-            var canUseTankSkills = surecast.HasValue && invulnerability != 0;
             SetEnabled(ButtonId.Start, canStart);
             SetEnabled(ButtonId.Retry, canRetry);
             SetEnabled(ButtonId.Stop, canStop);
-            SetEnabled(ButtonId.Sprint, surecast.HasValue);
-            SetEnabled(ButtonId.Knockback, surecast.HasValue);
-            SetEnabled(ButtonId.Invulnerability, canUseTankSkills);
-            SetEnabled(ButtonId.Provoke, canUseTankSkills && provokeAvailable);
-            SetEnabled(ButtonId.Shirk, canUseTankSkills && shirkAvailable);
-            if (surecast.HasValue)
-                _surecast = surecast.Value;
-
-            var previousRows = ButtonRows.Length;
-            var previousHeight = Height;
-            _invulnerability = invulnerability;
-            var rowCount = ButtonRows.Length;
-            if (previousRows != rowCount)
-            {
-                UpdateScreenLimits();
-                Height = CompactHeight(Width, previousHeight * rowCount / previousRows);
-                RestoreLocation(Location);
-            }
             Invalidate();
             UpdateVisibility();
         }
@@ -179,35 +131,17 @@ namespace Simulant.UI
 
         private float Inset => Math.Min(ClientSize.Width / 2f, ClientSize.Height / 2f) * 0.12f;
 
-        private ButtonId[][] ButtonRows => _invulnerability == 0 ? DefaultRows : TankRows;
-
         private int CompactHeight(int width, int requestedHeight)
-        {
-            // 换仇两个按钮占满第三行，图标与上一行的坦克技能等高。
-            var rows = ButtonRows;
-            var layoutHeight = width / (float)SessionRow.Length + (rows.Length - 1) * width / (float)rows[1].Length;
-            return Math.Max(MinimumSize.Height, Math.Min(requestedHeight, (int)layoutHeight));
-        }
+            => Math.Max(MinimumSize.Height, Math.Min(requestedHeight, width / SessionRow.Length));
 
         private IEnumerable<(ButtonId Button, RectangleF Bounds)> LayoutButtons()
         {
-            var rows = ButtonRows;
-            var skillRows = rows.Length - 1;
-            var skillColumns = rows[1].Length;
-            var sessionHeight = ClientSize.Height * skillColumns / (float)(skillColumns + skillRows * SessionRow.Length);
-            var skillHeight = (ClientSize.Height - sessionHeight) / skillRows;
+            var width = ClientSize.Width / (float)SessionRow.Length;
             var inset = Inset;
-            var top = 0f;
-            foreach (var row in rows)
+            for (var column = 0; column < SessionRow.Length; column++)
             {
-                var width = ClientSize.Width / (float)row.Length;
-                var height = row == SessionRow ? sessionHeight : skillHeight;
-                for (var column = 0; column < row.Length; column++)
-                {
-                    var bounds = new RectangleF(column * width + inset, top + inset, width - inset * 2, height - inset * 2);
-                    yield return (row[column], bounds);
-                }
-                top += height;
+                var bounds = new RectangleF(column * width + inset, inset, width - inset * 2, ClientSize.Height - inset * 2);
+                yield return (SessionRow[column], bounds);
             }
         }
 
@@ -225,7 +159,7 @@ namespace Simulant.UI
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             foreach (var (button, bounds) in LayoutButtons())
             {
-                var active = CanClick(button);
+                var active = _enabled.Contains(button);
                 var hover = active && _hover == button && !_dragging;
                 var background = hover ? WorkbenchTheme.QuickControl.ButtonHover : WorkbenchTheme.QuickControl.Button;
                 if (hover && Capture && _pressed == button)
@@ -234,12 +168,7 @@ namespace Simulant.UI
                 using (var fill = new SolidBrush(background))
                     e.Graphics.FillPath(fill, shape);
 
-                if (!_sessionButtons.TryGetValue(button, out var session))
-                {
-                    PaintSkill(e.Graphics, button, bounds);
-                    continue;
-                }
-
+                var session = _sessionButtons[button];
                 var size = Math.Min(bounds.Width, bounds.Height) * 0.44f;
                 var x = bounds.Left + bounds.Width / 2;
                 var y = bounds.Top + bounds.Height / 2;
@@ -376,12 +305,9 @@ namespace Simulant.UI
             RestoreLocation(Location);
             if (Location != _originalBounds.Location)
                 LocationCommitted?.Invoke(Location);
-            if (button is ButtonId clicked && CanClick(clicked))
+            if (button is ButtonId clicked && _enabled.Contains(clicked))
             {
-                if (_sessionButtons.TryGetValue(clicked, out var session))
-                    session.Execute();
-                else
-                    _useSkill(SkillAction(clicked));
+                _sessionButtons[clicked].Execute();
                 Invalidate();
             }
         }
@@ -428,9 +354,8 @@ namespace Simulant.UI
             {
                 var screen = Screen.FromRectangle(Bounds);
                 var minWidth = screen.Bounds.Width / 24;
-                var rowCount = ButtonRows.Length;
-                MaximumSize = new Size(screen.Bounds.Width / 10, screen.Bounds.Height * rowCount / 20);
-                MinimumSize = new Size(minWidth, Math.Min(screen.Bounds.Height * rowCount / 40, minWidth * rowCount / SessionRow.Length));
+                MaximumSize = new Size(screen.Bounds.Width / 10, screen.Bounds.Height / 20);
+                MinimumSize = new Size(minWidth, Math.Min(screen.Bounds.Height / 40, minWidth / SessionRow.Length));
                 Height = CompactHeight(Width, Height);
             }
             finally
@@ -445,6 +370,13 @@ namespace Simulant.UI
             if (e.CloseReason == CloseReason.UserClosing)
                 e.Cancel = true;
             base.OnFormClosing(e);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+                _visibilityTimer?.Dispose();
+            base.Dispose(disposing);
         }
 
         [DllImport("user32.dll")]

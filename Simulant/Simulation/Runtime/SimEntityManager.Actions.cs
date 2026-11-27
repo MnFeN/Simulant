@@ -1,93 +1,86 @@
+using Simulant.Core;
 using Simulant.Core.Entity;
-using Simulant.Core.Party;
 using Simulant.Game.Data;
+using Simulant.Game.FFCS.Client.Game;
+using Simulant.Game.FFCS.Client.Game.Object;
+using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ActionEffect = Simulant.Game.FFCS.Client.Game.Character.ActionEffectHandler.Effect;
+using GeneralActionId = Simulant.Simulation.Runtime.PlayerActions.GeneralActions.ActionId;
+using GeneralStatusId = Simulant.Simulation.Runtime.PlayerActions.GeneralActions.StatusId;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Simulation.Runtime
 {
-    internal enum SimLocalAction : uint
-    {
-        Sprint = 3,
-        ArmsLength = 7548,
-        Surecast = 7559,
-        HallowedGround = 30,
-        Holmgang = 43,
-        LivingDead = 3638,
-        Superbolide = 16152,
-        Provoke = 7533,
-        Shirk = 7537
-    }
-
     public sealed partial class SimEntityManager
     {
-        internal static readonly uint[] LocalActions = Enum.GetValues(typeof(SimLocalAction))
-            .Cast<SimLocalAction>().Select(action => (uint)action).ToArray();
+        private sealed class OwnedStatus
+        {
+            internal Character Actor;
+            internal Character Source;
+            internal int Slot;
+            internal ushort StatusId;
+            internal SimActor Participant;
+            internal bool LockMovement;
+            internal double ExpiresAt;
+            internal SimScheduledAction Expiry;
+            internal ushort? LoggedParam;
+        }
 
-        internal static bool IsEnmityAction(uint action) => action == (uint)SimLocalAction.Provoke || action == (uint)SimLocalAction.Shirk;
+        private readonly List<OwnedStatus> _statuses = new List<OwnedStatus>();
 
-        internal bool CanUseEnmityAction(uint actionId)
+        internal Character[] GetActivePartyCharacters()
         {
             lock (_gate)
             {
-                if (!_acceptingEntities || !_scheduler.IsRunning || Party.Count == 0)
-                    return false;
-
-                if (actionId == (uint)SimLocalAction.Shirk)
-                    return Party.Exists(IsShirkTarget);
-
-                return actionId == (uint)SimLocalAction.Provoke && _partyEnmity.Count != 0 &&
-                    (Party.Count == 1 || _partyService?.IsOwnedBy(this) == true);
+                return Party.Where(actor => actor.IsActive && actor.Entity.HP != 0)
+                    .Select(actor => actor.Entity).ToArray();
             }
         }
 
         private static bool IsShirkTarget(SimActor actor)
             => actor != null && actor.Entity.Identity.Slot != 0 && actor.IsActive && actor.Entity.HP != 0;
 
-        internal bool TryUseEnmityAction(Character player, uint actionId)
+        internal bool TryUseEnmityAction(Character player, ActionRequest request, bool provoke)
         {
             lock (_gate)
             {
-                if (!CanUseEnmityAction(actionId) || InvulnerabilityAction(player.Job) == 0 ||
+                if (!_acceptingEntities || !_scheduler.IsRunning || GetInvulnerability(player.Job).Action == 0 ||
                     !_actors.TryGetValue(player.Identity, out var source) || !source.IsActive || source.Entity.HP == 0 ||
-                    !Party.Contains(source) || ActionsLocked(source))
+                    !Party.Contains(source))
                     return false;
 
-                var provoke = actionId == (uint)SimLocalAction.Provoke;
-                var candidates = (provoke
-                    ? _partyEnmity.Keys.Where(actor => actor.IsActive && actor.Entity.HP != 0 && actor.Entity.IsTargetable)
-                    : Party.Where(IsShirkTarget)).Where(actor => actor != source).ToArray();
-                SimActor FindTarget(IntPtr address) => candidates.FirstOrDefault(actor => actor.Address == address);
+                if (provoke && Party.Count > 1 && _partyService?.IsOwnedBy(this) != true)
+                    return false;
 
-                var target = FindTarget(SimPartyService.GetSelectedTarget(preferSoftTarget: true)) ??
-                    FindTarget(SimPartyService.GetSelectedTarget());
-                // 没有选中队友时可保留当前目标，优先退避给另一名坦克。
-                if (!provoke && target == null)
-                    target = candidates.FirstOrDefault(actor => InvulnerabilityAction(actor.Job) != 0) ?? candidates.FirstOrDefault();
+                // 网络战斗角色使用 Type 0 的完整 GameObjectId，按请求当时的目标结算。
+                var candidates = provoke
+                    ? _partyEnmity.Keys.Where(actor => actor.IsActive && actor.Entity.HP != 0 && actor.Entity.IsTargetable)
+                    : Party.Where(IsShirkTarget);
+                var target = candidates.FirstOrDefault(actor => actor != source && request.TargetId == actor.Id);
                 if (target == null)
                     return false;
 
-                UseEnmityAction(source, (SimLocalAction)actionId, target);
+                UseEnmityAction(source, provoke, target, request);
                 return true;
             }
         }
 
-        internal void UsePartyEnmityAction(SimActor source, SimLocalAction action, SimActor target)
+        internal void UsePartyEnmityAction(SimActor source, bool provoke, SimActor target)
         {
             lock (_gate)
             {
                 if (!_acceptingEntities || !source.IsActive || source.Entity.HP == 0 || !target.IsActive || target.Entity.HP == 0)
                     return;
 
-                UseEnmityAction(source, action, target);
+                UseEnmityAction(source, provoke, target);
             }
         }
 
-        private void UseEnmityAction(SimActor source, SimLocalAction action, SimActor target)
+        private void UseEnmityAction(SimActor source, bool provoke, SimActor target, ActionRequest request = null)
         {
-            var provoke = action == SimLocalAction.Provoke;
             var bosses = provoke ? new[] { target } : _partyEnmity.Keys.Where(boss => boss.IsActive && boss.Entity.HP != 0).ToArray();
             foreach (var boss in bosses)
             {
@@ -113,31 +106,44 @@ namespace Simulant.Simulation.Runtime
                 PublishPartyEnmity(boss, scores, percentages);
             }
 
-            PlayLocalActionEffect(source, (uint)action, target);
+            if (request == null)
+                PlayLocalActionEffect(source, (uint)(provoke ? GeneralActionId.挑衅 : GeneralActionId.退避), target);
+            else
+                ResolvePlayerAction(source.Entity, request, target.Entity, request.ActionId);
         }
 
-        public static uint InvulnerabilityAction(Job job)
+        internal void ResolvePlayerAction(Character player, ActionRequest request, Character target, uint actionId,
+            params ActionEffect[] effects)
+        {
+            const float animationLock = 0.6f;
+            player.ReceiveActionResult(request, actionId, target, target.Pos3D, animationLock, effects);
+            CombatLog?.Ability(player, actionId, target, null, request.Facing, animationLock, null, null, effects);
+        }
+
+        internal static (uint Action, ushort Status) GetInvulnerability(Job job)
         {
             switch (job)
             {
                 case Job.PLD:
-                    return (uint)SimLocalAction.HallowedGround;
+                    return (30, 82);
                 case Job.WAR:
-                    return (uint)SimLocalAction.Holmgang;
+                    return (43, 409);
                 case Job.DRK:
-                    return (uint)SimLocalAction.LivingDead;
+                    return (3638, 810);
                 case Job.GNB:
-                    return (uint)SimLocalAction.Superbolide;
+                    return (16152, 1836);
                 default:
-                    return 0;
+                    return default;
             }
         }
 
         /// <summary>只演出本职业无敌；伤害判定必须显式允许无敌，不能全局免除机制错误。</summary>
-        public bool UseInvulnerability(SimActor actor)
+        public bool UseInvulnerability(SimActor actor) => UseInvulnerability(actor, null);
+
+        internal bool UseInvulnerability(SimActor actor, ActionRequest request)
         {
-            var action = InvulnerabilityAction(actor.Job);
-            return action != 0 && UseLocalAction(actor, action);
+            var action = GetInvulnerability(actor.Job);
+            return action.Action != 0 && UseStatusAction(actor, action.Action, action.Status, 10, request);
         }
 
         /// <summary>四人水分摊、五人神圣等人数不足时，所有实际参与者获得死亡刻印。</summary>
@@ -162,77 +168,45 @@ namespace Simulant.Simulation.Runtime
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
 
-            UseLocalAction(actor, (uint)((surecast ?? (SimJobActions.For(actor.Job)?.Caster == true))
-                ? SimLocalAction.Surecast : SimLocalAction.ArmsLength));
+            if (surecast ?? (SimJobActions.For(actor.Job)?.Caster == true))
+                UseStatusAction(actor, (uint)GeneralActionId.沉稳咏唱, (ushort)GeneralStatusId.沉稳咏唱, 6);
+            else
+                UseStatusAction(actor, (uint)GeneralActionId.亲疏自行, (ushort)GeneralStatusId.亲疏自行, 6);
         }
 
-        /// <summary>本地模拟已支持的职能技能和冲刺；状态和演出共用，冷却不作限制。</summary>
-        internal bool UseLocalAction(SimActor actor, uint actionId)
+        internal bool UseStatusAction(SimActor actor, uint action, ushort status, float seconds, ActionRequest request = null,
+            byte param = 0)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
-            var action = (SimLocalAction)actionId;
-            var knockbackImmunity = action == SimLocalAction.ArmsLength || action == SimLocalAction.Surecast;
-            if (action != SimLocalAction.Sprint && !knockbackImmunity && actionId != InvulnerabilityAction(actor.Job))
-                return false;
-
-            ushort id;
-            switch (action)
-            {
-                case SimLocalAction.Surecast:
-                    id = 160;
-                    break;
-                case SimLocalAction.ArmsLength:
-                    id = 1209;
-                    break;
-                case SimLocalAction.Sprint:
-                    id = 50;
-                    break;
-                case SimLocalAction.HallowedGround:
-                    id = 82;
-                    break;
-                case SimLocalAction.Holmgang:
-                    id = 409;
-                    break;
-                case SimLocalAction.LivingDead:
-                    id = 810;
-                    break;
-                case SimLocalAction.Superbolide:
-                    id = 1836;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(actionId), "不支持的模拟技能。");
-            }
 
             lock (_gate)
             {
                 EnsureAcceptingEntities();
                 EnsureStatusActor(actor);
-                if (ActionsLocked(actor))
+                if (request == null && actor.Entity.AreActionsLocked())
                     return false;
 
-                var seconds = knockbackImmunity ? 6 : 10;
-                // 冲刺的 Param 是加速百分比；回放中的状态 50 使用 30，填 0 只显示图标、不加速。
-                var param = action == SimLocalAction.Sprint ? (ushort)30 : (ushort)0;
-                SetStatus(actor, id, seconds, param, actor);
-                PlayLocalActionEffect(actor, actionId, actor);
+                var effect = SetActionStatus(actor, actor, status, seconds, param);
+                if (request == null)
+                    PlayLocalActionEffect(actor, action, actor);
+                else
+                    ResolvePlayerAction(actor.Entity, request, actor.Entity, action, effect);
                 return true;
             }
         }
 
-        private static bool ActionsLocked(SimActor actor)
+        internal ActionEffect SetActionStatus(SimActor source, SimActor target, ushort status, float seconds,
+            byte param, byte effectParam = 0)
         {
-            var statuses = actor.Entity.Native.StatusManager;
-            var sheet = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>();
-            // 眩晕可能来自另一个会话，因此从角色当前状态读取。
-            for (var slot = 0; slot < 60; slot++)
+            SetStatus(target, status, seconds, param, source);
+            return new ActionEffect
             {
-                var statusId = statuses.GetStatus(slot).StatusId.Get();
-                if (statusId != 0 && sheet.TryGetRow(statusId, out var row) && row.LockActions)
-                    return true;
-            }
-
-            return false;
+                Type = 0x0E,
+                Param0 = effectParam,
+                Param2 = param,
+                Value = status
+            };
         }
 
         private static void PlayLocalActionEffect(SimActor actor, uint actionId, SimActor target)
@@ -243,5 +217,268 @@ namespace Simulant.Simulation.Runtime
                 GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var action))
                 actor.Entity.PlayBlendTimeline((ushort)action.AnimationEnd.RowId);
         }
+
+        private void SetSprintEffect(SimActor actor, bool enabled)
+        {
+            const ushort sprint = (ushort)GeneralStatusId.冲刺;
+
+            lock (_gate)
+            {
+                if (enabled)
+                {
+                    if (_acceptingEntities && actor.IsActive)
+                        SetStatus(actor, sprint, 10, 0, actor);
+                }
+                else
+                    TryCleanup(() => RemoveStatus(actor, sprint));
+            }
+        }
+
+        /// <summary>施加本会话的状态，到期自动移除；传入 0 秒表示常驻。</summary>
+        public void SetStatus(SimActor actor, ushort statusId, float seconds, ushort param, SimActor source)
+            => SetStatus(actor, statusId, seconds, param, source, lockMovement: null);
+
+        internal void SetStatus(SimActor actor, ushort statusId, float seconds, ushort param, SimActor source, bool? lockMovement)
+        {
+            if (actor == null)
+                throw new ArgumentNullException(nameof(actor));
+
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            if (statusId == 0)
+                throw new ArgumentOutOfRangeException(nameof(statusId), "状态编号不能为零。");
+
+            if (float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds < 0)
+                throw new ArgumentOutOfRangeException(nameof(seconds), "状态持续时间必须为非负有限秒数，0 表示常驻。");
+
+            lock (_gate)
+            {
+                EnsureAcceptingEntities();
+                EnsureStatusActor(actor);
+                EnsureStatusActor(source);
+
+                if (StatusManager.SetStatusFuncPtr == IntPtr.Zero || StatusManager.RemoveStatusFuncPtr == IntPtr.Zero)
+                    throw new InvalidOperationException("状态设置或移除函数尚未定位，请重新初始化。");
+
+                var owned = _statuses.FirstOrDefault(s => s.Actor.Identity == actor.Entity.Identity && s.StatusId == statusId);
+                var statuses = actor.Entity.Native.StatusManager;
+
+                if (owned != null)
+                {
+                    var current = statuses.GetStatus(owned.Slot);
+
+                    if (current.StatusId.Get() == 0)
+                    {
+                        ForgetStatus(owned);
+                        owned = null;
+                    }
+                    else if (!MatchesStatus(current, owned))
+                    {
+                        ForgetStatus(owned);
+                        throw new InvalidOperationException("模拟状态槽已被其他状态替换，拒绝覆盖。");
+                    }
+                    else if (owned.Source.Identity != source.Entity.Identity)
+                        throw new InvalidOperationException("同一模拟状态不能在仍生效时更换来源实体。");
+                }
+
+                if (owned == null)
+                {
+                    var slot = -1;
+
+                    for (var i = 0; i < 30; i++)
+                        if (statuses.GetStatus(i).StatusId.Get() == 0)
+                        {
+                            slot = i;
+                            break;
+                        }
+
+                    if (slot < 0)
+                        throw new InvalidOperationException("角色前 30 个状态槽已满，无法添加模拟点名。");
+
+                    owned = new OwnedStatus
+                    {
+                        Actor = actor.Entity,
+                        Source = source.Entity,
+                        Slot = slot,
+                        StatusId = statusId,
+                        Participant = actor
+                    };
+                    // 原生调用可能部分成功后抛错；写入之前即登记恢复责任。
+                    _statuses.Add(owned);
+                }
+
+                var found = GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Status>().TryGetRow(statusId, out var row);
+                var expiresAt = seconds > 0 ? _scheduler.ElapsedSeconds + seconds : double.PositiveInfinity;
+
+                // 返回值只表示编号或来源有变化；同一状态刷新时间和参数会正常返回 false。
+                var identityChanged = statuses.SetStatus(owned.Slot, statusId, seconds, param,
+                    new GameObjectId
+                    {
+                        ObjectId = source.Id
+                    }, true);
+                var actual = actor.Entity.Native.StatusManager.GetStatus(owned.Slot);
+                var actualId = actual.StatusId.Get();
+                var actualSource = actual.SourceObject.Get().Id;
+                var actualParam = actual.Param.Get();
+
+                if (actualId != statusId || actualSource != source.Id || actualParam != param)
+                    throw new InvalidOperationException("原生状态设置后未读到预期点名，已保留清理责任。" +
+                        $"目标 0x{actor.Id:X8}，槽 {owned.Slot}；" +
+                        FormattableString.Invariant($"期望编号 0x{statusId:X4}、参数 {param}、来源 0x{source.Id:X16}、时间 {seconds:F3} 秒；") +
+                        FormattableString.Invariant($"实际编号 0x{actualId:X4}、参数 {actualParam}、来源 0x{actualSource:X16}、剩余 {actual.RemainingTime.Get():F3} 秒；") +
+                        $"原生编号或来源变化标志：{(identityChanged ? "是" : "否")}。");
+
+                owned.LockMovement = lockMovement ?? (found && row.LockMovement);
+                owned.ExpiresAt = expiresAt;
+                owned.Expiry?.Cancel();
+                owned.Expiry = seconds > 0 ? ScheduleStatusExpiry(owned, expiresAt) : null;
+                owned.LoggedParam = null;
+                if (CombatLog?.Enabled == true)
+                {
+                    CombatLog.Status(true, statusId, seconds, param, source.Entity, actor.Entity);
+                    owned.LoggedParam = param;
+                }
+                RefreshMovementLocks();
+            }
+        }
+
+        private SimScheduledAction ScheduleStatusExpiry(OwnedStatus owned, double expiresAt)
+            => _scheduler.Schedule(expiresAt, () =>
+            {
+                lock (_gate)
+                {
+                    if (owned.Expiry == null || owned.ExpiresAt != expiresAt)
+                        return;
+
+                    RemoveOwnedStatus(owned);
+                    RefreshMovementLocks();
+                }
+            }, "移除到期模拟状态");
+
+        private void ForgetStatus(OwnedStatus owned)
+        {
+            _statuses.Remove(owned);
+            owned.Expiry?.Cancel();
+            owned.Expiry = null;
+            if (owned.LoggedParam.HasValue && owned.Actor.IsAlive)
+                CombatLog?.Status(false, owned.StatusId, 0, owned.LoggedParam.Value, owned.Source, owned.Actor);
+            owned.LoggedParam = null;
+        }
+
+        /// <summary>只移除本会话施加的同种状态，不触碰原有或后来替换的状态。</summary>
+        public void RemoveStatus(SimActor actor, ushort statusId)
+        {
+            if (actor == null)
+                throw new ArgumentNullException(nameof(actor));
+
+            lock (_gate)
+            {
+                foreach (var owned in _statuses.Where(s => s.Actor.Identity == actor.Entity.Identity && s.StatusId == statusId).ToArray())
+                    RemoveOwnedStatus(owned);
+
+                RefreshMovementLocks();
+            }
+        }
+
+        /// <summary>查询仍由本会话持有的状态层数和剩余时间。</summary>
+        internal bool TryGetOwnedStatus(SimActor actor, ushort statusId, out ushort param, out float seconds)
+        {
+            lock (_gate)
+            {
+                var owned = _statuses.FirstOrDefault(status => status.Actor.Identity == actor.Entity.Identity &&
+                    status.StatusId == statusId);
+                if (owned != null && actor.Entity.IsAlive)
+                {
+                    var current = actor.Entity.Native.StatusManager.GetStatus(owned.Slot);
+                    var remaining = owned.ExpiresAt - _scheduler.ElapsedSeconds;
+                    if (remaining > 0 && MatchesStatus(current, owned))
+                    {
+                        param = current.Param.Get();
+                        seconds = double.IsPositiveInfinity(remaining) ? 0 : (float)remaining;
+                        return true;
+                    }
+                }
+                param = 0;
+                seconds = 0;
+                return false;
+            }
+        }
+
+        private void EnsureStatusActor(SimActor actor)
+        {
+            if (!actor.IsActive || !_actors.TryGetValue(actor.Entity.Identity, out var current) || !ReferenceEquals(current, actor))
+                throw new InvalidOperationException("状态的目标和来源必须是本会话的活动角色。");
+        }
+
+        private static bool MatchesStatus(Status status, OwnedStatus owned)
+            => status.StatusId.Get() == owned.StatusId && status.SourceObject.Get().Id == owned.Source.Id;
+
+        private void RemoveOwnedStatus(OwnedStatus owned)
+        {
+            // 实体身份包含世界与生命周期；失效后绝不触碰被复用的地址。
+            if (!owned.Actor.IsAlive)
+            {
+                ForgetStatus(owned);
+                return;
+            }
+
+            var statuses = owned.Actor.Native.StatusManager;
+            var current = statuses.GetStatus(owned.Slot);
+
+            if (!MatchesStatus(current, owned))
+            {
+                ForgetStatus(owned);
+                return;
+            }
+
+            if (StatusManager.RemoveStatusFuncPtr == IntPtr.Zero)
+                throw new InvalidOperationException("状态移除函数尚未定位，已保留模拟点名以便重试清理。");
+
+            statuses.RemoveStatus(owned.Slot);
+
+            if (!owned.Actor.IsAlive)
+            {
+                ForgetStatus(owned);
+                return;
+            }
+
+            if (MatchesStatus(owned.Actor.Native.StatusManager.GetStatus(owned.Slot), owned))
+                throw new InvalidOperationException("原生状态移除后模拟点名仍存在，请重试停止。");
+
+            ForgetStatus(owned);
+        }
+
+        private void ClearStatuses(EntityBase dependency = null)
+        {
+            lock (_gate)
+            {
+                List<Exception> errors = null;
+
+                foreach (var owned in _statuses.Where(s => dependency == null ||
+                    s.Actor.Identity == dependency.Identity || s.Source.Identity == dependency.Identity).ToArray())
+                {
+                    try
+                    {
+                        RemoveOwnedStatus(owned);
+                    }
+                    catch (Exception error)
+                    {
+                        if (errors == null)
+                            errors = new List<Exception>();
+
+                        errors.Add(error);
+                    }
+                }
+
+                RefreshMovementLocks();
+
+                if (errors != null)
+                    throw new AggregateException("部分模拟点名清理失败，已保留实体与清理责任。", errors);
+            }
+        }
+
+        private bool HasStatusDependency(EntityBase entity)
+            => _statuses.Any(s => s.Actor.Identity == entity.Identity || s.Source.Identity == entity.Identity);
     }
 }

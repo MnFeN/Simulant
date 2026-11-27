@@ -4,7 +4,8 @@ using Simulant.Game.FFCS.Client.Game.Object;
 
 namespace Simulant.Game.FFCS.Client.Game
 {
-    // Client::Game::ActionManager
+    // 原生 Client::Game::ActionManager，无基类。
+    // https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/Game/ActionManager.cs
     public struct ActionManager : IMemoryObject
     {
         public IntPtr Ptr { get; set; }
@@ -15,6 +16,8 @@ namespace Simulant.Game.FFCS.Client.Game
             => InstancePtr.As<ActionManager>();
 
         public MemoryField<float> AnimationLock => Ptr.Field<float>(0x08);
+
+        internal ComboDetail Combo => Ptr.As<ComboDetail>(0x60);
 
         internal MemoryField<uint> AreaTargetingActionId => Ptr.Field<uint>(0x90);
 
@@ -44,19 +47,6 @@ namespace Simulant.Game.FFCS.Client.Game
             }
         }
 
-        // 迁移自 FFXIVClientStructs ActionManager；复用客户端处理冷却更新的方法。
-        [SigPattern("E8 * * * * 8B D0 48 8B CD 8B F0")]
-        public static IntPtr GetRecastGroupFuncPtr { get; set; }
-        public int GetRecastGroup(uint actionId) => GetRecastGroupFuncPtr.Call<int>(Ptr, 1, actionId);
-
-        [SigPattern("40 53 48 83 EC 20 48 63 DA 85 D2")]
-        public static IntPtr GetRecastGroupDetailFuncPtr { get; set; }
-        public IntPtr GetRecastGroupDetail(int group) => GetRecastGroupDetailFuncPtr.Call<IntPtr>(Ptr, group);
-
-        [SigPattern("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 8B F2 0F 29 74 24 ?? 0F B6 D2")]
-        public static IntPtr SetCooldownFuncPtr { get; set; }
-        public void SetCooldown(uint actionId, float elapsed, float total)
-            => SetCooldownFuncPtr.Call(Ptr, 1, actionId, elapsed, total);
         // [FieldOffset(0x188), FixedSizeArray] internal FixedSizeArray80<RecastDetail> _cooldowns;
         public MemoryField<float> DistanceToTargetHitbox => Ptr.Field<float>(0x7EC); // distance to target minus both self & target hitbox radius, clamped to 0
 
@@ -156,6 +146,13 @@ namespace Simulant.Game.FFCS.Client.Game
 
         public void OpenCastBar(Character.Character character, ActionType actionType, uint actionId, uint spellId, uint extraParam, float castTimeElapsed, float castTimeTotal)
             => OpenCastBarFuncPtr.Call(Ptr, character.Ptr, actionType, actionId, spellId, extraParam, castTimeElapsed, castTimeTotal);
+
+        internal enum CastTimeProc : byte
+        {
+            None = 0,
+            Requiescat = 9, // PLD
+            DivineMight = 15, // PLD
+        }
 
         public enum UseActionMode
         {

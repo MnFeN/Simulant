@@ -1,11 +1,16 @@
+using Simulant.ACT;
 using Simulant.Core.Entity;
 using Simulant.Game;
+using Simulant.Game.Data;
+using Simulant.Game.FFCS.Client.Game;
 using Simulant.Simulation.Runtime;
+using Simulant.Simulation.Runtime.PlayerActions;
 using Simulant.Simulation.Timeline;
 using System;
-using System.Collections.Concurrent;
 using System.Numerics;
 using System.Threading;
+using ActionRow = Lumina.Excel.Sheets.Action;
+using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Core
 {
@@ -17,74 +22,21 @@ namespace Simulant.Core
         private SimScheduler _scheduler;
         private SimEntityManager _entities;
         private SimEntityManager _encounterEntities;
-        private SimHotbarInput _input;
-        private SimActionRecasts _recasts;
-        private bool _polling;
         private ActionRequest _lastActionRequest;
         private (EntityIdentity Player, uint Sequence, Vector2 Position)? _castOrigin;
-        private Func<uint, bool> _enmityAction;
-        private readonly ConcurrentDictionary<uint, SimActionCooldown> _cooldowns = new ConcurrentDictionary<uint, SimActionCooldown>();
+        private (EntityIdentity Player, ActionRequest Request, bool Observed)? _pendingCast;
 
         internal SimActionService(PluginHost host) => _host = host;
 
-        internal bool CanUseEnmityAction(uint action) => SimEntityManager.IsEnmityAction(action) &&
-            (Volatile.Read(ref _enmityAction) != null || Volatile.Read(ref _encounterEntities)?.CanUseEnmityAction(action) == true);
-
-        internal void SetEnmityActionHandler(Func<uint, bool> handler)
-            => Volatile.Write(ref _enmityAction, handler);
-
-        internal (uint Action, bool Ready) LimitBreakButton
-            => Volatile.Read(ref _encounterEntities)?.LimitBreakButton ?? default;
+        internal SimEntityManager Entities => _entities;
+        internal SimEntityManager EncounterEntities => Volatile.Read(ref _encounterEntities);
 
         private bool Enabled => _host.FirewallEnabled && _host.PluginReady && !_host.Disposed && !_host.IsSwitchingTerritory;
 
-        // 亲疏自行与沉稳咏唱共用一个冷却组。
-        private static uint CooldownKey(uint action) => action == (uint)SimLocalAction.Surecast ? (uint)SimLocalAction.ArmsLength : action;
-        internal SimActionCooldown Cooldown(uint action) => _cooldowns.TryGetValue(CooldownKey(action), out var value) ? value : default;
-
         internal void BeginSimulation(SimEntityManager encounterEntities = null)
         {
-            lock (_gate)
-            {
-                if (!Enabled)
-                    return;
+            if (Enabled)
                 Volatile.Write(ref _encounterEntities, encounterEntities);
-                EnsureScheduler();
-                _scheduler.ScheduleAfter(0, () =>
-                {
-                    _input = null;
-                    _cooldowns.Clear();
-                    if (!Enabled)
-                        return;
-                    try
-                    {
-                        var player = _host.EntityProvider.GetMyself();
-                        if (player == null || !player.IsAlive)
-                            return;
-                        if (_recasts == null)
-                            _recasts = new SimActionRecasts(player);
-                        _recasts.Reset();
-                    }
-                    catch (Exception error)
-                    {
-                        _host.LogWarning("重置模拟技能冷却失败：" + error.Message);
-                    }
-                    try
-                    {
-                        // 只在本轮启动时读取键位、当前栏位和宏图标，途中不刷新映射。
-                        _input = new SimHotbarInput();
-                        if (!_polling)
-                        {
-                            _polling = true;
-                            PollInput();
-                        }
-                    }
-                    catch (Exception error)
-                    {
-                        _host.LogWarning("读取模拟技能快捷键失败，可使用悬浮窗或默语指令：" + error.Message);
-                    }
-                }, "缓存模拟技能快捷键并重置冷却");
-            }
         }
 
         internal void EndSimulation(SimEntityManager encounterEntities)
@@ -97,71 +49,12 @@ namespace Simulant.Core
             if (_scheduler != null)
                 return;
             _scheduler = new SimScheduler((error, node) => _host.LogWarning("模拟技能失败：" + error.Message));
-            _entities = new SimEntityManager(_host.EntitySpawner, error => _host.LogWarning("清理模拟技能状态失败：" + error.Message));
-            _entities.Scheduler = _scheduler;
+            _entities = new SimEntityManager(_host.EntitySpawner, error => _host.LogWarning("清理模拟技能状态失败：" + error.Message))
+            {
+                Scheduler = _scheduler,
+                CombatLog = new SimCombatLog(() => _host.Configuration.GenerateActLogs, XivNetworkLog.WriteLine, _host.LogWarning)
+            };
             _scheduler.Start();
-        }
-
-        private void PollInput()
-        {
-            if (!Enabled || _input == null)
-            {
-                _polling = false;
-                return;
-            }
-            try
-            {
-                _input.Poll(Execute);
-                _scheduler.ScheduleAfter(0.02, PollInput, "监听模拟技能按键");
-            }
-            catch (Exception error)
-            {
-                _polling = false;
-                _input = null;
-                _host.LogWarning("监听模拟技能按键失败，可使用悬浮窗或默语指令：" + error.Message);
-            }
-        }
-
-        internal static uint ParseAction(string command, Game.FFCS.Client.Game.Character.Job job = Game.FFCS.Client.Game.Character.Job.ADV)
-        {
-            var parts = (command ?? "").Split(new[]
-            {
-                ' '
-            }, 2, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 2 || !parts[0].Equals("ac", StringComparison.OrdinalIgnoreCase))
-                return 0;
-
-            switch (parts[1].Trim().Trim('"'))
-            {
-                case "沉稳咏唱":
-                    return (uint)SimLocalAction.Surecast;
-                case "亲疏自行":
-                    return (uint)SimLocalAction.ArmsLength;
-                case "冲刺":
-                    return (uint)SimLocalAction.Sprint;
-                case "挑衅":
-                    return (uint)SimLocalAction.Provoke;
-                case "退避":
-                    return (uint)SimLocalAction.Shirk;
-                case "无敌":
-                    return SimEntityManager.InvulnerabilityAction(job);
-                case "神圣领域":
-                    return (uint)SimLocalAction.HallowedGround;
-                case "死斗":
-                    return (uint)SimLocalAction.Holmgang;
-                case "行尸走肉":
-                    return (uint)SimLocalAction.LivingDead;
-                case "超火流星":
-                    return (uint)SimLocalAction.Superbolide;
-                default:
-                    return 0;
-            }
-        }
-
-        internal void Receive(string command)
-        {
-            var action = ParseAction(command, _host.EntityProvider.GetMyself()?.Job ?? Game.FFCS.Client.Game.Character.Job.ADV);
-            RequestAction(action);
         }
 
         /// <summary>按发送顺序处理本机技能请求，并检查本机读条期间的位移。</summary>
@@ -191,12 +84,46 @@ namespace Simulant.Core
                 return;
             }
 
+            var previousPending = _pendingCast?.Request;
+            QueueCapturedActions(player, requests);
             var cast = player.Native.CastInfo;
             var sequence = cast.SourceSequence.Get();
             var actionId = cast.ActionId.Get();
             var actionType = cast.ActionType.Get();
             var requestForCast = _lastActionRequest;
-            if (!cast.IsCasting || sequence == 0 || (ushort)cast.ResponseSourceSequence.Get() == sequence ||
+            var casting = (bool)cast.IsCasting;
+            if (_pendingCast.HasValue)
+            {
+                var pending = _pendingCast.Value;
+                var request = pending.Request;
+                if (dropped != 0 || pending.Player != player.Identity || cancelSequence == request.SourceSequence ||
+                    (ushort)cast.ResponseSourceSequence.Get() == request.SourceSequence)
+                {
+                    _pendingCast = null;
+                }
+                else if (casting && sequence == request.SourceSequence && actionId == request.ActionId &&
+                    actionType == (byte)request.ActionType)
+                {
+                    if (RejectLockedAction(player, request))
+                    {
+                        _pendingCast = null;
+                        _castOrigin = null;
+                        return;
+                    }
+
+                    _pendingCast = (pending.Player, request, true);
+                    requestForCast = request;
+                }
+                else if (ReferenceEquals(request, previousPending))
+                {
+                    _pendingCast = null;
+                    // 请求被采集时原生函数可能还没有写入 CastInfo，瞬发在下一次轮询确认。
+                    if (!casting && (!pending.Observed || sequence == request.SourceSequence && actionId == request.ActionId &&
+                        cast.CurrentCastTime.Get() >= cast.TotalCastTime.Get()))
+                        QueueCapturedResult(player, request);
+                }
+            }
+            if (!casting || sequence == 0 || (ushort)cast.ResponseSourceSequence.Get() == sequence ||
                 requestForCast == null || requestForCast.SourceSequence != sequence ||
                 requestForCast.ActionId != actionId || (byte)requestForCast.ActionType != actionType)
             {
@@ -218,8 +145,18 @@ namespace Simulant.Core
             // 用施法期间的水平位置变化判定，转向和亚厘米的坐标抖动不计入。
             var byMovement = remaining > slidecastWindow &&
                 Vector2.DistanceSquared(position, origin.Value.Position) > 0.0001f;
-            if ((!byRequest && !byMovement) || !Enabled)
+            if (!Enabled)
                 return;
+            if (!byRequest && !byMovement)
+            {
+                if (remaining <= slidecastWindow && _pendingCast?.Request.SourceSequence == sequence)
+                {
+                    var request = _pendingCast.Value.Request;
+                    _pendingCast = null;
+                    QueueCapturedResult(player, request);
+                }
+                return;
+            }
 
             var cancelled = false;
             GameInterop.Connection?.RunInFrame(() =>
@@ -234,61 +171,96 @@ namespace Simulant.Core
                 cancelled = true;
             });
             if (cancelled)
+            {
+                if (_pendingCast?.Request.SourceSequence == sequence)
+                    _pendingCast = null;
                 _host.LogVerbose($"[咏唱取消] 技能={actionId} 序号={sequence} 原因={(byRequest ? "主动取消" : "移动")}");
+            }
         }
 
         internal void ClearCastTracking()
         {
             _lastActionRequest = null;
             _castOrigin = null;
+            _pendingCast = null;
         }
 
-        internal void RequestAction(uint action)
+        private void QueueCapturedActions(Character player, ActionRequest[] requests)
         {
-            if (action == 0)
-                return;
+            foreach (var request in requests)
+            {
+                if (request.Kind == ActionRequestKind.CancelCast || request.SourceSequence == 0 ||
+                    (request.ActionType != ActionType.Action && request.ActionType != ActionType.GeneralAction))
+                    continue;
 
+                if (RejectLockedAction(player, request))
+                    continue;
+
+                var hasBaseCastTime = request.ActionType == ActionType.Action
+                    ? GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(request.ActionId, out var action) && action.Cast100ms > 0
+                    : EncounterEntities?.MayCastLimitBreak(request) == true;
+                if (hasBaseCastTime && !request.HasInstantCastProc)
+                    _pendingCast = (player.Identity, request, false);
+                else
+                    QueueCapturedResult(player, request);
+            }
+        }
+
+        private void QueueCapturedResult(Character player, ActionRequest request)
+        {
             lock (_gate)
             {
                 if (!Enabled)
                     return;
-
                 EnsureScheduler();
-                _scheduler.ScheduleAfter(0, () => Execute(action), "执行本机模拟技能");
+                _scheduler.ScheduleAfter(0, () => ExecuteCapturedAction(player, request), "结算本机技能请求");
             }
         }
 
-        private void Execute(uint action, bool isLimitBreak = false)
+        private void ExecuteCapturedAction(Character player, ActionRequest request)
         {
-            try
+            if (!Enabled || !player.IsAlive || _host.EntityProvider.GetMyself()?.Identity != player.Identity || player.HP == 0)
+                return;
+
+            // 技能请求入队后可能受到眩晕，结算前再核对一次。
+            if (RejectLockedAction(player, request))
+                return;
+
+            var encounter = EncounterEntities;
+            if (encounter?.TryUseLimitBreak(player, request) == true)
+                return;
+            if (request.Kind != ActionRequestKind.Normal)
+                return;
+
+            if (ReferenceEquals(PluginHost.Instance, _host) && GeneralActions.TryGetResult(request))
+                return;
+            if (request.ActionType != ActionType.Action)
+                return;
+            if (player.Level == 100 && TryGetJobResult(player.Job, request))
+                return;
+
+            if (request.ActionId == SimEntityManager.GetInvulnerability(player.Job).Action &&
+                !_entities.UseInvulnerability(_entities.Attach(player), request))
+                player.RejectActionResult(request, 582);
+        }
+
+        private static bool RejectLockedAction(Character player, ActionRequest request)
+        {
+            if (!player.AreActionsLocked())
+                return false;
+
+            player.RejectActionResult(request, 572);
+            return true;
+        }
+
+        private bool TryGetJobResult(Job job, ActionRequest request)
+        {
+            switch (job)
             {
-                if (!Enabled || !isLimitBreak && Cooldown(action).Remaining > 0)
-                    return;
-                var player = _host.EntityProvider.GetMyself();
-                if (player == null || !player.IsAlive)
-                    return;
-                if (Volatile.Read(ref _encounterEntities)?.TryUseLimitBreak(player, isLimitBreak ? 0 : action) == true || isLimitBreak)
-                    return;
-                if (_recasts == null)
-                    _recasts = new SimActionRecasts(player);
-                if (!_recasts.Supports(action))
-                    return;
-                if (SimEntityManager.IsEnmityAction(action))
-                {
-                    var handler = Volatile.Read(ref _enmityAction);
-                    var accepted = handler != null ? handler(action) :
-                        Volatile.Read(ref _encounterEntities)?.TryUseEnmityAction(player, action) == true;
-                    if (!accepted)
-                        return;
-                }
-                else if (!_entities.UseLocalAction(_entities.Attach(player), action))
-                    return;
-                _cooldowns[CooldownKey(action)] = new SimActionCooldown(_recasts.Duration(action));
-                _recasts.Start(action);
-            }
-            catch (Exception error)
-            {
-                _host.LogWarning("执行模拟技能失败：" + error.Message);
+                case Job.PLD:
+                    return ReferenceEquals(PluginHost.Instance, _host) && PaladinActions.TryGetResult(request);
+                default:
+                    return false;
             }
         }
 
@@ -300,14 +272,8 @@ namespace Simulant.Core
                 try
                 {
                     _scheduler?.Dispose();
-                    try
-                    {
-                        _recasts?.Dispose();
-                    }
-                    catch (Exception error)
-                    {
-                        _host.LogWarning("恢复模拟前技能冷却失败：" + error.Message);
-                    }
+                    if (ReferenceEquals(PluginHost.Instance, _host))
+                        PaladinActions.CancelSpellComboExpiry();
                     _entities?.Clear();
                 }
                 finally
@@ -315,11 +281,6 @@ namespace Simulant.Core
                     _scheduler = null;
                     _entities = null;
                     Volatile.Write(ref _encounterEntities, null);
-                    _input = null;
-                    _recasts = null;
-                    SetEnmityActionHandler(null);
-                    _polling = false;
-                    _cooldowns.Clear();
                     ClearCastTracking();
                 }
             }

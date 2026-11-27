@@ -184,11 +184,11 @@ namespace Simulant.Content.U7a.Presets
                 timeline.At(7.117, () => _fight.CastBoss(opening, 6.6f), "光与暗的孤翼读条");
                 timeline.At(8.300, () => ShowTower(1), "第二塔出现");
                 timeline.At(11.751, () => ShowTower(2), "第三塔出现");
-                timeline.At(11.4, () => UseTankAction(TankForWing(1), SimLocalAction.Provoke), "另一名坦克挑衅");
+                timeline.At(11.4, () => UseTankAction(TankForWing(1), provoke: true), "另一名坦克挑衅");
                 timeline.At(12.5, () =>
                 {
                     if (_fight.MainTank == TankForWing(1))
-                        UseTankAction(_initialTank, SimLocalAction.Shirk);
+                        UseTankAction(_initialTank, provoke: false);
                 }, "原一仇退避");
                 timeline.At(14.001, () => _fight.BossEffect(opening, 0.2f), "光与暗的孤翼读条结算");
                 AddTowerResolution(timeline, 0, 14.249, firstTowerHit);
@@ -419,10 +419,10 @@ namespace Simulant.Content.U7a.Presets
             private void MoveAll(Func<int, SimPosition> positions, double arrive, double hold, bool urgent = false)
                 => _fight.MoveAll(positions, _offset + arrive, _offset + hold, urgent);
 
-            private void UseTankAction(int slot, SimLocalAction action)
+            private void UseTankAction(int slot, bool provoke)
             {
                 if (slot != _fight.Self)
-                    _fight.EntityManager.UsePartyEnmityAction(_fight.Party[slot], action, action == SimLocalAction.Provoke ? _fight.Pandora : _fight.Party[1 - slot]);
+                    _fight.EntityManager.UsePartyEnmityAction(_fight.Party[slot], provoke, provoke ? _fight.Pandora : _fight.Party[1 - slot]);
             }
         }
     }

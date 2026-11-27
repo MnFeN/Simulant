@@ -248,8 +248,11 @@ namespace Simulant.Core.Firewall
             if (opcode == cancelCastOpcode && length == ExecuteCommandLength && BitConverter.ToUInt32(data, body) == CancelCastCommand)
                 return new ActionRequest(opcode, length);
 
-            // 从 UseActionLocation 核对动作编号、类型、递增的 LastUsedActionSequence 和两项压缩朝向，
-            // 再逐项追踪构包函数写入正文的位置。正文 +4 的用途仍未完整确认，保留原始字节。
+            // 国服 2026.11.03.0000.0000：
+            // 从 ActionManager.UseActionLocation 跟踪 GetAdjustedCastTime 的 outOptProc，
+            // 三种构包函数都把这个字节复制到正文 +4。
+            // 骑士的安魂祈祷与神圣魔法效果提高分支会先写入对应枚举值，再返回 0 毫秒。
+            // 正文 +5 起是动作类型、请求序号和两项压缩朝向。
             var action = BitConverter.ToUInt32(data, body);
             var type = (ActionType)data[body + 5];
             var sequence = BitConverter.ToUInt16(data, body + 6);

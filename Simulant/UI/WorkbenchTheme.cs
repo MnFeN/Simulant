@@ -45,10 +45,6 @@ namespace Simulant.UI
             internal static readonly Color Button = Color.FromArgb(40, 44, 51);
             internal static readonly Color ButtonHover = Color.FromArgb(58, 62, 70);
             internal static readonly Color ButtonPressed = Color.FromArgb(69, 74, 82);
-            internal static readonly Color DisabledSkillShade = Color.FromArgb(155, 22, 25, 31);
-            internal static readonly Color SkillBorder = Color.FromArgb(95, 180, 185, 195);
-            internal static readonly Color CooldownShade = Color.FromArgb(185, 12, 17, 27);
-            internal static readonly Color CooldownEdge = Color.FromArgb(210, 200, 228, 255);
 
             internal static Color DisabledAction(Color accent)
                 => Color.FromArgb(accent.R / 2, accent.G / 2, accent.B / 2);

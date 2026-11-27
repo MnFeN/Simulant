@@ -1,7 +1,9 @@
+using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Core.Party;
 using Simulant.Game;
 using Simulant.Game.Data;
+using Simulant.Game.FFCS.Client.Game;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Linq;
@@ -38,21 +40,6 @@ namespace Simulant.Simulation.Runtime
 
         internal static bool IsTankJob(Job job)
             => GameDataService.Instance.GetSheet<ClassJob>().TryGetRow((uint)job, out var row) && row.Role == 1;
-
-        internal (uint Action, bool Ready) LimitBreakButton
-        {
-            get
-            {
-                lock (_gate)
-                {
-                    if (_limitBreakActions == null)
-                        return default;
-                    var level = (int)(_limitBreakUnits / LimitBreakBarUnits);
-                    var action = _limitBreakActions[level == 0 ? (int)_limitBreakBars - 1 : level - 1];
-                    return (action, action != 0 && level != 0 && !_limitBreakPending && _acceptingEntities && _scheduler.IsRunning);
-                }
-            }
-        }
 
         internal bool TankLimitBreakActive
         {
@@ -138,10 +125,42 @@ namespace Simulant.Simulation.Runtime
             => _limitBreakPlayer.ActorControlSelf(ActorControlCategory.LimitBreakGauge,
                 _limitBreakBars, _limitBreakUnits, LimitBreakBarUnits, presentation);
 
-        internal bool TryUseLimitBreak(Character player, uint action)
+        internal bool MayCastLimitBreak(ActionRequest request)
         {
             lock (_gate)
-                return _limitBreakPlayer?.Entity.Identity == player.Identity && QueueLimitBreak(_limitBreakPlayer, action, 1);
+            {
+                var action = GetRequestedLimitBreak(request);
+                return action != 0 &&
+                    GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(action, out var row) && row.Cast100ms != 0;
+            }
+        }
+
+        private uint GetRequestedLimitBreak(ActionRequest request)
+        {
+            if (_limitBreakActions == null)
+                return 0;
+
+            // 通用动作 3 根据当前量表选择技能，选点或普通技能路径也可能直接带对应级别的技能编号。
+            if (request.ActionType == ActionType.GeneralAction && request.ActionId == 3)
+            {
+                var level = (int)(_limitBreakUnits / LimitBreakBarUnits);
+                return level > 0 ? _limitBreakActions[level - 1] : 0;
+            }
+            return request.ActionType == ActionType.Action && _limitBreakActions.Contains(request.ActionId) ? request.ActionId : 0;
+        }
+
+        internal bool TryUseLimitBreak(Character player, ActionRequest request)
+        {
+            lock (_gate)
+            {
+                var action = GetRequestedLimitBreak(request);
+                if (action == 0)
+                    return false;
+
+                if (_limitBreakPlayer?.Entity.Identity != player.Identity || !QueueLimitBreak(_limitBreakPlayer, action, 1, request))
+                    player.RejectActionResult(request, 582);
+                return true;
+            }
         }
 
         internal bool UsePartyLimitBreak(SimActor actor, int requiredLevel)
@@ -150,7 +169,7 @@ namespace Simulant.Simulation.Runtime
                 return QueueLimitBreak(actor, 0, requiredLevel);
         }
 
-        private bool QueueLimitBreak(SimActor source, uint requestedAction, int requiredLevel)
+        private bool QueueLimitBreak(SimActor source, uint requestedAction, int requiredLevel, ActionRequest request = null)
         {
             var level = (int)(_limitBreakUnits / LimitBreakBarUnits);
             if (!_acceptingEntities || !_scheduler.IsRunning || _limitBreakPending || level < requiredLevel ||
@@ -160,7 +179,8 @@ namespace Simulant.Simulation.Runtime
             var data = GameDataService.Instance;
             var job = data.GetSheet<ClassJob>().GetRow((uint)source.Job);
             var id = LimitBreakActions(job)[level - 1];
-            if (id == 0 || requestedAction != 0 && requestedAction != id || ActionsLocked(source) ||
+            if (id == 0 || requestedAction != 0 && requestedAction != id ||
+                request == null && source.Entity.AreActionsLocked() ||
                 source == _limitBreakPlayer && _casts.HasPendingAction(source))
                 return false;
 
@@ -170,20 +190,29 @@ namespace Simulant.Simulation.Runtime
             if (hostile)
             {
                 var enemies = _partyEnmity.Keys.Where(actor => actor.IsActive && actor.Entity.HP != 0 && actor.Entity.IsTargetable).ToArray();
-                var softTarget = SimPartyService.GetSelectedTarget(preferSoftTarget: true);
-                var hardTarget = SimPartyService.GetSelectedTarget();
-                target = enemies.FirstOrDefault(actor => actor.Address == softTarget) ??
-                    enemies.FirstOrDefault(actor => actor.Address == hardTarget) ?? enemies.FirstOrDefault();
+                if (request != null)
+                {
+                    target = enemies.FirstOrDefault(actor => request.TargetId == actor.Id);
+                    if (target == null && action.TargetArea && request.GroundPosition.HasValue)
+                        target = enemies.FirstOrDefault();
+                }
+                else
+                {
+                    var softTarget = SimPartyService.GetSelectedTarget(preferSoftTarget: true);
+                    var hardTarget = SimPartyService.GetSelectedTarget();
+                    target = enemies.FirstOrDefault(actor => actor.Address == softTarget) ??
+                        enemies.FirstOrDefault(actor => actor.Address == hardTarget) ?? enemies.FirstOrDefault();
+                }
                 if (target == null)
                     return false;
             }
 
-            _scheduler.ScheduleAfter(0, () => BeginLimitBreak(source, target, action, level, hostile), "开始模拟极限技");
+            _scheduler.ScheduleAfter(0, () => BeginLimitBreak(source, target, action, level, hostile, request), "开始模拟极限技");
             _limitBreakPending = true;
             return true;
         }
 
-        private void BeginLimitBreak(SimActor source, SimActor target, ActionRow action, int level, bool hostile)
+        private void BeginLimitBreak(SimActor source, SimActor target, ActionRow action, int level, bool hostile, ActionRequest request)
         {
             lock (_gate)
             {
@@ -194,12 +223,19 @@ namespace Simulant.Simulation.Runtime
                     return;
                 }
 
-                var point = target.Pos3D;
-                var facing = hostile ? (float)Math.Atan2(point.X - source.Pos.X, point.Y - source.Pos.Y) : source.Heading;
-                var duration = SimCastController.CastDuration(action.Cast100ms);
-                if (duration <= 0)
+                if (request != null && source.Entity.AreActionsLocked())
                 {
-                    FinishLimitBreak(source, target, action, level, point, facing, hostile);
+                    _limitBreakPending = false;
+                    source.Entity.RejectActionResult(request, 572);
+                    return;
+                }
+
+                var point = request?.GroundPosition ?? target.Pos3D;
+                var facing = request?.Facing ?? (hostile ? (float)Math.Atan2(point.X - source.Pos.X, point.Y - source.Pos.Y) : source.Heading);
+                var duration = SimCastController.CastDuration(action.Cast100ms);
+                if (request != null || duration <= 0)
+                {
+                    FinishLimitBreak(source, target, action, level, point, facing, hostile, request);
                     return;
                 }
 
@@ -213,7 +249,8 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        private void FinishLimitBreak(SimActor source, SimActor target, ActionRow action, int level, Vector3 point, float heading, bool hostile)
+        private void FinishLimitBreak(SimActor source, SimActor target, ActionRow action, int level, Vector3 point, float heading,
+            bool hostile, ActionRequest request = null)
         {
             lock (_gate)
             {
@@ -228,7 +265,14 @@ namespace Simulant.Simulation.Runtime
                 var tank = IsTankJob(source.Job);
                 var animationLock = tank ? 3.86f : 0.6f;
                 var hits = hostile ? new[] { target } : new[] { source }.Concat(Party.Where(member => member != source)).ToArray();
-                if (action.TargetArea)
+                if (request != null)
+                {
+                    var animationTarget = action.TargetArea ? null : target.Entity;
+                    source.Entity.ReceiveActionResult(request, action.RowId, animationTarget, point, animationLock);
+                    CombatLog?.Ability(source.Entity, action.RowId, animationTarget, action.TargetArea ? (Vector3?)point : null,
+                        heading, animationLock, hits, hostile && !action.TargetArea ? 1 : 8);
+                }
+                else if (action.TargetArea)
                     source.ExecuteActionEffectAt(action.RowId, point, heading, animationLock, hits, 8);
                 else
                     source.ExecuteActionEffect(action.RowId, target, heading, hits, hostile ? 1 : 8, animationLock);

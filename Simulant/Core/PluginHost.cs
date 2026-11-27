@@ -24,7 +24,7 @@ namespace Simulant.Core
 {
     public sealed class PluginHost
     {
-        public static PluginHost Instance { get; set; } // 仅为了调试方便
+        public static PluginHost Instance { get; set; } // 由 PluginMain 在启用和卸载时维护。
 
         public ExternalProcessMemory Memory => GameInterop.Connection.Memory;
 
@@ -468,7 +468,6 @@ namespace Simulant.Core
             DebugTest = new Test(this);
             Commands = new SimCommandListener(LogError);
             PlayerActions = new SimActionService(this);
-            Commands.Received += PlayerActions.Receive;
             Commands.Received += _ui.ReceiveSimulationCommand;
 
             _statusLabel.Text = "仿生石已启动，等待 FFXIV 解析插件绑定游戏。";

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading;
+using ActionEffect = Simulant.Game.FFCS.Client.Game.Character.ActionEffectHandler.Effect;
 using ActionRow = Lumina.Excel.Sheets.Action;
 using StatusRow = Lumina.Excel.Sheets.Status;
 
@@ -61,7 +62,8 @@ namespace Simulant.Simulation.Runtime
 
         /// <summary>一次结算共用一个技能序号。15/16 依网络包的目标容量决定，实际命中人数单独记录。</summary>
         internal void Ability(Character source, uint actionId, Character animationTarget, Vector3? effectOrigin,
-            float? effectHeading, float animationLock, IEnumerable<SimActor> hitTargets, int? packetTargetCapacity)
+            float? effectHeading, float animationLock, IEnumerable<SimActor> hitTargets, int? packetTargetCapacity,
+            ActionEffect[] effects = null)
         {
             Record(time =>
             {
@@ -77,7 +79,7 @@ namespace Simulant.Simulation.Runtime
                 // 解析插件对无目标结算始终写 15 行。手写结算没有包容量时沿用原来的行号规则。
                 var lineType = count != 0 && (packetTargetCapacity ?? count) > 1 ? 22 : 21;
                 var sourceFields = Vitals(source);
-                const string emptyEffects = "0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0";
+                var effectFields = FormatAbilityEffects(effects);
                 var sourceAndSkill = $"{Actor(source.Id, source)}|{Skill(actionId, action)}";
                 var area = effectOrigin.HasValue || count > 1 || (count == 0 && (hitTargets != null || action?.EffectRange > 0));
                 var origin = effectOrigin ?? animationTarget?.Pos3D ?? source.Pos3D;
@@ -86,7 +88,7 @@ namespace Simulant.Simulation.Runtime
                 for (var index = 0; index < rows.Length; index++)
                 {
                     var target = count == 0 ? null : actualHits[index];
-                    rows[index] = $"{sourceAndSkill}|{Actor(target?.Id ?? NoTarget, target)}|{emptyEffects}|{Vitals(target)}|{sourceFields}|{sequence:X8}|{index}|{count}|00||01|{actionId:X2}|{actionId:X2}|{animationLock:F3}|{rawRotation:X4}";
+                    rows[index] = $"{sourceAndSkill}|{Actor(target?.Id ?? NoTarget, target)}|{effectFields}|{Vitals(target)}|{sourceFields}|{sequence:X8}|{index}|{count}|00||01|{actionId:X2}|{actionId:X2}|{animationLock:F3}|{rawRotation:X4}";
                 }
 
                 var targetId = animationTarget?.Id ?? NoTarget;
@@ -98,6 +100,25 @@ namespace Simulant.Simulation.Runtime
 
                 Write(264, time, $"{source.Id:X8}|{actionId:X4}|{sequence:X8}|{extra}|{targetId:X8}");
             });
+        }
+
+        private static string FormatAbilityEffects(ActionEffect[] effects)
+        {
+            if (effects == null || effects.Length == 0)
+                return "0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0";
+
+            // ACT 将每个原生效果槽拆成两个小端 uint，并以十六进制写入。
+            var fields = new string[16];
+            for (var slot = 0; slot < fields.Length / 2; slot++)
+            {
+                var effect = slot < effects.Length ? effects[slot] : default;
+                var flags = effect.Type | (uint)effect.Param0 << 8 | (uint)effect.Param1 << 16 | (uint)effect.Param2 << 24;
+                var value = effect.Param3 | (uint)effect.Param4 << 8 | (uint)effect.Value << 16;
+                fields[slot * 2] = flags.ToString("X", CultureInfo.InvariantCulture);
+                fields[slot * 2 + 1] = value.ToString("X", CultureInfo.InvariantCulture);
+            }
+
+            return string.Join("|", fields);
         }
 
         internal void Cancel(Character actor, uint actionId)
