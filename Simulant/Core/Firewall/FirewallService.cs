@@ -19,6 +19,10 @@ namespace Simulant.Core.Firewall
             internal IntPtr Target;
             internal byte[] Original;
             internal IntPtr Cave;
+            internal bool CapturesActionRequests;
+            internal ushort CancelCastOpcode;
+            internal uint ActionRequestsRead;
+            internal uint ActionRequestsDropped;
             internal bool NeedsRestore;
             internal bool Enabled;
             internal Action RestoreNetworkTimeout;
@@ -299,16 +303,15 @@ namespace Simulant.Core.Firewall
 
             LogSafely(() => _host.LogVerbose($"OnSendPacketFuncPtr at {(ulong)target:X}"));
 
-            // 函数开头前 3 条指令：
-            // 48 89 5C 24 08
-            // 48 89 74 24 10
-            // 4C 89 64 24 18
+            // 从 ZoneClient.SendPacket 沿转发调用进入 AddressStore.OnSendPacketFuncPtr 所定位的函数。
+            // 入口签名的前三条 mov 将 rbx、rsi、r12 保存到调用者预留的栈槽，合计 15 字节。
+            // 这三条完整指令只用 rsp 寻址，原样搬入放行分支后能在同一个栈帧中执行。
             var state = CaptureHook(memory, processHandle, target, SendHookLength);
             _send = state;
 
-            // Allocate 代码洞
+            // 同一次远程分配保存入口跳板、请求采集代码和队列，随本次发包 Hook 一起回收。
             EnsureCapturedProcess(state);
-            state.Cave = state.Memory.AllocateMemory(0x100);
+            state.Cave = state.Memory.AllocateMemory(SendCaveSize);
 
             if (state.Cave == IntPtr.Zero)
                 throw new InvalidOperationException("发包 Hook 开启失败，无法分配代码洞。");
@@ -324,19 +327,9 @@ namespace Simulant.Core.Firewall
             var passOpcode = state.Memory.Read<ushort>(heartbeatAddress + 4);
             var returnAddress = (ulong)target + SendHookLength;
 
-            // 代码洞内容：
-            // 判断是否为心跳包，是则放行，否则直接返回（跳转至 block 处）：
-            // cmp word ptr [rdx], passOpcode
-            // jne block
-            //
-            // 放行路径：执行被覆盖的指令，跳转回补丁后：
-            // <原始指令>
-            // jmp qword ptr [rip+0]
-            // <8 字节回跳地址>
-            //
-            // block 路径: return 0
-            // xor eax, eax
-            // ret
+            // 从 ZoneClient.SendPacket 的转发参数确认 rdx 是发送描述缓冲区，开头是 opcode。
+            // 心跳分支保留所有参数和栈指针，补执行入口指令后继续原函数。
+            // 其余包跳到拦截分支，其中命中技能请求签名和长度的包会先复制到队列。
             var cave = new List<byte>();
 
             // cmp word ptr [rdx], imm16
@@ -346,48 +339,30 @@ namespace Simulant.Core.Firewall
                 0x66, 0x81, 0x3A
             }.Concat(BitConverter.GetBytes(passOpcode)));
 
-            // jne block
-            var jnePos = cave.Count;
-            cave.AddRange(new byte[]
-            {
-                0x75, 0x00
-            });
+            var blocked = AppendShortJump(cave, 0x75); // jne 拦截分支
 
             // 补执行被入口覆盖掉的原始指令
             cave.AddRange(state.Original);
 
-            // jmp qword ptr [rip+0]
-            // FF 25 00 00 00 00
-            // <8 字节回跳地址>
+            // FF 25 00 00 00 00 是 jmp qword ptr [rip+0]。紧跟指令的 8 字节存放完整回跳地址，
+            // 回到原函数被覆盖的三条指令之后。间接跳转无需代码洞位于 rel32 可达范围内。
             cave.AddRange(new byte[]
             {
                 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00
             });
             cave.AddRange(BitConverter.GetBytes(returnAddress));
 
-            // block:
-            var blockPos = cave.Count;
-            var blockOffset = blockPos - (jnePos + 2);
-            // xor eax, eax
-            // ret
-            cave.AddRange(new byte[]
-            {
-                0x31, 0xC0
-            });
-            cave.AddRange(new byte[]
-            {
-                0xC3
-            });
+            PatchShortJump(cave, blocked);
+            AppendActionRequestCapture(cave, state, passOpcode);
 
-            // 回填 jne 的相对偏移
-            cave[jnePos + 1] = unchecked((byte)blockOffset);
+            // 生成的指令只能占用队列之前的区域，队列头和槽位留给运行时读写。
+            if (cave.Count > ActionRequestQueueOffset)
+                throw new InvalidOperationException("发包代码超过预留空间。");
 
             WriteExact(state, state.Cave, cave.ToArray());
 
-            // 入口补丁：
-            // FF 25 00 00 00 00
-            // <8字节 cave 地址>
-            // 90
+            // 原入口同样用 jmp qword ptr [rip+0] 读取紧随指令的代码洞地址，最后补一个 nop，
+            // 使补丁正好覆盖三条完整的入口指令。恢复时写回 CaptureHook 保存的原始字节。
             var patch = new List<byte>();
             patch.AddRange(new byte[]
             {

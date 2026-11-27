@@ -41,6 +41,7 @@ namespace Simulant.Core
         private bool _subscriptionsStopped;
         private bool _disposing;
         private volatile bool _disposeCompleted;
+        private string _actionRequestTraceError;
 
         internal PluginLog PluginLog = new PluginLog();
         internal Configuration Configuration { get; private set; } = new Configuration();
@@ -130,6 +131,40 @@ namespace Simulant.Core
 
             if (failure != null)
                 LogWarning("更新摄影棚失败：" + failure);
+        }
+
+        internal void PollActionRequests()
+        {
+            if (!Monitor.TryEnter(_initLock))
+                return;
+
+            try
+            {
+                if (!PluginReady || Disposed || IsSwitchingTerritory)
+                {
+                    PlayerActions.ClearCastTracking();
+                    return;
+                }
+
+                var requests = FirewallService.DrainActionRequests(out var dropped);
+                PlayerActions.HandleActionRequests(requests, dropped);
+
+                if (dropped != 0)
+                    LogVerbose($"[技能请求] 采集队列丢弃 {dropped} 条。");
+
+                _actionRequestTraceError = null;
+            }
+            catch (Exception error)
+            {
+                if (_actionRequestTraceError != error.Message)
+                    LogWarning("处理技能请求失败：" + error.Message);
+
+                _actionRequestTraceError = error.Message;
+            }
+            finally
+            {
+                Monitor.Exit(_initLock);
+            }
         }
 
         internal void EnsureFirewallAllowed()

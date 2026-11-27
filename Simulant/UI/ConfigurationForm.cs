@@ -87,6 +87,8 @@ namespace Simulant.UI
                     CreateGroundTeleportKeys(), "开启防火墙后，按键传送到鼠标指向的地面。"),
                 new DecimalOption(nameof(Configuration.SimLatency), "模拟判定延迟（秒）", _draft.SimLatency, 1, 0, 2,
                     "判定采用自身此前的位置和防击退状态，模拟服务器提前判定；不影响假队员、演出和报错时间。设为 0 关闭，下次模拟生效。\n此延迟与网络延迟不同，建议不低于 0.30 s 以反映真实副本情况。"),
+                new DecimalOption(nameof(Configuration.SlidecastWindow), "本机滑步窗口（秒）", _draft.SlidecastWindow,
+                    max: 1, decimalPlaces: 2, hint: "防火墙开启时，读条剩余时间在此范围内的走动可以保留读条。设为 0 时，读条期间的走动都会打断。"),
                 new CheckBoxOption(nameof(Configuration.GenerateActLogs), "生成 ACT 日志（实验性）", _draft.GenerateActLogs,
                     "开启后可生成对应的 ACT 及网络日志，供 Triggernometry 等插件使用。"),
                 developerMode

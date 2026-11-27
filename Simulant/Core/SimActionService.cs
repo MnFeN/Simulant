@@ -1,7 +1,10 @@
+using Simulant.Core.Entity;
+using Simulant.Game;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Concurrent;
+using System.Numerics;
 using System.Threading;
 
 namespace Simulant.Core
@@ -17,6 +20,8 @@ namespace Simulant.Core
         private SimHotbarInput _input;
         private SimActionRecasts _recasts;
         private bool _polling;
+        private ActionRequest _lastActionRequest;
+        private (EntityIdentity Player, uint Sequence, Vector2 Position)? _castOrigin;
         private Func<uint, bool> _enmityAction;
         private readonly ConcurrentDictionary<uint, SimActionCooldown> _cooldowns = new ConcurrentDictionary<uint, SimActionCooldown>();
 
@@ -159,6 +164,85 @@ namespace Simulant.Core
             RequestAction(action);
         }
 
+        /// <summary>按发送顺序处理本机技能请求，并检查本机读条期间的位移。</summary>
+        internal void HandleActionRequests(ActionRequest[] requests, uint dropped)
+        {
+            ushort cancelSequence = 0;
+            foreach (var request in requests)
+            {
+                _host.LogVerbose(request.ToString());
+                if (request.Kind == ActionRequestKind.CancelCast)
+                    cancelSequence = _lastActionRequest?.SourceSequence ?? 0;
+                else
+                    _lastActionRequest = request;
+            }
+
+            // 主动取消包没有请求序号。丢包时无法确定它前面的技能请求，跳过这批主动取消。
+            if (dropped != 0)
+            {
+                _lastActionRequest = null;
+                cancelSequence = 0;
+            }
+
+            var player = Enabled ? _host.EntityProvider.GetMyself() : null;
+            if (player == null)
+            {
+                ClearCastTracking();
+                return;
+            }
+
+            var cast = player.Native.CastInfo;
+            var sequence = cast.SourceSequence.Get();
+            var actionId = cast.ActionId.Get();
+            var actionType = cast.ActionType.Get();
+            var requestForCast = _lastActionRequest;
+            if (!cast.IsCasting || sequence == 0 || (ushort)cast.ResponseSourceSequence.Get() == sequence ||
+                requestForCast == null || requestForCast.SourceSequence != sequence ||
+                requestForCast.ActionId != actionId || (byte)requestForCast.ActionType != actionType)
+            {
+                _castOrigin = null;
+                return;
+            }
+
+            var position = player.Pos;
+            var origin = _castOrigin;
+            if (!origin.HasValue || origin.Value.Player != player.Identity || origin.Value.Sequence != sequence)
+            {
+                origin = (player.Identity, sequence, position);
+                _castOrigin = origin;
+            }
+
+            var byRequest = cancelSequence == sequence;
+            var slidecastWindow = _host.Configuration.SlidecastWindow;
+            var remaining = cast.TotalCastTime.Get() - cast.CurrentCastTime.Get();
+            // 用施法期间的水平位置变化判定，转向和亚厘米的坐标抖动不计入。
+            var byMovement = remaining > slidecastWindow &&
+                Vector2.DistanceSquared(position, origin.Value.Position) > 0.0001f;
+            if ((!byRequest && !byMovement) || !Enabled)
+                return;
+
+            var cancelled = false;
+            GameInterop.Connection?.RunInFrame(() =>
+            {
+                // 同一帧核对并取消，避免期间开始新读条、确认技能或走进滑步窗口。
+                if (!cast.IsCasting || cast.SourceSequence.Get() != sequence || cast.ActionId.Get() != actionId ||
+                    (ushort)cast.ResponseSourceSequence.Get() == sequence ||
+                    (!byRequest && cast.TotalCastTime.Get() - cast.CurrentCastTime.Get() <= slidecastWindow))
+                    return;
+
+                player.ActorControl(ActorControlCategory.CancelCast, a2: actionType, a3: actionId, a4: 1);
+                cancelled = true;
+            });
+            if (cancelled)
+                _host.LogVerbose($"[咏唱取消] 技能={actionId} 序号={sequence} 原因={(byRequest ? "主动取消" : "移动")}");
+        }
+
+        internal void ClearCastTracking()
+        {
+            _lastActionRequest = null;
+            _castOrigin = null;
+        }
+
         internal void RequestAction(uint action)
         {
             if (action == 0)
@@ -236,6 +320,7 @@ namespace Simulant.Core
                     SetEnmityActionHandler(null);
                     _polling = false;
                     _cooldowns.Clear();
+                    ClearCastTracking();
                 }
             }
         }

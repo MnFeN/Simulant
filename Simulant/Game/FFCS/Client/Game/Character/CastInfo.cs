@@ -4,6 +4,7 @@ using System.Numerics;
 
 namespace Simulant.Game.FFCS.Client.Game.Character
 {
+    // https://github.com/aers/FFXIVClientStructs/blob/80cb4a7b7e11a6702e2eb8839afd301a918c638e/FFXIVClientStructs/FFXIV/Client/Game/Character/CastInfo.cs
     public struct CastInfo : IMemoryObject
     {
         public IntPtr Ptr { get; set; }
@@ -22,14 +23,14 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         public MemoryField<float> CurrentCastTime => Ptr.Field<float>(0x34);
         public MemoryField<float> BaseCastTime => Ptr.Field<float>(0x38);
         public MemoryField<float> TotalCastTime => Ptr.Field<float>(0x3C);
-        /* 模拟器不需要 Response 相关字段
-        
         // fields below (Response*) are set when ActionEffect is received - at this point cast can't be cancelled - this is the start of the slidecast window
+        internal MemoryField<uint> ResponseSourceSequence => Ptr.Field<uint>(0x50);
+
+        /* 尚未封装的响应字段
         [FieldOffset(0x40)] public uint ResponseSpellId;
         [FieldOffset(0x44)] public ActionType ResponseActionType;
         [FieldOffset(0x48)] public uint ResponseActionId;
         [FieldOffset(0x4C)] public uint ResponseGlobalSequence;
-        [FieldOffset(0x50)] public uint ResponseSourceSequence;
         [FieldOffset(0x58), FixedSizeArray] internal FixedSizeArray32<GameObjectId> _responseTargetIds;
         [FieldOffset(0x158)] public byte ResponseTargetCount;
         [FieldOffset(0x159)] public byte ResponseFlags; // see ActionEffectHandler.Header.Flags

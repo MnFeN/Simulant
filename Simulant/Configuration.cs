@@ -26,6 +26,7 @@ namespace Simulant
         public bool ShouldSerializeSelectedTerritoryId() => SelectedTerritoryId > 0;
         public string SelectedPhaseKey { get; set; }
         public double SimLatency { get; set; } = 0.35;
+        public double SlidecastWindow { get; set; } = 0.50;
         public bool GenerateActLogs { get; set; }
         public bool DeveloperMode { get; set; }
         public string FfxivPath { get; set; } = string.Empty;
@@ -48,6 +49,9 @@ namespace Simulant
             if (double.IsNaN(SimLatency) || SimLatency < 0 || SimLatency > 1)
                 throw new InvalidOperationException("模拟延迟必须在 0 到 1 秒之间。");
 
+            if (double.IsNaN(SlidecastWindow) || SlidecastWindow < 0 || SlidecastWindow > 1)
+                throw new InvalidOperationException("滑步窗口必须在 0 到 1 秒之间。");
+
             return new Configuration
             {
                 SimulatedParty = SimulatedParty.Copy(),
@@ -58,6 +62,7 @@ namespace Simulant
                 SelectedTerritoryId = SelectedTerritoryId,
                 SelectedPhaseKey = SelectedPhaseKey,
                 SimLatency = SimLatency,
+                SlidecastWindow = SlidecastWindow,
                 GenerateActLogs = GenerateActLogs,
                 DeveloperMode = DeveloperMode,
                 FfxivPath = FfxivPath?.Trim() ?? string.Empty,
