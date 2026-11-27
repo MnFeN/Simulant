@@ -100,11 +100,12 @@ namespace Simulant.Content.U7a.Presets
                 .Take(count).Select(p => p.Slot).ToArray();
     }
 
-    internal abstract class U7aP2ExerciseLogic : U7aEarlyExerciseLogic
+    internal abstract partial class U7aP2ExerciseLogic : U7aEarlyExerciseLogic
     {
+        private const double IcePuddleActivationDelay = 3;
         protected static readonly int[] NearGroup = { 0, 1, 4, 5 };
         protected static readonly int[] FarGroup = { 2, 3, 6, 7 };
-        private static readonly int[] Partners = { 4, 5, 6, 7, 0, 1, 2, 3 };
+        protected static readonly int[] Partners = { 4, 5, 6, 7, 0, 1, 2, 3 };
         private readonly Dictionary<int, (Vector2 Center, float Radius, double ActiveAt, HashSet<int> Hit)> _icePuddles
             = new Dictionary<int, (Vector2, float, double, HashSet<int>)>();
         private bool _watchingIcePuddles;
@@ -131,6 +132,15 @@ namespace Simulant.Content.U7a.Presets
         {
             Oracle.ActorControl(ActorControlCategory.SetModelState, 4);
             SetTankTarget(Oracle);
+        }
+
+        protected static void StartIceBossJump(SimActor actor, Vector2 destination, float heading)
+            => actor.ExecuteActionEffectAt(0x9CEF, new Vector3(destination, -0.0153f), heading, 1.1f, packetTargetCapacity: 8);
+
+        protected static void FinishIceBossJump(SimActor actor, Vector2 destination, float heading)
+        {
+            actor.ActorControl(ActorControlCategory.FinishTimelineMoveAtServerPosition);
+            actor.ActorMove(new Vector3(destination, 0), heading, 90);
         }
 
         protected void Kick(SimActor actor, uint action, ActionArea area)
@@ -167,7 +177,7 @@ namespace Simulant.Content.U7a.Presets
             => Helper(helper, position).ExecuteActionEffectAt(action, new Vector3(position, -0.0153f), 0, duration, hit, 8);
 
         protected void AddBanish(SimTimeline timeline, bool spread, double castAt, double effectAt, double circlesAt,
-            double? moveAt = null, int[] partners = null)
+            Action<double, double> move, double? moveAt = null, int[] partners = null)
         {
             partners = partners ?? Partners;
             var action = spread ? 0x9D1Du : 0x9D1Cu;
@@ -180,9 +190,7 @@ namespace Simulant.Content.U7a.Presets
                     Oracle.ActorControl(ActorControlCategory.TargetVFX, vfx, Oracle.Id, Oracle.Id, 4700);
                 Voice(Oracle, 8205525);
             }, spread ? "放逐：分散读条" : "放逐：双人分摊读条");
-            timeline.At(moveAt ?? castAt, () =>
-                MoveAll(slot => Spot(Center + BanishOffset(spread || slot < 4 ? slot : partners[slot], spread), 0.25f),
-                    circlesAt - 0.3, circlesAt + 0.2, urgent: true), "移动到放逐站位");
+            timeline.At(moveAt ?? castAt, () => move(circlesAt - 0.3, circlesAt + 0.2), "移动到放逐站位");
             timeline.At(effectAt, () => Oracle.ExecuteActionEffect(action, Oracle, null, null, 1, 3.1f), "放逐读条结算");
             timeline.At(circlesAt, () =>
             {
@@ -206,9 +214,7 @@ namespace Simulant.Content.U7a.Presets
 
         internal static Vector2 BanishOffset(int slot, bool spread)
         {
-            // 北 MT，东北 D4，东 ST，东南 D2，南 H2，西南 D1，西 H1，西北 D3。
-            var clock = new[] { 0, 2, 6, 4, 5, 3, 7, 1 };
-            var direction = spread ? clock[slot] : 2 * (slot % 4);
+            var direction = spread ? (8 - (int)U7aPartyPositions.EightWayDirection(slot)) % 8 : 2 * (slot % 4);
             return Direction(Math.PI - direction * Math.PI / 4) * (spread ? 9.5f : 8);
         }
 
@@ -227,11 +233,11 @@ namespace Simulant.Content.U7a.Presets
                     Pos = new Vector3(position, 0),
                     SharedGroupState = (uint)(0x500003 + index * 0x10000)
                 });
-                _icePuddles.Add(index, (position, radius, Now + 0.16, new HashSet<int>()));
+                _icePuddles.Add(index, (position, radius, Now + IcePuddleActivationDelay, new HashSet<int>()));
                 if (!_watchingIcePuddles)
                 {
                     _watchingIcePuddles = true;
-                    Scheduler.ScheduleAfter(0.12, WatchIcePuddles, "检查冰圈残留");
+                    Scheduler.ScheduleAfter(IcePuddleActivationDelay, WatchIcePuddles, "检查冰圈残留");
                 }
             }, "生成冰圈残留");
             Scheduler.Schedule(Origin + fadeAt, () =>

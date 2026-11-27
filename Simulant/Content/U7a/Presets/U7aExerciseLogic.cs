@@ -83,6 +83,8 @@ namespace Simulant.Content.U7a.Presets
 
         protected abstract SimTimeline BuildExercise();
         protected virtual SimPosition InitialPartyPosition(int slot) => Spot(Center, 5);
+        protected virtual Vector2 InitialBossPosition => IsP4 ? Center + new Vector2(0, 5) : Center;
+        protected virtual float InitialBossHeading => (float)Math.PI;
         protected virtual void OnBossSpawned()
         {
         }
@@ -104,7 +106,7 @@ namespace Simulant.Content.U7a.Presets
                 PrepareAdditionalActors(() => Scheduler.ScheduleAfter(2, BeginExercise, "场景就绪后开始机制")));
 
             void Spawn(uint id, uint name, Vector2 position, Action<SimActor> accept, ushort? model = null, uint layout = 0,
-                uint? maxHp = null)
+                uint? maxHp = null, float heading = (float)Math.PI)
             {
                 var spec = new NetworkNpcSpawnSpec
                 {
@@ -113,7 +115,7 @@ namespace Simulant.Content.U7a.Presets
                     ModelCharaId = model,
                     LayoutId = id == 17831 ? 0xA55BFFu : id == 17833 ? 0xA55C01u : id == 17835 ? 0xA55C02u : id == 17839 ? 0xA55C06u : layout,
                     Pos = new Vector3(position, 0),
-                    Heading = (float)Math.PI,
+                    Heading = heading,
                     Level = 100
                 };
                 if (maxHp.HasValue)
@@ -126,11 +128,11 @@ namespace Simulant.Content.U7a.Presets
                 });
             }
 
-            Spawn(BossBaseId, BossNameId, IsP4 ? Center + new Vector2(0, 5) : Center, actor =>
+            Spawn(BossBaseId, BossNameId, InitialBossPosition, actor =>
             {
                 Oracle = actor;
                 OnBossSpawned();
-            }, BossModel, BossLayoutId, BossMaxHp);
+            }, BossModel, BossLayoutId, BossMaxHp, InitialBossHeading);
             if (IsP4)
             {
                 Spawn(17833, 12809, Center, actor => Shiva = actor, model: 4376);
@@ -377,14 +379,17 @@ namespace Simulant.Content.U7a.Presets
             }
         }
 
+        protected void MarkOffender(int slot)
+        {
+            _failedSelf |= slot == Self;
+            if (_marked.Add(slot))
+                VfxManager.ShowLockOn(Party[slot].Address, "m0489trg_b0c");
+        }
+
         protected void Report(MechanicError error, MechanicResult result = null)
         {
             foreach (var slot in error.Offenders)
-            {
-                _failedSelf |= slot == Self;
-                if (_marked.Add(slot))
-                    VfxManager.ShowLockOn(Party[slot].Address, "m0489trg_b0c");
-            }
+                MarkOffender(slot);
             var message = FormattableString.Invariant($"[{_preset.Name}] {Now:0.000} 秒：") + error.Format(Self, s => Roles[s]);
             _host.LogWarning(message);
             GameChat.SendEcho(message, playSound: true);

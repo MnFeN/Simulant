@@ -28,6 +28,18 @@ namespace Simulant.Content.U7a.Presets
         MT, ST
     }
 
+    internal static class U7aPartyPositions
+    {
+        // MT、ST、H1、H2、D1、D2、D3、D4 的正八方站位。
+        private static readonly ExerciseDirection[] EightWayDirections =
+        {
+            ExerciseDirection.N, ExerciseDirection.E, ExerciseDirection.W, ExerciseDirection.S,
+            ExerciseDirection.SW, ExerciseDirection.SE, ExerciseDirection.NW, ExerciseDirection.NE
+        };
+
+        internal static ExerciseDirection EightWayDirection(int slot) => EightWayDirections[slot];
+    }
+
     internal static class U7aExerciseOptions
     {
         internal static ComboBoxOption<ExerciseRole> Player() => new ComboBoxOption<ExerciseRole>(
