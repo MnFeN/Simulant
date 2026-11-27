@@ -12,9 +12,10 @@ namespace Simulant.Simulation.Runtime
         {
             public Vector2 Destination;
             public readonly List<Vector2> Points = new List<Vector2>();
+            public Queue<Vector2> RequiredRoute;
             public int Point;
             public double Arrival, NotBefore, Latest, HoldUntil, StageAt;
-            public bool Immediate, StageFirst, Arrived, Running, ReturnToMelee, GapClose;
+            public bool Immediate, StageFirst, Arrived, Running, ReturnToMelee, GapClose, GapCloseOnly;
             public byte Speed = RunSpeed;
             public Func<SimPosition> Follow;
             public double SampleFirst, SampleSecond, NorthHeading;
@@ -105,7 +106,7 @@ namespace Simulant.Simulation.Runtime
 
         /// <summary>绝对时间均以会话调度器为基准；保持时间覆盖最后一次相关机制判定。</summary>
         internal void MoveForMechanic(SimActor actor, SimPosition area, double arriveBy, double holdUntil,
-            bool urgent, double northHeading, bool gapClose)
+            bool urgent, double northHeading, bool gapClose, bool gapCloseOnly = false, IReadOnlyList<Vector2> waypoints = null)
         {
             if (!Finite(arriveBy) || !Finite(holdUntil) || holdUntil < arriveBy)
                 throw new ArgumentException("目标时间必须有效，且保持站位的结束时间不能早于目标时间。");
@@ -124,14 +125,16 @@ namespace Simulant.Simulation.Runtime
                 // 暂停期间可以接收下一段走位，但只能从击退落点、暂停结束后开始规划。
                 var now = Math.Max(_scheduler.ElapsedSeconds, state.SuspendedUntil);
                 var position = _movement.PositionAfterKnockback(actor);
+                var hasWaypoints = waypoints?.Count > 0;
                 // 关闭延迟与紧急意图都直接就位，不让自动读条、滑步、贪刀或绕路推迟移动。
-                var immediate = urgent || !state.Options.DelayArrival;
+                var immediate = urgent || hasWaypoints || !state.Options.DelayArrival;
                 var plan = new MovePlan
                 {
                     Destination = destination,
                     Latest = arriveBy,
                     HoldUntil = holdUntil,
                     GapClose = gapClose,
+                    GapCloseOnly = gapCloseOnly,
                     Immediate = immediate,
                     NotBefore = immediate ? now : arriveBy - 1,
                     Arrival = immediate ? now : arriveBy - 0.25 - _random.NextDouble() * 0.35
@@ -164,9 +167,22 @@ namespace Simulant.Simulation.Runtime
                 }
 
                 // 即使下一次仍站在原点，只要有空闲也可先回近战，随后再回来处理机制。
-                if (plan.StageFirst || Vector2.Distance(position, destination) > SimMovementController.NetworkArrivalTolerance)
+                if (!gapCloseOnly && (hasWaypoints || plan.StageFirst ||
+                    Vector2.Distance(position, destination) > SimMovementController.NetworkArrivalTolerance))
                 {
-                    plan.Points.AddRange(CreateRoute(origin, destination, immediate ? 0 : state.Options.RouteAngleDegrees, _random));
+                    if (hasWaypoints)
+                    {
+                        foreach (var waypoint in waypoints)
+                        {
+                            if (!Finite(waypoint.X) || !Finite(waypoint.Y) || Math.Abs(waypoint.X) > 1000 || Math.Abs(waypoint.Y) > 1000)
+                                throw new ArgumentOutOfRangeException(nameof(waypoints), "途经点必须位于网络坐标范围内。");
+                            plan.Points.Add(waypoint);
+                        }
+                        plan.Points.Add(destination);
+                        plan.RequiredRoute = new Queue<Vector2>(plan.Points);
+                    }
+                    else
+                        plan.Points.AddRange(CreateRoute(origin, destination, immediate ? 0 : state.Options.RouteAngleDegrees, _random));
 
                     if (plan.StageFirst && now + TravelTime(position, plan) + 1 > plan.Arrival)
                     {
@@ -175,7 +191,7 @@ namespace Simulant.Simulation.Runtime
                         plan.Points.AddRange(CreateRoute(position, destination, state.Options.RouteAngleDegrees, _random));
                     }
 
-                    if (now + TravelTime(position, plan) > arriveBy)
+                    if (!hasWaypoints && now + TravelTime(position, plan) > arriveBy)
                     {
                         plan.Points.Clear();
                         plan.Points.Add(destination);
@@ -306,8 +322,27 @@ namespace Simulant.Simulation.Runtime
                 return;
             }
 
-            var position = actor.Pos;
+            if (plan.RequiredRoute != null)
+            {
+                if (actor.IsMoving)
+                    return;
+                if (plan.RequiredRoute.Count == 0)
+                {
+                    plan.Arrived = true;
+                    SetSprintEffect(state, false);
+                    return;
+                }
 
+                // 移动控制器沿路推进队列。被定身打断后，从剩余路线继续。
+                plan.Point = plan.Points.Count - plan.RequiredRoute.Count;
+                TrySprint(plan, actor.Pos, now);
+                _movement.MoveNetworkPath(actor, plan.RequiredRoute, plan.Speed);
+                plan.Running = true;
+                SetSprintEffect(state, plan.Speed > RunSpeed);
+                return;
+            }
+
+            var position = actor.Pos;
             if (!actor.IsMoving)
             {
                 while (plan.Point < plan.Points.Count && Vector2.Distance(position, plan.Points[plan.Point]) <=
@@ -410,9 +445,12 @@ namespace Simulant.Simulation.Runtime
             plan.Speed = 78;
             plan.Immediate = plan.Running = true;
             plan.StageFirst = false;
-            plan.Points.Clear();
-            plan.Points.Add(plan.Destination);
-            plan.Point = 0;
+            if (plan.RequiredRoute == null)
+            {
+                plan.Points.Clear();
+                plan.Points.Add(plan.Destination);
+                plan.Point = 0;
+            }
             return true;
         }
 

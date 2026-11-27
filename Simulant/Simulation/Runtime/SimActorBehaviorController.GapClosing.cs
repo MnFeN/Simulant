@@ -10,10 +10,14 @@ namespace Simulant.Simulation.Runtime
         {
             if (!plan.GapClose)
                 return false;
-            plan.GapClose = false;
 
             var action = state.Actions?.GapCloser ?? 0;
-            if (action == 0 || _target == null || !_target.IsActive || !_target.Entity.IsTargetable || _target.Entity.HP == 0)
+            var targetReady = action != 0 && _target?.IsActive == true && _target.Entity.IsTargetable && _target.Entity.HP != 0;
+            // 只有单独的突进意图会原地等复现的首领；普通机制走位仍按原方式回跑。
+            if (plan.GapCloseOnly && action != 0 && !targetReady && now < plan.HoldUntil)
+                return true;
+            plan.GapClose = false;
+            if (!targetReady || plan.GapCloseOnly && now >= plan.HoldUntil)
                 return false;
 
             var actor = state.Actor;
@@ -39,11 +43,17 @@ namespace Simulant.Simulation.Runtime
             state.SuspendedUntil = now + duration + 0.1;
             state.NextAction = Math.Max(state.NextAction, state.SuspendedUntil);
             plan.Speed = RunSpeed;
-            plan.Arrived = false;
             plan.StageFirst = false;
             plan.Points.Clear();
-            plan.Points.Add(plan.Destination);
             plan.Point = 0;
+            plan.Arrived = plan.GapCloseOnly;
+            if (plan.GapCloseOnly)
+            {
+                plan.Destination = destination;
+                state.Anchor = destination;
+            }
+            else
+                plan.Points.Add(plan.Destination);
             return true;
         }
     }

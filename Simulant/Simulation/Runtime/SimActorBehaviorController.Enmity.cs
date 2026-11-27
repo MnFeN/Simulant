@@ -128,7 +128,8 @@ namespace Simulant.Simulation.Runtime
             if (state.Mode == EnmityFollowMode.MoveAndFace && distance > stopDistance + SimMovementController.NetworkArrivalTolerance)
             {
                 var destination = position + direction * ((distance - stopDistance) / distance);
-                _movement.PursueEnmity(boss, destination, BossRunSpeed);
+                // 网络位置回修可能向后，首领面向仍由一仇的实际位置决定。
+                _movement.PursueEnmity(boss, destination, BossRunSpeed, (float)Math.Atan2(direction.X, direction.Y));
                 return;
             }
 

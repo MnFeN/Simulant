@@ -34,7 +34,8 @@ namespace Simulant.Simulation.Runtime
             public bool Stopping;
             public bool Knockback;
             public bool EnmityPursuit;
-            public float FixedHeading;
+            public float? FixedHeading;
+            public Queue<Vector2> RequiredRoute;
         }
 
         private const double TickIntervalSeconds = 0.016;
@@ -135,11 +136,15 @@ namespace Simulant.Simulation.Runtime
         public void MoveNetworkTo(SimActor actor, Vector2 target, byte speedParam = 30, Action onArrived = null)
             => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, onArrived);
 
+        internal void MoveNetworkPath(SimActor actor, Queue<Vector2> route, byte speedParam)
+            => StartNetworkMovement(actor, route.Peek(), speedParam / 10f, speedParam, false, null, requiredRoute: route);
+
         internal void FollowNetworkTo(SimActor actor, Vector2 target, byte speedParam)
             => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, null, retarget: true);
 
-        internal void PursueEnmity(SimActor actor, Vector2 target, byte speedParam)
-            => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, null, retarget: true, enmityPursuit: true);
+        internal void PursueEnmity(SimActor actor, Vector2 target, byte speedParam, float heading)
+            => StartNetworkMovement(actor, target, speedParam / 10f, speedParam, false, null,
+                retarget: true, enmityPursuit: true, fixedHeading: heading);
 
         internal bool CanPursueEnmity(SimActor actor)
         {
@@ -210,7 +215,8 @@ namespace Simulant.Simulation.Runtime
         }
 
         private void StartNetworkMovement(SimActor actor, Vector2 target, float speed, byte speedParam,
-            bool knockback, Action onArrived, bool retarget = false, bool enmityPursuit = false)
+            bool knockback, Action onArrived, bool retarget = false, bool enmityPursuit = false, float? fixedHeading = null,
+            Queue<Vector2> requiredRoute = null)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -249,8 +255,9 @@ namespace Simulant.Simulation.Runtime
                     var current = _moving[index];
 
                     if (current.Network && current.EnmityPursuit == enmityPursuit && !current.Knockback &&
-                        !current.Stopping && !current.Arrived && current.OnArrived == null)
+                        !current.Stopping && !current.Arrived && current.OnArrived == null && current.RequiredRoute == null)
                     {
+                        current.FixedHeading = fixedHeading;
                         if (current.Target == target && current.SpeedParam == speedParam)
                             return;
 
@@ -280,8 +287,9 @@ namespace Simulant.Simulation.Runtime
                     SpeedParam = speedParam,
                     Knockback = knockback,
                     EnmityPursuit = enmityPursuit,
-                    FixedHeading = knockback ? actor.Heading : 0,
-                    OnArrived = onArrived
+                    FixedHeading = knockback ? actor.Heading : fixedHeading,
+                    OnArrived = onArrived,
+                    RequiredRoute = requiredRoute
                 };
                 _moving.Add(movement);
 
@@ -491,13 +499,15 @@ namespace Simulant.Simulation.Runtime
             var dx = (double)movement.Target.X - current.X;
             var dy = (double)movement.Target.Y - current.Y;
             var withinTolerance = dx * dx + dy * dy <= NetworkArrivalTolerance * NetworkArrivalTolerance;
+            var hasNext = movement.RequiredRoute?.Count > 1;
 
             // 原生位置可能已经追上前一个包；路程未按时间走完时，不能提前宣布到达。
-            if (withinTolerance && (!movement.NetworkStarted || movement.NetworkDestinationSent))
+            if (!hasNext && withinTolerance && (!movement.NetworkStarted || movement.NetworkDestinationSent))
             {
                 if (movement.Knockback && movement.NetworkStarted)
-                    movement.Actor.ActorMove(current, movement.FixedHeading, 0);
+                    movement.Actor.ActorMove(current, movement.FixedHeading.Value, 0);
 
+                movement.RequiredRoute?.Dequeue();
                 return true;
             }
 
@@ -511,7 +521,7 @@ namespace Simulant.Simulation.Runtime
                 movement.NetworkOrigin = movement.NetworkLastSent = new Vector2(current.X, current.Y);
                 movement.NetworkDuration = Math.Sqrt(dx * dx + dy * dy) / movement.Speed;
                 movement.Actor.ActorMove(current,
-                    movement.Knockback ? movement.FixedHeading : (float)Math.Atan2(dx, dy), movement.SpeedParam,
+                    movement.FixedHeading ?? (float)Math.Atan2(dx, dy), movement.SpeedParam,
                     movement.Knockback ? ActorMoveFlags.Knockback : ActorMoveFlags.None);
             }
             else if (now - movement.UpdatedAt >= _networkTimeoutSeconds)
@@ -548,11 +558,21 @@ namespace Simulant.Simulation.Runtime
                 {
                     var direction = movement.Target - movement.NetworkOrigin;
                     movement.Actor.ActorMove(new Vector3(next.X, next.Y, current.Z),
-                        movement.Knockback ? movement.FixedHeading : (float)Math.Atan2(direction.X, direction.Y), movement.SpeedParam,
+                        movement.FixedHeading ?? (float)Math.Atan2(direction.X, direction.Y), movement.SpeedParam,
                         movement.Knockback ? ActorMoveFlags.Knockback : ActorMoveFlags.None);
                     movement.NetworkLastSent = next;
                     movement.NetworkLastSentAt = now;
-                    movement.NetworkDestinationSent = final;
+                    if (final && hasNext)
+                    {
+                        // 发完途经点的位置包就继续下一段；只在整条路线的终点等待客户端位置追上。
+                        movement.RequiredRoute.Dequeue();
+                        movement.NetworkOrigin = next;
+                        movement.Target = movement.RequiredRoute.Peek();
+                        movement.UpdatedAt = now;
+                        movement.NetworkDuration = Vector2.Distance(next, movement.Target) / movement.Speed;
+                    }
+                    else
+                        movement.NetworkDestinationSent = final;
                 }
             }
 

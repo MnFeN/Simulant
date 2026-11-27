@@ -184,13 +184,35 @@ namespace Simulant.Simulation.Runtime
         /// </summary>
         public void MoveForMechanic(SimPosition destination, double arriveBy, double? holdUntil = null,
             bool urgent = false, double northHeading = Math.PI, bool gapClose = false)
+            => MoveForMechanic(destination, arriveBy, holdUntil, urgent, northHeading, gapClose, null);
+
+        /// <summary>立即出发，依次经过指定的绝对坐标，再前往最终站位。赶时间时仍保留途经点。</summary>
+        public void MoveForMechanic(SimPosition destination, IReadOnlyList<Vector2> waypoints, double arriveBy,
+            double? holdUntil = null, double northHeading = Math.PI)
+            => MoveForMechanic(destination, arriveBy, holdUntil, true, northHeading, false, waypoints);
+
+        private void MoveForMechanic(SimPosition destination, double arriveBy, double? holdUntil, bool urgent,
+            double northHeading, bool gapClose, IReadOnlyList<Vector2> waypoints)
         {
             EnsureActive();
 
             if (BehaviorController == null)
                 throw new InvalidOperationException("机制走位只支持本会话生成的网络假玩家。");
 
-            BehaviorController.MoveForMechanic(this, destination, arriveBy, holdUntil ?? arriveBy, urgent, northHeading, gapClose);
+            BehaviorController.MoveForMechanic(this, destination, arriveBy, holdUntil ?? arriveBy, urgent, northHeading, gapClose,
+                waypoints: waypoints);
+        }
+
+        /// <summary>等当前首领可选中后执行职业突进，并保持在实际落点直到指定会话时刻。</summary>
+        internal void GapCloseForMechanic(double holdUntil)
+        {
+            EnsureActive();
+
+            if (BehaviorController == null)
+                throw new InvalidOperationException("机制突进只支持本会话生成的网络假玩家。");
+
+            BehaviorController.MoveForMechanic(this, Pos, holdUntil, holdUntil, urgent: true,
+                northHeading: Math.PI, gapClose: true, gapCloseOnly: true);
         }
 
         /// <summary>
