@@ -120,6 +120,7 @@ namespace Simulant.Simulation.Runtime
 
                     _scheduler.Schedule(0, _logic.Start, "初始化模拟");
                     _directorId = _host.ZoneService?.ContentDirectorId ?? 0;
+                    _host.PlayerActions.ResetCooldowns();
                     _roundStarted = true;
                     _scheduler.Start();
                 }
@@ -238,6 +239,7 @@ namespace Simulant.Simulation.Runtime
             WriteDirectorLog(DirectorCommand.Ready);
             WaitUntil(_wipeStartedAt, 400);
             WriteDirectorLog(DirectorCommand.Recommence);
+            _host.PlayerActions.ResetCooldowns();
 
             cleanupError?.Throw();
         }

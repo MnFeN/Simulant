@@ -398,6 +398,7 @@ namespace Simulant.Core.Zone
             GameInterop.Connection.RunInFrame(() => SwitchTerritoryInFrame(territoryId, territory, worldVersion, storyProgress));
             EnsureWorld(worldVersion);
             _host.CompleteEntityWorldChange();
+            _host.PlayerActions.ResetCooldowns();
         }
 
         private void SwitchTerritoryInFrame(int territoryId, TerritoryType? territory, int worldVersion, int storyProgress)

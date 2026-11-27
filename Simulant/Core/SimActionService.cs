@@ -44,6 +44,30 @@ namespace Simulant.Core
             Interlocked.CompareExchange(ref _encounterEntities, null, encounterEntities);
         }
 
+        internal void ResetCooldowns()
+        {
+            if (!_host.FirewallEnabled)
+                return;
+
+            try
+            {
+                var connection = GameInterop.Connection;
+                connection?.RunInFrame(() => ClearCooldownGroups(ActionManager.Instance.ThrowIfNull(), connection));
+            }
+            catch (Exception error)
+            {
+                _host.LogWarning("重置技能冷却失败：" + error.Message);
+            }
+        }
+
+        private static void ClearCooldownGroups(ActionManager manager, GameConnection connection)
+        {
+            var cooldowns = manager._cooldowns;
+            var emptyCooldowns = new byte[cooldowns.Length * RecastDetail.Size];
+            if (connection.Memory.WriteBytes(cooldowns.Ptr, emptyCooldowns) != emptyCooldowns.Length)
+                throw new InvalidOperationException("未能完整重置技能冷却。");
+        }
+
         private void EnsureScheduler()
         {
             if (_scheduler != null)

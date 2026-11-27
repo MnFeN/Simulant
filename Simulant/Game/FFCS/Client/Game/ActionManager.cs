@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Simulant.Game.FFCS.Client.Game.Object;
 
 namespace Simulant.Game.FFCS.Client.Game
@@ -47,7 +48,8 @@ namespace Simulant.Game.FFCS.Client.Game
             }
         }
 
-        // [FieldOffset(0x188), FixedSizeArray] internal FixedSizeArray80<RecastDetail> _cooldowns;
+        internal MemoryArray<RecastDetail> _cooldowns => Ptr.ArrayField<RecastDetail>(0x188, 80);
+
         public MemoryField<float> DistanceToTargetHitbox => Ptr.Field<float>(0x7EC); // distance to target minus both self & target hitbox radius, clamped to 0
 
         /// <summary>
@@ -163,61 +165,17 @@ namespace Simulant.Game.FFCS.Client.Game
         }
     }
 
-    /*
     /// <summary>
     /// A struct representing information about recast timers/cooldowns for a specific RecastGroup. A recast group may be
     /// shared between one (or more) actions, depending on the group in question.
     /// </summary>
-    public struct RecastDetail : IMemoryObject
+    [StructLayout(LayoutKind.Explicit, Size = Size)]
+    internal struct RecastDetail
     {
-        public IntPtr Ptr { get; set; }
-
-        /// <summary>
-        /// A boolean representing if this recast group is currently "active." When this is a non-zero value (true), this
-        /// recast group is actively in cooldown.
-        /// </summary>
-        public MemoryField<bool> IsActive => Ptr.Field<bool>(0x0);
-
-        /// <summary>
-        /// The last Action ID that triggered an update for this recast group.
-        /// </summary>
-        public MemoryField<uint> ActionId => Ptr.Field<uint>(0x4);
-
-        /// <summary>
-        /// The current "elapsed" time of this action's recharge. For most actions, this value will be set to zero when the
-        /// action is used. For actions with multiple charges, this value will give "credit" for unspent actions.
-        /// </summary>
-        /// <remarks>
-        /// For multi-charge actions, it helps to think of this field as representing the current value of a resource gauge.
-        /// This value represents the "current level" of the resource gauge, with each second adding 1 unit to the gauge up
-        /// until the maximum as defined in the <see cref="Total"/> field.
-        /// <para />
-        /// When a normal action is cast, this gauge is "depleted" to zero. When a multi-charge action is cast, however,
-        /// the appropriate value (defined by the action, but generally the recharge time) is subtracted from this value.
-        /// </remarks>
-        public MemoryField<float> Elapsed => Ptr.Field<float>(0x8);
-
-        /// <summary>
-        /// The total number of seconds this recast group takes to go from "fully exhausted" to "fully charged." For most
-        /// actions, this will simply be the adjusted recast time from <see cref="ActionManager.GetAdjustedRecastTime"/>
-        /// (which displays in the tooltip UI as the "recast time"). Multi-charge actions such as Ninja's Mudra will show
-        /// the total charge time (the Adjusted Recast Time multiplied by the number of charges this action has at max
-        /// level).
-        /// </summary>
-        /// <remarks>
-        /// The total value shown here depends on the last action used. For example, if a specific action is
-        /// bound to the GCD but is faster/slower than the normal GCD, this value will be set accordingly.
-        /// <para />
-        /// Continuing the resource gauge analogy from <see cref="Elapsed"/>, this field would represent the "cap" of the
-        /// resource gauge. For normal actions, the resource gauge must be completely filled before the action can be used
-        /// again. Multi-charge actions will instead allow the gauge to charge to the maximum number of actions allowed.
-        /// <para />
-        /// It is recommended to use <see cref="ActionManager.GetRecastTime"/> over this field, as it handles an edge case
-        /// in charge management.
-        /// </remarks>
-        public MemoryField<float> Total => Ptr.Field<float>(0xC);
+        // 只用记录大小批量清零，暂不暴露单个字段。
+        internal const int Size = 0x14;
     }
-    */
+
     public struct ComboDetail : IMemoryObject
     {
         public IntPtr Ptr { get; set; }
