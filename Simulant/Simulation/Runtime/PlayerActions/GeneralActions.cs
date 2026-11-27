@@ -27,10 +27,11 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         {
             冲刺 = 50,
             沉稳咏唱 = 160,
+            铁壁 = 1191,
             亲疏自行 = 1209
         }
 
-        internal static bool TryGetResult(ActionRequest request)
+        internal static bool TryHandleAction(ActionRequest request)
         {
             var player = PluginHost.Instance?.EntityProvider?.GetMyself();
             if (player == null)
@@ -49,13 +50,13 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             {
                 case ActionId.冲刺:
                     // 状态参数 30 表示冲刺的加速百分比。
-                    AddTargetStatus(player, player, effects, (ushort)StatusId.冲刺, 10, param: 30);
+                    AddTargetStatus(player, player, effects, StatusId.冲刺, 10, param: 30);
                     break;
                 case ActionId.亲疏自行:
-                    AddTargetStatus(player, player, effects, (ushort)StatusId.亲疏自行, 6);
+                    AddSourceStatus(player, effects, StatusId.亲疏自行, 6, param: 100, effectParam: 67);
                     break;
                 case ActionId.沉稳咏唱:
-                    AddTargetStatus(player, player, effects, (ushort)StatusId.沉稳咏唱, 6);
+                    AddTargetStatus(player, player, effects, StatusId.沉稳咏唱, 6);
                     break;
                 case ActionId.挑衅:
                     UseEnmityAction(player, request, provoke: true);
@@ -67,7 +68,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     return false;
             }
 
-            Entities.ResolvePlayerAction(player, request, player, (uint)action, effects.ToArray());
+            Entities.ResolveAction(player, request, player, action, effects.ToArray());
             return true;
         }
 

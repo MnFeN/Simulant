@@ -1,5 +1,6 @@
 using Simulant.Core;
 using Simulant.Core.Entity;
+using Simulant.Game;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
 using System;
@@ -26,12 +27,31 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             var attackType = unchecked((sbyte)action.AttackType.RowId);
             var damageType = attackType == -1 ? weaponAttackType : (int)attackType;
             // ActionEffect 的 Param1 低四位为伤害类型，高四位为属性。Param0 的直击和暴击位保持为零。
-            effects.Insert(0, new ActionEffect
+            effects.Add(new ActionEffect
             {
                 Type = 0x03,
                 Param1 = (byte)(((action.Aspect & 0x0F) << 4) | (damageType & 0x0F)),
                 Value = 10000
             });
+        }
+
+        internal static void AddHealing(Character recipient, List<ActionEffect> effects, ushort amount, bool atSource = false)
+        {
+            RestoreHp(recipient, amount);
+            effects.Add(new ActionEffect
+            {
+                Type = 0x04,
+                Param4 = atSource ? (byte)0x80 : (byte)0,
+                Value = amount
+            });
+        }
+
+        internal static void RestoreHp(Character recipient, ushort amount)
+        {
+            var current = recipient.HP;
+            var next = (uint)Math.Min(recipient.MaxHP, (ulong)current + amount);
+            if (current != 0 && next > current)
+                recipient.SetNetworkVitals(next);
         }
 
         private static Character FindTarget(ActionRequest request)
@@ -90,10 +110,10 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         internal static bool TryGetEnemySpell(Character player, ActionRequest request, out Character target, out int mpCost)
         {
             mpCost = 0;
-            return TryGetEnemy(player, request, out target) && TryGetSpellCost(player, request, out mpCost);
+            return TryGetEnemy(player, request, out target) && TryGetFixedMpCost(player, request, out mpCost);
         }
 
-        internal static bool TryGetSpellCost(Character player, ActionRequest request, out int cost)
+        internal static bool TryGetFixedMpCost(Character player, ActionRequest request, out int cost)
         {
             var row = GetAction(request);
             // Action 表的魔力消耗类型为 3，每单位 50 点魔力。
@@ -116,7 +136,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         internal static void AddMpRecovery(Character player, List<ActionEffect> effects, ushort amount)
         {
             ChangeMp(player, amount);
-            effects.Insert(0, new ActionEffect
+            effects.Add(new ActionEffect
             {
                 Type = 0x0B,
                 Param4 = 0x80,
@@ -124,83 +144,112 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             });
         }
 
-        internal static bool RequireStatus(Character player, ActionRequest request, ushort status)
+        internal static bool HasStatus<TStatusEnum>(Character player, TStatusEnum status)
+            where TStatusEnum : struct, Enum
+            => player.HasStatus(Convert.ToUInt16(status));
+
+        internal static bool RequireStatus<TStatusEnum>(Character player, ActionRequest request, TStatusEnum status)
+            where TStatusEnum : struct, Enum
         {
-            if (Entities.TryGetOwnedStatus(Entities.Attach(player), status, out _, out _))
+            if (HasStatus(player, status))
                 return true;
             player.RejectActionResult(request, 572);
             return false;
         }
 
-        internal static void RemoveStatus(Character player, ushort status)
-            => Entities.RemoveStatus(Entities.Attach(player), status);
-
-        internal static void ConsumeStatusStack(Character player, ushort status)
+        internal static void RemoveStatus<TStatusEnum>(Character player, TStatusEnum status)
+            where TStatusEnum : struct, Enum
         {
-            var actor = Entities.Attach(player);
-            if (!Entities.TryGetOwnedStatus(actor, status, out var stacks, out var remaining))
-                return;
-            if (stacks > 1)
-                Entities.SetStatus(actor, status, remaining, (ushort)(stacks - 1), actor);
-            else
-                Entities.RemoveStatus(actor, status);
+            var statusId = Convert.ToUInt16(status);
+            // 状态可能在开启防火墙前已生效。移除本机角色自身施加的状态后清理模拟记录。
+            player.ActorControl(ActorControlCategory.LoseEffect, a1: statusId, a3: player.Id);
+            Entities.RemoveStatus(Entities.Attach(player), statusId);
         }
 
-        internal static void AddSourceStatus(Character player, List<ActionEffect> effects, ushort status,
-            float seconds, byte stacks = 0, byte effectParam = 0)
+        internal static void ConsumeStatusStack<TStatusEnum>(Character player, TStatusEnum status)
+            where TStatusEnum : struct, Enum
         {
+            var statusId = Convert.ToUInt16(status);
+            var statuses = player.Native.StatusManager;
+            var slot = statuses.GetStatusIndex(statusId, player.Id);
+            if (slot < 0)
+                return;
+
+            var stacks = statuses.GetStatus(slot).Param.Get();
+            if (stacks <= 1)
+            {
+                RemoveStatus(player, status);
+                return;
+            }
+
             var actor = Entities.Attach(player);
-            Entities.SetStatus(actor, status, seconds, stacks, actor);
+            var next = (ushort)(stacks - 1);
+            if (Entities.TryGetOwnedStatus(actor, statusId, out _, out var remaining))
+                Entities.SetStatus(actor, statusId, remaining, next, actor);
+            else
+                player.ActorControl(ActorControlCategory.UpdateEffect, (uint)slot, statusId, next);
+        }
+
+        internal static void AddSourceStatus<TStatusEnum>(Character player, List<ActionEffect> effects, TStatusEnum status,
+            float seconds, byte param = 0, byte effectParam = 0) where TStatusEnum : struct, Enum
+        {
+            var statusId = Convert.ToUInt16(status);
+            var actor = Entities.Attach(player);
+            Entities.SetStatus(actor, statusId, seconds, param, actor);
             effects.Add(new ActionEffect
             {
                 Type = 0x0F,
                 Param0 = effectParam,
-                Param2 = stacks,
+                Param2 = param,
                 Param4 = 0x80,
-                Value = status
+                Value = statusId
             });
         }
 
-        internal static void RemoveSourceStatus(Character player, List<ActionEffect> effects, ushort status)
+        internal static void RemoveSourceStatus<TStatusEnum>(Character player, List<ActionEffect> effects, TStatusEnum status)
+            where TStatusEnum : struct, Enum
         {
             RemoveStatus(player, status);
             effects.Add(new ActionEffect
             {
                 Type = 0x11,
                 Param4 = 0x80,
-                Value = status
+                Value = Convert.ToUInt16(status)
             });
         }
 
-        internal static void AddTargetStatus(Character player, Character target, List<ActionEffect> effects,
-            ushort status, float seconds, byte effectParam = 0, byte param = 0)
+        internal static void AddTargetStatus<TStatusEnum>(Character player, Character target, List<ActionEffect> effects,
+            TStatusEnum status, float seconds, byte effectParam = 0, byte param = 0) where TStatusEnum : struct, Enum
         {
+            var statusId = Convert.ToUInt16(status);
             var source = Entities.Attach(player);
-            effects.Add(Entities.SetActionStatus(source, Entities.Attach(target), status, seconds, param, effectParam));
+            effects.Add(Entities.SetActionStatus(source, Entities.Attach(target), statusId, seconds, param, effectParam));
         }
 
-        internal static void AddAreaStatus(Character player, IEnumerable<Character> targets, List<ActionEffect> effects,
-            ushort status, float seconds)
+        internal static void AddAreaStatus<TStatusEnum>(Character player, IEnumerable<Character> targets, List<ActionEffect> effects,
+            TStatusEnum status, float seconds) where TStatusEnum : struct, Enum
         {
+            var statusId = Convert.ToUInt16(status);
             var source = Entities.Attach(player);
             foreach (var target in targets)
-                Entities.SetStatus(Entities.Attach(target), status, seconds, 0, source);
+                Entities.SetStatus(Entities.Attach(target), statusId, seconds, 0, source);
 
             // 结算头只带主目标，其余范围目标已经更新状态。
             effects.Add(new ActionEffect
             {
                 Type = 0x0E,
-                Value = status
+                Value = statusId
             });
         }
 
-        internal static bool HasCombo(uint prerequisite)
+        internal static bool HasCombo<TActionEnum>(TActionEnum prerequisite) where TActionEnum : struct, Enum
         {
             var combo = ActionManager.Instance.Combo;
-            return combo.Action.Get() == prerequisite && combo.Timer.Get() > 0;
+            return combo.Action.Get() == Convert.ToUInt32(prerequisite) && combo.Timer.Get() > 0;
         }
 
-        internal static void AddWeaponCombo(List<ActionEffect> effects, ushort action, bool comboSucceeded = false)
+        internal static void AddWeaponCombo<TActionEnum>(List<ActionEffect> effects, TActionEnum action,
+            bool comboSucceeded = false) where TActionEnum : struct, Enum
         {
             // ActionEffectHandler.Receive 的缓存入口将来源效果 0x1B 的 Value 写到普通连击栏。
             effects.Add(new ActionEffect
@@ -208,7 +257,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                 Type = 0x1B,
                 Param0 = comboSucceeded ? (byte)1 : (byte)0,
                 Param4 = 0x80,
-                Value = action
+                Value = Convert.ToUInt16(action)
             });
         }
     }

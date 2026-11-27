@@ -256,11 +256,11 @@ namespace Simulant.Core
             if (request.Kind != ActionRequestKind.Normal)
                 return;
 
-            if (ReferenceEquals(PluginHost.Instance, _host) && GeneralActions.TryGetResult(request))
+            if (ReferenceEquals(PluginHost.Instance, _host) && GeneralActions.TryHandleAction(request))
                 return;
             if (request.ActionType != ActionType.Action)
                 return;
-            if (player.Level == 100 && TryGetJobResult(player.Job, request))
+            if (player.Level == 100 && TryHandleJobAction(player.Job, request))
                 return;
 
             if (request.ActionId == SimEntityManager.GetInvulnerability(player.Job).Action &&
@@ -277,12 +277,12 @@ namespace Simulant.Core
             return true;
         }
 
-        private bool TryGetJobResult(Job job, ActionRequest request)
+        private bool TryHandleJobAction(Job job, ActionRequest request)
         {
             switch (job)
             {
                 case Job.PLD:
-                    return ReferenceEquals(PluginHost.Instance, _host) && PaladinActions.TryGetResult(request);
+                    return ReferenceEquals(PluginHost.Instance, _host) && PaladinActions.TryHandleAction(request);
                 default:
                     return false;
             }

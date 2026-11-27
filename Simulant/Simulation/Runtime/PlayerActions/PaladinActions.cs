@@ -76,12 +76,13 @@ namespace Simulant.Simulation.Runtime.PlayerActions
 
         // 技能表以 -1 表示采用武器伤害类型，国服回放中的骑士剑技为斩击。
         private const byte WeaponAttackType = 1;
+        private const ushort SpellHealing = 10000;
         private static SimScheduledAction _spellComboExpiry;
 
-        internal static bool TryGetResult(ActionRequest request)
+        internal static bool TryHandleAction(ActionRequest request)
         {
             var player = PluginHost.Instance?.EntityProvider?.GetMyself();
-            if (player == null || player.Job != Job.PLD)
+            if (player?.Job != Job.PLD)
                 return false;
 
             var target = player;
@@ -95,234 +96,248 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    AddWeaponCombo(effects, (ushort)ActionId.先锋剑);
                     AddDamage(effects, request, WeaponAttackType);
+                    AddWeaponCombo(effects, ActionId.先锋剑);
                     break;
                 case ActionId.暴乱剑:
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    if (HasCombo((uint)ActionId.先锋剑))
+                    AddDamage(effects, request, WeaponAttackType);
+                    if (HasCombo(ActionId.先锋剑))
                     {
                         AddMpRecovery(player, effects, 1000);
-                        AddWeaponCombo(effects, (ushort)ActionId.暴乱剑, comboSucceeded: true);
+                        AddWeaponCombo(effects, ActionId.暴乱剑, comboSucceeded: true);
                     }
-                    AddDamage(effects, request, WeaponAttackType);
                     break;
                 case ActionId.王权剑:
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    if (HasCombo((uint)ActionId.暴乱剑))
-                    {
-                        AddSourceStatus(player, effects, (ushort)StatusId.赎罪剑预备, 30);
-                        AddSourceStatus(player, effects, (ushort)StatusId.神圣魔法效果提高, 30);
-                        AddWeaponCombo(effects, (ushort)ActionId.王权剑, comboSucceeded: true);
-                    }
                     AddDamage(effects, request, WeaponAttackType);
+                    if (HasCombo(ActionId.暴乱剑))
+                    {
+                        AddSourceStatus(player, effects, StatusId.赎罪剑预备, 30);
+                        AddSourceStatus(player, effects, StatusId.神圣魔法效果提高, 30);
+                        AddWeaponCombo(effects, ActionId.王权剑, comboSucceeded: true);
+                    }
                     break;
                 case ActionId.全蚀斩:
-                    var eclipseTarget = GetAreaEnemies(player, request).FirstOrDefault();
-                    if (eclipseTarget != null)
+                    target = GetAreaEnemies(player, request).FirstOrDefault();
+                    if (target != null)
                     {
-                        target = eclipseTarget;
                         AddDamage(effects, request, WeaponAttackType);
-                        AddWeaponCombo(effects, (ushort)ActionId.全蚀斩);
+                        AddWeaponCombo(effects, ActionId.全蚀斩);
                     }
                     break;
                 case ActionId.日珥斩:
-                    var prominenceTarget = GetAreaEnemies(player, request).FirstOrDefault();
-                    if (prominenceTarget != null)
+                    target = GetAreaEnemies(player, request).FirstOrDefault();
+                    if (target != null)
                     {
-                        target = prominenceTarget;
-                        if (HasCombo((uint)ActionId.全蚀斩))
-                        {
-                            AddSourceStatus(player, effects, (ushort)StatusId.神圣魔法效果提高, 30);
-                            AddMpRecovery(player, effects, 1000);
-                            AddWeaponCombo(effects, (ushort)ActionId.日珥斩, comboSucceeded: true);
-                        }
                         AddDamage(effects, request, WeaponAttackType);
+                        if (HasCombo(ActionId.全蚀斩))
+                        {
+                            AddMpRecovery(player, effects, 1000);
+                            AddSourceStatus(player, effects, StatusId.神圣魔法效果提高, 30);
+                            AddWeaponCombo(effects, ActionId.日珥斩, comboSucceeded: true);
+                        }
                     }
                     break;
                 case ActionId.战逃反应:
                     // 国服回放中战逃反应直接对自身附加状态，并以来源效果附加沥血剑预备。
-                    AddTargetStatus(player, player, effects, (ushort)StatusId.战逃反应, 20, effectParam: 25);
-                    AddSourceStatus(player, effects, (ushort)StatusId.沥血剑预备, 30);
+                    AddTargetStatus(player, player, effects, StatusId.战逃反应, 20, effectParam: 25);
+                    AddSourceStatus(player, effects, StatusId.沥血剑预备, 30);
                     break;
                 case ActionId.沥血剑:
-                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, (ushort)StatusId.沥血剑预备))
+                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.沥血剑预备))
                         return true;
 
-                    consumeAfterResult = StatusId.沥血剑预备;
                     AddDamage(effects, request, WeaponAttackType);
+                    consumeAfterResult = StatusId.沥血剑预备;
                     break;
                 case ActionId.赎罪剑:
-                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, (ushort)StatusId.赎罪剑预备))
+                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.赎罪剑预备))
                         return true;
 
-                    AddMpRecovery(player, effects, 400);
-                    AddSourceStatus(player, effects, (ushort)StatusId.祈告剑预备, 30);
-                    consumeAfterResult = StatusId.赎罪剑预备;
                     AddDamage(effects, request, WeaponAttackType);
+                    AddMpRecovery(player, effects, 400);
+                    AddSourceStatus(player, effects, StatusId.祈告剑预备, 30);
+                    consumeAfterResult = StatusId.赎罪剑预备;
                     break;
                 case ActionId.祈告剑:
-                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, (ushort)StatusId.祈告剑预备))
+                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.祈告剑预备))
                         return true;
 
-                    AddMpRecovery(player, effects, 400);
-                    AddSourceStatus(player, effects, (ushort)StatusId.葬送剑预备, 30);
-                    consumeAfterResult = StatusId.祈告剑预备;
                     AddDamage(effects, request, WeaponAttackType);
+                    AddMpRecovery(player, effects, 400);
+                    AddSourceStatus(player, effects, StatusId.葬送剑预备, 30);
+                    consumeAfterResult = StatusId.祈告剑预备;
                     break;
                 case ActionId.葬送剑:
-                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, (ushort)StatusId.葬送剑预备))
+                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.葬送剑预备))
                         return true;
 
+                    AddDamage(effects, request, WeaponAttackType);
                     AddMpRecovery(player, effects, 400);
                     consumeAfterResult = StatusId.葬送剑预备;
-                    AddDamage(effects, request, WeaponAttackType);
                     break;
                 case ActionId.偿赎剑:
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    AddMpRecovery(player, effects, 500);
                     AddDamage(effects, request, WeaponAttackType);
+                    AddMpRecovery(player, effects, 500);
                     break;
                 case ActionId.厄运流转:
                     var hits = GetAreaEnemies(player, request).ToArray();
-                    if (hits.Length != 0)
+                    target = hits.FirstOrDefault();
+                    if (target != null)
                     {
-                        target = hits[0];
-                        AddAreaStatus(player, hits, effects, (ushort)StatusId.厄运流转, 15);
                         AddDamage(effects, request, WeaponAttackType);
+                        AddAreaStatus(player, hits, effects, StatusId.厄运流转, 15);
                     }
                     break;
                 case ActionId.绝对统治:
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    AddSourceStatus(player, effects, (ushort)StatusId.安魂祈祷, 30, stacks: 4);
-                    AddSourceStatus(player, effects, (ushort)StatusId.悔罪预备, 30);
                     AddDamage(effects, request, WeaponAttackType);
+                    AddSourceStatus(player, effects, StatusId.安魂祈祷, 30, param: 4);
+                    AddSourceStatus(player, effects, StatusId.悔罪预备, 30);
                     break;
                 case ActionId.圣灵:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost))
                         return true;
 
+                    AddDamage(effects, request, WeaponAttackType);
+                    AddHealing(player, effects, SpellHealing, atSource: true);
                     ChangeMp(player, -mpCost);
                     ConsumeHolySpellProc(player, request);
-                    AddDamage(effects, request, WeaponAttackType);
                     break;
                 case ActionId.圣环:
-                    target = GetAreaEnemies(player, request).FirstOrDefault() ?? player;
-                    if (!TryGetSpellCost(player, request, out mpCost))
+                    target = GetAreaEnemies(player, request).FirstOrDefault();
+                    if (!TryGetFixedMpCost(player, request, out mpCost))
                         return true;
 
+                    if (target != null)
+                    {
+                        AddDamage(effects, request, WeaponAttackType);
+                        AddHealing(player, effects, SpellHealing, atSource: true);
+                    }
                     ChangeMp(player, -mpCost);
                     ConsumeHolySpellProc(player, request);
-                    if (target != player)
-                        AddDamage(effects, request, WeaponAttackType);
                     break;
                 case ActionId.悔罪:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost) ||
-                        !TryGetSpellGauge(player, request, out gauge) || !RequireStatus(player, request, (ushort)StatusId.悔罪预备))
+                        !TryGetSpellGauge(player, request, out gauge) || !RequireStatus(player, request, StatusId.悔罪预备))
                         return true;
 
-                    ChangeMp(player, -mpCost);
-                    ConsumeStatusStack(player, (ushort)StatusId.安魂祈祷);
-                    RemoveStatus(player, (ushort)StatusId.悔罪预备);
-                    AdvanceSpellCombo(player, gauge, 1);
                     AddDamage(effects, request, WeaponAttackType);
+                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    ChangeMp(player, -mpCost);
+                    ConsumeStatusStack(player, StatusId.安魂祈祷);
+                    RemoveStatus(player, StatusId.悔罪预备);
+                    AdvanceSpellCombo(player, gauge, 1);
                     break;
                 case ActionId.信念之剑:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost) ||
                         !TryGetSpellGauge(player, request, out gauge, expectedStep: 1))
                         return true;
 
-                    ChangeMp(player, -mpCost);
-                    ConsumeStatusStack(player, (ushort)StatusId.安魂祈祷);
-                    AdvanceSpellCombo(player, gauge, 2);
                     AddDamage(effects, request, WeaponAttackType);
+                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    ChangeMp(player, -mpCost);
+                    ConsumeStatusStack(player, StatusId.安魂祈祷);
+                    AdvanceSpellCombo(player, gauge, 2);
                     break;
                 case ActionId.真理之剑:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost) ||
                         !TryGetSpellGauge(player, request, out gauge, expectedStep: 2))
                         return true;
 
-                    ChangeMp(player, -mpCost);
-                    ConsumeStatusStack(player, (ushort)StatusId.安魂祈祷);
-                    AdvanceSpellCombo(player, gauge, 3);
                     AddDamage(effects, request, WeaponAttackType);
+                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    ChangeMp(player, -mpCost);
+                    ConsumeStatusStack(player, StatusId.安魂祈祷);
+                    AdvanceSpellCombo(player, gauge, 3);
                     break;
                 case ActionId.英勇之剑:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost) ||
                         !TryGetSpellGauge(player, request, out gauge, expectedStep: 3))
                         return true;
 
-                    ChangeMp(player, -mpCost);
-                    ConsumeStatusStack(player, (ushort)StatusId.安魂祈祷);
-                    AddSourceStatus(player, effects, (ushort)StatusId.荣耀之剑预备, 30);
-                    AdvanceSpellCombo(player, gauge, 0);
                     AddDamage(effects, request, WeaponAttackType);
+                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    ChangeMp(player, -mpCost);
+                    ConsumeStatusStack(player, StatusId.安魂祈祷);
+                    AddSourceStatus(player, effects, StatusId.荣耀之剑预备, 30);
+                    AdvanceSpellCombo(player, gauge, 0);
                     break;
                 case ActionId.荣耀之剑:
-                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, (ushort)StatusId.荣耀之剑预备))
+                    if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.荣耀之剑预备))
                         return true;
 
-                    consumeAfterResult = StatusId.荣耀之剑预备;
                     AddDamage(effects, request, WeaponAttackType);
+                    consumeAfterResult = StatusId.荣耀之剑预备;
                     break;
                 case ActionId.神圣领域:
-                    AddTargetStatus(player, player, effects, (ushort)StatusId.神圣领域, 10);
+                    AddTargetStatus(player, player, effects, StatusId.神圣领域, 10);
                     break;
                 case ActionId.壁垒:
-                    AddSourceStatus(player, effects, (ushort)StatusId.壁垒, 10, effectParam: 100);
+                    AddSourceStatus(player, effects, StatusId.壁垒, 10, effectParam: 100);
                     break;
                 case ActionId.极致防御:
-                    AddSourceStatus(player, effects, (ushort)StatusId.极致防御, 15);
-                    AddSourceStatus(player, effects, (ushort)StatusId.极致护盾, 15);
+                    AddTargetStatus(player, player, effects, StatusId.极致防御, 15, effectParam: 0xD8);
+                    AddTargetStatus(player, player, effects, StatusId.极致护盾, 15);
                     break;
                 case ActionId.圣光幕帘:
-                    var partyTargets = GetPartyInRange(player, request);
-                    AddAreaStatus(player, partyTargets, effects, (ushort)StatusId.圣光幕帘, 30);
+                    var partyTargets = GetPartyInRange(player, request).ToArray();
+                    AddAreaStatus(player, partyTargets, effects, StatusId.圣光幕帘, 30);
+                    AddHealing(player, effects, SpellHealing);
+                    foreach (var member in partyTargets.Skip(1))
+                        RestoreHp(member, SpellHealing);
                     break;
                 case ActionId.钢铁信念:
-                    AddSourceStatus(player, effects, (ushort)StatusId.钢铁信念, 0);
+                    AddTargetStatus(player, player, effects, StatusId.钢铁信念, 0, effectParam: 40);
                     break;
                 case ActionId.解除钢铁信念:
-                    RemoveSourceStatus(player, effects, (ushort)StatusId.钢铁信念);
+                    RemoveSourceStatus(player, effects, StatusId.钢铁信念);
                     break;
                 case ActionId.圣盾阵:
                     if (!TrySpendOath(player, request))
                         return true;
 
-                    AddTargetStatus(player, player, effects, (ushort)StatusId.圣盾阵, 8);
-                    AddTargetStatus(player, player, effects, (ushort)StatusId.骑士的坚守, 4);
-                    AddTargetStatus(player, player, effects, (ushort)StatusId.骑士的加护, 12);
+                    AddSourceStatus(player, effects, StatusId.圣盾阵, 8, effectParam: 0xF1);
+                    AddSourceStatus(player, effects, StatusId.骑士的坚守, 4, effectParam: 0xF1);
+                    AddSourceStatus(player, effects, StatusId.骑士的加护, 12);
                     break;
                 case ActionId.干预:
                     if (!TryGetPartyTarget(player, request, out target) || !TrySpendOath(player, request))
                         return true;
 
-                    AddTargetStatus(player, target, effects, (ushort)StatusId.干预, 8);
-                    AddTargetStatus(player, target, effects, (ushort)StatusId.骑士的坚守, 4);
-                    AddTargetStatus(player, target, effects, (ushort)StatusId.骑士的加护, 12);
+                    // 铁壁或极致防御生效时，干预减伤由 10% 增至 20%。
+                    var enhancedIntervention = 
+                        HasStatus(player, GeneralActions.StatusId.铁壁) ||
+                        HasStatus(player, StatusId.极致防御);
+                    AddTargetStatus(player, target, effects, StatusId.干预, 8,
+                        effectParam: enhancedIntervention ? (byte)0xEC : (byte)0xF6);
+                    AddTargetStatus(player, target, effects, StatusId.骑士的坚守, 4, effectParam: 0xF6);
+                    AddTargetStatus(player, target, effects, StatusId.骑士的加护, 12);
                     break;
                 case ActionId.保护:
                     if (!TryGetPartyTarget(player, request, out target) || !TrySpendOath(player, request))
                         return true;
 
-                    AddSourceStatus(player, effects, (ushort)StatusId.保护, 12);
-                    AddTargetStatus(player, target, effects, (ushort)StatusId.被保护, 12);
+                    AddTargetStatus(player, target, effects, StatusId.被保护, 12);
+                    AddSourceStatus(player, effects, StatusId.保护, 12);
                     break;
                 default:
                     return false;
             }
 
-            Entities.ResolvePlayerAction(player, request, target, request.ActionId, effects.ToArray());
+            Entities.ResolveAction(player, request, target, request.ActionId, effects.ToArray());
             if (consumeAfterResult != 0)
-                RemoveStatus(player, (ushort)consumeAfterResult);
+                RemoveStatus(player, consumeAfterResult);
             return true;
         }
 
@@ -331,10 +346,10 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             switch (request.CastProc)
             {
                 case ActionManager.CastTimeProc.DivineMight:
-                    RemoveStatus(player, (ushort)StatusId.神圣魔法效果提高);
+                    RemoveStatus(player, StatusId.神圣魔法效果提高);
                     break;
                 case ActionManager.CastTimeProc.Requiescat:
-                    ConsumeStatusStack(player, (ushort)StatusId.安魂祈祷);
+                    ConsumeStatusStack(player, StatusId.安魂祈祷);
                     break;
             }
         }

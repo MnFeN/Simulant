@@ -106,18 +106,37 @@ namespace Simulant.Simulation.Runtime
                 PublishPartyEnmity(boss, scores, percentages);
             }
 
-            if (request == null)
-                PlayLocalActionEffect(source, (uint)(provoke ? GeneralActionId.挑衅 : GeneralActionId.退避), target);
-            else
-                ResolvePlayerAction(source.Entity, request, target.Entity, request.ActionId);
+            var action = request?.ActionId ?? (uint)(provoke ? GeneralActionId.挑衅 : GeneralActionId.退避);
+            ResolveAction(source.Entity, request, target.Entity, action);
         }
 
-        internal void ResolvePlayerAction(Character player, ActionRequest request, Character target, uint actionId,
-            params ActionEffect[] effects)
+        internal void ResolveAction<TActionEnum>(Character source, ActionRequest request, Character target, TActionEnum action,
+            params ActionEffect[] requestEffects) where TActionEnum : struct, Enum
+            => ResolveAction(source, request, target, Convert.ToUInt32(action), requestEffects);
+
+        internal void ResolveAction(Character source, ActionRequest request, Character target, uint actionId,
+            params ActionEffect[] requestEffects)
         {
-            const float animationLock = 0.6f;
-            player.ReceiveActionResult(request, actionId, target, target.Pos3D, animationLock, effects);
-            CombatLog?.Ability(player, actionId, target, null, request.Facing, animationLock, null, null, effects);
+            var animationLock = 0f;
+            if (request == null)
+                source.ExecuteActionEffect(actionId, target);
+            else
+            {
+                var hasCastTime = !request.HasInstantCastProc &&
+                    GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var actionRow) &&
+                    actionRow.Cast100ms > 0;
+                animationLock = hasCastTime ? 0.1f : 0.6f;
+                source.ReceiveActionResult(request, actionId, target, target?.Pos3D ?? source.Pos3D, animationLock, requestEffects);
+            }
+
+            var missed = target == null && request?.Kind == ActionRequestKind.Normal;
+            CombatLog?.Ability(source, actionId, missed ? source : target, null, request?.Facing, animationLock,
+                missed ? Array.Empty<SimActor>() : null, null, request == null ? null : requestEffects);
+
+            // 时间轴触发的本机技能需补播动作，网络假角色由结算演出驱动。
+            if (request == null && source.Identity.Slot == 0 &&
+                GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var action))
+                source.PlayBlendTimeline((ushort)action.AnimationEnd.RowId);
         }
 
         internal static (uint Action, ushort Status) GetInvulnerability(Job job)
@@ -169,10 +188,15 @@ namespace Simulant.Simulation.Runtime
                 throw new ArgumentNullException(nameof(actor));
 
             if (surecast ?? (SimJobActions.For(actor.Job)?.Caster == true))
-                UseStatusAction(actor, (uint)GeneralActionId.沉稳咏唱, (ushort)GeneralStatusId.沉稳咏唱, 6);
+                UseStatusAction(actor, GeneralActionId.沉稳咏唱, GeneralStatusId.沉稳咏唱, 6);
             else
-                UseStatusAction(actor, (uint)GeneralActionId.亲疏自行, (ushort)GeneralStatusId.亲疏自行, 6);
+                UseStatusAction(actor, GeneralActionId.亲疏自行, GeneralStatusId.亲疏自行, 6);
         }
+
+        private bool UseStatusAction<TActionEnum, TStatusEnum>(SimActor actor, TActionEnum action, TStatusEnum status, float seconds)
+            where TActionEnum : struct, Enum
+            where TStatusEnum : struct, Enum
+            => UseStatusAction(actor, Convert.ToUInt32(action), Convert.ToUInt16(status), seconds);
 
         internal bool UseStatusAction(SimActor actor, uint action, ushort status, float seconds, ActionRequest request = null,
             byte param = 0)
@@ -188,10 +212,7 @@ namespace Simulant.Simulation.Runtime
                     return false;
 
                 var effect = SetActionStatus(actor, actor, status, seconds, param);
-                if (request == null)
-                    PlayLocalActionEffect(actor, action, actor);
-                else
-                    ResolvePlayerAction(actor.Entity, request, actor.Entity, action, effect);
+                ResolveAction(actor.Entity, request, actor.Entity, action, request == null ? null : new[] { effect });
                 return true;
             }
         }
@@ -207,15 +228,6 @@ namespace Simulant.Simulation.Runtime
                 Param2 = param,
                 Value = status
             };
-        }
-
-        private static void PlayLocalActionEffect(SimActor actor, uint actionId, SimActor target)
-        {
-            actor.ExecuteActionEffect(actionId, target);
-            // 本机模拟技能需要补播动作，网络假角色由结算演出驱动。
-            if (actor.Entity.Identity.Slot == 0 &&
-                GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var action))
-                actor.Entity.PlayBlendTimeline((ushort)action.AnimationEnd.RowId);
         }
 
         private void SetSprintEffect(SimActor actor, bool enabled)
