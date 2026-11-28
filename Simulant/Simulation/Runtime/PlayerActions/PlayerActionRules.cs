@@ -44,13 +44,10 @@ namespace Simulant.Simulation.Runtime.PlayerActions
     {
         internal const ushort ComboDurationMilliseconds = 30000;
 
-        /// <summary>各职业在静态构造函数中登记的开场初始化方法。</summary>
-        internal static readonly Dictionary<Job, Action> JobActionsOnSimStart = new Dictionary<Job, Action>();
-
         /// <summary>按结算技能编号保存特殊瞬发动画锁，单位为秒。</summary>
         private static readonly Dictionary<uint, float> SpecialAnimationLocks = new Dictionary<uint, float>();
 
-        /// <summary>由职业静态构造函数按技能枚举登记特殊瞬发动画锁。</summary>
+        /// <summary>由职业单例的构造函数按技能枚举登记特殊瞬发动画锁。</summary>
         /// <remarks>职业初始化时登记，每个技能编号登记一次。</remarks>
         internal static void AddSpecialAnimationLock<TActionId>(TActionId actionId, float animationLock)
             where TActionId : struct, Enum

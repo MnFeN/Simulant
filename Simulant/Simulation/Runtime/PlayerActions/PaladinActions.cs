@@ -12,7 +12,7 @@ using static Simulant.Simulation.Runtime.PlayerActions.PlayerActionRules;
 
 namespace Simulant.Simulation.Runtime.PlayerActions
 {
-    internal static class PaladinActions
+    internal sealed class PaladinActions : JobActions<PaladinActions, PaladinGauge>
     {
         private enum ActionId : uint
         {
@@ -76,27 +76,18 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         // 技能表以 -1 表示采用武器伤害类型，国服回放中的骑士剑技为斩击。
         private const byte WeaponAttackType = 1;
         private const ushort SpellHealing = 10000;
-        private static SimScheduledAction _spellComboExpiry;
 
-        static PaladinActions()
+        private SimScheduledAction _spellComboExpiry;
+
+        private PaladinActions() : base(Job.PLD)
         {
-            JobActionsOnSimStart.Add(Job.PLD, OnSimStart);
         }
 
-        private static PaladinGauge GetGauge()
-            => PlayerActionRules.GetGauge<PaladinGauge>(Job.PLD);
+        internal override void OnSimStart() => GetGauge().OathGauge.Set(100);
 
-        private static void OnSimStart()
+        internal override bool TryHandleAction(ActionRequest request)
         {
-            GetGauge().OathGauge.Set(100);
-        }
-
-        internal static bool TryHandleAction(ActionRequest request)
-        {
-            var player = PluginHost.Instance?.EntityProvider?.GetMyself();
-            if (player?.Job != Job.PLD)
-                return false;
-
+            var player = PluginHost.Instance.EntityProvider.GetMyself();
             var target = player;
             var effects = new List<ActionEffect>(4);
             (Character Target, List<ActionEffect> Effects)[] areaHits = null;
@@ -361,7 +352,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             }
         }
 
-        private static bool RequireSpellComboStep(Character player, ActionRequest request, byte expectedStep)
+        private bool RequireSpellComboStep(Character player, ActionRequest request, byte expectedStep)
         {
             if (GetGauge().ConfiteorComboStep.Get() == expectedStep)
                 return true;
@@ -370,7 +361,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             return false;
         }
 
-        private static void AdvanceSpellCombo(Character player, byte next)
+        private void AdvanceSpellCombo(Character player, byte next)
         {
             var gauge = GetGauge();
             // 国服回放中，悔罪、信念之剑、真理之剑各同步 30 秒及阶段 1、2、3，英勇之剑归零。
@@ -392,7 +383,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             }, "结束悔罪连段");
         }
 
-        private static bool TrySpendOath(Character player, ActionRequest request)
+        private bool TrySpendOath(Character player, ActionRequest request)
         {
             var cost = GetAction(request).PrimaryCostValue;
             var gauge = GetGauge();
@@ -407,13 +398,13 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             return true;
         }
 
-        internal static void OnAutoAttack()
+        internal override void OnAutoAttack()
         {
             var gauge = GetGauge();
             gauge.OathGauge.Set((byte)Math.Min(100, gauge.OathGauge.Get() + 5));
         }
 
-        internal static void CancelSpellComboExpiry()
+        protected override void OnReset()
         {
             _spellComboExpiry?.Cancel();
             _spellComboExpiry = null;

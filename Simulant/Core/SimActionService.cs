@@ -7,9 +7,7 @@ using Simulant.Simulation.Runtime.PlayerActions;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Threading;
-using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Core
 {
@@ -24,14 +22,6 @@ namespace Simulant.Core
         private ActionRequest _lastActionRequest;
         private (EntityIdentity Player, uint Sequence, Vector2 Position)? _castOrigin;
         private (EntityIdentity Player, ActionRequest Request)? _pendingCast;
-
-        static SimActionService()
-        {
-            // 开场时可能还没放过技能，先运行各职业的注册代码。
-            // todo 反射实现
-            RuntimeHelpers.RunClassConstructor(typeof(PaladinActions).TypeHandle);
-            RuntimeHelpers.RunClassConstructor(typeof(WhiteMageActions).TypeHandle);
-        }
 
         internal SimActionService(PluginHost host) => _host = host;
 
@@ -273,6 +263,8 @@ namespace Simulant.Core
             if (RejectLockedAction(player, request))
                 return;
 
+            var job = player.Job;
+            var jobActions = JobActions.For(job);
             var encounter = EncounterEntities;
             if (encounter?.TryUseLimitBreak(player, request) == true)
                 return;
@@ -280,12 +272,13 @@ namespace Simulant.Core
                 ReferenceEquals(PluginHost.Instance, _host) &&
                 GeneralActions.TryHandleAction(request))
                 return;
-            if (player.Level == 100 && TryHandleJobAction(player.Job, request))
+            if (player.Level == 100 && request.ActionType == ActionType.Action &&
+                ReferenceEquals(PluginHost.Instance, _host) && jobActions?.TryHandleAction(request) == true)
                 return;
             if (request.ActionType != ActionType.Action)
                 return;
 
-            if (request.Kind == ActionRequestKind.Normal && request.ActionId == SimEntityManager.GetInvulnerability(player.Job).Action &&
+            if (request.Kind == ActionRequestKind.Normal && request.ActionId == SimEntityManager.GetInvulnerability(job).Action &&
                 !_entities.UseInvulnerability(_entities.Attach(player), request))
                 player.RejectActionResult(request, 582);
         }
@@ -299,18 +292,6 @@ namespace Simulant.Core
             return true;
         }
 
-        private bool TryHandleJobAction(Job job, ActionRequest request)
-        {
-            switch (job)
-            {
-                case Job.PLD:
-                    return request.ActionType == ActionType.Action && ReferenceEquals(PluginHost.Instance, _host) &&
-                        PaladinActions.TryHandleAction(request);
-                default:
-                    return false;
-            }
-        }
-
         internal void Reset()
         {
             lock (_gate)
@@ -320,7 +301,7 @@ namespace Simulant.Core
                 {
                     _scheduler?.Dispose();
                     if (ReferenceEquals(PluginHost.Instance, _host))
-                        PaladinActions.CancelSpellComboExpiry();
+                        JobActions.ResetAll();
                     _entities?.Clear();
                 }
                 finally

@@ -96,8 +96,7 @@ namespace Simulant.Core
             else
                 weaponAttackType = 1;
             entities.ResolveAutoAttack(player, target, actionId, weaponAttackType);
-            if (job == Job.PLD)
-                PaladinActions.OnAutoAttack();
+            JobActions.For(job)?.OnAutoAttack();
             return true;
         }
 

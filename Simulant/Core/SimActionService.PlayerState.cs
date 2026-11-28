@@ -18,8 +18,7 @@ namespace Simulant.Core
                 var player = _host.EntityProvider.GetMyself();
                 SetSimLevel(player, level, player.MaxHP, checked((ushort)player.MaxMp));
 
-                if (PlayerActionRules.JobActionsOnSimStart.TryGetValue(player.Job, out var initialize))
-                    initialize();
+                JobActions.For(player.Job)?.OnSimStart();
             });
         }
 

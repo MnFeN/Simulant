@@ -1,20 +1,18 @@
+using Simulant.Core;
 using Simulant.Game.FFCS.Client.Game.Gauge;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
-using static Simulant.Simulation.Runtime.PlayerActions.PlayerActionRules;
 
 namespace Simulant.Simulation.Runtime.PlayerActions
 {
-    internal static class WhiteMageActions
+    internal sealed class WhiteMageActions : JobActions<WhiteMageActions, WhiteMageGauge>
     {
-        static WhiteMageActions()
+        private WhiteMageActions() : base(Job.WHM)
         {
-            JobActionsOnSimStart.Add(Job.WHM, OnSimStart);
         }
 
-        private static WhiteMageGauge GetGauge()
-            => PlayerActionRules.GetGauge<WhiteMageGauge>(Job.WHM);
+        internal override bool TryHandleAction(ActionRequest request) => false;
 
-        private static void OnSimStart()
+        internal override void OnSimStart()
         {
             var gauge = GetGauge();
             gauge.LilyTimer.Set(0);
