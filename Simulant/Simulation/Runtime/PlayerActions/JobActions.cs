@@ -22,24 +22,17 @@ namespace Simulant.Simulation.Runtime.PlayerActions
 
         internal static JobActions For(Job job) => ByJob.TryGetValue(job, out var actions) ? actions : null;
 
-        internal static void ResetAll()
-        {
-            foreach (var actions in ByJob.Values)
-                actions.OnReset();
-        }
-
         /// <summary>处理职业技能请求。未实现的技能返回 false。</summary>
         internal abstract bool TryHandleAction(ActionRequest request);
 
-        internal virtual void OnSimStart()
-        {
-        }
+        /// <summary>开始模拟时，当前职业的重置，如某些职业满量谱。</summary>
+        internal abstract void OnSimStart();
+
+        /// <summary>本机技能服务结束时清理职业状态，包括停止模拟、换图和断线。</summary>
+        /// <param name="canWritePlayerState">是否仍可写入本次模拟玩家的客户端状态。</param>
+        internal abstract void OnSimEnd(bool canWritePlayerState);
 
         internal virtual void OnAutoAttack()
-        {
-        }
-
-        protected virtual void OnReset()
         {
         }
     }

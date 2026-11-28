@@ -19,5 +19,9 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             gauge.Lily.Set(3);
             gauge.BloodLily.Set(3);
         }
+
+        internal override void OnSimEnd(bool canWritePlayerState)
+        {
+        }
     }
 }

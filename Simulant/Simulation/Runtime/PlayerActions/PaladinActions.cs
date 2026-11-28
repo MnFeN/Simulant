@@ -85,6 +85,13 @@ namespace Simulant.Simulation.Runtime.PlayerActions
 
         internal override void OnSimStart() => GetGauge().OathGauge.Set(100);
 
+        internal override void OnSimEnd(bool canWritePlayerState)
+        {
+            _spellComboExpiry = null;
+            if (canWritePlayerState)
+                ClearSpellCombo(GetGauge());
+        }
+
         internal override bool TryHandleAction(ActionRequest request)
         {
             var player = PluginHost.Instance.EntityProvider.GetMyself();
@@ -378,9 +385,14 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                 var activeGauge = GetGauge();
                 if (activeGauge.ConfiteorComboStep.Get() != next)
                     return;
-                activeGauge.ConfiteorComboStep.Set(0);
-                activeGauge.ConfiteorComboTimer.Set(0);
+                ClearSpellCombo(activeGauge);
             }, "结束悔罪连段");
+        }
+
+        private static void ClearSpellCombo(PaladinGauge gauge)
+        {
+            gauge.ConfiteorComboStep.Set(0);
+            gauge.ConfiteorComboTimer.Set(0);
         }
 
         private bool TrySpendOath(Character player, ActionRequest request)
@@ -402,12 +414,6 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         {
             var gauge = GetGauge();
             gauge.OathGauge.Set((byte)Math.Min(100, gauge.OathGauge.Get() + 5));
-        }
-
-        protected override void OnReset()
-        {
-            _spellComboExpiry?.Cancel();
-            _spellComboExpiry = null;
         }
     }
 }

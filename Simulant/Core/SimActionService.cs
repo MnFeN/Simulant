@@ -8,6 +8,7 @@ using Simulant.Simulation.Timeline;
 using System;
 using System.Numerics;
 using System.Threading;
+using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Core
 {
@@ -19,6 +20,7 @@ namespace Simulant.Core
         private SimScheduler _scheduler;
         private SimEntityManager _entities;
         private SimEntityManager _encounterEntities;
+        private JobActions _jobActions;
         private ActionRequest _lastActionRequest;
         private (EntityIdentity Player, uint Sequence, Vector2 Position)? _castOrigin;
         private (EntityIdentity Player, ActionRequest Request)? _pendingCast;
@@ -32,17 +34,24 @@ namespace Simulant.Core
 
         internal void BeginSimulation(SimEntityManager encounterEntities, byte? level = null)
         {
-            if (!Enabled)
-                return;
+            lock (_gate)
+            {
+                if (!Enabled)
+                    return;
 
-            if (level.HasValue)
-                PrepareSimPlayer(level.Value);
-            Volatile.Write(ref _encounterEntities, encounterEntities);
+                if (level.HasValue)
+                    PrepareSimPlayer(level.Value);
+                Volatile.Write(ref _encounterEntities, encounterEntities);
+            }
         }
 
         internal void EndSimulation(SimEntityManager encounterEntities)
         {
-            Interlocked.CompareExchange(ref _encounterEntities, null, encounterEntities);
+            lock (_gate)
+            {
+                if (ReferenceEquals(_encounterEntities, encounterEntities))
+                    ResetCore(endingSimulation: true);
+            }
         }
 
         internal void ResetCooldowns()
@@ -73,6 +82,11 @@ namespace Simulant.Core
         {
             if (_scheduler != null)
                 return;
+
+            ClearActionEntities();
+            if (_entities != null)
+                throw new InvalidOperationException("上次模拟的本机技能尚未清理。");
+
             _scheduler = new SimScheduler((error, node) => _host.LogWarning("模拟技能失败：" + error.Message));
             _entities = new SimEntityManager(_host.EntitySpawner, error => _host.LogWarning("清理模拟技能状态失败：" + error.Message))
             {
@@ -85,6 +99,12 @@ namespace Simulant.Core
 
         /// <summary>按发送顺序处理本机技能请求，并检查本机读条期间的位移。</summary>
         internal void HandleActionRequests(ActionRequest[] requests, uint dropped)
+        {
+            lock (_gate)
+                HandleActionRequestsCore(requests, dropped);
+        }
+
+        private void HandleActionRequestsCore(ActionRequest[] requests, uint dropped)
         {
             ushort cancelSequence = 0;
             foreach (var request in requests)
@@ -110,9 +130,7 @@ namespace Simulant.Core
                 return;
             }
 
-            lock (_gate)
-                if (Enabled)
-                    EnsureScheduler();
+            EnsureScheduler();
 
             var previousPending = _pendingCast?.Request;
             QueueCapturedActions(player, requests);
@@ -245,14 +263,11 @@ namespace Simulant.Core
 
         private void QueueCapturedResult(Character player, ActionRequest request)
         {
-            lock (_gate)
-            {
-                if (!Enabled)
-                    return;
-                EnsureScheduler();
+            if (Enabled)
                 _scheduler.ScheduleAfter(0, () => ExecuteCapturedAction(player, request), "结算本机技能请求");
-            }
         }
+
+        private JobActions SelectJobActions(Job job) => _jobActions = JobActions.For(job);
 
         private void ExecuteCapturedAction(Character player, ActionRequest request)
         {
@@ -264,7 +279,7 @@ namespace Simulant.Core
                 return;
 
             var job = player.Job;
-            var jobActions = JobActions.For(job);
+            var jobActions = SelectJobActions(job);
             var encounter = EncounterEntities;
             if (encounter?.TryUseLimitBreak(player, request) == true)
                 return;
@@ -295,23 +310,40 @@ namespace Simulant.Core
         internal void Reset()
         {
             lock (_gate)
+                ResetCore(endingSimulation: false);
+        }
+
+        private void ResetCore(bool endingSimulation)
+        {
+            // 先停本机调度，避免在清理状态或量谱时还有一个技能正在结算。
+            _scheduler?.Dispose();
+            _scheduler = null;
+            Volatile.Write(ref _encounterEntities, null);
+            ClearCastTracking();
+            var jobActions = _jobActions;
+            _jobActions = null;
+
+            try
             {
-                // 回调不获取此锁，先等待在途调用完成，再清除自己施加的状态。
-                try
+                if (jobActions != null)
                 {
-                    _scheduler?.Dispose();
-                    if (ReferenceEquals(PluginHost.Instance, _host))
-                        JobActions.ResetAll();
-                    _entities?.Clear();
-                }
-                finally
-                {
-                    _scheduler = null;
-                    _entities = null;
-                    Volatile.Write(ref _encounterEntities, null);
-                    ClearCastTracking();
+                    var player = endingSimulation && Enabled && ReferenceEquals(PluginHost.Instance, _host)
+                        ? _host.EntityProvider.GetMyself()
+                        : null;
+                    jobActions.OnSimEnd(player != null && ReferenceEquals(jobActions, JobActions.For(player.Job)));
                 }
             }
+            finally
+            {
+                ClearActionEntities();
+            }
+        }
+
+        private void ClearActionEntities()
+        {
+            _entities?.Clear();
+            if (_entities?.HasPendingCleanup != true)
+                _entities = null;
         }
     }
 }

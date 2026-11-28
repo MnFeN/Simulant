@@ -1,7 +1,6 @@
 using Simulant.Core.Entity;
 using Simulant.Game;
 using Simulant.Game.FFCS.Client.Game.UI;
-using Simulant.Simulation.Runtime.PlayerActions;
 
 namespace Simulant.Core
 {
@@ -18,7 +17,7 @@ namespace Simulant.Core
                 var player = _host.EntityProvider.GetMyself();
                 SetSimLevel(player, level, player.MaxHP, checked((ushort)player.MaxMp));
 
-                JobActions.For(player.Job)?.OnSimStart();
+                SelectJobActions(player.Job)?.OnSimStart();
             });
         }
 

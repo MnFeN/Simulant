@@ -96,7 +96,7 @@ namespace Simulant.Core
             else
                 weaponAttackType = 1;
             entities.ResolveAutoAttack(player, target, actionId, weaponAttackType);
-            JobActions.For(job)?.OnAutoAttack();
+            SelectJobActions(job)?.OnAutoAttack();
             return true;
         }
 
@@ -108,7 +108,8 @@ namespace Simulant.Core
             var currentMp = player.MP;
             var maxMp = player.MaxMp;
 
-            // 国服 ACT 血蓝同步样本：战斗中每次恢复 1% HP 和 200 MP，脱战 10% HP 和 600 MP。
+            // 战斗中每次恢复 1% HP 和 200 MP，脱战 10% HP 和 600 MP。
+            // todo: 治疗职业回蓝关联信仰（或直接用配置选项）
             var hp = (uint)Math.Min(maxHp, (ulong)currentHp + maxHp / (inCombat ? 100u : 10u));
             var mp = currentMp;
             if (!HasAstralFire(player))

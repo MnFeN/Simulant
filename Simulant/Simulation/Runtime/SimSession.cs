@@ -191,7 +191,6 @@ namespace Simulant.Simulation.Runtime
 
         private void StopCore()
         {
-            _host.PlayerActions.EndSimulation(_entityManager);
             // Dispose 先取消并等待当前节点退出，再允许释放节点引用的原生实体。
             _scheduler?.Dispose();
             if (Interlocked.Exchange(ref _stopping, 1) != 0)
@@ -199,18 +198,24 @@ namespace Simulant.Simulation.Runtime
 
             try
             {
-                if (!_roundStarted)
-                {
-                    Cleanup();
-                    return;
-                }
-
-                _roundStarted = false;
-                StopRound();
+                _host.PlayerActions.EndSimulation(_entityManager);
             }
             finally
             {
-                Volatile.Write(ref _stopping, 0);
+                try
+                {
+                    if (_roundStarted)
+                    {
+                        _roundStarted = false;
+                        StopRound();
+                    }
+                    else
+                        Cleanup();
+                }
+                finally
+                {
+                    Volatile.Write(ref _stopping, 0);
+                }
             }
         }
 
