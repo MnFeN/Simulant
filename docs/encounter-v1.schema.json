@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Simulant 本地副本 v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "territoryId"],
+  "dependentRequired": { "actors": ["timeline"], "timeline": ["actors"] },
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "minLength": 1, "maxLength": 96, "not": { "pattern": "[^a-z0-9.-]" } },
+    "name": { "$ref": "#/$defs/text" },
+    "description": { "$ref": "#/$defs/text" },
+    "author": { "$ref": "#/$defs/text" },
+    "territoryId": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["weatherId", "bgmId"],
+      "properties": {
+        "weatherId": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "bgmId": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "mapEffectFlags": {
+          "type": "array",
+          "items": { "type": ["integer", "null"], "minimum": 0, "maximum": 65535 }
+        }
+      }
+    },
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "baseId", "nameId", "level", "position", "heading"],
+        "properties": {
+          "id": { "$ref": "#/$defs/text" },
+          "baseId": { "$ref": "#/$defs/npcRow" },
+          "nameId": { "$ref": "#/$defs/npcRow" },
+          "level": { "type": "integer", "minimum": 1, "maximum": 255 },
+          "position": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/float" } },
+          "heading": { "$ref": "#/$defs/float" }
+        }
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["at", "op", "actor", "actionId"],
+        "properties": {
+          "at": { "type": "number", "minimum": 0, "maximum": 1.7976931348623157e308 },
+          "op": { "const": "cast" },
+          "actor": { "$ref": "#/$defs/text" },
+          "actionId": { "type": "integer", "minimum": 1, "maximum": 4294967295 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "text": { "type": "string", "pattern": "\\S" },
+    "npcRow": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+    "float": { "type": "number", "minimum": -3.4028234663852886e38, "maximum": 3.4028234663852886e38 }
+  }
+}

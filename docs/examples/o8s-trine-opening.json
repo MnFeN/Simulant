@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "example.o8s.trine-opening",
+  "name": "O8S · 异三角开场读条",
+  "description": "本体就绪 3 秒后施放第一次异三角。",
+  "territoryId": 755,
+  "environment": { "weatherId": 79, "bgmId": 533 },
+  "actors": [
+    { "id": "boss", "baseId": 8528, "nameId": 7131, "level": 80, "position": [0, 0, 0], "heading": 3.141593 }
+  ],
+  "timeline": [
+    { "at": 3, "op": "cast", "actor": "boss", "actionId": 10509 }
+  ]
+}

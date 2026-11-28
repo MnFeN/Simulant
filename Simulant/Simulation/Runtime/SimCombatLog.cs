@@ -33,6 +33,8 @@ namespace Simulant.Simulation.Runtime
         }
 
         internal bool Enabled => _enabled();
+        internal event Action<Character, uint> CastStarted;
+        internal event Action<Character, uint> AbilityResolved;
 
         internal void Party(IReadOnlyList<SimActor> members)
             => Record(time =>
@@ -47,6 +49,7 @@ namespace Simulant.Simulation.Runtime
         internal void Cast(Character source, ActionRow action, Character target, float duration,
             Vector3? castOrigin, float? castHeading)
         {
+            CastStarted?.Invoke(source, action.RowId);
             Record(time =>
             {
                 var sourcePos = source.Pos3D;
@@ -65,6 +68,7 @@ namespace Simulant.Simulation.Runtime
             float? effectHeading, float animationLock, IEnumerable<SimActor> hitTargets, int? packetTargetCapacity,
             ActionEffect[] effects = null)
         {
+            AbilityResolved?.Invoke(source, actionId);
             Record(time =>
             {
                 var action = GameDataService.Instance.GetSheet<ActionRow>().GetRowOrDefault(actionId);

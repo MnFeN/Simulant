@@ -115,10 +115,11 @@ namespace Simulant.UI
             public bool HasPreset;
         }
 
-        internal void LoadTerritoryData()
+        internal void LoadTerritoryData(IEnumerable<int> localTerritories)
         {
             var territoryData = GameDataService.Instance.GetSheet<TerritoryType>();
             var presetTerritoryIds = GetPresetTerritoryIds();
+            presetTerritoryIds.UnionWith(localTerritories);
 
             // 预留一些空间，游戏更新时不更新数据也能进入地图
             var size = territoryData.Select(t => (int)t.RowId).Max() + 100;

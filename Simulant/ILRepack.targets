@@ -7,6 +7,8 @@
       <PluginMergeInput Include="$(IntermediateOutputPath)$(TargetFileName)" />
       <PluginMergeInput Include="@(ReferenceCopyLocalPaths)"
           Condition="'%(Extension)' == '.dll' and ('%(Filename)' == 'Lumina.ACT.Core' or '%(Filename)' == 'BCnEncoder' or '%(Filename)' == 'CommunityToolkit.HighPerformance' or '%(Filename)' == 'Microsoft.Bcl.HashCode' or '%(Filename)' == 'Microsoft.Bcl.Numerics' or '%(Filename)' == 'System.Buffers' or '%(Filename)' == 'System.Memory' or '%(Filename)' == 'System.Runtime.CompilerServices.Unsafe' or '%(Filename)' == 'System.Threading.Tasks.Extensions')" />
+      <PluginMergeInput Include="@(ReferenceCopyLocalPaths)"
+          Condition="'%(Extension)' == '.dll' and ('%(Filename)' == 'System.Text.Json' or '%(Filename)' == 'System.Text.Encodings.Web' or '%(Filename)' == 'Microsoft.Bcl.AsyncInterfaces' or '%(Filename)' == 'System.Numerics.Vectors')" />
     </ItemGroup>
     <ILRepack InputAssemblies="@(PluginMergeInput)" OutputFile="$(TargetPath)" TargetKind="Dll"
               Internalize="false" DebugInfo="true" LibraryPath="$(TargetDir)" />

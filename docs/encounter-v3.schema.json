@@ -1,0 +1,527 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Simulant 本地副本 v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "territoryId"],
+  "properties": {
+    "schemaVersion": {"const": 3},
+    "id": {"$ref": "encounter-v2.schema.json#/properties/id"},
+    "name": {"$ref": "encounter-v2.schema.json#/properties/name"},
+    "territoryId": {"$ref": "encounter-v2.schema.json#/properties/territoryId"},
+    "author": {"$ref": "encounter-v2.schema.json#/properties/author"},
+    "description": {"$ref": "encounter-v2.schema.json#/properties/description"},
+    "environment": {"$ref": "encounter-v2.schema.json#/properties/environment"},
+    "waymarks": {"$ref": "encounter-v2.schema.json#/properties/waymarks"},
+    "roleSwap": {"$ref": "encounter-v2.schema.json#/properties/roleSwap"},
+    "party": {"$ref": "encounter-v2.schema.json#/properties/party"},
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "baseId", "nameId", "level", "position", "heading"],
+        "properties": {
+          "id": {"$ref": "encounter-v2.schema.json#/properties/actors/items/properties/id"},
+          "baseId": {"$ref": "encounter-v2.schema.json#/properties/actors/items/properties/baseId"},
+          "nameId": {"$ref": "encounter-v2.schema.json#/properties/actors/items/properties/nameId"},
+          "level": {"$ref": "encounter-v2.schema.json#/properties/actors/items/properties/level"},
+          "position": {"$ref": "encounter-v2.schema.json#/properties/actors/items/properties/position"},
+          "heading": {"$ref": "encounter-v2.schema.json#/properties/actors/items/properties/heading"},
+          "hidden": {"$ref": "encounter-v2.schema.json#/properties/actors/items/properties/hidden"},
+          "enmity": {
+            "type": "object",
+            "propertyNames": {"$ref": "#/$defs/role"},
+            "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 100}
+          },
+          "maxHp": {"type": "integer", "minimum": 1, "maximum": 4294967295}
+        },
+        "dependentRequired": {"maxHp": ["enmity"]}
+      }
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "values", "default"],
+        "properties": {
+          "id": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+          "label": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"allOf": [{"$ref": "encounter-v1.schema.json#/$defs/text"}, {"not": {"const": "*"}}]},
+            "uniqueItems": true
+          },
+          "default": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+          "random": {"type": "boolean"}
+        }
+      }
+    },
+    "timeline": {"$ref": "#/$defs/steps"}
+  },
+  "dependentRequired": {
+    "actors": ["timeline"],
+    "timeline": ["actors"],
+    "options": ["timeline"],
+    "party": ["actors"],
+    "roleSwap": ["party"],
+    "waymarks": ["actors"]
+  },
+  "if": {"not": {"required": ["party"]}},
+  "then": {
+    "properties": {
+      "timeline": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/withoutParty"}},
+      "actors": {"items": {"not": {"required": ["enmity"]}}}
+    }
+  },
+  "$defs": {
+    "targetKey": {
+      "allOf": [
+        {"$ref": "encounter-v1.schema.json#/$defs/text"},
+        {"pattern": "^[^<>\\u0000-\\u001f\\u007f-\\u009f]*$", "not": {"const": "$member"}}
+      ]
+    },
+    "point": {"$ref": "encounter-v2.schema.json#/$defs/point"},
+    "role": {"$ref": "encounter-v2.schema.json#/$defs/role"},
+    "shape": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "radius"],
+          "properties": {
+            "type": {"const": "circle"},
+            "radius": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "radius", "degrees"],
+          "properties": {
+            "type": {"const": "cone"},
+            "radius": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38},
+            "degrees": {"type": "number", "exclusiveMinimum": 0, "maximum": 360}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "inner", "outer"],
+          "properties": {
+            "type": {"const": "donut"},
+            "inner": {"type": "number", "minimum": 0, "maximum": 3.4028234663852886e+38},
+            "outer": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "length", "width"],
+          "properties": {
+            "type": {"const": "rectangle"},
+            "length": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38},
+            "width": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "length", "width"],
+          "properties": {
+            "type": {"const": "cross"},
+            "length": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38},
+            "width": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38}
+          }
+        }
+      ]
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "conditions"],
+          "properties": {
+            "type": {"const": "all"},
+            "conditions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/condition"}}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "conditions"],
+          "properties": {
+            "type": {"const": "any"},
+            "conditions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/condition"}}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "condition"],
+          "properties": {"type": {"const": "not"}, "condition": {"$ref": "#/$defs/condition"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "check", "passed"],
+          "properties": {
+            "type": {"const": "checkResult"},
+            "check": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "passed": {"type": "boolean"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "option", "value"],
+          "properties": {
+            "type": {"const": "optionEquals"},
+            "option": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "value": {"$ref": "encounter-v1.schema.json#/$defs/text"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "actor", "percent"],
+          "properties": {
+            "type": {"const": "hpAtMost"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "percent": {"type": "number", "minimum": 0, "maximum": 100}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "statusId"],
+          "properties": {
+            "type": {"const": "hasStatus"},
+            "statusId": {"type": "integer", "minimum": 1, "maximum": 65535},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "role": {"$ref": "#/$defs/role"},
+            "target": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "minStacks": {"type": "integer", "minimum": 1, "maximum": 65535}
+          },
+          "oneOf": [{"required": ["actor"]}, {"required": ["role"]}, {"required": ["target"]}]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "shape", "min", "max"],
+          "properties": {
+            "type": {"const": "areaCount"},
+            "shape": {"$ref": "#/$defs/shape"},
+            "min": {"type": "integer", "minimum": 0, "maximum": 8},
+            "max": {"type": "integer", "minimum": 0, "maximum": 8},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "position": {"$ref": "#/$defs/point"},
+            "roles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/role"}, "uniqueItems": true},
+            "heading": {"$ref": "encounter-v1.schema.json#/$defs/float"},
+            "target": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "centerRole": {"$ref": "#/$defs/role"}
+          },
+          "oneOf": [{"required": ["actor"]}, {"required": ["position"]}, {"required": ["centerRole"]}],
+          "not": {"required": ["roles", "target"]}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "role", "target"],
+          "properties": {
+            "type": {"const": "targetIs"},
+            "role": {"$ref": "#/$defs/role"},
+            "target": {"$ref": "encounter-v1.schema.json#/$defs/text"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "actor", "objectId"],
+          "properties": {
+            "type": {"const": "objectActive"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "objectId": {"type": "integer", "minimum": 1, "maximum": 4294967295}
+          }
+        }
+      ]
+    },
+    "signal": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "actor", "actionId"],
+          "properties": {
+            "type": {"const": "castStarted"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "actionId": {"type": "integer", "minimum": 1, "maximum": 4294967295}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "actor", "actionId"],
+          "properties": {
+            "type": {"const": "castResolved"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "actionId": {"type": "integer", "minimum": 1, "maximum": 4294967295}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "check"],
+          "properties": {
+            "type": {"const": "checkResolved"},
+            "check": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "passed": {"type": "boolean"}
+          }
+        }
+      ]
+    },
+    "steps": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/step"}},
+    "step": {
+      "oneOf": [
+        {"$ref": "encounter-v2.schema.json#/properties/timeline/items"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "at", "if", "then"],
+          "properties": {
+            "op": {"const": "branch"},
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "if": {"$ref": "#/$defs/condition"},
+            "then": {"$ref": "#/$defs/steps"},
+            "else": {"$ref": "#/$defs/steps"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "at", "timeout", "then"],
+          "properties": {
+            "op": {"const": "trigger"},
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "timeout": {"type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e+308},
+            "then": {"$ref": "#/$defs/steps"},
+            "event": {"$ref": "#/$defs/signal"},
+            "if": {"$ref": "#/$defs/condition"},
+            "else": {"$ref": "#/$defs/steps"}
+          },
+          "oneOf": [{"required": ["event"]}, {"required": ["if"]}]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "at", "id", "if", "text"],
+          "properties": {
+            "op": {"const": "judge"},
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "id": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "if": {"$ref": "#/$defs/condition"},
+            "text": {
+              "allOf": [
+                {"$ref": "encounter-v1.schema.json#/$defs/text"},
+                {"pattern": "^[^<>\\u0000-\\u001f\\u007f-\\u009f]*$"}
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "at", "id", "roles", "position", "radius", "text"],
+          "properties": {
+            "op": {"const": "check"},
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "id": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "roles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/role"}, "uniqueItems": true},
+            "position": {"$ref": "#/$defs/point"},
+            "radius": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38},
+            "text": {
+              "allOf": [
+                {"$ref": "encounter-v1.schema.json#/$defs/text"},
+                {"pattern": "^[^<>\\u0000-\\u001f\\u007f-\\u009f]*$"}
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "at", "actor", "percent"],
+          "properties": {
+            "op": {"const": "health"},
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "percent": {"type": "number", "minimum": 0, "maximum": 100}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "at", "slot", "flags"],
+          "properties": {
+            "op": {"const": "mapEffect"},
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "slot": {"type": "integer", "minimum": 0, "maximum": 65535},
+            "flags": {"type": "integer", "minimum": 1, "maximum": 65535}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "at", "roles", "knockbackId"],
+          "properties": {
+            "op": {"const": "knockback"},
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "roles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/role"}, "uniqueItems": true},
+            "knockbackId": {"type": "integer", "minimum": 1, "maximum": 65535},
+            "position": {"$ref": "#/$defs/point"},
+            "heading": {"$ref": "encounter-v1.schema.json#/$defs/float"}
+          },
+          "oneOf": [{"required": ["position"]}, {"required": ["heading"]}]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["at", "op", "actor", "key", "by"],
+          "properties": {
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "op": {"const": "selectTarget"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "key": {"$ref": "#/$defs/targetKey"},
+            "by": {"enum": ["nearest", "farthest", "enmity", "firstEnmity"]},
+            "rank": {"type": "integer", "minimum": 1, "maximum": 8},
+            "roles": {"type": "array", "items": {"$ref": "#/$defs/role"}, "minItems": 1, "uniqueItems": true}
+          },
+          "not": {"required": ["rank", "by"], "properties": {"by": {"const": "firstEnmity"}}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["at", "op", "actor", "key", "by", "tetherId"],
+          "properties": {
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "op": {"const": "trackTether"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "key": {"$ref": "#/$defs/targetKey"},
+            "by": {"enum": ["nearest", "farthest", "enmity", "firstEnmity"]},
+            "rank": {"type": "integer", "minimum": 1, "maximum": 8},
+            "roles": {"type": "array", "items": {"$ref": "#/$defs/role"}, "minItems": 1, "uniqueItems": true},
+            "tetherId": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+            "interceptRadius": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38},
+            "initialRole": {"$ref": "#/$defs/role"}
+          },
+          "not": {"required": ["rank", "by"], "properties": {"by": {"const": "firstEnmity"}}},
+          "dependentRequired": {"initialRole": ["interceptRadius"]}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["at", "op", "key"],
+          "properties": {
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "op": {"const": "resolveTether"},
+            "key": {"$ref": "#/$defs/targetKey"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["at", "op", "actor", "actionId", "target"],
+          "properties": {
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "op": {"const": "cast"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "actionId": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+            "target": {"$ref": "encounter-v1.schema.json#/$defs/text"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["at", "op", "actor", "statusId", "duration"],
+          "properties": {
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "op": {"const": "status"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "statusId": {"type": "integer", "minimum": 1, "maximum": 65535},
+            "duration": {"type": "number", "minimum": 0, "maximum": 3.4028234663852886e+38},
+            "targetRole": {"$ref": "#/$defs/role"},
+            "target": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "stacks": {"type": "integer", "minimum": 0, "maximum": 65535},
+            "addStacks": {"type": "integer", "minimum": 1, "maximum": 65535}
+          },
+          "anyOf": [{"required": ["target"]}, {"required": ["addStacks"]}],
+          "allOf": [
+            {"not": {"required": ["target", "targetRole"]}},
+            {"not": {"required": ["stacks", "addStacks"]}},
+            {
+              "if": {"required": ["addStacks"]},
+              "then": {
+                "properties": {"duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38}}
+              }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["at", "op", "actor", "targetRole", "damage"],
+          "properties": {
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "op": {"const": "partyHit"},
+            "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+            "targetRole": {"$ref": "#/$defs/role"},
+            "damage": {"type": "integer", "minimum": 1, "maximum": 4294967295}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["at", "op", "then"],
+          "properties": {
+            "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+            "op": {"const": "forParty"},
+            "then": {"$ref": "#/$defs/steps"},
+            "roles": {"type": "array", "items": {"$ref": "#/$defs/role"}, "minItems": 1, "uniqueItems": true},
+            "interval": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38, "minimum": 0.1},
+            "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.4028234663852886e+38}
+          },
+          "dependentRequired": {"interval": ["duration"], "duration": ["interval"]}
+        }
+      ]
+    },
+    "withoutParty": {
+      "not": {
+        "anyOf": [
+          {"required": ["targetRole"]},
+          {"required": ["roles"]},
+          {"required": ["groundAt"], "properties": {"groundAt": {"$ref": "#/$defs/role"}}},
+          {"required": ["target"]},
+          {"properties": {"op": {"enum": ["selectTarget", "trackTether", "resolveTether", "forParty"]}}}
+        ]
+      },
+      "properties": {
+        "then": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/withoutParty"}},
+        "else": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/withoutParty"}},
+        "if": {"$ref": "#/$defs/conditionWithoutParty"}
+      }
+    },
+    "conditionWithoutParty": {
+      "not": {
+        "anyOf": [{"required": ["role"]}, {"properties": {"type": {"const": "areaCount"}}}, {"required": ["target"]}]
+      },
+      "properties": {
+        "condition": {"$ref": "#/$defs/conditionWithoutParty"},
+        "conditions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/conditionWithoutParty"}}
+      }
+    }
+  }
+}

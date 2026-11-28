@@ -35,6 +35,12 @@ namespace Simulant.Simulation.Runtime
         private SimScheduledAction _enemyListPoll;
         private readonly List<EnemyListEntry> _enemyEntries = new List<EnemyListEntry>();
         private readonly Dictionary<SimActor, Dictionary<SimActor, float>> _partyEnmity = new Dictionary<SimActor, Dictionary<SimActor, float>>();
+        private sealed class ScriptEnemy
+        {
+            internal bool Damageable;
+            internal SimActor First;
+        }
+        private readonly Dictionary<SimActor, ScriptEnemy> _scriptEnemies = new Dictionary<SimActor, ScriptEnemy>();
         private static readonly int[] DefaultPartyEnmity = { 100, 50, 10, 10, 15, 15, 15, 15 };
         internal SimEnemyList EnemyList { get; set; }
 
@@ -241,6 +247,38 @@ namespace Simulant.Simulation.Runtime
                 return _partyEnmity.TryGetValue(target, out var scores)
                     ? OrderedPartyEnmity(scores).Where(actor => actor.Entity.HP != 0).ToArray()
                     : Array.Empty<SimActor>();
+        }
+
+        internal void RegisterScriptEnemy(SimActor enemy, int[] initial, bool damageable)
+        {
+            lock (_gate)
+            {
+                SetPartyEnmity(enemy, false, initial);
+                _scriptEnemies[enemy] = new ScriptEnemy { Damageable = damageable, First = GetPartyEnmityOrder(enemy).FirstOrDefault() };
+            }
+        }
+
+        internal SimActor FirstEngager(SimActor enemy)
+        {
+            lock (_gate) return _scriptEnemies.TryGetValue(enemy, out var state) ? state.First : null;
+        }
+
+        internal void ApplyScriptHit(SimActor source, SimActor enemy, uint damage)
+        {
+            lock (_gate)
+            {
+                if (!_scriptEnemies.TryGetValue(enemy, out var state) || !Party.Contains(source) || !source.IsActive ||
+                    source.Entity.HP == 0 || !enemy.IsActive || enemy.Entity.HP == 0 || !enemy.Entity.IsTargetable || damage == 0) return;
+                var scores = _partyEnmity[enemy];
+                if (state.First == null) state.First = source;
+                scores[source] += damage / 1000f;
+                UpdateEnmityPercentages(enemy, scores);
+                if (state.Damageable)
+                {
+                    var hp = enemy.Entity.HP;
+                    enemy.Entity.SetNetworkVitals(damage >= hp ? 0 : hp - damage);
+                }
+            }
         }
 
         /// <summary>设置假玩家的共同战斗目标；只允许本会话拥有的网络战斗 NPC，空值表示离开战斗。</summary>
@@ -475,6 +513,7 @@ namespace Simulant.Simulation.Runtime
                     _actors.Remove(actor.Entity.Identity);
                     _enemyEntries.RemoveAll(entry => entry.Actor == actor);
                     _partyEnmity.Remove(actor);
+                    _scriptEnemies.Remove(actor);
                     foreach (var scores in _partyEnmity.Values)
                         scores.Remove(actor);
                     if (Party.Remove(actor) && _partyService?.IsOwnedBy(this) == true)
@@ -595,6 +634,7 @@ namespace Simulant.Simulation.Runtime
                     Party.Clear();
                     _enemyEntries.Clear();
                     _partyEnmity.Clear();
+                    _scriptEnemies.Clear();
                 }
 
                 // 先停止所有参与者的行为，再回收本会话生成的实体。借用玩家只解除关联。

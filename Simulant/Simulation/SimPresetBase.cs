@@ -25,6 +25,8 @@ namespace Simulant.Simulation
         public abstract string Description { get; }
         /// <summary>占位预设设为 false，保留展示信息但禁止创建模拟会话。</summary>
         public virtual bool IsImplemented => true;
+        internal virtual string ConfigurationKey => GetType().FullName;
+        internal virtual string UnavailableMessage => "该预设尚未实现，暂不能开始模拟。";
 
         /// <summary> 全部 Option，包括纯 Label 这种仅用于显示 UI 的假 Option。</summary>
         public abstract List<SimOptionBase> Options { get; }

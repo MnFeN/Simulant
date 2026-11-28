@@ -640,7 +640,7 @@ namespace Simulant.Core
                 var snapshot = Configuration.Copy();
                 var values = preset.Options.Select(option =>
                     new KeyValuePair<string, string>(option.PropertyName, option.SerializeValue()));
-                if (!snapshot.UpdatePreset(preset.GetType().FullName, values))
+                if (!snapshot.UpdatePreset(preset.ConfigurationKey, values))
                     return;
 
                 snapshot.Save(ConfigurationPath);
