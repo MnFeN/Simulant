@@ -175,6 +175,28 @@ namespace Simulant.Game.FFCS.Client.Game
         internal static int GetAdjustedCastTime(ActionType actionType, uint actionId, bool applyProcs = true, IntPtr outOptProc = default)
             => GetAdjustedCastTimeFuncPtr.Call<int>(actionType, actionId, applyProcs, outOptProc);
 
+        [SigPattern("E8 * * * * 8B D0 48 8B CD 8B F0")]
+        internal static IntPtr GetRecastGroupFuncPtr { get; set; }
+
+        internal int GetRecastGroup(int type, uint actionId)
+            => GetRecastGroupFuncPtr.Call<int>(Ptr, type, actionId);
+
+        /// <summary>
+        /// Method used by game server to update cooldowns on the client.
+        /// Only operates on *primary* recast group for the specified action.
+        /// </summary>
+        [SigPattern("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 8B F2 0F 29 74 24 ?? 0F B6 D2")]
+        internal static IntPtr SetCooldownFuncPtr { get; set; }
+
+        internal void SetCooldown(ActionType actionType, uint actionId, float newElapsed, float newTotal)
+            => SetCooldownFuncPtr.Call(Ptr, actionType, actionId, newElapsed, newTotal);
+
+        [SigPattern("E9 * * * * 41 B0 ?? 8B D3")]
+        internal static IntPtr GetMaxChargesFuncPtr { get; set; }
+
+        internal static ushort GetMaxCharges(uint actionId, uint level) // 0 for current level
+            => GetMaxChargesFuncPtr.Call<ushort>(actionId, level);
+
         internal enum CastTimeProc : byte
         {
             None = 0,
@@ -212,8 +234,50 @@ namespace Simulant.Game.FFCS.Client.Game
     [StructLayout(LayoutKind.Explicit, Size = Size)]
     internal struct RecastDetail
     {
-        // 只用记录大小批量清零，暂不暴露单个字段。
         internal const int Size = 0x14;
+
+        /// <summary>
+        /// A boolean representing if this recast group is currently "active." When this is a non-zero value (true), this
+        /// recast group is actively in cooldown.
+        /// </summary>
+        [FieldOffset(0x0), MarshalAs(UnmanagedType.I1)] public bool IsActive;
+
+        /// <summary>The last Action ID that triggered an update for this recast group.</summary>
+        [FieldOffset(0x4)] public uint ActionId;
+
+        /// <summary>
+        /// The current "elapsed" time of this action's recharge. For most actions, this value will be set to zero when the
+        /// action is used. For actions with multiple charges, this value will give "credit" for unspent actions.
+        /// </summary>
+        /// <remarks>
+        /// For multi-charge actions, it helps to think of this field as representing the current value of a resource gauge.
+        /// This value represents the "current level" of the resource gauge, with each second adding 1 unit to the gauge up
+        /// until the maximum as defined in the <see cref="Total"/> field.
+        /// <para />
+        /// When a normal action is cast, this gauge is "depleted" to zero. When a multi-charge action is cast, however,
+        /// the appropriate value (defined by the action, but generally the recharge time) is subtracted from this value.
+        /// </remarks>
+        [FieldOffset(0x8)] public float Elapsed;
+
+        /// <summary>
+        /// The total number of seconds this recast group takes to go from "fully exhausted" to "fully charged." For most
+        /// actions, this will simply be the adjusted recast time from <see cref="ActionManager.GetAdjustedRecastTime"/>
+        /// (which displays in the tooltip UI as the "recast time"). Multi-charge actions such as Ninja's Mudra will show
+        /// the total charge time (the Adjusted Recast Time multiplied by the number of charges this action has at max
+        /// level).
+        /// </summary>
+        /// <remarks>
+        /// The total value shown here depends on the last action used. For example, if a specific action is
+        /// bound to the GCD but is faster/slower than the normal GCD, this value will be set accordingly.
+        /// <para />
+        /// Continuing the resource gauge analogy from <see cref="Elapsed"/>, this field would represent the "cap" of the
+        /// resource gauge. For normal actions, the resource gauge must be completely filled before the action can be used
+        /// again. Multi-charge actions will instead allow the gauge to charge to the maximum number of actions allowed.
+        /// <para />
+        /// It is recommended to use <see cref="ActionManager.GetRecastTime"/> over this field, as it handles an edge case
+        /// in charge management.
+        /// </remarks>
+        [FieldOffset(0xC)] public float Total;
     }
 
     public struct ComboDetail : IMemoryObject

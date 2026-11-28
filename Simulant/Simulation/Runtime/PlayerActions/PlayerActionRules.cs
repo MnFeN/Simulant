@@ -193,6 +193,38 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             });
         }
 
+        internal static void ReduceCooldown<TActionEnum>(TActionEnum action, float seconds)
+            where TActionEnum : struct, Enum
+            => AdvanceCooldown(Convert.ToUInt32(action), seconds, charges: 0);
+
+        internal static void RestoreCharges<TActionEnum>(TActionEnum action, int count = 1)
+            where TActionEnum : struct, Enum
+            => AdvanceCooldown(Convert.ToUInt32(action), 0, count);
+
+        private static void AdvanceCooldown(uint actionId, float seconds, int charges)
+        {
+            var connection = GameInterop.Connection;
+            connection.RunInFrame(() =>
+            {
+                var manager = ActionManager.Instance;
+                var group = manager.GetRecastGroup((int)ActionType.Action, actionId);
+                var cooldowns = manager._cooldowns;
+                if ((uint)group >= (uint)cooldowns.Length)
+                    return;
+
+                var recast = (cooldowns.Ptr + group * RecastDetail.Size).Read<RecastDetail>();
+                if (!recast.IsActive || recast.Elapsed >= recast.Total)
+                    return;
+
+                // 同组动作共享进度。继续使用当前记录的动作，避免覆盖原生冷却组的动作标记。
+                var trackedAction = recast.ActionId == 0 ? actionId : recast.ActionId;
+                if (charges > 0)
+                    seconds += recast.Total / Math.Max(1, (int)ActionManager.GetMaxCharges(trackedAction, 0)) * charges;
+                if (seconds > 0)
+                    manager.SetCooldown(ActionType.Action, trackedAction, Math.Min(recast.Total, recast.Elapsed + seconds), recast.Total);
+            });
+        }
+
         internal static bool HasStatus<TStatusEnum>(Character player, TStatusEnum status)
             where TStatusEnum : struct, Enum
             => player.HasStatus(Convert.ToUInt16(status));
