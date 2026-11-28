@@ -107,7 +107,6 @@ namespace Simulant.Simulation.Runtime
                     _entityManager.PlayerBehavior = _host.Configuration.SimulatedParty.Copy();
                     _entityManager.SelfJudgementAdvance = _host.Configuration.SimLatency;
                     _logic.Prepare();
-                    _host.PlayerActions.BeginSimulation(_entityManager);
                     var waymarks = _preset.Waymarks;
 
                     if (waymarks != null)
@@ -120,6 +119,7 @@ namespace Simulant.Simulation.Runtime
 
                     _scheduler.Schedule(0, _logic.Start, "初始化模拟");
                     _directorId = _host.ZoneService?.ContentDirectorId ?? 0;
+                    _host.PlayerActions.BeginSimulation(_entityManager, checked((byte)_preset.Level));
                     _host.PlayerActions.ResetCooldowns();
                     _roundStarted = true;
                     _scheduler.Start();

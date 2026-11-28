@@ -144,14 +144,10 @@ namespace Simulant.Simulation.Runtime
             ResolveAction(source.Entity, request, target.Entity, action);
         }
 
-        internal void ResolveAction<TActionEnum>(Character source, ActionRequest request, Character target, TActionEnum action,
-            params ActionEffect[] requestEffects) where TActionEnum : struct, Enum
-            => ResolveAction(source, request, target, Convert.ToUInt32(action), requestEffects);
-
         internal void ResolveAction(Character source, ActionRequest request, Character target, uint actionId,
             params ActionEffect[] requestEffects)
         {
-            var animationLock = GetAnimationLock(request, actionId);
+            var animationLock = PlayerActionRules.GetAnimationLock(request, actionId);
             if (request == null)
                 source.ExecuteActionEffect(actionId, target);
             else
@@ -182,7 +178,7 @@ namespace Simulant.Simulation.Runtime
             IReadOnlyList<(Character Target, List<ActionEffect> Effects)> hits, float? animationLockOverride = null)
         {
             var position = request?.GroundPosition ?? animationTarget?.Pos3D ?? source.Pos3D;
-            var animationLock = animationLockOverride ?? GetAnimationLock(request, actionId);
+            var animationLock = animationLockOverride ?? PlayerActionRules.GetAnimationLock(request, actionId);
             source.ReceiveActionResults(request, actionId, animationTarget, position, animationLock, hits);
             ConsumeSharedCastProc(source, request);
             CombatLog?.AbilityResults(source, actionId, animationTarget, request?.GroundPosition, request?.Facing ?? source.Heading, animationLock, hits);
@@ -202,30 +198,6 @@ namespace Simulant.Simulation.Runtime
             PlayerActionRules.AddDamage(hits[0].Effects, actionId, weaponAttackType);
             ResolveActionResults(source, null, target, actionId, hits, animationLockOverride: 0.5f);
             PublishPlayerAction(new PlayerActionResult(source, actionId, null, targets, targets));
-        }
-
-        /// <summary>按结算技能编号保存特殊瞬发动画锁，单位为秒。</summary>
-        private static readonly Dictionary<uint, float> SpecialAnimationLocks = new Dictionary<uint, float>();
-
-        /// <summary>由职业静态构造函数按技能枚举登记特殊瞬发动画锁。</summary>
-        /// <remarks>首次进入该职业的技能处理入口时先完成登记，公共结算随后查表。每个技能编号登记一次。</remarks>
-        internal static void AddSpecialAnimationLock<TActionId>(TActionId actionId, float animationLock)
-            where TActionId : struct, Enum
-            => SpecialAnimationLocks.Add(Convert.ToUInt32(actionId), animationLock);
-
-        /// <summary>为本机技能回包选择动画锁。读条用 0.1 秒，瞬发优先查特殊值，默认 0.6 秒。</summary>
-        /// <remarks>
-        /// ActionEffectHandler.Receive 的本机技能结算分支读取 Header.AnimationLock 并更新本机计时器。
-        /// 默认值取自实战回包，例如圣灵读条和瞬发。特殊值可用 ACT 21/22 行或原生回放的技能结算核对。
-        /// </remarks>
-        private static float GetAnimationLock(ActionRequest request, uint actionId)
-        {
-            if (request == null)
-                return 0f;
-            if (request.RequiresCast)
-                return 0.1f;
-
-            return SpecialAnimationLocks.TryGetValue(actionId, out var animationLock) ? animationLock : 0.6f;
         }
 
         /// <summary>技能结算后按请求记录的咏唱修正消耗即刻咏唱。</summary>

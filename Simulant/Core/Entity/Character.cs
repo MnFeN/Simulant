@@ -44,6 +44,10 @@ namespace Simulant.Core.Entity
 
         /// <summary>通过原生收包更新血蓝量，保留全部状态；仅用于网络角色。</summary>
         public void SetNetworkVitals(uint hp, ushort? mp = null)
+            => SetNetworkVitals(hp, mp, null, null);
+
+        /// <summary>通过原生状态更新同步指定的血蓝和等级，省略的字段沿用当前值。</summary>
+        internal void SetNetworkVitals(uint? hp, ushort? mp, byte? level, byte? syncedLevel)
         {
             if (PacketDispatcher.HandleStatusEffectListDoublePacketFuncPtr == IntPtr.Zero)
                 throw new InvalidOperationException("原生角色状态更新函数尚未定位。");
@@ -55,9 +59,10 @@ namespace Simulant.Core.Entity
                 throw new InvalidOperationException("只有战斗实体列表中的网络玩家或战斗 NPC 可以接收血量更新。");
 
             uint maxHp = native.MaxHealth, maxMp = native.MaxMana;
+            var currentHp = hp ?? native.Health.Get();
             uint currentMp = mp.HasValue ? mp.Value : (uint)native.Mana;
 
-            if (hp > maxHp)
+            if (currentHp > maxHp)
                 throw new ArgumentOutOfRangeException(nameof(hp), "当前血量不能超过血量上限。");
 
             if (currentMp > maxMp)
@@ -69,9 +74,9 @@ namespace Simulant.Core.Entity
             var packet = new StatusEffectListDoublePacket
             {
                 ClassJob = (byte)(Job)native.ClassJob,
-                Level = native.Level,
-                Level_2 = native.Level,
-                CurrentHP = hp,
+                Level = level ?? native.Level.Get(),
+                Level_2 = syncedLevel ?? native.Level.Get(),
+                CurrentHP = currentHp,
                 MaxHP = maxHp,
                 CurrentMP = (ushort)currentMp,
                 MaxMP = (ushort)maxMp,

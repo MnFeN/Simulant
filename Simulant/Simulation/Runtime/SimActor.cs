@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
-using CharacterModes = Simulant.Game.FFCS.Client.Game.Character.CharacterModes;
 using GeneralStatusId = Simulant.Simulation.Runtime.PlayerActions.GeneralActions.StatusId;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
@@ -55,14 +54,13 @@ namespace Simulant.Simulation.Runtime
             {
                 StopCasting();
                 StopMoving();
-                Entity.SetMode(CharacterModes.Dead);
                 ActorControl(ActorControlCategory.DeathAnimation);
             }
 
             return lost;
         }
 
-        /// <summary>为已接受复活的模拟角色恢复血蓝、行为模式和原生复活动画。</summary>
+        /// <summary>为已接受复活的模拟角色恢复血蓝并播放原生复活动画。</summary>
         public bool Revive(uint hp, ushort? mp = null)
         {
             EnsureActive();
@@ -70,7 +68,6 @@ namespace Simulant.Simulation.Runtime
                 return false;
 
             Entity.SetNetworkVitals(hp, mp);
-            Entity.SetMode(CharacterModes.Normal);
             ActorControl(ActorControlCategory.RaiseAnimation);
             Manager?.RemoveStatus(this, (ushort)GeneralStatusId.复活);
 

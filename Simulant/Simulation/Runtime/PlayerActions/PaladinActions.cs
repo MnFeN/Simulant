@@ -78,6 +78,19 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         private const ushort SpellHealing = 10000;
         private static SimScheduledAction _spellComboExpiry;
 
+        static PaladinActions()
+        {
+            JobActionsOnSimStart.Add(Job.PLD, OnSimStart);
+        }
+
+        private static PaladinGauge GetGauge()
+            => PlayerActionRules.GetGauge<PaladinGauge>(Job.PLD);
+
+        private static void OnSimStart()
+        {
+            GetGauge().OathGauge.Set(100);
+        }
+
         internal static bool TryHandleAction(ActionRequest request)
         {
             var player = PluginHost.Instance?.EntityProvider?.GetMyself();
@@ -89,70 +102,70 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             (Character Target, List<ActionEffect> Effects)[] areaHits = null;
             StatusId consumeAfterResult = 0;
             int mpCost;
-            PaladinGauge gauge;
-            switch ((ActionId)request.ActionId)
+            var action = (ActionId)request.ActionId;
+            switch (action)
             {
                 case ActionId.先锋剑:
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
-                    AddWeaponCombo(effects, ActionId.先锋剑);
+                    AddDamage(effects, request);
+                    AddWeaponCombo(effects, action);
                     break;
                 case ActionId.暴乱剑:
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
+                    AddDamage(effects, request);
                     if (HasCombo(ActionId.先锋剑))
                     {
                         AddMpRecovery(player, effects, 1000);
-                        AddWeaponCombo(effects, ActionId.暴乱剑, comboSucceeded: true);
+                        AddWeaponCombo(effects, action, comboSucceeded: true);
                     }
                     break;
                 case ActionId.王权剑:
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
+                    AddDamage(effects, request);
                     if (HasCombo(ActionId.暴乱剑))
                     {
                         AddSourceStatus(player, effects, StatusId.赎罪剑预备, 30);
                         AddSourceStatus(player, effects, StatusId.神圣魔法效果提高, 30);
-                        AddWeaponCombo(effects, ActionId.王权剑, comboSucceeded: true);
+                        AddWeaponCombo(effects, action, comboSucceeded: true);
                     }
                     break;
                 case ActionId.全蚀斩:
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType);
+                    areaHits = AddAreaDamage(player, request);
                     if (areaHits.Length != 0)
-                        AddWeaponCombo(areaHits[0].Effects, ActionId.全蚀斩);
+                        AddWeaponCombo(areaHits[0].Effects, action);
                     break;
                 case ActionId.日珥斩:
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType);
+                    areaHits = AddAreaDamage(player, request);
                     if (areaHits.Length != 0 && HasCombo(ActionId.全蚀斩))
                     {
                         AddMpRecovery(player, areaHits[0].Effects, 1000);
                         AddSourceStatus(player, areaHits[0].Effects, StatusId.神圣魔法效果提高, 30);
-                        AddWeaponCombo(areaHits[0].Effects, ActionId.日珥斩, comboSucceeded: true);
+                        AddWeaponCombo(areaHits[0].Effects, action, comboSucceeded: true);
                     }
                     break;
                 case ActionId.战逃反应:
                     // 国服回放中战逃反应直接对自身附加状态，并以来源效果附加沥血剑预备。
-                    AddTargetStatus(player, player, effects, StatusId.战逃反应, 20, effectParam: 25);
+                    AddSelfStatus(player, effects, StatusId.战逃反应, 20, effectParam: 25);
                     AddSourceStatus(player, effects, StatusId.沥血剑预备, 30);
                     break;
                 case ActionId.沥血剑:
                     if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.沥血剑预备))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
+                    AddDamage(effects, request);
                     consumeAfterResult = StatusId.沥血剑预备;
                     break;
                 case ActionId.赎罪剑:
                     if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.赎罪剑预备))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
+                    AddDamage(effects, request);
                     AddMpRecovery(player, effects, 400);
                     AddSourceStatus(player, effects, StatusId.祈告剑预备, 30);
                     consumeAfterResult = StatusId.赎罪剑预备;
@@ -161,7 +174,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.祈告剑预备))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
+                    AddDamage(effects, request);
                     AddMpRecovery(player, effects, 400);
                     AddSourceStatus(player, effects, StatusId.葬送剑预备, 30);
                     consumeAfterResult = StatusId.祈告剑预备;
@@ -170,7 +183,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.葬送剑预备))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
+                    AddDamage(effects, request);
                     AddMpRecovery(player, effects, 400);
                     consumeAfterResult = StatusId.葬送剑预备;
                     break;
@@ -178,11 +191,11 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    areaHits = AddAreaDamage(player, request, target);
                     AddMpRecovery(player, areaHits[0].Effects, 500);
                     break;
                 case ActionId.厄运流转:
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType);
+                    areaHits = AddAreaDamage(player, request);
                     foreach (var hit in areaHits)
                         AddHoTDoT(player, hit.Target, hit.Effects, StatusId.厄运流转, 15, 10000);
                     break;
@@ -190,7 +203,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    areaHits = AddAreaDamage(player, request, target);
                     AddSourceStatus(player, areaHits[0].Effects, StatusId.安魂祈祷, 30, param: 4);
                     AddSourceStatus(player, areaHits[0].Effects, StatusId.悔罪预备, 30);
                     break;
@@ -198,8 +211,8 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     if (!TryGetEnemySpell(player, request, out target, out mpCost))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
-                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    AddDamage(effects, request);
+                    AddSourceHealing(player, effects, SpellHealing);
                     ChangeMp(player, -mpCost);
                     ConsumeHolySpellProc(player, request);
                     break;
@@ -207,74 +220,74 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     if (!TryGetMpCost(player, request, out mpCost))
                         return true;
 
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType);
+                    areaHits = AddAreaDamage(player, request);
                     if (areaHits.Length != 0)
-                        AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
+                        AddSourceHealing(player, areaHits[0].Effects, SpellHealing);
                     ChangeMp(player, -mpCost);
                     ConsumeHolySpellProc(player, request);
                     break;
                 case ActionId.悔罪:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost) ||
-                        !TryGetSpellGauge(player, request, out gauge) || !RequireStatus(player, request, StatusId.悔罪预备))
+                        !RequireStatus(player, request, StatusId.悔罪预备))
                         return true;
 
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
-                    AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
+                    areaHits = AddAreaDamage(player, request, target);
+                    AddSourceHealing(player, areaHits[0].Effects, SpellHealing);
                     ChangeMp(player, -mpCost);
                     ConsumeStatusStack(player, StatusId.安魂祈祷);
                     RemoveStatus(player, StatusId.悔罪预备);
-                    AdvanceSpellCombo(player, gauge, 1);
+                    AdvanceSpellCombo(player, 1);
                     break;
                 case ActionId.信念之剑:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost) ||
-                        !TryGetSpellGauge(player, request, out gauge, expectedStep: 1))
+                        !RequireSpellComboStep(player, request, 1))
                         return true;
 
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
-                    AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
+                    areaHits = AddAreaDamage(player, request, target);
+                    AddSourceHealing(player, areaHits[0].Effects, SpellHealing);
                     ChangeMp(player, -mpCost);
                     ConsumeStatusStack(player, StatusId.安魂祈祷);
-                    AdvanceSpellCombo(player, gauge, 2);
+                    AdvanceSpellCombo(player, 2);
                     break;
                 case ActionId.真理之剑:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost) ||
-                        !TryGetSpellGauge(player, request, out gauge, expectedStep: 2))
+                        !RequireSpellComboStep(player, request, 2))
                         return true;
 
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
-                    AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
+                    areaHits = AddAreaDamage(player, request, target);
+                    AddSourceHealing(player, areaHits[0].Effects, SpellHealing);
                     ChangeMp(player, -mpCost);
                     ConsumeStatusStack(player, StatusId.安魂祈祷);
-                    AdvanceSpellCombo(player, gauge, 3);
+                    AdvanceSpellCombo(player, 3);
                     break;
                 case ActionId.英勇之剑:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost) ||
-                        !TryGetSpellGauge(player, request, out gauge, expectedStep: 3))
+                        !RequireSpellComboStep(player, request, 3))
                         return true;
 
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
-                    AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
+                    areaHits = AddAreaDamage(player, request, target);
+                    AddSourceHealing(player, areaHits[0].Effects, SpellHealing);
                     ChangeMp(player, -mpCost);
                     ConsumeStatusStack(player, StatusId.安魂祈祷);
                     AddSourceStatus(player, areaHits[0].Effects, StatusId.荣耀之剑预备, 30);
-                    AdvanceSpellCombo(player, gauge, 0);
+                    AdvanceSpellCombo(player, 0);
                     break;
                 case ActionId.荣耀之剑:
                     if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.荣耀之剑预备))
                         return true;
 
-                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    areaHits = AddAreaDamage(player, request, target);
                     consumeAfterResult = StatusId.荣耀之剑预备;
                     break;
                 case ActionId.神圣领域:
-                    AddTargetStatus(player, player, effects, StatusId.神圣领域, 10);
+                    AddSelfStatus(player, effects, StatusId.神圣领域, 10);
                     break;
                 case ActionId.壁垒:
                     AddSourceStatus(player, effects, StatusId.壁垒, 10, effectParam: 100);
                     break;
                 case ActionId.极致防御:
-                    AddTargetStatus(player, player, effects, StatusId.极致防御, 15, effectParam: 0xD8);
-                    AddTargetStatus(player, player, effects, StatusId.极致护盾, 15, breaksOnDamage: true);
+                    AddSelfStatus(player, effects, StatusId.极致防御, 15, effectParam: 0xD8);
+                    AddSelfStatus(player, effects, StatusId.极致护盾, 15, breaksOnDamage: true);
                     break;
                 case ActionId.圣光幕帘:
                     areaHits = CreateHits(GetPartyInRange(player, request));
@@ -285,7 +298,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     }
                     break;
                 case ActionId.钢铁信念:
-                    AddTargetStatus(player, player, effects, StatusId.钢铁信念, 0, effectParam: 40);
+                    AddSelfStatus(player, effects, StatusId.钢铁信念, 0, effectParam: 40);
                     break;
                 case ActionId.解除钢铁信念:
                     RemoveSourceStatus(player, effects, StatusId.钢铁信念);
@@ -322,14 +335,18 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     return false;
             }
 
-            if (areaHits != null)
-                Entities.ResolveActionResults(player, request, target, request.ActionId, areaHits);
-            else
-                Entities.ResolveAction(player, request, target, request.ActionId, effects.ToArray());
+            ResolvePlayerAction(player, request, target, effects, areaHits);
             if (consumeAfterResult != 0)
                 RemoveStatus(player, consumeAfterResult);
             return true;
         }
+
+        private static void AddDamage(List<ActionEffect> effects, ActionRequest request)
+            => PlayerActionRules.AddDamage(effects, request, WeaponAttackType);
+
+        private static (Character Target, List<ActionEffect> Effects)[] AddAreaDamage(Character player,
+            ActionRequest request, Character primaryTarget = null)
+            => PlayerActionRules.AddAreaDamage(player, request, WeaponAttackType, primaryTarget);
 
         private static void ConsumeHolySpellProc(Character player, ActionRequest request)
         {
@@ -344,36 +361,18 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             }
         }
 
-        private static bool TryGetSpellGauge(Character player, ActionRequest request, out PaladinGauge gauge, byte? expectedStep = null)
+        private static bool RequireSpellComboStep(Character player, ActionRequest request, byte expectedStep)
         {
-            if (!TryGetGauge(out gauge))
-            {
-                player.RejectActionResult(request, 582);
-                return false;
-            }
+            if (GetGauge().ConfiteorComboStep.Get() == expectedStep)
+                return true;
 
-            if (expectedStep.HasValue && gauge.ConfiteorComboStep.Get() != expectedStep.Value)
-            {
-                player.RejectActionResult(request, 572);
-                return false;
-            }
-
-            return true;
+            player.RejectActionResult(request, 572);
+            return false;
         }
 
-        private static bool TryGetGauge(out PaladinGauge gauge)
+        private static void AdvanceSpellCombo(Character player, byte next)
         {
-            gauge = default;
-            if (JobGaugeManager.InstancePtr == IntPtr.Zero)
-                return false;
-
-            var manager = JobGaugeManager.Instance();
-            gauge = manager.Paladin;
-            return manager.ClassJobId.Get() == (byte)Job.PLD && manager.CurrentGauge == gauge.Ptr;
-        }
-
-        private static void AdvanceSpellCombo(Character player, PaladinGauge gauge, byte next)
-        {
+            var gauge = GetGauge();
             // 国服回放中，悔罪、信念之剑、真理之剑各同步 30 秒及阶段 1、2、3，英勇之剑归零。
             // 从 JobGaugeManager 的骑士对象沿技能可用性虚函数可见只比较连段阶段，忠义值无需修改。
             gauge.ConfiteorComboTimer.Set(next == 0 ? (ushort)0 : ComboDurationMilliseconds);
@@ -382,8 +381,11 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             var connection = GameInterop.Connection;
             _spellComboExpiry = next == 0 ? null : Entities.Scheduler.ScheduleAfter(ComboDurationMilliseconds / 1000d, () =>
             {
-                if (!ReferenceEquals(connection, GameInterop.Connection) || !player.IsAlive ||
-                    !TryGetGauge(out var activeGauge) || activeGauge.ConfiteorComboStep.Get() != next)
+                if (!ReferenceEquals(connection, GameInterop.Connection) || !player.IsAlive)
+                    return;
+
+                var activeGauge = GetGauge();
+                if (activeGauge.ConfiteorComboStep.Get() != next)
                     return;
                 activeGauge.ConfiteorComboStep.Set(0);
                 activeGauge.ConfiteorComboTimer.Set(0);
@@ -392,28 +394,23 @@ namespace Simulant.Simulation.Runtime.PlayerActions
 
         private static bool TrySpendOath(Character player, ActionRequest request)
         {
-            var row = GetAction(request);
-            if (row.PrimaryCostType != 41 || !TryGetGauge(out var gauge))
-            {
-                player.RejectActionResult(request, 572);
-                return false;
-            }
-
+            var cost = GetAction(request).PrimaryCostValue;
+            var gauge = GetGauge();
             var current = gauge.OathGauge.Get();
-            if (current < row.PrimaryCostValue)
+            if (current < cost)
             {
                 player.RejectActionResult(request, 572);
                 return false;
             }
 
-            gauge.OathGauge.Set((byte)(current - row.PrimaryCostValue));
+            gauge.OathGauge.Set((byte)(current - cost));
             return true;
         }
 
         internal static void OnAutoAttack()
         {
-            if (TryGetGauge(out var gauge))
-                gauge.OathGauge.Set((byte)Math.Min(100, gauge.OathGauge.Get() + 5));
+            var gauge = GetGauge();
+            gauge.OathGauge.Set((byte)Math.Min(100, gauge.OathGauge.Get() + 5));
         }
 
         internal static void CancelSpellComboExpiry()

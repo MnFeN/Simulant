@@ -53,16 +53,16 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             {
                 case ActionId.冲刺:
                     // 状态参数 30 表示冲刺的加速百分比。
-                    AddTargetStatus(player, player, effects, StatusId.冲刺, 10, param: 30);
+                    AddSelfStatus(player, effects, StatusId.冲刺, 10, param: 30);
                     break;
                 case ActionId.亲疏自行:
                     AddSourceStatus(player, effects, StatusId.亲疏自行, 6, param: 100, effectParam: 67);
                     break;
                 case ActionId.沉稳咏唱:
-                    AddTargetStatus(player, player, effects, StatusId.沉稳咏唱, 6);
+                    AddSelfStatus(player, effects, StatusId.沉稳咏唱, 6);
                     break;
                 case ActionId.即刻咏唱:
-                    AddTargetStatus(player, player, effects, StatusId.即刻咏唱, 10);
+                    AddSelfStatus(player, effects, StatusId.即刻咏唱, 10);
                     break;
                 case ActionId.挑衅:
                     UseEnmityAction(player, request, provoke: true);
@@ -74,7 +74,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     return false;
             }
 
-            Entities.ResolveAction(player, request, player, action, effects.ToArray());
+            ResolvePlayerAction(player, request, player, effects, actionId: (uint)action);
             return true;
         }
 

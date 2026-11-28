@@ -7,6 +7,7 @@ using Simulant.Simulation.Runtime.PlayerActions;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
@@ -24,6 +25,14 @@ namespace Simulant.Core
         private (EntityIdentity Player, uint Sequence, Vector2 Position)? _castOrigin;
         private (EntityIdentity Player, ActionRequest Request)? _pendingCast;
 
+        static SimActionService()
+        {
+            // 开场时可能还没放过技能，先运行各职业的注册代码。
+            // todo 反射实现
+            RuntimeHelpers.RunClassConstructor(typeof(PaladinActions).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(WhiteMageActions).TypeHandle);
+        }
+
         internal SimActionService(PluginHost host) => _host = host;
 
         internal SimEntityManager Entities => _entities;
@@ -31,10 +40,14 @@ namespace Simulant.Core
 
         private bool Enabled => _host.FirewallEnabled && _host.PluginReady && !_host.Disposed && !_host.IsSwitchingTerritory;
 
-        internal void BeginSimulation(SimEntityManager encounterEntities = null)
+        internal void BeginSimulation(SimEntityManager encounterEntities, byte? level = null)
         {
-            if (Enabled)
-                Volatile.Write(ref _encounterEntities, encounterEntities);
+            if (!Enabled)
+                return;
+
+            if (level.HasValue)
+                PrepareSimPlayer(level.Value);
+            Volatile.Write(ref _encounterEntities, encounterEntities);
         }
 
         internal void EndSimulation(SimEntityManager encounterEntities)

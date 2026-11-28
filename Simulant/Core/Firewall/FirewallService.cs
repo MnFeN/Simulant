@@ -85,6 +85,7 @@ namespace Simulant.Core.Firewall
 
         public void Disable()
         {
+            _host.PlayerActions?.RestoreSimPlayer();
             try
             {
                 lock (_gate)
@@ -115,6 +116,7 @@ namespace Simulant.Core.Firewall
 
                 _receive = _send = _interaction = null;
                 ResetProcessModeIfCleared();
+                _host.PlayerActions?.ForgetSimPlayer();
                 LogSafely(() => _host.PlayerActions?.Reset());
                 return true;
             }
@@ -152,7 +154,10 @@ namespace Simulant.Core.Firewall
                     _host.EnsureFirewallAllowed();
 
                 if (_receive == null && _send == null && _interaction == null)
+                {
                     _host.CancelCastBeforeFirewall();
+                    _host.PlayerActions?.RecordPlayerLevel();
+                }
 
                 try
                 {
@@ -168,6 +173,7 @@ namespace Simulant.Core.Firewall
                         throw new AggregateException("开启防火墙失败，回滚也未完成；清理记录已保留。", errors);
                     }
 
+                    _host.PlayerActions?.ForgetSimPlayer();
                     throw;
                 }
             }

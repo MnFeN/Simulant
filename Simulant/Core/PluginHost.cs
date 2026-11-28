@@ -172,6 +172,9 @@ namespace Simulant.Core
             if (!PluginReady || IsInitializing || Disposed || IsSwitchingTerritory)
                 throw new InvalidOperationException("请等待插件连接游戏并完成区域切换，再启用防火墙。");
 
+            if (EntityProvider.GetMyself()?.HP == 0)
+                throw new InvalidOperationException("角色已倒地，请复活后再启用防火墙。");
+
             if (Configuration.DeveloperMode)
                 return;
 
@@ -1052,6 +1055,7 @@ namespace Simulant.Core
 
                 _entityProcess = identity;
                 PluginReady = false;
+                PlayerActions?.ForgetSimPlayer();
                 lock (_subscriptionGate)
                     Commands?.Stop();
 

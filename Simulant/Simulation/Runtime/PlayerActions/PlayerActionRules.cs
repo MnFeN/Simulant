@@ -8,9 +8,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using ActionEffectHandler = Simulant.Game.FFCS.Client.Game.Character.ActionEffectHandler;
 using ActionEffect = Simulant.Game.FFCS.Client.Game.Character.ActionEffectHandler.Effect;
+using ActionEffectHandler = Simulant.Game.FFCS.Client.Game.Character.ActionEffectHandler;
 using ActionRow = Lumina.Excel.Sheets.Action;
+using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Simulation.Runtime.PlayerActions
 {
@@ -43,7 +44,58 @@ namespace Simulant.Simulation.Runtime.PlayerActions
     {
         internal const ushort ComboDurationMilliseconds = 30000;
 
+        /// <summary>各职业在静态构造函数中登记的开场初始化方法。</summary>
+        internal static readonly Dictionary<Job, Action> JobActionsOnSimStart = new Dictionary<Job, Action>();
+
+        /// <summary>按结算技能编号保存特殊瞬发动画锁，单位为秒。</summary>
+        private static readonly Dictionary<uint, float> SpecialAnimationLocks = new Dictionary<uint, float>();
+
+        /// <summary>由职业静态构造函数按技能枚举登记特殊瞬发动画锁。</summary>
+        /// <remarks>职业初始化时登记，每个技能编号登记一次。</remarks>
+        internal static void AddSpecialAnimationLock<TActionId>(TActionId actionId, float animationLock)
+            where TActionId : struct, Enum
+            => SpecialAnimationLocks.Add(Convert.ToUInt32(actionId), animationLock);
+
+        /// <summary>为本机技能回包选择动画锁。读条用 0.1 秒，瞬发优先查特殊值，默认 0.6 秒。</summary>
+        /// <remarks>
+        /// ActionEffectHandler.Receive 的本机技能结算分支读取 Header.AnimationLock 并更新本机计时器。
+        /// 默认值取自实战回包，例如圣灵读条和瞬发。特殊值可用 ACT 21/22 行或原生回放的技能结算核对。
+        /// </remarks>
+        internal static float GetAnimationLock(ActionRequest request, uint actionId)
+        {
+            if (request == null)
+                return 0f;
+            if (request.RequiresCast)
+                return 0.1f;
+
+            return SpecialAnimationLocks.TryGetValue(actionId, out var animationLock) ? animationLock : 0.6f;
+        }
+
         internal static SimEntityManager Entities => PluginHost.Instance.PlayerActions.Entities;
+
+        /// <summary>读取本机当前职业的量谱。职业与量谱类型由调用方对应。</summary>
+        internal static TGauge GetGauge<TGauge>(Job job) where TGauge : struct, IMemoryObject
+        {
+            var manager = JobGaugeManager.Instance().ThrowIfNull("未定位本机职业量谱管理器。");
+            var currentJob = (Job)manager.ClassJobId.Get();
+            var gauge = manager.CurrentGauge;
+            if (currentJob != job || gauge == IntPtr.Zero)
+                throw new InvalidOperationException($"未能取得本机职业 {job} 的量谱。当前量谱职业为 {currentJob}。");
+
+            return gauge.As<TGauge>();
+        }
+
+        /// <summary>提交本机技能的单目标或范围结算。范围打空时传入空的目标列表。</summary>
+        internal static void ResolvePlayerAction(Character player, ActionRequest request, Character target,
+            List<ActionEffect> effects, IReadOnlyList<(Character Target, List<ActionEffect> Effects)> areaHits = null,
+            uint? actionId = null)
+        {
+            var resolvedActionId = actionId ?? request.ActionId;
+            if (areaHits == null)
+                Entities.ResolveAction(player, request, target, resolvedActionId, effects.ToArray());
+            else
+                Entities.ResolveActionResults(player, request, target, resolvedActionId, areaHits);
+        }
 
         internal static ActionRow GetAction(ActionRequest request)
             => GameDataService.Instance.GetSheet<ActionRow>().GetRow(request.ActionId);
@@ -75,6 +127,10 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                 Value = amount
             });
         }
+
+        /// <summary>恢复施法者的生命值，并在当前目标的效果列表中添加来源治疗。</summary>
+        internal static void AddSourceHealing(Character player, List<ActionEffect> effects, ushort amount)
+            => AddHealing(player, effects, amount, atSource: true);
 
         internal static void RestoreHp(Character recipient, ushort amount)
         {
@@ -336,6 +392,12 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             effects.Add(Entities.SetActionStatus(source, Entities.Attach(target), statusId, seconds, param,
                 effectParam, breaksOnDamage));
         }
+
+        /// <summary>以施法者为目标附加状态，使用目标状态效果。</summary>
+        internal static void AddSelfStatus<TStatusEnum>(Character player, List<ActionEffect> effects, TStatusEnum status,
+            float seconds, byte effectParam = 0, byte param = 0, bool breaksOnDamage = false)
+            where TStatusEnum : struct, Enum
+            => AddTargetStatus(player, player, effects, status, seconds, effectParam, param, breaksOnDamage);
 
         /// <summary>观察自己施加的模拟状态。每次成功结算只调用一次 onAction，目标是该状态的持有者。</summary>
         internal static bool ObserveStatus<TStatusEnum>(Character player, Character target, TStatusEnum status,

@@ -28,6 +28,7 @@ namespace Simulant.Simulation
 
         /// <summary> 全部 Option，包括纯 Label 这种仅用于显示 UI 的假 Option。</summary>
         public abstract List<SimOptionBase> Options { get; }
+        /// <summary>开始模拟时应用到本机角色的等级。</summary>
         public abstract int Level { get; }
         public abstract Type SimLogicType { get; }
 
