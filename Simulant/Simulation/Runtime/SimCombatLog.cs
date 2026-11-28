@@ -145,6 +145,16 @@ namespace Simulant.Simulation.Runtime
             });
         }
 
+        internal void PeriodicEffect(Character source, Character target, ushort status, uint amount, bool healing)
+            => Record(time =>
+            {
+                var kind = healing ? "HoT" : "DoT";
+                Write(24, time, $"{Actor(target.Id, target)}|{kind}|{status:X}|{amount:X}|{Vitals(target)}|{Actor(source?.Id ?? 0, source)}|0|{Vitals(source)}");
+            });
+
+        internal void HealthAndMana(Character actor)
+            => Record(time => Write(39, time, $"{Actor(actor.Id, actor)}|{Vitals(actor)}"));
+
         internal void Status(bool adding, ushort id, float duration, ushort param, Character source, Character target)
         {
             Record(time =>

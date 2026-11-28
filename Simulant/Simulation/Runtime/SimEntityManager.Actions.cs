@@ -26,6 +26,7 @@ namespace Simulant.Simulation.Runtime
             internal bool LockMovement;
             internal bool BreaksOnDamage;
             internal Action<Character> OnBreak;
+            internal Action<Character> OnTick;
             internal double ExpiresAt;
             internal SimScheduledAction Expiry;
             internal ushort? LoggedParam;
@@ -405,7 +406,8 @@ namespace Simulant.Simulation.Runtime
             }
         }
 
-        internal bool ObserveStatus(Character source, Character target, ushort statusId, Action<Character> onBreak)
+        internal bool ObserveStatus(Character source, Character target, ushort statusId,
+            Action<Character> onBreak, Action<Character> onTick)
         {
             lock (_gate)
             {
@@ -415,6 +417,7 @@ namespace Simulant.Simulation.Runtime
                     return false;
 
                 owned.OnBreak = onBreak;
+                owned.OnTick = onTick;
                 owned.BreaksOnDamage |= onBreak != null;
                 return true;
             }
@@ -436,6 +439,29 @@ namespace Simulant.Simulation.Runtime
                         shield.OnBreak?.Invoke(shield.Actor);
                 }
                 return broken;
+            }
+        }
+
+        private bool IsStatusActive(OwnedStatus owned)
+            => _acceptingEntities && owned.Actor.IsAlive && owned.Source.IsAlive && _statuses.Contains(owned) &&
+                _scheduler.ElapsedSeconds < owned.ExpiresAt && MatchesStatus(owned.Actor.Native.StatusManager.GetStatus(owned.Slot), owned);
+
+        /// <summary>结算同一三秒刻度上的持续状态和地面效果。</summary>
+        internal void TickPeriodicEffects()
+        {
+            lock (_gate)
+            {
+                if (!_acceptingEntities || !_scheduler.IsRunning)
+                    return;
+
+                var statuses = _statuses.Where(status => status.OnTick != null).ToArray();
+                var groundEffects = _groundEffects.Values.Where(effect => effect.OnTick != null).ToArray();
+                foreach (var status in statuses)
+                    if (IsStatusActive(status))
+                        status.OnTick?.Invoke(status.Actor);
+                foreach (var effect in groundEffects)
+                    if (TryGetGroundEffect(effect.Source, effect.ActionId, out var current) && ReferenceEquals(current, effect))
+                        effect.OnTick(effect);
             }
         }
 

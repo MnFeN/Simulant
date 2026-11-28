@@ -15,6 +15,7 @@ namespace Simulant.Game.FFCS.Client.Game
 
         internal IntPtr CurrentGauge => Ptr.ReadPtr();
         internal PaladinGauge Paladin => Ptr.As<PaladinGauge>(0x08);
+        internal BlackMageGauge BlackMage => Ptr.As<BlackMageGauge>(0x08);
         internal MemoryField<byte> ClassJobId => Ptr.Field<byte>(0x58);
     }
 }

@@ -19,11 +19,12 @@ namespace Simulant.Simulation.Runtime
             internal float Heading { get; }
             internal ActionArea Area { get; }
             internal double ExpiresAt { get; }
+            internal Action<GroundEffect> OnTick { get; }
             internal bool HasVfx;
             internal SimScheduledAction Expiry;
-            internal SimScheduledAction Tick;
 
-            internal GroundEffect(Character source, uint actionId, Vector3 position, float heading, ActionArea area, double expiresAt)
+            internal GroundEffect(Character source, uint actionId, Vector3 position, float heading,
+                ActionArea area, double expiresAt, Action<GroundEffect> onTick)
             {
                 Source = source;
                 ActionId = actionId;
@@ -31,6 +32,7 @@ namespace Simulant.Simulation.Runtime
                 Heading = heading;
                 Area = area;
                 ExpiresAt = expiresAt;
+                OnTick = onTick;
             }
 
             internal bool Contains(Character target)
@@ -40,27 +42,21 @@ namespace Simulant.Simulation.Runtime
         private readonly Dictionary<(EntityIdentity Source, uint Action), GroundEffect> _groundEffects =
             new Dictionary<(EntityIdentity, uint), GroundEffect>();
 
-        /// <summary>以请求落点创建地面效果。无落点时使用施法者当前位置；重复施放替换同一来源的旧效果。</summary>
+        /// <summary>以请求落点创建地面效果。重复施放替换同一来源的旧效果，onTick 随统一三秒刻度结算。</summary>
         internal void PlaceGroundEffect(Character source, ActionRequest request, double duration, ActionArea? area = null,
-            string vfxPath = null, double tickInterval = 0, Action<GroundEffect> onTick = null, Action<GroundEffect> onExpire = null)
+            string vfxPath = null, Action<GroundEffect> onTick = null, Action<GroundEffect> onExpire = null)
         {
             SimTimeline.ValidateSeconds(duration, nameof(duration));
             if (duration == 0)
                 throw new ArgumentOutOfRangeException(nameof(duration), "地面效果的持续时间必须大于零。");
-            if (onTick != null)
-            {
-                SimTimeline.ValidateSeconds(tickInterval, nameof(tickInterval));
-                if (tickInterval == 0)
-                    throw new ArgumentOutOfRangeException(nameof(tickInterval), "地面效果的结算间隔必须大于零。");
-            }
 
             lock (_gate)
             {
                 EnsureAcceptingEntities();
                 var position = request.GroundPosition ?? source.Pos3D;
                 var shape = area ?? ActionArea.FromAction(request.ActionId, source.HitboxRadius);
-                var start = _scheduler.ElapsedSeconds;
-                var effect = new GroundEffect(source, request.ActionId, position, request.Facing, shape, start + duration);
+                var effect = new GroundEffect(source, request.ActionId, position, request.Facing,
+                    shape, _scheduler.ElapsedSeconds + duration, onTick);
                 RemoveGroundEffect(source, request.ActionId);
                 _groundEffects.Add((source.Identity, request.ActionId), effect);
 
@@ -82,8 +78,6 @@ namespace Simulant.Simulation.Runtime
                     effect.HasVfx = true;
                     VfxManager.ShowGroundEffect(vfxPath, effect.Position, effect.Heading, effect);
                 }
-                if (onTick != null)
-                    ScheduleGroundTick(effect, start + tickInterval, tickInterval, onTick);
             }
         }
 
@@ -103,31 +97,10 @@ namespace Simulant.Simulation.Runtime
                     return;
 
                 effect.Expiry?.Cancel();
-                effect.Tick?.Cancel();
                 if (effect.HasVfx)
                     VfxManager.Remove(effect);
                 _groundEffects.Remove(key);
             }
-        }
-
-        private void ScheduleGroundTick(GroundEffect effect, double at, double interval, Action<GroundEffect> onTick)
-        {
-            if (at >= effect.ExpiresAt)
-                return;
-
-            effect.Tick = _scheduler.Schedule(at, () =>
-            {
-                lock (_gate)
-                {
-                    if (!_acceptingEntities || !TryGetGroundEffect(effect.Source, effect.ActionId, out var current) ||
-                        !ReferenceEquals(current, effect))
-                        return;
-
-                    onTick(effect);
-                    if (TryGetGroundEffect(effect.Source, effect.ActionId, out current) && ReferenceEquals(current, effect))
-                        ScheduleGroundTick(effect, at + interval, interval, onTick);
-                }
-            }, "结算地面效果");
         }
 
         private bool ClearGroundEffects()

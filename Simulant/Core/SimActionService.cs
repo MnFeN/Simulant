@@ -13,7 +13,7 @@ using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 namespace Simulant.Core
 {
     /// <summary>防火墙期间的本机模拟技能，独立于副本的启动、停止和判定。</summary>
-    internal sealed class SimActionService
+    internal sealed partial class SimActionService
     {
         private readonly PluginHost _host;
         private readonly object _gate = new object();
@@ -77,6 +77,7 @@ namespace Simulant.Core
                 CombatLog = new SimCombatLog(() => _host.Configuration.GenerateActLogs, XivNetworkLog.WriteLine, _host.LogWarning)
             };
             _scheduler.Start();
+            StartPlayerTicks(_scheduler, _entities);
         }
 
         /// <summary>按发送顺序处理本机技能请求，并检查本机读条期间的位移。</summary>
@@ -105,6 +106,10 @@ namespace Simulant.Core
                 ClearCastTracking();
                 return;
             }
+
+            lock (_gate)
+                if (Enabled)
+                    EnsureScheduler();
 
             var previousPending = _pendingCast?.Request;
             QueueCapturedActions(player, requests);
