@@ -1,6 +1,7 @@
 using Simulant.Core.Environment;
 using Simulant.Game.Data;
 using Simulant.Simulation.Runtime;
+using Simulant.Simulation.Runtime.PlayerActions;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -17,6 +18,7 @@ namespace Simulant
     public sealed class Configuration
     {
         public SimActorBehaviorOptions SimulatedParty { get; set; } = new SimActorBehaviorOptions();
+        public PictomancerStartResources PictomancerResources { get; set; } = new PictomancerStartResources();
         public bool AutoInstallUpdates { get; set; } = true;
         public bool QuickControlsEnabled { get; set; } = true;
         public Keys GroundTeleportKey { get; set; } = Keys.OemSemicolon;
@@ -55,6 +57,7 @@ namespace Simulant
             return new Configuration
             {
                 SimulatedParty = SimulatedParty.Copy(),
+                PictomancerResources = (PictomancerResources ?? new PictomancerStartResources()).Copy(),
                 AutoInstallUpdates = AutoInstallUpdates,
                 QuickControlsEnabled = QuickControlsEnabled,
                 GroundTeleportKey = GroundTeleportKey,

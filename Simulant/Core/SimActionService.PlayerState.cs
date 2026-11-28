@@ -12,13 +12,13 @@ namespace Simulant.Core
 
         private void PrepareSimPlayer(byte level)
         {
+            var player = _host.EntityProvider.GetMyself();
             GameInterop.Connection.RunInFrame(() =>
             {
-                var player = _host.EntityProvider.GetMyself();
                 SetSimLevel(player, level, player.MaxHP, checked((ushort)player.MaxMp));
-
-                SelectJobActions(player.Job)?.OnSimStart();
             });
+            ResetCooldowns();
+            SelectJobActions(player.Job)?.OnSimStart();
         }
 
         internal void ForgetSimPlayer() => _levelBeforeFirewall = null;

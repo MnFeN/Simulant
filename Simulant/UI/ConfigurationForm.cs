@@ -12,12 +12,13 @@ using System.Windows.Forms;
 
 namespace Simulant.UI
 {
-    internal sealed class ConfigurationForm : FormEx
+    internal sealed partial class ConfigurationForm : FormEx
     {
         private readonly IContainer _components = new Container();
         private readonly PluginHost _host;
         private readonly Configuration _draft;
         private readonly List<SimOptionBase> _partyOptions;
+        private readonly List<SimOptionBase> _pictomancerOptions;
         private readonly List<SimOptionBase> _miscOptions;
 
         internal ConfigurationForm(PluginHost host)
@@ -52,6 +53,13 @@ namespace Simulant.UI
             partyTab.Controls.Add(table);
             new OptionEditor(table, toolTip).Build(_partyOptions);
             tabs.TabPages.Add(partyTab);
+
+            _pictomancerOptions = CreatePictomancerOptions(_draft.PictomancerResources);
+            var pctTab = new TabPageEx { Text = "绘灵起始资源", AutoScroll = true, Padding = new Padding(14) };
+            var pctTable = new TableLayoutPanel();
+            pctTab.Controls.Add(pctTable);
+            new OptionEditor(pctTable, toolTip).Build(_pictomancerOptions);
+            tabs.TabPages.Add(pctTab);
 
             var miscTab = new TabPageEx
             {
@@ -198,6 +206,9 @@ namespace Simulant.UI
             {
                 foreach (var option in _partyOptions)
                     option.ApplyTo(_draft.SimulatedParty);
+
+                foreach (var option in _pictomancerOptions)
+                    option.ApplyTo(_draft.PictomancerResources);
 
                 foreach (var option in _miscOptions)
                     option.ApplyTo(_draft);

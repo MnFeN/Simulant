@@ -45,6 +45,13 @@ namespace Simulant.Simulation.Runtime
         /// <summary>以请求落点创建地面效果。重复施放替换同一来源的旧效果，onTick 随统一三秒刻度结算。</summary>
         internal void PlaceGroundEffect(Character source, ActionRequest request, double duration, ActionArea? area = null,
             string vfxPath = null, Action<GroundEffect> onTick = null, Action<GroundEffect> onExpire = null)
+            => PlaceGroundEffect(source, request.ActionId, request.GroundPosition ?? source.Pos3D, request.Facing, duration,
+                area, onTick, onExpire, vfxPath == null ? (Action<GroundEffect>)null :
+                    effect => VfxManager.ShowGroundEffect(vfxPath, effect.Position, effect.Heading, effect));
+
+        internal void PlaceGroundEffect(Character source, uint actionId, Vector3 position, float heading, double duration,
+            ActionArea? area = null, Action<GroundEffect> onTick = null, Action<GroundEffect> onExpire = null,
+            Action<GroundEffect> showVisual = null)
         {
             SimTimeline.ValidateSeconds(duration, nameof(duration));
             if (duration == 0)
@@ -53,30 +60,29 @@ namespace Simulant.Simulation.Runtime
             lock (_gate)
             {
                 EnsureAcceptingEntities();
-                var position = request.GroundPosition ?? source.Pos3D;
-                var shape = area ?? ActionArea.FromAction(request.ActionId, source.HitboxRadius);
-                var effect = new GroundEffect(source, request.ActionId, position, request.Facing,
+                var shape = area ?? ActionArea.FromAction(actionId, source.HitboxRadius);
+                var effect = new GroundEffect(source, actionId, position, heading,
                     shape, _scheduler.ElapsedSeconds + duration, onTick);
-                RemoveGroundEffect(source, request.ActionId);
-                _groundEffects.Add((source.Identity, request.ActionId), effect);
+                RemoveGroundEffect(source, actionId);
+                _groundEffects.Add((source.Identity, actionId), effect);
 
                 effect.Expiry = _scheduler.Schedule(effect.ExpiresAt, () =>
                 {
                     lock (_gate)
                     {
-                        if (!_groundEffects.TryGetValue((source.Identity, request.ActionId), out var current) ||
+                        if (!_groundEffects.TryGetValue((source.Identity, actionId), out var current) ||
                             !ReferenceEquals(current, effect))
                             return;
 
-                        RemoveGroundEffect(source, request.ActionId);
+                        RemoveGroundEffect(source, actionId);
                         if (_acceptingEntities && source.IsAlive)
                             onExpire?.Invoke(effect);
                     }
                 }, "移除地面效果");
-                if (vfxPath != null)
+                if (showVisual != null)
                 {
                     effect.HasVfx = true;
-                    VfxManager.ShowGroundEffect(vfxPath, effect.Position, effect.Heading, effect);
+                    showVisual(effect);
                 }
             }
         }
