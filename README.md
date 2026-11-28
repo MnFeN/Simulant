@@ -75,6 +75,18 @@ Encounters run entirely on the client, with no need to set up or connect to a pr
 
 - 如果此过程中有任何一步导致游戏崩溃，请记录问题并重启 ACT。
 
+## 绘灵法师循环练习
+
+切换到绘灵法师，在旅馆启用仿生石防火墙。加载区域 `1238`，选择「绘灵法师木人练习」并开始模拟，然后选中木人，用游戏热栏施放技能。可连续练习色魔法、减色混合、构想与肖像、三连重锤和星空爆发。伤害为模拟值，星空圆圈用于显示练习范围。
+
+在「配置 → 绘灵起始资源」启用自定义配置，可指定开场魔力、量谱、颜料、画布、充能和增益。木人和副本预设共用这份配置。
+
+### 职业技能怎么接入
+
+- `SimActionService` 处理技能请求、读条、打断和滑步，按当前职业把成功进入结算的请求交给 `JobActions`。公共结算负责把结果交回游戏客户端，播放原生演出。
+- `PictomancerActions` 校验技能条件，更新量谱、连段和增益。客户端根据这些状态更新热栏。`OnSimStart` 应用开场资源，`OnSimEnd` 清理本轮职业状态。
+- 新职业在 `Simulation/Runtime/PlayerActions` 实现 `JobActions`，有量谱时使用 `JobActions<TJob, TGauge>`。把实现注册到 `JobActions` 的职业表，复用 `PlayerActionRules` 的目标、状态、伤害和冷却方法，再用木人验证完整循环与重开清理。
+
 ## 致谢 · Acknowledgements
 
 此插件的开发借鉴了大量 Dalamud 仓库，建立在前人在 FFXIV 客户端、游戏数据和模拟工具方面研究的基础之上。

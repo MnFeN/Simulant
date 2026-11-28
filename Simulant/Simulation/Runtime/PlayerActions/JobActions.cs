@@ -13,7 +13,8 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         private static readonly Dictionary<Job, JobActions> ByJob = new JobActions[]
         {
             PaladinActions.Instance,
-            WhiteMageActions.Instance
+            WhiteMageActions.Instance,
+            PictomancerActions.Instance
         }.ToDictionary(actions => actions.ClassJob);
 
         protected Job ClassJob { get; }
@@ -21,6 +22,8 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         protected JobActions(Job job) => ClassJob = job;
 
         internal static JobActions For(Job job) => ByJob.TryGetValue(job, out var actions) ? actions : null;
+
+        internal virtual bool SupportsLevel(byte level) => level == 100;
 
         /// <summary>处理职业技能请求。未实现的技能返回 false。</summary>
         internal abstract bool TryHandleAction(ActionRequest request);

@@ -308,6 +308,13 @@ namespace Simulant.Simulation.Runtime
             ScheduleEnemyList();
         }
 
+        internal bool OwnsHostileTarget(Character target)
+        {
+            lock (_gate)
+                return _acceptingEntities && !_isClearing &&
+                    _enemyEntries.Any(entry => entry.Actor.IsActive && entry.Actor.Entity.Identity == target.Identity);
+        }
+
         private void ScheduleEnemyList()
         {
             if (_enemyListPoll != null || (_enemyEntries.Count == 0 && !EnemyList.HasPendingCleanup))

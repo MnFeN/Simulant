@@ -39,9 +39,12 @@ namespace Simulant.Core
                 if (!Enabled)
                     return;
 
-                if (level.HasValue)
-                    PrepareSimPlayer(level.Value);
                 Volatile.Write(ref _encounterEntities, encounterEntities);
+                if (level.HasValue)
+                {
+                    EnsureScheduler();
+                    PrepareSimPlayer(level.Value);
+                }
             }
         }
 
@@ -287,8 +290,8 @@ namespace Simulant.Core
                 ReferenceEquals(PluginHost.Instance, _host) &&
                 GeneralActions.TryHandleAction(request))
                 return;
-            if (player.Level == 100 && request.ActionType == ActionType.Action &&
-                ReferenceEquals(PluginHost.Instance, _host) && jobActions?.TryHandleAction(request) == true)
+            if (request.ActionType == ActionType.Action && ReferenceEquals(PluginHost.Instance, _host) &&
+                jobActions != null && jobActions.SupportsLevel(player.Level) && jobActions.TryHandleAction(request))
                 return;
             if (request.ActionType != ActionType.Action)
                 return;
