@@ -14,6 +14,31 @@ using ActionRow = Lumina.Excel.Sheets.Action;
 
 namespace Simulant.Simulation.Runtime.PlayerActions
 {
+    /// <summary>本机一次成功结算，目标列表以发给客户端的效果为准。</summary>
+    internal readonly struct PlayerActionResult
+    {
+        internal Character Source { get; }
+        internal uint ActionId { get; }
+        internal ActionRequest Request { get; }
+        internal IReadOnlyList<Character> Targets { get; }
+        internal IReadOnlyList<Character> DamagedTargets { get; }
+        internal bool IsAutoAttack => Request == null;
+        internal bool IsSpell => !IsAutoAttack && Category == 2;
+        internal bool IsWeaponskill => !IsAutoAttack && Category == 3;
+
+        private uint Category => GameDataService.Instance.GetSheet<ActionRow>().GetRowOrDefault(ActionId)?.ActionCategory.RowId ?? 0;
+
+        internal PlayerActionResult(Character source, uint actionId, ActionRequest request,
+            IReadOnlyList<Character> targets, IReadOnlyList<Character> damagedTargets)
+        {
+            Source = source;
+            ActionId = actionId;
+            Request = request;
+            Targets = targets;
+            DamagedTargets = damagedTargets;
+        }
+    }
+
     internal static class PlayerActionRules
     {
         internal const ushort ComboDurationMilliseconds = 30000;
@@ -309,11 +334,12 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                 effectParam, breaksOnDamage));
         }
 
-        /// <summary>为自己施加的模拟状态登记破裂或周期结算回调，回调参数为状态持有者。</summary>
+        /// <summary>观察自己施加的模拟状态。每次成功结算只调用一次 onAction，目标是该状态的持有者。</summary>
         internal static bool ObserveStatus<TStatusEnum>(Character player, Character target, TStatusEnum status,
-            Action<Character> onBreak = null, Action<Character> onTick = null)
+            Action<Character, PlayerActionResult> onAction = null, Action<Character> onBreak = null,
+            Action<Character> onExpire = null, Action<Character> onTick = null)
             where TStatusEnum : struct, Enum
-            => Entities.ObserveStatus(player, target, Convert.ToUInt16(status), onBreak, onTick);
+            => Entities.ObserveStatus(player, target, Convert.ToUInt16(status), onAction, onBreak, onExpire, onTick);
 
         /// <summary>仅模拟指定护盾被击破，可用于不扣本机血量的练习。</summary>
         internal static bool BreakShield<TStatusEnum>(Character target, TStatusEnum status)
@@ -321,25 +347,25 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             => Entities.BreakShields(target, Convert.ToUInt16(status));
 
         /// <summary>添加随统一三秒刻度结算的持续伤害或治疗。治疗更新实际生命值。</summary>
-        internal static void AddPeriodicStatus<TStatusEnum>(Character player, Character target, List<ActionEffect> effects,
-            TStatusEnum status, float seconds, ushort amount, bool healing = false)
+        internal static void AddHoTDoT<TStatusEnum>(Character source, Character target, List<ActionEffect> effects,
+            TStatusEnum status, float seconds, ushort amount, bool isHealing = false)
             where TStatusEnum : struct, Enum
         {
-            AddTargetStatus(player, target, effects, status, seconds);
+            AddTargetStatus(source, target, effects, status, seconds);
             var statusId = Convert.ToUInt16(status);
-            ObserveStatus(player, target, status,
-                onTick: recipient => ApplyPeriodicEffect(player, recipient, statusId, amount, healing));
+            ObserveStatus(source, target, status,
+                onTick: statusTarget => ApplyPeriodicEffect(source, statusTarget, statusId, amount, isHealing));
         }
 
         /// <summary>向单个目标结算一次持续伤害或治疗，状态和地面效果共用。</summary>
-        internal static void ApplyPeriodicEffect(Character source, Character recipient, ushort statusId, ushort amount, bool healing)
+        internal static void ApplyPeriodicEffect(Character source, Character target, ushort statusId, ushort amount, bool isHealing)
         {
-            if (recipient.HP == 0)
+            if (target.HP == 0)
                 return;
-            if (healing)
-                RestoreHp(recipient, amount);
-            recipient.ActorControl(ActorControlCategory.HotDot, statusId, healing ? 4u : 3u, amount, source.Id);
-            Entities.CombatLog?.PeriodicEffect(source, recipient, statusId, amount, healing);
+            if (isHealing)
+                RestoreHp(target, amount);
+            target.ActorControl(ActorControlCategory.HotDot, statusId, isHealing ? 4u : 3u, amount, source.Id);
+            Entities.CombatLog?.PeriodicEffect(source, target, statusId, amount, isHealing);
         }
 
         internal static bool HasCombo<TActionEnum>(TActionEnum prerequisite) where TActionEnum : struct, Enum

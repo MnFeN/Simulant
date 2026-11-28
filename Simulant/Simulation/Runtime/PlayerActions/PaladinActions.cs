@@ -184,7 +184,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                 case ActionId.厄运流转:
                     areaHits = AddAreaDamage(player, request, WeaponAttackType);
                     foreach (var hit in areaHits)
-                        AddPeriodicStatus(player, hit.Target, hit.Effects, StatusId.厄运流转, 15, 10000);
+                        AddHoTDoT(player, hit.Target, hit.Effects, StatusId.厄运流转, 15, 10000);
                     break;
                 case ActionId.绝对统治:
                     if (!TryGetEnemy(player, request, out target))

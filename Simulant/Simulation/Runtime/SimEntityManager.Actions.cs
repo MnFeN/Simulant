@@ -4,6 +4,7 @@ using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Game.FFCS.Client.Game.Object;
 using Simulant.Simulation.Timeline;
+using Simulant.Simulation.Runtime.PlayerActions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,19 +17,49 @@ namespace Simulant.Simulation.Runtime
 {
     public sealed partial class SimEntityManager
     {
+        /// <summary>本会话施加的模拟状态记录，保存原生槽位、有效期以及结算和清理所需的信息。</summary>
         private sealed class OwnedStatus
         {
+            /// <summary>持有此状态的角色实体，用于读取和清理原生状态槽。</summary>
             internal Character Actor;
+
+            /// <summary>施加此状态的角色实体，用于核对状态来源和匹配技能结算。</summary>
             internal Character Source;
+
+            /// <summary>此状态在持有者原生状态管理器中的槽位索引。</summary>
             internal int Slot;
+
+            /// <summary>游戏状态编号，用于核对槽位中的状态是否仍由本会话持有。</summary>
             internal ushort StatusId;
+
+            /// <summary>状态持有者在本会话中的模拟角色，用于移动限制和小队状态判定。</summary>
             internal SimActor Participant;
+
+            /// <summary>此状态有效时是否限制持有者主动移动。</summary>
             internal bool LockMovement;
+
+            /// <summary>此状态是否作为可被伤害直接击破的护盾处理。</summary>
             internal bool BreaksOnDamage;
+
+            /// <summary>状态有效期间，施加者成功结算本机技能时的回调。参数依次为状态持有者和技能结算结果。</summary>
+            internal Action<Character, PlayerActionResult> OnAction;
+
+            /// <summary>护盾被击破后的回调，参数为护盾持有者。</summary>
             internal Action<Character> OnBreak;
+
+            /// <summary>状态到期并清理后的回调，参数为状态持有者。</summary>
+            internal Action<Character> OnExpire;
+
+            /// <summary>状态有效期间随统一三秒刻度执行的回调，参数为状态持有者。</summary>
             internal Action<Character> OnTick;
+
+            /// <summary>相对会话调度器起点的到期时刻，单位为秒。正无穷表示不会自动到期。</summary>
             internal double ExpiresAt;
+
+            /// <summary>移除到期状态的调度任务。刷新或清理状态时取消旧任务。</summary>
             internal SimScheduledAction Expiry;
+
+            /// <summary>添加状态时登记的 ACT 日志参数，供移除日志复用。未登记时为空。</summary>
             internal ushort? LoggedParam;
         }
 
@@ -133,6 +164,14 @@ namespace Simulant.Simulation.Runtime
             CombatLog?.Ability(source, actionId, missed ? source : target, null, request?.Facing, animationLock,
                 missed ? Array.Empty<SimActor>() : null, null, request == null ? null : requestEffects);
 
+            if (request?.ActionType == ActionType.Action && source.Identity.Slot == 0)
+            {
+                var targets = target == null ? Array.Empty<Character>() : new[] { target };
+                var damaged = requestEffects?.Any(effect => effect.Type == 0x03) == true ? targets : Array.Empty<Character>();
+                PluginHost.Instance?.PlayerActions.Entities?.PublishPlayerAction(
+                    new PlayerActionResult(source, actionId, request, targets, damaged));
+            }
+
             // 时间轴触发的本机技能需补播动作，网络假角色由结算演出驱动。
             if (request == null && source.Identity.Slot == 0 &&
                 GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var action))
@@ -147,6 +186,13 @@ namespace Simulant.Simulation.Runtime
             source.ReceiveActionResults(request, actionId, animationTarget, position, animationLock, hits);
             ConsumeSharedCastProc(source, request);
             CombatLog?.AbilityResults(source, actionId, animationTarget, request?.GroundPosition, request?.Facing ?? source.Heading, animationLock, hits);
+            if (request?.ActionType == ActionType.Action && source.Identity.Slot == 0)
+            {
+                var targets = hits.Select(hit => hit.Target).ToArray();
+                var damaged = hits.Where(hit => hit.Effects.Any(effect => effect.Type == 0x03)).Select(hit => hit.Target).ToArray();
+                PluginHost.Instance?.PlayerActions.Entities?.PublishPlayerAction(
+                    new PlayerActionResult(source, actionId, request, targets, damaged));
+            }
         }
 
         /// <summary>按结算技能编号保存特殊瞬发动画锁，单位为秒。</summary>
@@ -407,7 +453,8 @@ namespace Simulant.Simulation.Runtime
         }
 
         internal bool ObserveStatus(Character source, Character target, ushort statusId,
-            Action<Character> onBreak, Action<Character> onTick)
+            Action<Character, PlayerActionResult> onAction, Action<Character> onBreak, Action<Character> onExpire,
+            Action<Character> onTick)
         {
             lock (_gate)
             {
@@ -416,7 +463,9 @@ namespace Simulant.Simulation.Runtime
                 if (owned == null)
                     return false;
 
+                owned.OnAction = onAction;
                 owned.OnBreak = onBreak;
+                owned.OnExpire = onExpire;
                 owned.OnTick = onTick;
                 owned.BreaksOnDamage |= onBreak != null;
                 return true;
@@ -440,6 +489,15 @@ namespace Simulant.Simulation.Runtime
                 }
                 return broken;
             }
+        }
+
+        internal void PublishPlayerAction(PlayerActionResult result)
+        {
+            lock (_gate)
+                foreach (var owned in _statuses.Where(status => status.OnAction != null &&
+                    status.Source.Identity == result.Source.Identity).ToArray())
+                    if (IsStatusActive(owned))
+                        owned.OnAction?.Invoke(owned.Actor, result);
         }
 
         private bool IsStatusActive(OwnedStatus owned)
@@ -473,8 +531,18 @@ namespace Simulant.Simulation.Runtime
                     if (owned.Expiry == null || owned.ExpiresAt != expiresAt)
                         return;
 
+                    var actor = owned.Actor;
+                    var callback = owned.OnExpire;
+                    if (callback != null && actor.IsAlive)
+                    {
+                        var status = actor.Native.StatusManager.GetStatus(owned.Slot);
+                        if (status.StatusId.Get() != 0 && !MatchesStatus(status, owned))
+                            callback = null;
+                    }
                     RemoveOwnedStatus(owned);
                     RefreshMovementLocks();
+                    if (_acceptingEntities && actor.IsAlive && owned.Source.IsAlive)
+                        callback?.Invoke(actor);
                 }
             }, "移除到期模拟状态");
 
