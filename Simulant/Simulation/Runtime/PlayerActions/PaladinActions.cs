@@ -204,7 +204,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     ConsumeHolySpellProc(player, request);
                     break;
                 case ActionId.圣环:
-                    if (!TryGetFixedMpCost(player, request, out mpCost))
+                    if (!TryGetMpCost(player, request, out mpCost))
                         return true;
 
                     areaHits = AddAreaDamage(player, request, WeaponAttackType);

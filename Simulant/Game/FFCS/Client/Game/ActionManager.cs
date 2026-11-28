@@ -149,11 +149,51 @@ namespace Simulant.Game.FFCS.Client.Game
         public void OpenCastBar(Character.Character character, ActionType actionType, uint actionId, uint spellId, uint extraParam, float castTimeElapsed, float castTimeTotal)
             => OpenCastBarFuncPtr.Call(Ptr, character.Ptr, actionType, actionId, spellId, extraParam, castTimeElapsed, castTimeTotal);
 
+        [SigPattern("E8 * * * * 40 0F B6 CE E9")]
+        internal static IntPtr GetActionCostFuncPtr { get; set; }
+
+        /// <summary>查询客户端计算的技能消耗，返回值的单位由技能的消耗类型决定。</summary>
+        /// <remarks>
+        /// 国服 7.58（2026.11.03.0000.0000）：从 ActionManager.CheckActionResources 的魔力比较分支进入本函数，
+        /// 可核对类型 4 使用第四参 a4 = 1 取得最低魔力。a4 = 0 时，本函数读取当前魔力计算实际消耗。
+        /// </remarks>
+        internal static int GetActionCost(ActionType actionType, uint actionId, byte a3, byte a4, byte a5, byte a6)
+            => GetActionCostFuncPtr.Call<int>(actionType, actionId, a3, a4, a5, a6);
+
+        /// <summary>
+        /// Calculate cast time for an action, in milliseconds, adjusted by player stats (haste, sks/sps, etc.) and optionally various class mechanics.
+        /// </summary>
+        /// <param name="actionType">The type of action to check.</param>
+        /// <param name="actionId">The ID of the action to check.</param>
+        /// <param name="applyProcs">If true, applies various class mechanics (procs, swiftcast, etc).</param>
+        /// <param name="outOptProc">If non-null and applyProcs is true, will be set to applied proc.</param>
+        /// <returns></returns>
+        [SigPattern("E8 * * * * 8B D0 48 8B CF E8 ?? ?? ?? ?? 0F B7 55")]
+        internal static IntPtr GetAdjustedCastTimeFuncPtr { get; set; }
+
+        // 默认应用光速、即刻咏唱等职业修正。返回零表示瞬发，正值为修正后的毫秒数。
+        internal static int GetAdjustedCastTime(ActionType actionType, uint actionId, bool applyProcs = true, IntPtr outOptProc = default)
+            => GetAdjustedCastTimeFuncPtr.Call<int>(actionType, actionId, applyProcs, outOptProc);
+
         internal enum CastTimeProc : byte
         {
             None = 0,
+            Firestarter = 1, // THM/BLM
+            //Thundercloud = 2, // THM/BLM, gone in 7.0
+            Swiftcast = 3,
+            Lightspeed = 4, // AST
+            Dualcast = 5, // RDM
+            Abridged = 6, // AST
+            Triplecast = 7, // BLM
+            DemiBahamut = 8, // SMN
             Requiescat = 9, // PLD
+            DemiPhoenix = 11, // SMN
+            EnhancedHarpe = 12, // RPR
+            SoulsowOutOfCombat = 13, // RPR
+            Acceleration = 14, // RDM
             DivineMight = 15, // PLD
+            MotifOutOfCombat = 18, // PCT
+            RainbowBright = 19, // PCT
         }
 
         public enum UseActionMode

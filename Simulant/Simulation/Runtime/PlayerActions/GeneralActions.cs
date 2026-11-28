@@ -15,7 +15,8 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             挑衅 = 7533,
             退避 = 7537,
             亲疏自行 = 7548,
-            沉稳咏唱 = 7559
+            沉稳咏唱 = 7559,
+            即刻咏唱 = 7561
         }
 
         private enum GeneralActionId : uint
@@ -27,6 +28,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         {
             冲刺 = 50,
             沉稳咏唱 = 160,
+            即刻咏唱 = 167,
             铁壁 = 1191,
             亲疏自行 = 1209
         }
@@ -57,6 +59,9 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     break;
                 case ActionId.沉稳咏唱:
                     AddTargetStatus(player, player, effects, StatusId.沉稳咏唱, 6);
+                    break;
+                case ActionId.即刻咏唱:
+                    AddTargetStatus(player, player, effects, StatusId.即刻咏唱, 10);
                     break;
                 case ActionId.挑衅:
                     UseEnmityAction(player, request, provoke: true);

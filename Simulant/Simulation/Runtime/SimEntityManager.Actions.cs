@@ -117,13 +117,13 @@ namespace Simulant.Simulation.Runtime
         internal void ResolveAction(Character source, ActionRequest request, Character target, uint actionId,
             params ActionEffect[] requestEffects)
         {
-            var animationLock = 0f;
+            var animationLock = GetAnimationLock(request, actionId);
             if (request == null)
                 source.ExecuteActionEffect(actionId, target);
             else
             {
-                animationLock = GetAnimationLock(request, actionId);
                 source.ReceiveActionResult(request, actionId, target, target?.Pos3D ?? source.Pos3D, animationLock, requestEffects);
+                ConsumeSharedCastProc(source, request);
             }
 
             var missed = target == null && request?.Kind == ActionRequestKind.Normal;
@@ -142,15 +142,39 @@ namespace Simulant.Simulation.Runtime
             var position = request.GroundPosition ?? animationTarget?.Pos3D ?? source.Pos3D;
             var animationLock = GetAnimationLock(request, actionId);
             source.ReceiveActionResults(request, actionId, animationTarget, position, animationLock, hits);
+            ConsumeSharedCastProc(source, request);
             CombatLog?.AbilityResults(source, actionId, animationTarget, request.GroundPosition, request.Facing, animationLock, hits);
         }
 
+        /// <summary>按结算技能编号保存特殊瞬发动画锁，单位为秒。</summary>
+        private static readonly Dictionary<uint, float> SpecialAnimationLocks = new Dictionary<uint, float>();
+
+        /// <summary>由职业静态构造函数按技能枚举登记特殊瞬发动画锁。</summary>
+        /// <remarks>首次进入该职业的技能处理入口时先完成登记，公共结算随后查表。每个技能编号登记一次。</remarks>
+        internal static void AddSpecialAnimationLock<TActionId>(TActionId actionId, float animationLock)
+            where TActionId : struct, Enum
+            => SpecialAnimationLocks.Add(Convert.ToUInt32(actionId), animationLock);
+
+        /// <summary>为本机技能回包选择动画锁。读条用 0.1 秒，瞬发优先查特殊值，默认 0.6 秒。</summary>
+        /// <remarks>
+        /// ActionEffectHandler.Receive 的本机技能结算分支读取 Header.AnimationLock 并更新本机计时器。
+        /// 默认值取自实战回包，例如圣灵读条和瞬发。特殊值可用 ACT 21/22 行或原生回放的技能结算核对。
+        /// </remarks>
         private static float GetAnimationLock(ActionRequest request, uint actionId)
         {
-            var hasCastTime = !request.HasInstantCastProc &&
-                GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var row) &&
-                row.Cast100ms > 0;
-            return hasCastTime ? 0.1f : 0.6f;
+            if (request == null)
+                return 0f;
+            if (request.RequiresCast)
+                return 0.1f;
+
+            return SpecialAnimationLocks.TryGetValue(actionId, out var animationLock) ? animationLock : 0.6f;
+        }
+
+        /// <summary>技能结算后按请求记录的咏唱修正消耗即刻咏唱。</summary>
+        private static void ConsumeSharedCastProc(Character source, ActionRequest request)
+        {
+            if (request?.CastProc == ActionManager.CastTimeProc.Swiftcast)
+                PlayerActions.PlayerActionRules.RemoveStatus(source, GeneralStatusId.即刻咏唱);
         }
 
         internal static (uint Action, ushort Status) GetInvulnerability(Job job)

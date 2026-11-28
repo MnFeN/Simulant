@@ -1,7 +1,6 @@
 using Simulant.ACT;
 using Simulant.Core.Entity;
 using Simulant.Game;
-using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Simulation.Runtime;
 using Simulant.Simulation.Runtime.PlayerActions;
@@ -9,7 +8,6 @@ using Simulant.Simulation.Timeline;
 using System;
 using System.Numerics;
 using System.Threading;
-using ActionRow = Lumina.Excel.Sheets.Action;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Core
@@ -24,7 +22,7 @@ namespace Simulant.Core
         private SimEntityManager _encounterEntities;
         private ActionRequest _lastActionRequest;
         private (EntityIdentity Player, uint Sequence, Vector2 Position)? _castOrigin;
-        private (EntityIdentity Player, ActionRequest Request, bool Observed)? _pendingCast;
+        private (EntityIdentity Player, ActionRequest Request)? _pendingCast;
 
         internal SimActionService(PluginHost host) => _host = host;
 
@@ -120,13 +118,14 @@ namespace Simulant.Core
             {
                 var pending = _pendingCast.Value;
                 var request = pending.Request;
+                var matches = sequence == request.SourceSequence && actionId == request.ActionId &&
+                    actionType == (byte)request.ActionType;
                 if (dropped != 0 || pending.Player != player.Identity || cancelSequence == request.SourceSequence ||
                     (ushort)cast.ResponseSourceSequence.Get() == request.SourceSequence)
                 {
                     _pendingCast = null;
                 }
-                else if (casting && sequence == request.SourceSequence && actionId == request.ActionId &&
-                    actionType == (byte)request.ActionType)
+                else if (casting && matches)
                 {
                     if (RejectLockedAction(player, request))
                     {
@@ -135,16 +134,17 @@ namespace Simulant.Core
                         return;
                     }
 
-                    _pendingCast = (pending.Player, request, true);
                     requestForCast = request;
                 }
                 else if (ReferenceEquals(request, previousPending))
                 {
                     _pendingCast = null;
-                    // 请求被采集时原生函数可能还没有写入 CastInfo，瞬发在下一次轮询确认。
-                    if (!casting && (!pending.Observed || sequence == request.SourceSequence && actionId == request.ActionId &&
-                        cast.CurrentCastTime.Get() >= cast.TotalCastTime.Get()))
-                        QueueCapturedResult(player, request);
+                    if (!casting && matches)
+                    {
+                        var total = cast.TotalCastTime.Get();
+                        if (total > 0 && cast.CurrentCastTime.Get() >= total)
+                            QueueCapturedResult(player, request);
+                    }
                 }
             }
             if (!casting || sequence == 0 || (ushort)cast.ResponseSourceSequence.Get() == sequence ||
@@ -165,6 +165,7 @@ namespace Simulant.Core
 
             var byRequest = cancelSequence == sequence;
             var slidecastWindow = _host.Configuration.SlidecastWindow;
+            // CastInfo 记录本次读条确定的总时长和当前进度，滑步按两者的差判断。
             var remaining = cast.TotalCastTime.Get() - cast.CurrentCastTime.Get();
             // 用施法期间的水平位置变化判定，转向和亚厘米的坐标抖动不计入。
             var byMovement = remaining > slidecastWindow &&
@@ -220,11 +221,14 @@ namespace Simulant.Core
                 if (RejectLockedAction(player, request))
                     continue;
 
-                var hasBaseCastTime = request.ActionType == ActionType.Action
-                    ? GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(request.ActionId, out var action) && action.Cast100ms > 0
-                    : EncounterEntities?.MayCastLimitBreak(request) == true;
-                if (hasBaseCastTime && !request.HasInstantCastProc)
-                    _pendingCast = (player.Identity, request, false);
+                // 通用极限技需要先按量表找到实际技能，再交给原生咏唱时间计算。
+                var actionId = request.ActionType == ActionType.Action
+                    ? request.ActionId
+                    : EncounterEntities?.GetLimitBreakActionId(request) ?? 0;
+                // 按客户端修正后的时间分流。光速等效果把时长减到零时直接结算。
+                request.RequiresCast = actionId != 0 && ActionManager.GetAdjustedCastTime(ActionType.Action, actionId) > 0;
+                if (request.RequiresCast)
+                    _pendingCast = (player.Identity, request);
                 else
                     QueueCapturedResult(player, request);
             }

@@ -143,20 +143,36 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         internal static bool TryGetEnemySpell(Character player, ActionRequest request, out Character target, out int mpCost)
         {
             mpCost = 0;
-            return TryGetEnemy(player, request, out target) && TryGetFixedMpCost(player, request, out mpCost);
+            return TryGetEnemy(player, request, out target) && TryGetMpCost(player, request, out mpCost);
         }
 
-        internal static bool TryGetFixedMpCost(Character player, ActionRequest request, out int cost)
+        /// <summary>按原生规则检查魔力并给出实际扣费。技能成功结算时用 <see cref="ChangeMp"/> 扣除。</summary>
+        /// <remarks>
+        /// Action.PrimaryCostType 为 3、4、12、51 时查询魔力消耗。类型 4 单独查询最低魔力，
+        /// 再用当前魔力比较门槛与实际扣费中的较大值。量谱和状态的消耗由职业结算负责。
+        /// 国服 7.58（2026.11.03.0000.0000）：沿 GetActionCost 的类型 4 分支读取
+        /// Action.PrimaryCostValue 和 ParamGrow.MpModifier，核爆（技能 162）的 100 级基础门槛为
+        /// 8 × 10000 ÷ 100 = 800 MP。无灵极心时 1000 MP 可以释放并耗尽，600 MP 低于门槛。
+        /// 该分支对核爆读取黑魔量谱的灵极心。原生用整数计算扣去 34% 后的门槛，并按同一比例减少
+        /// 实际消耗，最低仍扣调整后的门槛。有灵极心时门槛为 528 MP，1000 MP 扣 660，600 MP 扣 528。
+        /// </remarks>
+        internal static bool TryGetMpCost(Character player, ActionRequest request, out int cost)
         {
-            var row = GetAction(request);
-            // Action 表的魔力消耗类型为 3，每单位 50 点魔力。
-            cost = row.PrimaryCostValue * 50;
-            if (row.PrimaryCostType == 3 && player.MP >= cost)
+            var costType = GetAction(request).PrimaryCostType;
+            var minimumMp = costType == 4
+                ? ActionManager.GetActionCost(request.ActionType, request.ActionId, 1, 1, 1, 0)
+                : 0;
+            cost = costType == 3 || costType == 4 || costType == 12 || costType == 51
+                ? ActionManager.GetActionCost(request.ActionType, request.ActionId, 1, 0, 1, 0)
+                : 0;
+            if (player.MP >= Math.Max(minimumMp, cost))
                 return true;
-            player.RejectActionResult(request, 572);
+
+            player.RejectActionResult(request, 568);
             return false;
         }
 
+        /// <summary>通过原生角色血蓝更新应用魔力变化，结果限制在零到最大魔力之间。</summary>
         internal static void ChangeMp(Character player, int delta)
         {
             var current = player.MP;

@@ -125,14 +125,10 @@ namespace Simulant.Simulation.Runtime
             => _limitBreakPlayer.ActorControlSelf(ActorControlCategory.LimitBreakGauge,
                 _limitBreakBars, _limitBreakUnits, LimitBreakBarUnits, presentation);
 
-        internal bool MayCastLimitBreak(ActionRequest request)
+        internal uint GetLimitBreakActionId(ActionRequest request)
         {
             lock (_gate)
-            {
-                var action = GetRequestedLimitBreak(request);
-                return action != 0 &&
-                    GameDataService.Instance.GetSheet<ActionRow>().TryGetRow(action, out var row) && row.Cast100ms != 0;
-            }
+                return GetRequestedLimitBreak(request);
         }
 
         private uint GetRequestedLimitBreak(ActionRequest request)
