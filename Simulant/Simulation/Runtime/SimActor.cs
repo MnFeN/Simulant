@@ -15,6 +15,8 @@ namespace Simulant.Simulation.Runtime
         private readonly SimCastController _casts;
         private readonly SimMovementController _movement;
         private int _detached;
+        internal SimEntityManager Manager { get; set; }
+        internal EntityIdentity? PetOwner { get; set; }
         internal SimActorBehaviorController BehaviorController { get; set; }
         internal SimActorBehaviorController BossBehaviorController { get; set; }
         internal bool MovementLocked { get; set; }

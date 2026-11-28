@@ -139,11 +139,11 @@ namespace Simulant.Simulation.Runtime
         internal void ResolveActionResults(Character source, ActionRequest request, Character animationTarget, uint actionId,
             IReadOnlyList<(Character Target, List<ActionEffect> Effects)> hits)
         {
-            var position = request.GroundPosition ?? animationTarget?.Pos3D ?? source.Pos3D;
+            var position = request?.GroundPosition ?? animationTarget?.Pos3D ?? source.Pos3D;
             var animationLock = GetAnimationLock(request, actionId);
             source.ReceiveActionResults(request, actionId, animationTarget, position, animationLock, hits);
             ConsumeSharedCastProc(source, request);
-            CombatLog?.AbilityResults(source, actionId, animationTarget, request.GroundPosition, request.Facing, animationLock, hits);
+            CombatLog?.AbilityResults(source, actionId, animationTarget, request?.GroundPosition, request?.Facing ?? source.Heading, animationLock, hits);
         }
 
         /// <summary>按结算技能编号保存特殊瞬发动画锁，单位为秒。</summary>
@@ -175,6 +175,14 @@ namespace Simulant.Simulation.Runtime
         {
             if (request?.CastProc == ActionManager.CastTimeProc.Swiftcast)
                 PlayerActions.PlayerActionRules.RemoveStatus(source, GeneralStatusId.即刻咏唱);
+        }
+
+        /// <summary>宠物作为独立施法者发送结算。不确认主人的技能请求。</summary>
+        internal void ResolvePetAction(SimActor pet, uint actionId, Character animationTarget,
+            IReadOnlyList<(Character Target, List<ActionEffect> Effects)> hits)
+        {
+            if (ReferenceEquals(pet.Manager, this) && pet.IsActive && pet.PetOwner.HasValue)
+                ResolveActionResults(pet.Entity, null, animationTarget, actionId, hits);
         }
 
         internal static (uint Action, ushort Status) GetInvulnerability(Job job)

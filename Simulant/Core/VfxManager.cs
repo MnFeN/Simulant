@@ -41,6 +41,12 @@ namespace Simulant.Core
                 owner, color, duration, cancellation: cancellation);
         }
 
+        internal static void ShowGroundEffect(string path, Vector3 position, float heading, object owner)
+        {
+            var rotation = Quaternion.CreateFromYawPitchRoll(heading, 0, 0);
+            ShowStaticCore(path, new Vector3(position.X, position.Z, position.Y), rotation, Vector3.One, owner, null);
+        }
+
         internal static void ShowStatic(string path, ResourceHandle resource, Vector3 position, Quaternion rotation,
             Vector3 scale, object owner, Vector4? color = null)
         {

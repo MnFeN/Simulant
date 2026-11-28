@@ -139,6 +139,17 @@ namespace Simulant.Game.FFCS.Client.Game.Object
         public int CompareTo(GameObjectId other) => Id.CompareTo(other.Id);
     }
 
+    /// <summary>
+    /// Enum for <see cref="GameObject.SubKind"/> when <see cref="GameObject.ObjectKind"/> is <see cref="ObjectKind.BattleNpc"/>.
+    /// </summary>
+    public enum BattleNpcSubKind : byte
+    {
+        /// <summary> Carbuncle, Eos/Selene, Machinists Rook Autoturret/Automaton Queen, Whitemages Lilybell, probably more. </summary>
+        Pet = 2,
+        /// <summary> Enemies, Guards </summary>
+        Combatant = 5
+    }
+
     [Flags]
     public enum ObjectTargetableFlags : byte
     {

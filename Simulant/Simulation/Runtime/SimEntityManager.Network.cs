@@ -1,4 +1,5 @@
 using Simulant.Core.Entity;
+using System.Linq;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
@@ -44,6 +45,37 @@ namespace Simulant.Simulation.Runtime
                     RegisterEnemy(actor, enemyListVisibility);
                     CombatLog?.SpawnNpc(actor.Id, parent, tether, animation);
                 });
+        }
+
+        /// <summary>生成归属指定施法者的网络宠物。宠物持有独立实体 ID，不加入小队或敌对列表。</summary>
+        internal void SpawnPet(Character owner, NetworkNpcSpawnSpec spec, Action<SimActor> onReady, double duration = 0)
+        {
+            SimTimeline.ValidateSeconds(duration, nameof(duration));
+            QueueNetworkSpawn((out NetworkCharacterSpawnRequest request) => _spawner.BeginSpawnNetworkBNpc(spec, out request, owner.Id),
+                actor =>
+                {
+                    if (!owner.IsAlive)
+                    {
+                        Delete(actor);
+                        return;
+                    }
+
+                    if (duration > 0)
+                        _scheduler.ScheduleAfter(duration, () => Delete(actor), "回收召唤物");
+                    onReady?.Invoke(actor);
+                }, timeoutSeconds: 5, onSpawned: actor =>
+                {
+                    actor.PetOwner = owner.Identity;
+                    actor.BossBehaviorController = null;
+                    actor.Entity.Native.IsHostile.Set(false);
+                    CombatLog?.SpawnNpc(actor.Id, spec.TetherTargetId, spec.TetherId, spec.AnimationState);
+                });
+        }
+
+        internal SimActor[] GetPets(Character owner)
+        {
+            lock (_gate)
+                return _actors.Values.Where(actor => actor.IsActive && actor.PetOwner == owner.Identity).ToArray();
         }
 
         /// <summary>生成网络玩家，默认复制自身外貌并优先采用已知的职业装备；就绪后在调度线程交付。</summary>

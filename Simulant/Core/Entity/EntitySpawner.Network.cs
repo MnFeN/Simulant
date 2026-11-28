@@ -41,15 +41,17 @@ namespace Simulant.Core.Entity
             new Dictionary<byte, NetworkCharacterSpawnRequest>();
         private long _networkWorldGeneration = 1;
 
-        internal void BeginSpawnNetworkBNpc(NetworkNpcSpawnSpec spec, out NetworkCharacterSpawnRequest request)
+        internal void BeginSpawnNetworkBNpc(NetworkNpcSpawnSpec spec, out NetworkCharacterSpawnRequest request, uint? petOwnerId = null)
         {
             request = null;
 
             if (spec == null)
                 throw new ArgumentNullException(nameof(spec));
 
+            // 国服 HandleSpawnNpcPacket 在入生成队列前按 CommonSpawnData.SubKind 判断宠物，
+            // 宠物分支还会读取同一结构的 OwnerId。
             BeginSpawnNetworkCharacter(ObjectKind.BattleNpc, spec.Targetable,
-                spec.ToPacket, PacketDispatcher.HandleSpawnNpcPacket, out request);
+                index => spec.ToPacket(index, petOwnerId), PacketDispatcher.HandleSpawnNpcPacket, out request);
         }
 
         internal void BeginSpawnNetworkPlayer(NetworkPlayerSpawnSpec spec, out NetworkCharacterSpawnRequest request,

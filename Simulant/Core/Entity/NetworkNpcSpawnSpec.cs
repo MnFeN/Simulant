@@ -64,7 +64,7 @@ namespace Simulant.Core.Entity
         /// <summary>随生成包初始化的状态，最多 30 条；永久状态的 RemainingTime 可以为 0。</summary>
         public CommonSpawnData.StatusEffect[] InitialStatuses;
 
-        internal unsafe SpawnNpcPacket ToPacket(byte spawnIndex)
+        internal unsafe SpawnNpcPacket ToPacket(byte spawnIndex, uint? petOwnerId = null)
         {
             if (BNpcBaseId == 0 || BNpcBaseId > int.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(BNpcBaseId), "战斗 NPC 基础编号必须为有效的正数表行编号。");
@@ -123,7 +123,7 @@ namespace Simulant.Core.Entity
                     EventId = EventId,
                     TargetId = TargetId,
                     CombatTaggerId = CombatTaggerId,
-                    OwnerId = OwnerId,
+                    OwnerId = petOwnerId ?? OwnerId,
                     TetherTargetId = TetherTargetId,
                     TetherId = TetherId,
                     MaxHealthPoints = MaxHealthPoints,
@@ -136,7 +136,7 @@ namespace Simulant.Core.Entity
                     Rotation = PacketCodec.EncodeUShortHeading(Heading),
                     SpawnIndex = spawnIndex,
                     ObjectKind = ObjectKind.BattleNpc,
-                    SubKind = 5,
+                    SubKind = (byte)(petOwnerId.HasValue ? BattleNpcSubKind.Pet : BattleNpcSubKind.Combatant),
                     CharacterMode = CharacterModes.Normal,
                     Level = Level,
                     DisplayFlags = DisplayFlags,

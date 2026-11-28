@@ -95,9 +95,9 @@ namespace Simulant.Core.Entity
                 targetEffects[index] = ActionEffectHandler.TargetEffects.FromEffects(hit.Effects.ToArray());
             }
 
-            ReceiveActionEffect(Id, Native.Ptr, actionId, request.Facing,
+            ReceiveActionEffect(Id, Native.Ptr, actionId, request?.Facing ?? Heading,
                 new Vector3(position.X, position.Z, position.Y), animationTarget?.Id ?? 0xE0000000u,
-                animationLock, request.SourceSequence, targetEffects, targetIds);
+                animationLock, request?.SourceSequence ?? 0, targetEffects, targetIds);
         }
 
         internal void RejectActionResult(ActionRequest request, uint messageId)

@@ -215,7 +215,8 @@ namespace Simulant.Core
             foreach (var request in requests)
             {
                 if (request.Kind == ActionRequestKind.CancelCast || request.SourceSequence == 0 ||
-                    (request.ActionType != ActionType.Action && request.ActionType != ActionType.GeneralAction))
+                    (request.ActionType != ActionType.Action && request.ActionType != ActionType.GeneralAction &&
+                        request.ActionType != ActionType.PetAction))
                     continue;
 
                 if (RejectLockedAction(player, request))
@@ -257,12 +258,13 @@ namespace Simulant.Core
             var encounter = EncounterEntities;
             if (encounter?.TryUseLimitBreak(player, request) == true)
                 return;
-            if (request.Kind == ActionRequestKind.Normal && ReferenceEquals(PluginHost.Instance, _host) &&
+            if (request.Kind == ActionRequestKind.Normal && request.ActionType != ActionType.PetAction &&
+                ReferenceEquals(PluginHost.Instance, _host) &&
                 GeneralActions.TryHandleAction(request))
                 return;
-            if (request.ActionType != ActionType.Action)
-                return;
             if (player.Level == 100 && TryHandleJobAction(player.Job, request))
+                return;
+            if (request.ActionType != ActionType.Action)
                 return;
 
             if (request.Kind == ActionRequestKind.Normal && request.ActionId == SimEntityManager.GetInvulnerability(player.Job).Action &&
@@ -284,7 +286,8 @@ namespace Simulant.Core
             switch (job)
             {
                 case Job.PLD:
-                    return ReferenceEquals(PluginHost.Instance, _host) && PaladinActions.TryHandleAction(request);
+                    return request.ActionType == ActionType.Action && ReferenceEquals(PluginHost.Instance, _host) &&
+                        PaladinActions.TryHandleAction(request);
                 default:
                     return false;
             }

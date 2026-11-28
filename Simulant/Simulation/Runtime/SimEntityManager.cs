@@ -83,7 +83,7 @@ namespace Simulant.Simulation.Runtime
             get
             {
                 lock (_gate)
-                    return _isClearing || _movementLockPlayer != null || _limitBreakPlayer != null || _owned.Count != 0 || _networkSpawns.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 || _names.Count != 0 ||
+                    return _isClearing || _movementLockPlayer != null || _limitBreakPlayer != null || _owned.Count != 0 || _networkSpawns.Count != 0 || _groundEffects.Count != 0 || _statuses.Count != 0 || _mechanics.Count != 0 || _names.Count != 0 ||
                         _spawner.HasPendingCreationCleanup || _movement?.HasPendingCleanup == true ||
                         _partyService?.IsOwnedBy(this) == true || EnemyList?.HasPendingCleanup == true;
             }
@@ -126,7 +126,7 @@ namespace Simulant.Simulation.Runtime
                     if (_mechanics.Count != 0)
                         throw new InvalidOperationException("上次模拟的机制尚未清理，请先重试停止。");
 
-                    if (_actors.Count != 0 || _owned.Count != 0 || _networkSpawns.Count != 0)
+                    if (_actors.Count != 0 || _owned.Count != 0 || _networkSpawns.Count != 0 || _groundEffects.Count != 0)
                         throw new InvalidOperationException("更换调度器前必须清理本次模拟。");
 
                     _casts?.Dispose();
@@ -439,6 +439,7 @@ namespace Simulant.Simulation.Runtime
 
                 actor = new SimActor(entity, _casts, _movement)
                 {
+                    Manager = this,
                     CombatLog = CombatLog,
                     FindLogActor = FindLogActor
                 };
@@ -568,7 +569,9 @@ namespace Simulant.Simulation.Runtime
             try
             {
                 TryCleanup(ClearMovementLocks);
-                if (!TryCleanup(ClearLimitBreakGauge))
+                var limitBreakCleared = TryCleanup(ClearLimitBreakGauge);
+                var groundEffectsCleared = ClearGroundEffects();
+                if (!limitBreakCleared || !groundEffectsCleared)
                     return;
                 _behaviors?.Dispose();
 
