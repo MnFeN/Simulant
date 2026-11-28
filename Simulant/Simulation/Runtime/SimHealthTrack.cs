@@ -64,7 +64,7 @@ namespace Simulant.Simulation.Runtime
                 var now = scheduler.ElapsedSeconds;
                 var hp = HpAt(now - startSeconds);
                 if (actor.Entity.HP != hp)
-                    actor.Entity.SetNetworkVitals(hp);
+                    actor.SetHp(hp);
 
                 if (now < end)
                     scheduler.Schedule(Math.Min(end, now + UpdateInterval), Update, "插值更新实体血量");

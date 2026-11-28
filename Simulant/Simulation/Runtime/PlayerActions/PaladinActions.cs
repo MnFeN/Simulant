@@ -274,13 +274,13 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     break;
                 case ActionId.极致防御:
                     AddTargetStatus(player, player, effects, StatusId.极致防御, 15, effectParam: 0xD8);
-                    AddTargetStatus(player, player, effects, StatusId.极致护盾, 15);
+                    AddTargetStatus(player, player, effects, StatusId.极致护盾, 15, breaksOnDamage: true);
                     break;
                 case ActionId.圣光幕帘:
                     areaHits = CreateHits(GetPartyInRange(player, request));
                     foreach (var hit in areaHits)
                     {
-                        AddTargetStatus(player, hit.Target, hit.Effects, StatusId.圣光幕帘, 30);
+                        AddTargetStatus(player, hit.Target, hit.Effects, StatusId.圣光幕帘, 30, breaksOnDamage: true);
                         AddHealing(hit.Target, hit.Effects, SpellHealing);
                     }
                     break;

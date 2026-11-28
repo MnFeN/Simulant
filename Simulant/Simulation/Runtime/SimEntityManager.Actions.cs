@@ -24,6 +24,8 @@ namespace Simulant.Simulation.Runtime
             internal ushort StatusId;
             internal SimActor Participant;
             internal bool LockMovement;
+            internal bool BreaksOnDamage;
+            internal Action<Character> OnBreak;
             internal double ExpiresAt;
             internal SimScheduledAction Expiry;
             internal ushort? LoggedParam;
@@ -264,9 +266,9 @@ namespace Simulant.Simulation.Runtime
         }
 
         internal ActionEffect SetActionStatus(SimActor source, SimActor target, ushort status, float seconds,
-            byte param, byte effectParam = 0)
+            byte param, byte effectParam = 0, bool breaksOnDamage = false)
         {
-            SetStatus(target, status, seconds, param, source);
+            SetStatus(target, status, seconds, param, source, lockMovement: null, breaksOnDamage: breaksOnDamage);
             return new ActionEffect
             {
                 Type = 0x0E,
@@ -296,7 +298,8 @@ namespace Simulant.Simulation.Runtime
         public void SetStatus(SimActor actor, ushort statusId, float seconds, ushort param, SimActor source)
             => SetStatus(actor, statusId, seconds, param, source, lockMovement: null);
 
-        internal void SetStatus(SimActor actor, ushort statusId, float seconds, ushort param, SimActor source, bool? lockMovement)
+        internal void SetStatus(SimActor actor, ushort statusId, float seconds, ushort param, SimActor source, bool? lockMovement,
+            bool breaksOnDamage = false)
         {
             if (actor == null)
                 throw new ArgumentNullException(nameof(actor));
@@ -388,6 +391,7 @@ namespace Simulant.Simulation.Runtime
                         $"原生编号或来源变化标志：{(identityChanged ? "是" : "否")}。");
 
                 owned.LockMovement = lockMovement ?? (found && row.LockMovement);
+                owned.BreaksOnDamage = breaksOnDamage || owned.OnBreak != null;
                 owned.ExpiresAt = expiresAt;
                 owned.Expiry?.Cancel();
                 owned.Expiry = seconds > 0 ? ScheduleStatusExpiry(owned, expiresAt) : null;
@@ -398,6 +402,40 @@ namespace Simulant.Simulation.Runtime
                     owned.LoggedParam = param;
                 }
                 RefreshMovementLocks();
+            }
+        }
+
+        internal bool ObserveStatus(Character source, Character target, ushort statusId, Action<Character> onBreak)
+        {
+            lock (_gate)
+            {
+                var owned = _statuses.FirstOrDefault(status => status.Source.Identity == source.Identity &&
+                    status.Actor.Identity == target.Identity && status.StatusId == statusId);
+                if (owned == null)
+                    return false;
+
+                owned.OnBreak = onBreak;
+                owned.BreaksOnDamage |= onBreak != null;
+                return true;
+            }
+        }
+
+        internal bool BreakShields(Character target, ushort? statusId = null)
+        {
+            lock (_gate)
+            {
+                var broken = false;
+                foreach (var shield in _statuses.Where(status => status.BreaksOnDamage &&
+                    status.Actor.Identity == target.Identity && (!statusId.HasValue || status.StatusId == statusId)).ToArray())
+                {
+                    if (!_statuses.Contains(shield) || shield.ExpiresAt <= _scheduler.ElapsedSeconds || !RemoveOwnedStatus(shield))
+                        continue;
+
+                    broken = true;
+                    if (_acceptingEntities && shield.Source.IsAlive)
+                        shield.OnBreak?.Invoke(shield.Actor);
+                }
+                return broken;
             }
         }
 
@@ -472,13 +510,13 @@ namespace Simulant.Simulation.Runtime
         private static bool MatchesStatus(Status status, OwnedStatus owned)
             => status.StatusId.Get() == owned.StatusId && status.SourceObject.Get().Id == owned.Source.Id;
 
-        private void RemoveOwnedStatus(OwnedStatus owned)
+        private bool RemoveOwnedStatus(OwnedStatus owned)
         {
             // 实体身份包含世界与生命周期；失效后绝不触碰被复用的地址。
             if (!owned.Actor.IsAlive)
             {
                 ForgetStatus(owned);
-                return;
+                return false;
             }
 
             var statuses = owned.Actor.Native.StatusManager;
@@ -487,7 +525,7 @@ namespace Simulant.Simulation.Runtime
             if (!MatchesStatus(current, owned))
             {
                 ForgetStatus(owned);
-                return;
+                return false;
             }
 
             if (StatusManager.RemoveStatusFuncPtr == IntPtr.Zero)
@@ -498,13 +536,14 @@ namespace Simulant.Simulation.Runtime
             if (!owned.Actor.IsAlive)
             {
                 ForgetStatus(owned);
-                return;
+                return false;
             }
 
             if (MatchesStatus(owned.Actor.Native.StatusManager.GetStatus(owned.Slot), owned))
                 throw new InvalidOperationException("原生状态移除后模拟点名仍存在，请重试停止。");
 
             ForgetStatus(owned);
+            return true;
         }
 
         private void ClearStatuses(EntityBase dependency = null)

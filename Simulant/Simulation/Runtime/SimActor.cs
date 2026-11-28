@@ -1,3 +1,4 @@
+using Simulant.Core;
 using Simulant.Core.Entity;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Timeline;
@@ -36,6 +37,19 @@ namespace Simulant.Simulation.Runtime
         public bool IsInvulnerable => IsActive && Entity.IsInvulnerable;
         public uint Id => Entity.Id;
         public IntPtr Address => Entity.Address;
+
+        internal void SetHp(uint hp)
+        {
+            var previous = Entity.HP;
+            Entity.SetNetworkVitals(hp);
+            if (hp >= previous)
+                return;
+
+            Manager?.BreakShields(Entity);
+            var playerActions = PluginHost.Instance?.PlayerActions.Entities;
+            if (!ReferenceEquals(playerActions, Manager))
+                playerActions?.BreakShields(Entity);
+        }
 
         /// <summary>网络 Boss 对当前一仇的行为，默认为关闭。转向和追击均通过 ActorMove 同步。</summary>
         public EnmityFollowMode FollowTopEnmity

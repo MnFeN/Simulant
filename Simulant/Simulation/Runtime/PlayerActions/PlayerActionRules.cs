@@ -300,12 +300,24 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         }
 
         internal static void AddTargetStatus<TStatusEnum>(Character player, Character target, List<ActionEffect> effects,
-            TStatusEnum status, float seconds, byte effectParam = 0, byte param = 0) where TStatusEnum : struct, Enum
+            TStatusEnum status, float seconds, byte effectParam = 0, byte param = 0, bool breaksOnDamage = false)
+            where TStatusEnum : struct, Enum
         {
             var statusId = Convert.ToUInt16(status);
             var source = Entities.Attach(player);
-            effects.Add(Entities.SetActionStatus(source, Entities.Attach(target), statusId, seconds, param, effectParam));
+            effects.Add(Entities.SetActionStatus(source, Entities.Attach(target), statusId, seconds, param,
+                effectParam, breaksOnDamage));
         }
+
+        /// <summary>为自己施加的护盾登记破裂回调，回调参数为护盾持有者。</summary>
+        internal static bool ObserveStatus<TStatusEnum>(Character player, Character target, TStatusEnum status, Action<Character> onBreak)
+            where TStatusEnum : struct, Enum
+            => Entities.ObserveStatus(player, target, Convert.ToUInt16(status), onBreak);
+
+        /// <summary>仅模拟指定护盾被击破，可用于不扣本机血量的练习。</summary>
+        internal static bool BreakShield<TStatusEnum>(Character target, TStatusEnum status)
+            where TStatusEnum : struct, Enum
+            => Entities.BreakShields(target, Convert.ToUInt16(status));
 
         internal static bool HasCombo<TActionEnum>(TActionEnum prerequisite) where TActionEnum : struct, Enum
         {
