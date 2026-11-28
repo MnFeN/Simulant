@@ -3,10 +3,12 @@ using Simulant.Core.Entity;
 using Simulant.Game;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
+using Simulant.Simulation.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using ActionEffectHandler = Simulant.Game.FFCS.Client.Game.Character.ActionEffectHandler;
 using ActionEffect = Simulant.Game.FFCS.Client.Game.Character.ActionEffectHandler.Effect;
 using ActionRow = Lumina.Excel.Sheets.Action;
 
@@ -71,40 +73,71 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         private static bool IsEnemy(Character target)
             => target != null && target.IsAlive && target.HP != 0 && target.Native.IsHostile && target.IsTargetable;
 
-        internal static IEnumerable<Character> GetAreaEnemies(Character player, ActionRequest request)
+        /// <summary>优先使用请求落点，其次使用指定的范围中心，默认以施法者为中心。</summary>
+        internal static IEnumerable<Character> GetAreaEnemies(Character player, ActionRequest request,
+            Character center = null, ActionArea? shape = null)
         {
-            var position = player.Pos;
-            var range = GetAction(request).EffectRange;
+            var area = shape ?? ActionArea.FromAction(request.ActionId, player.HitboxRadius);
+            var origin = GetAreaOrigin(player, request, center);
             return PluginHost.Instance.EntityProvider.GetCharacters().Where(character =>
-                IsEnemy(character) && Vector2.Distance(position, character.Pos) <= range + character.HitboxRadius);
+                IsEnemy(character) && area.IntersectsCircle(character.Pos, character.HitboxRadius, origin, request.Facing));
         }
 
-        internal static IEnumerable<Character> GetPartyInRange(Character player, ActionRequest request)
+        internal static IEnumerable<Character> GetPartyInRange(Character player, ActionRequest request,
+            Character center = null, ActionArea? shape = null)
+        {
+            var area = shape ?? ActionArea.FromAction(request.ActionId, player.HitboxRadius);
+            var origin = GetAreaOrigin(player, request, center);
+            return GetPartyCandidates(player)
+                .Where(member => area.Contains(member.Pos, origin, request.Facing));
+        }
+
+        private static Vector2 GetAreaOrigin(Character player, ActionRequest request, Character center)
+            => request.GroundPosition is Vector3 point ? new Vector2(point.X, point.Y) : center?.Pos ?? player.Pos;
+
+        private static IEnumerable<Character> GetPartyCandidates(Character player, bool includeDead = false)
         {
             yield return player;
 
-            var range = GetAction(request).EffectRange;
-            var position = player.Pos;
-            var party = PluginHost.Instance.PlayerActions.EncounterEntities?.GetActivePartyCharacters() ?? Array.Empty<Character>();
+            var party = PluginHost.Instance.PlayerActions.EncounterEntities?.GetActivePartyCharacters(includeDead)
+                ?? Array.Empty<Character>();
             foreach (var member in party)
-                if (member.Identity != player.Identity && Vector2.Distance(position, member.Pos) <= range)
+                if (member.Identity != player.Identity)
                     yield return member;
         }
 
-        internal static bool TryGetPartyTarget(Character player, ActionRequest request, out Character target)
+        internal static bool TryGetPartyTarget(Character player, ActionRequest request, out Character target,
+            bool allowSelf = false, bool dead = false)
         {
             target = FindTarget(request);
-            if (target != null && target.Identity != player.Identity)
+            if (target != null && target.IsAlive && (target.HP == 0) == dead &&
+                (allowSelf || target.Identity != player.Identity) &&
+                Vector2.Distance(player.Pos, target.Pos) <= GetAction(request).Range)
             {
                 var identity = target.Identity;
-                var party = PluginHost.Instance.PlayerActions.EncounterEntities?.GetActivePartyCharacters();
-                if (party?.Any(member => member.Identity == identity) == true &&
-                    Vector2.Distance(player.Pos, target.Pos) <= GetAction(request).Range)
+                if (GetPartyCandidates(player, includeDead: dead).Any(member => member.Identity == identity))
                     return true;
             }
 
             player.RejectActionResult(request, 582);
             return false;
+        }
+
+        internal static (Character Target, List<ActionEffect> Effects)[] CreateHits(IEnumerable<Character> targets)
+            => targets.Take(ActionEffectHandler.MaxTargets).Select(target => (target, new List<ActionEffect>())).ToArray();
+
+        /// <summary>对范围内的敌人添加伤害。指定已判定命中的主目标时，以它为中心并将它放在首位。</summary>
+        internal static (Character Target, List<ActionEffect> Effects)[] AddAreaDamage(Character player,
+            ActionRequest request, byte weaponAttackType, Character primaryTarget = null, ActionArea? shape = null)
+        {
+            var targets = GetAreaEnemies(player, request, primaryTarget, shape);
+            if (primaryTarget != null)
+                targets = new[] { primaryTarget }.Concat(targets.Where(target => target.Identity != primaryTarget.Identity));
+
+            var hits = CreateHits(targets);
+            foreach (var hit in hits)
+                AddDamage(hit.Effects, request, weaponAttackType);
+            return hits;
         }
 
         internal static bool TryGetEnemySpell(Character player, ActionRequest request, out Character target, out int mpCost)
@@ -224,22 +257,6 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             var statusId = Convert.ToUInt16(status);
             var source = Entities.Attach(player);
             effects.Add(Entities.SetActionStatus(source, Entities.Attach(target), statusId, seconds, param, effectParam));
-        }
-
-        internal static void AddAreaStatus<TStatusEnum>(Character player, IEnumerable<Character> targets, List<ActionEffect> effects,
-            TStatusEnum status, float seconds) where TStatusEnum : struct, Enum
-        {
-            var statusId = Convert.ToUInt16(status);
-            var source = Entities.Attach(player);
-            foreach (var target in targets)
-                Entities.SetStatus(Entities.Attach(target), statusId, seconds, 0, source);
-
-            // 结算头只带主目标，其余范围目标已经更新状态。
-            effects.Add(new ActionEffect
-            {
-                Type = 0x0E,
-                Value = statusId
-            });
         }
 
         internal static bool HasCombo<TActionEnum>(TActionEnum prerequisite) where TActionEnum : struct, Enum

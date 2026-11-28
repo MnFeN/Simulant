@@ -79,15 +79,22 @@ namespace Simulant.Game.FFCS.Client.Game.Character
         /// <param name="header">Details of the action.</param>
         /// <param name="effects">Per-target effect list array. Contains header->NumTargets elements.</param>
         /// <param name="targetEntityIds">Per-target effect id array. Contains header->NumTargets elements.</param>
-        /// <remarks>项目封送只提供一个目标的数据，使用 RemoteInput 将本地结构复制成游戏进程内的指针参数。</remarks>
+        /// <remarks>项目封送按同一顺序复制效果块和目标 ID。国服回放 ActionEffect1/8/16/24/32 的分发入口传入这两段数组，接收函数按 NumTargets 逐项读取。</remarks>
         internal static void Receive(uint casterEntityId, IntPtr casterPtr, in Vector3 targetPos, in Header header,
-            in TargetEffects effects, in GameObjectId targetEntityIds)
+            ReadOnlySpan<TargetEffects> effects, ReadOnlySpan<GameObjectId> targetEntityIds)
         {
-            if (header.NumTargets > 1)
-                throw new ArgumentOutOfRangeException(nameof(header), "单目标技能结算最多只能包含一个目标。");
+            if (header.NumTargets > MaxTargets || effects.Length != header.NumTargets || targetEntityIds.Length != header.NumTargets)
+                throw new ArgumentException("技能结算的目标数和效果块必须一致，最多支持 32 个目标。");
 
+            var effectInput = effects.IsEmpty
+                ? RemoteInput.Struct(default(TargetEffects)) : RemoteInput.FromBytes(MemoryMarshal.AsBytes(effects).ToArray());
+            var targetInput = targetEntityIds.IsEmpty
+                ? RemoteInput.Struct(default(GameObjectId)) : RemoteInput.FromBytes(MemoryMarshal.AsBytes(targetEntityIds).ToArray());
             ReceiveFuncPtr.Call(casterEntityId, casterPtr, RemoteInput.Struct(targetPos), RemoteInput.Struct(header),
-                RemoteInput.Struct(effects), RemoteInput.Struct(targetEntityIds));
+                effectInput, targetInput);
         }
+
+        // 国服 ActionEffect32 负载和原生接收队列均以 32 为容量上限。
+        internal const int MaxTargets = 32;
     }
 }

@@ -6,7 +6,6 @@ using Simulant.Game.FFCS.Client.Game.Gauge;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using ActionEffect = Simulant.Game.FFCS.Client.Game.Character.ActionEffectHandler.Effect;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 using static Simulant.Simulation.Runtime.PlayerActions.PlayerActionRules;
@@ -87,6 +86,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
 
             var target = player;
             var effects = new List<ActionEffect>(4);
+            (Character Target, List<ActionEffect> Effects)[] areaHits = null;
             StatusId consumeAfterResult = 0;
             int mpCost;
             PaladinGauge gauge;
@@ -123,24 +123,17 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     }
                     break;
                 case ActionId.全蚀斩:
-                    target = GetAreaEnemies(player, request).FirstOrDefault();
-                    if (target != null)
-                    {
-                        AddDamage(effects, request, WeaponAttackType);
-                        AddWeaponCombo(effects, ActionId.全蚀斩);
-                    }
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType);
+                    if (areaHits.Length != 0)
+                        AddWeaponCombo(areaHits[0].Effects, ActionId.全蚀斩);
                     break;
                 case ActionId.日珥斩:
-                    target = GetAreaEnemies(player, request).FirstOrDefault();
-                    if (target != null)
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType);
+                    if (areaHits.Length != 0 && HasCombo(ActionId.全蚀斩))
                     {
-                        AddDamage(effects, request, WeaponAttackType);
-                        if (HasCombo(ActionId.全蚀斩))
-                        {
-                            AddMpRecovery(player, effects, 1000);
-                            AddSourceStatus(player, effects, StatusId.神圣魔法效果提高, 30);
-                            AddWeaponCombo(effects, ActionId.日珥斩, comboSucceeded: true);
-                        }
+                        AddMpRecovery(player, areaHits[0].Effects, 1000);
+                        AddSourceStatus(player, areaHits[0].Effects, StatusId.神圣魔法效果提高, 30);
+                        AddWeaponCombo(areaHits[0].Effects, ActionId.日珥斩, comboSucceeded: true);
                     }
                     break;
                 case ActionId.战逃反应:
@@ -185,25 +178,21 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
-                    AddMpRecovery(player, effects, 500);
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    AddMpRecovery(player, areaHits[0].Effects, 500);
                     break;
                 case ActionId.厄运流转:
-                    var hits = GetAreaEnemies(player, request).ToArray();
-                    target = hits.FirstOrDefault();
-                    if (target != null)
-                    {
-                        AddDamage(effects, request, WeaponAttackType);
-                        AddAreaStatus(player, hits, effects, StatusId.厄运流转, 15);
-                    }
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType);
+                    foreach (var hit in areaHits)
+                        AddTargetStatus(player, hit.Target, hit.Effects, StatusId.厄运流转, 15);
                     break;
                 case ActionId.绝对统治:
                     if (!TryGetEnemy(player, request, out target))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
-                    AddSourceStatus(player, effects, StatusId.安魂祈祷, 30, param: 4);
-                    AddSourceStatus(player, effects, StatusId.悔罪预备, 30);
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    AddSourceStatus(player, areaHits[0].Effects, StatusId.安魂祈祷, 30, param: 4);
+                    AddSourceStatus(player, areaHits[0].Effects, StatusId.悔罪预备, 30);
                     break;
                 case ActionId.圣灵:
                     if (!TryGetEnemySpell(player, request, out target, out mpCost))
@@ -215,15 +204,12 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     ConsumeHolySpellProc(player, request);
                     break;
                 case ActionId.圣环:
-                    target = GetAreaEnemies(player, request).FirstOrDefault();
                     if (!TryGetFixedMpCost(player, request, out mpCost))
                         return true;
 
-                    if (target != null)
-                    {
-                        AddDamage(effects, request, WeaponAttackType);
-                        AddHealing(player, effects, SpellHealing, atSource: true);
-                    }
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType);
+                    if (areaHits.Length != 0)
+                        AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
                     ChangeMp(player, -mpCost);
                     ConsumeHolySpellProc(player, request);
                     break;
@@ -232,8 +218,8 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                         !TryGetSpellGauge(player, request, out gauge) || !RequireStatus(player, request, StatusId.悔罪预备))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
-                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
                     ChangeMp(player, -mpCost);
                     ConsumeStatusStack(player, StatusId.安魂祈祷);
                     RemoveStatus(player, StatusId.悔罪预备);
@@ -244,8 +230,8 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                         !TryGetSpellGauge(player, request, out gauge, expectedStep: 1))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
-                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
                     ChangeMp(player, -mpCost);
                     ConsumeStatusStack(player, StatusId.安魂祈祷);
                     AdvanceSpellCombo(player, gauge, 2);
@@ -255,8 +241,8 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                         !TryGetSpellGauge(player, request, out gauge, expectedStep: 2))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
-                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
                     ChangeMp(player, -mpCost);
                     ConsumeStatusStack(player, StatusId.安魂祈祷);
                     AdvanceSpellCombo(player, gauge, 3);
@@ -266,18 +252,18 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                         !TryGetSpellGauge(player, request, out gauge, expectedStep: 3))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
-                    AddHealing(player, effects, SpellHealing, atSource: true);
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
+                    AddHealing(player, areaHits[0].Effects, SpellHealing, atSource: true);
                     ChangeMp(player, -mpCost);
                     ConsumeStatusStack(player, StatusId.安魂祈祷);
-                    AddSourceStatus(player, effects, StatusId.荣耀之剑预备, 30);
+                    AddSourceStatus(player, areaHits[0].Effects, StatusId.荣耀之剑预备, 30);
                     AdvanceSpellCombo(player, gauge, 0);
                     break;
                 case ActionId.荣耀之剑:
                     if (!TryGetEnemy(player, request, out target) || !RequireStatus(player, request, StatusId.荣耀之剑预备))
                         return true;
 
-                    AddDamage(effects, request, WeaponAttackType);
+                    areaHits = AddAreaDamage(player, request, WeaponAttackType, target);
                     consumeAfterResult = StatusId.荣耀之剑预备;
                     break;
                 case ActionId.神圣领域:
@@ -291,11 +277,12 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     AddTargetStatus(player, player, effects, StatusId.极致护盾, 15);
                     break;
                 case ActionId.圣光幕帘:
-                    var partyTargets = GetPartyInRange(player, request).ToArray();
-                    AddAreaStatus(player, partyTargets, effects, StatusId.圣光幕帘, 30);
-                    AddHealing(player, effects, SpellHealing);
-                    foreach (var member in partyTargets.Skip(1))
-                        RestoreHp(member, SpellHealing);
+                    areaHits = CreateHits(GetPartyInRange(player, request));
+                    foreach (var hit in areaHits)
+                    {
+                        AddTargetStatus(player, hit.Target, hit.Effects, StatusId.圣光幕帘, 30);
+                        AddHealing(hit.Target, hit.Effects, SpellHealing);
+                    }
                     break;
                 case ActionId.钢铁信念:
                     AddTargetStatus(player, player, effects, StatusId.钢铁信念, 0, effectParam: 40);
@@ -335,7 +322,10 @@ namespace Simulant.Simulation.Runtime.PlayerActions
                     return false;
             }
 
-            Entities.ResolveAction(player, request, target, request.ActionId, effects.ToArray());
+            if (areaHits != null)
+                Entities.ResolveActionResults(player, request, target, request.ActionId, areaHits);
+            else
+                Entities.ResolveAction(player, request, target, request.ActionId, effects.ToArray());
             if (consumeAfterResult != 0)
                 RemoveStatus(player, consumeAfterResult);
             return true;

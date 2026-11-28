@@ -31,11 +31,11 @@ namespace Simulant.Simulation.Runtime
 
         private readonly List<OwnedStatus> _statuses = new List<OwnedStatus>();
 
-        internal Character[] GetActivePartyCharacters()
+        internal Character[] GetActivePartyCharacters(bool includeDead = false)
         {
             lock (_gate)
             {
-                return Party.Where(actor => actor.IsActive && actor.Entity.HP != 0)
+                return Party.Where(actor => actor.IsActive && (includeDead || actor.Entity.HP != 0))
                     .Select(actor => actor.Entity).ToArray();
             }
         }
@@ -122,10 +122,7 @@ namespace Simulant.Simulation.Runtime
                 source.ExecuteActionEffect(actionId, target);
             else
             {
-                var hasCastTime = !request.HasInstantCastProc &&
-                    GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var actionRow) &&
-                    actionRow.Cast100ms > 0;
-                animationLock = hasCastTime ? 0.1f : 0.6f;
+                animationLock = GetAnimationLock(request, actionId);
                 source.ReceiveActionResult(request, actionId, target, target?.Pos3D ?? source.Pos3D, animationLock, requestEffects);
             }
 
@@ -137,6 +134,23 @@ namespace Simulant.Simulation.Runtime
             if (request == null && source.Identity.Slot == 0 &&
                 GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var action))
                 source.PlayBlendTimeline((ushort)action.AnimationEnd.RowId);
+        }
+
+        internal void ResolveActionResults(Character source, ActionRequest request, Character animationTarget, uint actionId,
+            IReadOnlyList<(Character Target, List<ActionEffect> Effects)> hits)
+        {
+            var position = request.GroundPosition ?? animationTarget?.Pos3D ?? source.Pos3D;
+            var animationLock = GetAnimationLock(request, actionId);
+            source.ReceiveActionResults(request, actionId, animationTarget, position, animationLock, hits);
+            CombatLog?.AbilityResults(source, actionId, animationTarget, request.GroundPosition, request.Facing, animationLock, hits);
+        }
+
+        private static float GetAnimationLock(ActionRequest request, uint actionId)
+        {
+            var hasCastTime = !request.HasInstantCastProc &&
+                GameDataService.Instance.GetSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out var row) &&
+                row.Cast100ms > 0;
+            return hasCastTime ? 0.1f : 0.6f;
         }
 
         internal static (uint Action, ushort Status) GetInvulnerability(Job job)

@@ -67,51 +67,64 @@ namespace Simulant.Simulation.Runtime
         {
             Record(time =>
             {
-                var action = GameDataService.Instance.GetSheet<ActionRow>().GetRowOrDefault(actionId);
-                var timeRotation = effectHeading ?? source.Heading;
-                var rawRotation = PacketCodec.EncodeUShortHeading(timeRotation);
-                var rotation = PacketCodec.DecodeUShortHeading(rawRotation);
-                var sequence = unchecked((uint)Interlocked.Increment(ref _sequence));
                 var actualHits = hitTargets == null
                     ? (animationTarget == null ? Array.Empty<Character>() : new[] { animationTarget })
                     : hitTargets.Where(target => target?.IsActive == true).Select(target => target.Entity).Distinct().ToArray();
-                var count = actualHits.Length;
-                // 解析插件对无目标结算始终写 15 行。手写结算没有包容量时沿用原来的行号规则。
-                var lineType = count != 0 && (packetTargetCapacity ?? count) > 1 ? 22 : 21;
-                var sourceFields = Vitals(source);
-                var effectFields = FormatAbilityEffects(effects);
-                var sourceAndSkill = $"{Actor(source.Id, source)}|{Skill(actionId, action)}";
-                var area = effectOrigin.HasValue || count > 1 || (count == 0 && (hitTargets != null || action?.EffectRange > 0));
-                var origin = effectOrigin ?? animationTarget?.Pos3D ?? source.Pos3D;
-
-                var rows = new FormattableString[Math.Max(1, count)];
-                for (var index = 0; index < rows.Length; index++)
-                {
-                    var target = count == 0 ? null : actualHits[index];
-                    rows[index] = $"{sourceAndSkill}|{Actor(target?.Id ?? NoTarget, target)}|{effectFields}|{Vitals(target)}|{sourceFields}|{sequence:X8}|{index}|{count}|00||01|{actionId:X2}|{actionId:X2}|{animationLock:F3}|{rawRotation:X4}";
-                }
-
-                var targetId = animationTarget?.Id ?? NoTarget;
-                var extra = area
-                    ? $"1|{PacketPosition(origin, timeRotation, 3)}"
-                    : FormattableString.Invariant($"0||||{rotation:F3}");
-                foreach (var row in rows)
-                    Write(lineType, time, row);
-
-                Write(264, time, $"{source.Id:X8}|{actionId:X4}|{sequence:X8}|{extra}|{targetId:X8}");
+                WriteAbility(time, source, actionId, animationTarget, effectOrigin, effectHeading, animationLock,
+                    actualHits, packetTargetCapacity, hitTargets != null, _ => effects);
             });
         }
 
-        private static string FormatAbilityEffects(ActionEffect[] effects)
+        internal void AbilityResults(Character source, uint actionId, Character animationTarget, Vector3? effectOrigin,
+            float effectHeading, float animationLock, IReadOnlyList<(Character Target, List<ActionEffect> Effects)> hits)
+            => Record(time => WriteAbility(time, source, actionId, animationTarget, effectOrigin, effectHeading,
+                animationLock, hits.Select(hit => hit.Target).ToArray(), null, true, index => hits[index].Effects));
+
+        private void WriteAbility(DateTimeOffset time, Character source, uint actionId, Character animationTarget,
+            Vector3? effectOrigin, float? effectHeading, float animationLock, IReadOnlyList<Character> actualHits,
+            int? packetTargetCapacity, bool hasHitList, Func<int, IReadOnlyList<ActionEffect>> effects)
         {
-            if (effects == null || effects.Length == 0)
+            var action = GameDataService.Instance.GetSheet<ActionRow>().GetRowOrDefault(actionId);
+            var timeRotation = effectHeading ?? source.Heading;
+            var rawRotation = PacketCodec.EncodeUShortHeading(timeRotation);
+            var rotation = PacketCodec.DecodeUShortHeading(rawRotation);
+            var sequence = unchecked((uint)Interlocked.Increment(ref _sequence));
+            var count = actualHits.Count;
+            // 解析插件对无目标结算始终写 15 行。手写结算没有包容量时沿用原来的行号规则。
+            var lineType = count != 0 && (packetTargetCapacity ?? count) > 1 ? 22 : 21;
+            var sourceFields = Vitals(source);
+            var sourceAndSkill = $"{Actor(source.Id, source)}|{Skill(actionId, action)}";
+            var area = effectOrigin.HasValue || count > 1 || (count == 0 && (hasHitList || action?.EffectRange > 0));
+            var origin = effectOrigin ?? animationTarget?.Pos3D ?? source.Pos3D;
+
+            var rows = new FormattableString[Math.Max(1, count)];
+            for (var index = 0; index < rows.Length; index++)
+            {
+                var target = count == 0 ? null : actualHits[index];
+                var effectFields = FormatAbilityEffects(count == 0 ? null : effects(index));
+                rows[index] = $"{sourceAndSkill}|{Actor(target?.Id ?? NoTarget, target)}|{effectFields}|{Vitals(target)}|{sourceFields}|{sequence:X8}|{index}|{count}|00||01|{actionId:X2}|{actionId:X2}|{animationLock:F3}|{rawRotation:X4}";
+            }
+
+            var targetId = animationTarget?.Id ?? NoTarget;
+            var extra = area
+                ? $"1|{PacketPosition(origin, timeRotation, 3)}"
+                : FormattableString.Invariant($"0||||{rotation:F3}");
+            foreach (var row in rows)
+                Write(lineType, time, row);
+
+            Write(264, time, $"{source.Id:X8}|{actionId:X4}|{sequence:X8}|{extra}|{targetId:X8}");
+        }
+
+        private static string FormatAbilityEffects(IReadOnlyList<ActionEffect> effects)
+        {
+            if (effects == null || effects.Count == 0)
                 return "0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0";
 
             // ACT 将每个原生效果槽拆成两个小端 uint，并以十六进制写入。
             var fields = new string[16];
             for (var slot = 0; slot < fields.Length / 2; slot++)
             {
-                var effect = slot < effects.Length ? effects[slot] : default;
+                var effect = slot < effects.Count ? effects[slot] : default;
                 var flags = effect.Type | (uint)effect.Param0 << 8 | (uint)effect.Param1 << 16 | (uint)effect.Param2 << 24;
                 var value = effect.Param3 | (uint)effect.Param4 << 8 | (uint)effect.Value << 16;
                 fields[slot * 2] = flags.ToString("X", CultureInfo.InvariantCulture);

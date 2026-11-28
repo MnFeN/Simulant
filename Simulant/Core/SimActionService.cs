@@ -253,17 +253,15 @@ namespace Simulant.Core
             var encounter = EncounterEntities;
             if (encounter?.TryUseLimitBreak(player, request) == true)
                 return;
-            if (request.Kind != ActionRequestKind.Normal)
-                return;
-
-            if (ReferenceEquals(PluginHost.Instance, _host) && GeneralActions.TryHandleAction(request))
+            if (request.Kind == ActionRequestKind.Normal && ReferenceEquals(PluginHost.Instance, _host) &&
+                GeneralActions.TryHandleAction(request))
                 return;
             if (request.ActionType != ActionType.Action)
                 return;
             if (player.Level == 100 && TryHandleJobAction(player.Job, request))
                 return;
 
-            if (request.ActionId == SimEntityManager.GetInvulnerability(player.Job).Action &&
+            if (request.Kind == ActionRequestKind.Normal && request.ActionId == SimEntityManager.GetInvulnerability(player.Job).Action &&
                 !_entities.UseInvulnerability(_entities.Attach(player), request))
                 player.RejectActionResult(request, 582);
         }
