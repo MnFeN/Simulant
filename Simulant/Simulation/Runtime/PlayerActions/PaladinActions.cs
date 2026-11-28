@@ -410,6 +410,12 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             return true;
         }
 
+        internal static void OnAutoAttack()
+        {
+            if (TryGetGauge(out var gauge))
+                gauge.OathGauge.Set((byte)Math.Min(100, gauge.OathGauge.Get() + 5));
+        }
+
         internal static void CancelSpellComboExpiry()
         {
             _spellComboExpiry?.Cancel();

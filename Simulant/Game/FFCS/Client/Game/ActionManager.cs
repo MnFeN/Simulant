@@ -197,6 +197,12 @@ namespace Simulant.Game.FFCS.Client.Game
         internal static ushort GetMaxCharges(uint actionId, uint level) // 0 for current level
             => GetMaxChargesFuncPtr.Call<ushort>(actionId, level);
 
+        [SigPattern("E8 * * * * F3 41 0F 11 06 80 3B")]
+        internal static IntPtr GetActionRangeFuncPtr { get; set; }
+
+        internal static float GetActionRange(uint actionId)
+            => GetActionRangeFuncPtr.Call<float>(actionId);
+
         internal enum CastTimeProc : byte
         {
             None = 0,

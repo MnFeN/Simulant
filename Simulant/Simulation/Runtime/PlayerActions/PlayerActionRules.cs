@@ -49,8 +49,11 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             => GameDataService.Instance.GetSheet<ActionRow>().GetRow(request.ActionId);
 
         internal static void AddDamage(List<ActionEffect> effects, ActionRequest request, byte weaponAttackType)
+            => AddDamage(effects, request.ActionId, weaponAttackType);
+
+        internal static void AddDamage(List<ActionEffect> effects, uint actionId, byte weaponAttackType)
         {
-            var action = GetAction(request);
+            var action = GameDataService.Instance.GetSheet<ActionRow>().GetRow(actionId);
             var attackType = unchecked((sbyte)action.AttackType.RowId);
             var damageType = attackType == -1 ? weaponAttackType : (int)attackType;
             // ActionEffect 的 Param1 低四位为伤害类型，高四位为属性。Param0 的直击和暴击位保持为零。
@@ -95,7 +98,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             return false;
         }
 
-        private static bool IsEnemy(Character target)
+        internal static bool IsEnemy(Character target)
             => target != null && target.IsAlive && target.HP != 0 && target.Native.IsHostile && target.IsTargetable;
 
         /// <summary>优先使用请求落点，其次使用指定的范围中心，默认以施法者为中心。</summary>

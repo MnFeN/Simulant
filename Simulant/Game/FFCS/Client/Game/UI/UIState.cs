@@ -15,5 +15,6 @@ namespace Simulant.Game.FFCS.Client.Game.UI
         public Hotbar Hotbar => Ptr.As<Hotbar>(0x0);
         public Hate Hate => Ptr.As<Hate>(0x8);
         public Hater Hater => Ptr.As<Hater>(0x110);
+        internal WeaponState WeaponState => Ptr.As<WeaponState>(0xA20);
     }
 }

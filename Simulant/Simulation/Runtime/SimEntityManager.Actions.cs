@@ -179,10 +179,10 @@ namespace Simulant.Simulation.Runtime
         }
 
         internal void ResolveActionResults(Character source, ActionRequest request, Character animationTarget, uint actionId,
-            IReadOnlyList<(Character Target, List<ActionEffect> Effects)> hits)
+            IReadOnlyList<(Character Target, List<ActionEffect> Effects)> hits, float? animationLockOverride = null)
         {
             var position = request?.GroundPosition ?? animationTarget?.Pos3D ?? source.Pos3D;
-            var animationLock = GetAnimationLock(request, actionId);
+            var animationLock = animationLockOverride ?? GetAnimationLock(request, actionId);
             source.ReceiveActionResults(request, actionId, animationTarget, position, animationLock, hits);
             ConsumeSharedCastProc(source, request);
             CombatLog?.AbilityResults(source, actionId, animationTarget, request?.GroundPosition, request?.Facing ?? source.Heading, animationLock, hits);
@@ -193,6 +193,15 @@ namespace Simulant.Simulation.Runtime
                 PluginHost.Instance?.PlayerActions.Entities?.PublishPlayerAction(
                     new PlayerActionResult(source, actionId, request, targets, damaged));
             }
+        }
+
+        internal void ResolveAutoAttack(Character source, Character target, uint actionId, byte weaponAttackType)
+        {
+            var targets = new[] { target };
+            var hits = PlayerActionRules.CreateHits(targets);
+            PlayerActionRules.AddDamage(hits[0].Effects, actionId, weaponAttackType);
+            ResolveActionResults(source, null, target, actionId, hits, animationLockOverride: 0.5f);
+            PublishPlayerAction(new PlayerActionResult(source, actionId, null, targets, targets));
         }
 
         /// <summary>按结算技能编号保存特殊瞬发动画锁，单位为秒。</summary>
