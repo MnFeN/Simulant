@@ -1,11 +1,13 @@
 #pragma warning disable IDE1006
 using Lumina.Excel.Sheets;
+using Simulant.Content.Local;
 using Simulant.Core.Environment;
 using Simulant.Core.Zone;
 using Simulant.Game.Data;
 using Simulant.Game.FFCS.Client.Game;
 using Simulant.Simulation;
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -112,6 +114,60 @@ namespace Simulant.UI
         private bool _updatingTerritoryIdInput;
         private bool _updatingPhaseSelection;
         private bool _restoredTerritorySelection;
+        private readonly LocalEncounterLibrary _localEncounters;
+        private GameDataService _localData;
+
+        private void LoadLocalEncounters()
+        {
+            try
+            {
+                var data = GameDataService.Instance;
+                if (ReferenceEquals(data, _localData))
+                    return;
+                _localData = data;
+                _restoredTerritorySelection = false;
+                _localEncounters.Load(encounter => encounter.ValidateResources(data), _host.LogWarning);
+            }
+            catch (Exception error)
+            {
+                _host.LogWarning("读取本地副本目录失败：" + error.Message);
+            }
+        }
+
+        private bool CanImport => !_host.Disposed && GameDataAvailable && !_switchingTerritory && !presetControl.HasActiveSession;
+        private void UpdateImportButton() => btnImportEncounter.Enabled = CanImport;
+
+        private async void btnImportEncounter_Click(object sender, EventArgs e)
+        {
+            if (!CanImport)
+                return;
+            using (var dialog = new OpenFileDialog { Title = "导入本地副本描述文件", Filter = "JSON 描述文件 (*.json)|*.json", RestoreDirectory = true })
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK || !CanImport)
+                    return;
+                try
+                {
+                    var data = GameDataService.Instance;
+                    var preset = _localEncounters.Import(LocalEncounterLibrary.Read(dialog.FileName), encounter => encounter.ValidateResources(data),
+                        name => MessageBox.Show(this, $"替换已导入的「{name}」？", "导入本地副本",
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes && CanImport &&
+                            ReferenceEquals(data, GameDataService.Instance));
+                    if (preset == null)
+                        return;
+                    SelectTerritory(preset.TerritoryId, preset.ConfigurationKey);
+                    SaveTerritorySelection();
+                    _host.LogSim($"已导入「{preset.Name}」（区域 {preset.TerritoryId}）。");
+                    if (_host.ZoneService?.IsInSimulatedTerritory == true && IsCurrentTerritorySelected())
+                        await _host.ZoneService.EnterPhase(preset.Phase);
+                }
+                catch (Exception error)
+                {
+                    var message = Path.GetFileName(dialog.FileName) + "：" + error.Message;
+                    _host.LogError(message);
+                    MessageBox.Show(this, message, "导入本地副本", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
 
         private void btnSelectTerritory_Click(object sender, EventArgs e)
         {
@@ -119,7 +175,7 @@ namespace Simulant.UI
             {
                 try
                 {
-                    form.LoadTerritoryData();
+                    form.LoadTerritoryData(_localEncounters.Presets.Select(p => p.TerritoryId));
                 }
                 catch (Exception error)
                 {
@@ -143,6 +199,11 @@ namespace Simulant.UI
             if (territoryId <= 0 || territoryId > numTerritoryId.Maximum)
                 return;
 
+            SelectTerritory(territoryId, saved.SelectedPhaseKey);
+        }
+
+        private void SelectTerritory(int territoryId, string phaseKey)
+        {
             _updatingTerritoryIdInput = true;
 
             try
@@ -154,7 +215,7 @@ namespace Simulant.UI
                 _updatingTerritoryIdInput = false;
             }
 
-            TryUpdateTerritoryData(territoryId, saved.SelectedPhaseKey);
+            TryUpdateTerritoryData(territoryId, phaseKey);
         }
 
         private void numTerritoryId_ValueChanged(object sender, EventArgs e)
@@ -170,7 +231,7 @@ namespace Simulant.UI
             => _host.SaveTerritorySelection(_selectedTerritoryId, GetPhaseSelectionKey(cbxPhase.SelectedItem));
 
         private static string GetPhaseSelectionKey(object item)
-            => item is SimPresetBase preset ? preset.GetType().FullName : (item as PhaseData)?.Name;
+            => item is SimPresetBase preset ? preset.ConfigurationKey : (item as PhaseData)?.Name;
 
         private bool TryUpdateTerritoryData(int territoryId, string phaseKey = null)
         {
@@ -228,6 +289,8 @@ namespace Simulant.UI
                 cbxPhase.Items.AddRange(sims);
                 if (cbxPhase.Items.Count == 0 && territory.HasValue)
                     cbxPhase.Items.Add(PhaseData.TerritoryDefaults);
+                cbxPhase.Items.AddRange(_localEncounters.Presets.Where(p => p.TerritoryId == territoryId)
+                    .OrderBy(p => p.Name).ThenBy(p => p.ConfigurationKey, StringComparer.Ordinal).ToArray());
 
                 var savedPhase = phaseKey == null ? null
                     : cbxPhase.Items.Cast<object>().FirstOrDefault(item => GetPhaseSelectionKey(item) == phaseKey);

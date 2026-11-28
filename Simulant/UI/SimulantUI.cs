@@ -1,5 +1,6 @@
 #pragma warning disable IDE1006
 using Simulant.Core;
+using Simulant.Content.Local;
 using Simulant.Core.Entity;
 using Simulant.Game;
 using Simulant.Utils;
@@ -33,6 +34,9 @@ namespace Simulant.UI
         internal SimulantUI(PluginHost host) : this()
         {
             _host = host;
+            _localEncounters = new LocalEncounterLibrary(System.IO.Path.Combine(
+                System.IO.Path.GetDirectoryName(host.ConfigurationPath), "Simulant.Encounters"));
+            presetControl.SessionStateChanged += UpdateImportButton;
             ConfigureMainMenu();
             BindGroundTeleport();
             var actionRequestTimer = new Timer(components) { Interval = 20 };
@@ -286,7 +290,10 @@ namespace Simulant.UI
 
             var gameDataReady = GameDataAvailable;
             if (gameDataReady)
+            {
+                LoadLocalEncounters();
                 RestoreTerritorySelection();
+            }
 
             var pluginReady = _host.PluginReady && !_host.IsInitializing;
             var firewallEnabled = _host.FirewallEnabled;
@@ -300,6 +307,7 @@ namespace Simulant.UI
 
             // 游戏数据加载完：允许选地图、输入区域 ID、选择阶段
             btnSelectTerritory.Enabled = gameDataReady && !_switchingTerritory;
+            UpdateImportButton();
             lblTerritoryId.Enabled = gameDataReady;
             numTerritoryId.Enabled = gameDataReady && !_switchingTerritory;
             lblTerritory.Enabled = gameDataReady;

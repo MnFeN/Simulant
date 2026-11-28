@@ -57,7 +57,11 @@ namespace Simulant.Simulation
         {
             _host.LogSim($"正在开始模拟：{_preset.Name}（{_preset.Phase.Name}）");
             LoadOptionsFrom(_preset.Options);
+            OnOptionsLoaded();
         }
+
+        /// <summary>在启动线程读取脚本声明的选项，供调度线程使用本轮快照。</summary>
+        protected virtual void OnOptionsLoaded() { }
 
         internal void Start()
         {

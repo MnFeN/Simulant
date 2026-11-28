@@ -17,11 +17,14 @@
       BCnEncoder
       CommunityToolkit.HighPerformance
       Microsoft.Bcl.HashCode
+      Microsoft.Bcl.AsyncInterfaces
       Microsoft.Bcl.Numerics
       System.Buffers
       System.Memory
       System.Numerics.Vectors
       System.Runtime.CompilerServices.Unsafe
+      System.Text.Encodings.Web
+      System.Text.Json
       System.Threading.Tasks.Extensions
     </ExcludeAssemblies>
     <Unmanaged64Assemblies>SimuMagic</Unmanaged64Assemblies>

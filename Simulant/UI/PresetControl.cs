@@ -19,6 +19,8 @@ namespace Simulant.UI
         private (int World, int Seed)? _lastAttempt;
         private long _restartNotBefore;
         private volatile bool _preparingStart;
+        internal bool HasActiveSession => _preparingStart || _session?.IsRunning == true || _session?.HasPendingCleanup == true;
+        internal event Action SessionStateChanged;
         private int _stopVersion;
         private readonly System.Windows.Forms.Timer _sessionStateTimer;
         private readonly OptionEditor _optionEditor;
@@ -87,7 +89,7 @@ namespace Simulant.UI
             lblLastChanged.Text = preset.LastUpdated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             rtbInfo.Text = preset.Description?.Trim() ?? string.Empty;
             if (!preset.IsImplemented)
-                rtbInfo.AppendText(System.Environment.NewLine + "该预设尚未实现，暂不能开始模拟。");
+                rtbInfo.AppendText(System.Environment.NewLine + preset.UnavailableMessage);
             rtbInfo.Visible = !string.IsNullOrWhiteSpace(rtbInfo.Text);
 
             RebuildOptions(preset);
@@ -117,7 +119,7 @@ namespace Simulant.UI
 
         private void RebuildOptions(SimPresetBase preset)
         {
-            var saved = _host?.Configuration.Presets.Find(item => item.Id == preset.GetType().FullName);
+            var saved = _host?.Configuration.Presets.Find(item => item.Id == preset.ConfigurationKey);
             _optionEditor.Build(preset.Options, option =>
             {
                 var value = saved?.Options.Find(item => item.Name == option.PropertyName);
@@ -322,6 +324,7 @@ namespace Simulant.UI
             _displayedPendingCleanup = hasPendingCleanup;
             _displayedReadyToStart = GetStartBlockReason() == null;
             _displayedReadyToRetry = CanRetry;
+            SessionStateChanged?.Invoke();
 
             _host?.LogVerbose($"UpdateButtons: hasHost = {hasHost}, hasPreset = {hasPreset}, isRunning = {isRunning}");
             btnStart.Enabled = hasHost && hasPreset && _preset.IsImplemented && _displayedReadyToStart;

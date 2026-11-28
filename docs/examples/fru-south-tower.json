@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 3,
+  "id": "example.fru.south-tower",
+  "name": "光暗未来绝境战 · 复乐园双人塔教学",
+  "description": "以南侧单塔演示触发与分支。复乐园结算后，第一人进塔启动两秒倒计时，八秒无人进塔则超时。可选治疗或近战示范。",
+  "territoryId": 1238,
+  "environment": {
+    "weatherId": 108,
+    "bgmId": 20099,
+    "mapEffectFlags": [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4, 4, 4]
+  },
+  "party": {
+    "MT": [100, 94],
+    "ST": [102, 96],
+    "H1": [98, 99],
+    "H2": [102, 99],
+    "D1": [99, 100],
+    "D2": [101, 100],
+    "D3": [96, 100],
+    "D4": [104, 100]
+  },
+  "waymarks": {"1": [100, 107, 0]},
+  "options": [{"id": "tower-pair", "label": "示范踩塔组", "values": ["双治疗", "双近战"], "random": true, "default": "双治疗"}],
+  "actors": [
+    {"id": "pandora", "baseId": 17839, "nameId": 13561, "position": [100, 100, 0], "heading": 3.14159, "level": 100},
+    {
+      "id": "tower",
+      "baseId": 9020,
+      "nameId": 13561,
+      "position": [100, 107, 0],
+      "heading": 0,
+      "level": 100,
+      "hidden": true
+    }
+  ],
+  "timeline": [
+    {
+      "at": 0,
+      "op": "trigger",
+      "event": {"type": "castResolved", "actor": "pandora", "actionId": 40319},
+      "timeout": 12,
+      "then": [
+        {"at": 0, "op": "mapEffect", "slot": 53, "flags": 2},
+        {"at": 0, "op": "mapEffect", "slot": 50, "flags": 1},
+        {
+          "at": 0,
+          "op": "branch",
+          "if": {"type": "optionEquals", "option": "tower-pair", "value": "双治疗"},
+          "then": [
+            {"at": 0, "op": "hint", "text": "H1、H2 去南侧 1 标，其余职能留在塔外。"},
+            {"at": 0, "op": "move", "roles": ["H1", "H2"], "position": [100, 107]}
+          ],
+          "else": [
+            {"at": 0, "op": "hint", "text": "D1、D2 去南侧 1 标，其余职能留在塔外。"},
+            {"at": 0, "op": "move", "roles": ["D1", "D2"], "position": [100, 107]}
+          ]
+        },
+        {
+          "at": 0,
+          "op": "trigger",
+          "if": {
+            "type": "areaCount",
+            "position": [100, 107],
+            "shape": {"type": "circle", "radius": 3},
+            "min": 1,
+            "max": 8
+          },
+          "timeout": 8,
+          "then": [
+            {
+              "at": 2,
+              "op": "judge",
+              "id": "south-tower",
+              "if": {
+                "type": "areaCount",
+                "position": [100, 107],
+                "shape": {"type": "circle", "radius": 3},
+                "min": 2,
+                "max": 2
+              },
+              "text": "南塔结算时需要正好两人"
+            },
+            {
+              "at": 2,
+              "op": "branch",
+              "if": {"type": "checkResult", "check": "south-tower", "passed": true},
+              "then": [
+                {"at": 0, "op": "mapEffect", "slot": 53, "flags": 8},
+                {"at": 0, "op": "cast", "actor": "tower", "actionId": 40320, "groundAt": "self"},
+                {"at": 0, "op": "hint", "text": "双人塔处理成功。"},
+                {"at": 2, "op": "finish"}
+              ],
+              "else": [
+                {"at": 0, "op": "mapEffect", "slot": 53, "flags": 8},
+                {"at": 0, "op": "cast", "actor": "tower", "actionId": 40321, "groundAt": "self"},
+                {"at": 0, "op": "hint", "text": "塔内人数有误，请观察队伍实际站位。"},
+                {"at": 2, "op": "finish"}
+              ]
+            }
+          ],
+          "else": [
+            {"at": 0, "op": "hint", "text": "南塔等待超时，无人进塔。"},
+            {"at": 0, "op": "mapEffect", "slot": 53, "flags": 8},
+            {"at": 0, "op": "cast", "actor": "tower", "actionId": 40321, "groundAt": "self"},
+            {"at": 2, "op": "finish"}
+          ]
+        }
+      ],
+      "else": [{"at": 0, "op": "hint", "text": "未观察到复乐园结算，本轮结束。"}, {"at": 1, "op": "finish"}]
+    },
+    {"at": 1, "op": "cast", "actor": "pandora", "actionId": 40319}
+  ]
+}

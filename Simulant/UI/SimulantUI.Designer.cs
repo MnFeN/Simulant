@@ -49,6 +49,7 @@ namespace Simulant.UI
             this.lblTerritory = new LabelEx();
             this.lblPhase = new LabelEx();
             this.cbxPhase = new ComboBoxEx();
+            this.btnImportEncounter = new ButtonEx();
             this.mapActions = new TableLayoutPanel();
             this.btnSimEnter = new ButtonEx();
             this.btnSimExit = new ButtonEx();
@@ -265,7 +266,10 @@ namespace Simulant.UI
             this.sidebar.Controls.Add(this.lblRegionTitle, 0, 0);
             this.sidebar.Controls.Add(this.mapDetails, 0, 1);
             this.sidebar.Controls.Add(this.mapPicker, 0, 3);
-            this.sidebar.Controls.Add(this.lblPhase, 0, 4);
+            var phaseHeader = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
+            phaseHeader.Controls.Add(this.lblPhase);
+            phaseHeader.Controls.Add(this.btnImportEncounter);
+            this.sidebar.Controls.Add(phaseHeader, 0, 4);
             this.sidebar.Controls.Add(this.cbxPhase, 0, 5);
             this.sidebar.Controls.Add(this.mapActions, 0, 7);
             this.sidebar.Controls.Add(this.spawnPicker, 0, 8);
@@ -387,6 +391,11 @@ namespace Simulant.UI
             this.lblPhase.AutoEllipsis = true;
             this.lblPhase.Tone = LabelTone.Muted;
             this.lblPhase.Name = "lblPhase";
+            this.btnImportEncounter.Text = "导入本地 JSON";
+            this.btnImportEncounter.Dock = DockStyle.Right;
+            this.btnImportEncounter.Width = 116;
+            this.btnImportEncounter.Name = "btnImportEncounter";
+            this.btnImportEncounter.Click += new EventHandler(this.btnImportEncounter_Click);
             //
             // cbxPhase
             //
@@ -560,6 +569,7 @@ namespace Simulant.UI
         private LabelEx lblTerritory;
         private LabelEx lblPhase;
         private ComboBoxEx cbxPhase;
+        private ButtonEx btnImportEncounter;
         private TableLayoutPanel mapActions;
         private ButtonEx btnSimEnter;
         private ButtonEx btnSimExit;

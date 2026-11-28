@@ -89,6 +89,7 @@ namespace Simulant.Simulation.Runtime
                 {
                     var first = OrderedPartyEnmity(scores).FirstOrDefault(actor => actor.Entity.HP != 0);
                     scores[source] = (first == null ? 0 : scores[first]) + 20;
+                    if (_scriptEnemies.TryGetValue(boss, out var tracked) && tracked.First == null) tracked.First = source;
                 }
                 else
                 {
@@ -100,14 +101,19 @@ namespace Simulant.Simulation.Runtime
                     scores[target] = received + amount;
                 }
 
-                var leader = OrderedPartyEnmity(scores).First(actor => actor.Entity.HP != 0);
-                var percentages = Party.Select(actor => actor == leader ? 100 : actor.IsActive && actor.Entity.HP != 0 &&
-                    scores.TryGetValue(actor, out var value) ? Math.Min(99, (int)(100 * value / scores[leader])) : 0).ToArray();
-                PublishPartyEnmity(boss, scores, percentages);
+                UpdateEnmityPercentages(boss, scores);
             }
 
             var action = request?.ActionId ?? (uint)(provoke ? GeneralActionId.挑衅 : GeneralActionId.退避);
             ResolveAction(source.Entity, request, target.Entity, action);
+        }
+
+        private void UpdateEnmityPercentages(SimActor boss, Dictionary<SimActor, float> scores)
+        {
+            var leader = OrderedPartyEnmity(scores).First(actor => actor.Entity.HP != 0);
+            var percentages = Party.Select(actor => actor == leader ? 100 : actor.IsActive && actor.Entity.HP != 0 &&
+                scores.TryGetValue(actor, out var value) ? Math.Min(99, (int)(100 * value / scores[leader])) : 0).ToArray();
+            PublishPartyEnmity(boss, scores, percentages);
         }
 
         internal void ResolveAction<TActionEnum>(Character source, ActionRequest request, Character target, TActionEnum action,
@@ -127,6 +133,13 @@ namespace Simulant.Simulation.Runtime
                     actionRow.Cast100ms > 0;
                 animationLock = hasCastTime ? 0.1f : 0.6f;
                 source.ReceiveActionResult(request, actionId, target, target?.Pos3D ?? source.Pos3D, animationLock, requestEffects);
+                if (target != null && requestEffects?.Length > 0)
+                {
+                    lock (_gate)
+                        if (_actors.TryGetValue(target.Identity, out var enemy) && _scriptEnemies.ContainsKey(enemy) &&
+                            _actors.TryGetValue(source.Identity, out var attacker))
+                            ApplyScriptHit(attacker, enemy, (uint)requestEffects.Where(effect => effect.Type == 3).Sum(effect => (int)effect.Value));
+                }
             }
 
             var missed = target == null && request?.Kind == ActionRequestKind.Normal;

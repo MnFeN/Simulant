@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Simulant 本地副本 v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "territoryId"],
+  "properties": {
+    "schemaVersion": {"const": 2},
+    "id": {"$ref": "encounter-v1.schema.json#/properties/id"},
+    "name": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+    "territoryId": {"$ref": "encounter-v1.schema.json#/properties/territoryId"},
+    "description": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+    "author": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+    "environment": {"$ref": "encounter-v1.schema.json#/properties/environment"},
+    "party": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"],
+      "properties": {
+        "MT": {"$ref": "#/$defs/point"},
+        "ST": {"$ref": "#/$defs/point"},
+        "H1": {"$ref": "#/$defs/point"},
+        "H2": {"$ref": "#/$defs/point"},
+        "D1": {"$ref": "#/$defs/point"},
+        "D2": {"$ref": "#/$defs/point"},
+        "D3": {"$ref": "#/$defs/point"},
+        "D4": {"$ref": "#/$defs/point"}
+      }
+    },
+    "roleSwap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "roles"],
+      "properties": {
+        "label": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+        "roles": {"type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/role"}}
+      }
+    },
+    "waymarks": {
+      "type": "object",
+      "propertyNames": {"enum": ["A", "B", "C", "D", "1", "2", "3", "4"]},
+      "additionalProperties": {"$ref": "encounter-v1.schema.json#/properties/actors/items/properties/position"}
+    },
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "baseId", "nameId", "level", "position", "heading"],
+        "properties": {
+          "id": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+          "baseId": {"$ref": "encounter-v1.schema.json#/$defs/npcRow"},
+          "nameId": {"type": "integer", "minimum": 0, "maximum": 2147483647},
+          "level": {"$ref": "encounter-v1.schema.json#/properties/actors/items/properties/level"},
+          "position": {"$ref": "encounter-v1.schema.json#/properties/actors/items/properties/position"},
+          "heading": {"$ref": "encounter-v1.schema.json#/$defs/float"},
+          "hidden": {"type": "boolean"}
+        }
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {"type":"object","additionalProperties":false,"required":["at","op"],
+           "properties":{"at":{"$ref":"encounter-v1.schema.json#/properties/timeline/items/properties/at"},"op":{"const":"finish"}}},
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "actor", "actionId"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "cast"},
+              "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+              "actionId": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+              "targetRole": {"$ref": "#/$defs/role"},
+              "groundAt": {"enum": ["self", "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"]}
+            },
+            "not": {"required": ["targetRole", "groundAt"]}
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "actor", "value"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "visible"},
+              "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+              "value": {"type": "boolean"},
+              "targetable": {"type": "boolean"}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "actor", "position", "heading"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "place"},
+              "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+              "position": {"$ref": "#/$defs/point"},
+              "heading": {"$ref": "encounter-v1.schema.json#/$defs/float"}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "roles", "position"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "move"},
+              "roles": {"type": "array", "items": {"$ref": "#/$defs/role"}, "uniqueItems": true, "minItems": 1},
+              "position": {"$ref": "#/$defs/point"}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "roles", "position", "radius", "text"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "check"},
+              "roles": {"type": "array", "items": {"$ref": "#/$defs/role"}, "uniqueItems": true, "minItems": 1},
+              "position": {"$ref": "#/$defs/point"},
+              "radius": {"type": "number", "minimum": 0, "maximum": 3.4028234663852886e+38, "exclusiveMinimum": 0},
+              "text": {
+                "allOf": [
+                  {"$ref": "encounter-v1.schema.json#/$defs/text"},
+                  {"pattern": "^[^<>\\u0000-\\u001f\\u007f-\\u009f]*$"}
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "text"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "hint"},
+              "text": {
+                "allOf": [
+                  {"$ref": "encounter-v1.schema.json#/$defs/text"},
+                  {"pattern": "^[^<>\\u0000-\\u001f\\u007f-\\u009f]*$"}
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "actor", "targetRole", "tetherId", "duration"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "tether"},
+              "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+              "targetRole": {"$ref": "#/$defs/role"},
+              "tetherId": {"type": "integer", "minimum": 1, "maximum": 65535},
+              "duration": {"type": "number", "minimum": 0, "maximum": 3.4028234663852886e+38, "exclusiveMinimum": 0}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "actor", "statusId", "duration"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "status"},
+              "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+              "statusId": {"type": "integer", "minimum": 1, "maximum": 65535},
+              "duration": {"type": "number", "minimum": 0, "maximum": 3.4028234663852886e+38},
+              "stacks": {"type": "integer", "minimum": 0, "maximum": 65535},
+              "targetRole": {"$ref": "#/$defs/role"}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "actor", "objectId", "duration"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "object"},
+              "actor": {"$ref": "encounter-v1.schema.json#/$defs/text"},
+              "objectId": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+              "duration": {"type": "number", "minimum": 0, "maximum": 3.4028234663852886e+38, "exclusiveMinimum": 0}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "op", "targetRole", "iconId"],
+            "properties": {
+              "at": {"$ref": "encounter-v1.schema.json#/properties/timeline/items/properties/at"},
+              "op": {"const": "icon"},
+              "targetRole": {"$ref": "#/$defs/role"},
+              "iconId": {"type": "integer", "minimum": 1, "maximum": 4294967295}
+            }
+          }
+        ]
+      }
+    }
+  },
+  "dependentRequired": {"actors": ["timeline"], "timeline": ["actors"], "party": ["actors", "timeline"], "roleSwap": ["party"], "waymarks": ["actors"]},
+  "if": {"not": {"required": ["party"]}},
+  "then": {
+    "properties": {
+      "timeline": {
+        "items": {
+          "not": {
+            "anyOf": [
+              {"required": ["targetRole"]},
+              {"required": ["roles"]},
+              {
+                "properties": {"groundAt": {"enum": ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"]}},
+                "required": ["groundAt"]
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "role": {"enum": ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"]},
+    "point": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "encounter-v1.schema.json#/$defs/float"}}
+  }
+}

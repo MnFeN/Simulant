@@ -61,6 +61,8 @@ Encounters run entirely on the client, with no need to set up or connect to a pr
 
 - 在左侧选择地图，或输入地图 ID；如果此地图有阶段/模拟的话可以在下拉列表中选择。
 
+  要加载自定义副本，点击阶段旁的“导入本地 JSON”，选择描述文件。导入后会自动选中对应地图和阶段。场地预览使用“加载区域”，带时间轴的练习加载后可点“开始模拟”。[导入与示例](docs/README.md) · [JSON 作者手册](docs/encounter-format.md)
+
   如果要筛选目前已经定义的模拟，可在地图选择窗口界面中勾选 “仅显示含预设区域” 查看。
 
   <img width="800" alt="image" src="https://github.com/user-attachments/assets/042e777e-ca15-42cc-8b17-47abe33355c7" />

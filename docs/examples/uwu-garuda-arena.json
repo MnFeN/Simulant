@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "example.uwu.garuda-arena",
+  "name": "绝神兵 P1 · 场地预览",
+  "description": "查看暴风天气下的迦楼罗场地。",
+  "territoryId": 777,
+  "environment": { "weatherId": 28, "bgmId": 544 }
+}
