@@ -27,6 +27,7 @@ namespace Simulant.Simulation.Runtime.PlayerActions
         internal enum StatusId : ushort
         {
             冲刺 = 50,
+            复活 = 148,
             沉稳咏唱 = 160,
             即刻咏唱 = 167,
             铁壁 = 1191,

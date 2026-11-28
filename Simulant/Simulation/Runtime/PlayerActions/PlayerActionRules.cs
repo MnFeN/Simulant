@@ -371,6 +371,23 @@ namespace Simulant.Simulation.Runtime.PlayerActions
             Entities.CombatLog?.PeriodicEffect(source, target, statusId, amount, isHealing);
         }
 
+        /// <summary>为倒地目标加复活状态，并按国服结算顺序写入复活与技能确认效果。</summary>
+        internal static void OfferRaise<TActionEnum>(Character player, Character target, List<ActionEffect> effects,
+            TActionEnum action) where TActionEnum : struct, Enum
+        {
+            const ushort status = (ushort)GeneralActions.StatusId.复活;
+            // 国服复活结算先附加 60 秒状态，效果槽记录 Param1 = 20、Param2 = 8。
+            Entities.SetStatus(Entities.Attach(target), status, 60, 8, Entities.Attach(player));
+            effects.Add(new ActionEffect
+            {
+                Type = 0x0E,
+                Param1 = 20,
+                Param2 = 8,
+                Value = status
+            });
+            AddWeaponCombo(effects, action);
+        }
+
         internal static bool HasCombo<TActionEnum>(TActionEnum prerequisite) where TActionEnum : struct, Enum
         {
             var combo = ActionManager.Instance.Combo;

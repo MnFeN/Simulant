@@ -1,11 +1,14 @@
 using Simulant.Core;
 using Simulant.Core.Entity;
+using Simulant.Game;
 using Simulant.Simulation.Geometry;
 using Simulant.Simulation.Timeline;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
+using CharacterModes = Simulant.Game.FFCS.Client.Game.Character.CharacterModes;
+using GeneralStatusId = Simulant.Simulation.Runtime.PlayerActions.GeneralActions.StatusId;
 using Job = Simulant.Game.FFCS.Client.Game.Character.Job;
 
 namespace Simulant.Simulation.Runtime
@@ -37,6 +40,45 @@ namespace Simulant.Simulation.Runtime
         public bool IsInvulnerable => IsActive && Entity.IsInvulnerable;
         public uint Id => Entity.Id;
         public IntPtr Address => Entity.Address;
+
+        /// <summary>扣除已经判定的伤害，返回实际损失的生命值。</summary>
+        public uint TakeDamage(uint damage)
+        {
+            EnsureActive();
+            var hp = Entity.HP;
+            var lost = Math.Min(damage, hp);
+            if (lost == 0)
+                return 0;
+
+            SetHp(hp - lost);
+            if (lost == hp)
+            {
+                StopCasting();
+                StopMoving();
+                Entity.SetMode(CharacterModes.Dead);
+                ActorControl(ActorControlCategory.DeathAnimation);
+            }
+
+            return lost;
+        }
+
+        /// <summary>为已接受复活的模拟角色恢复血蓝、行为模式和原生复活动画。</summary>
+        public bool Revive(uint hp, ushort? mp = null)
+        {
+            EnsureActive();
+            if (Entity.HP != 0 || hp == 0)
+                return false;
+
+            Entity.SetNetworkVitals(hp, mp);
+            Entity.SetMode(CharacterModes.Normal);
+            ActorControl(ActorControlCategory.RaiseAnimation);
+            Manager?.RemoveStatus(this, (ushort)GeneralStatusId.复活);
+
+            var playerActions = PluginHost.Instance?.PlayerActions.Entities;
+            if (!ReferenceEquals(playerActions, Manager))
+                playerActions?.RemoveStatus(this, (ushort)GeneralStatusId.复活);
+            return true;
+        }
 
         internal void SetHp(uint hp)
         {
